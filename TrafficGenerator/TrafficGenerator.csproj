@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9" />
+        <PackageReference Include="PacketDotNet" Version="1.4.9-pre47" />
+        <PackageReference Include="SharpPcap" Version="6.3.1" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
+        
+        <!-- DNS & Network Utilities -->
+        <PackageReference Include="DnsClient" Version="1.8.0" />
+        
+        <!-- HTTP/HTTPS Traffic Generation -->
+        <PackageReference Include="Flurl.Http" Version="4.0.2" />
+        
+        <!-- JSON & Serialization -->
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.4-beta1" />
+        <PackageReference Include="System.Net.NetworkInformation" Version="4.3.0" />
+    </ItemGroup>
+
+</Project>

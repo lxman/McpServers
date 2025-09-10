@@ -1,0 +1,120 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <!-- Disable TypeScript compilation since we're using Node.js for TypeScript parsing -->
+        <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Esprima" Version="3.0.5" />
+      <PackageReference Include="FuzzySharp" Version="2.0.2" />
+      <PackageReference Include="JavaScriptEngineSwitcher.Extensions.MsDependencyInjection" Version="3.24.1" />
+      <PackageReference Include="JavaScriptEngineSwitcher.V8" Version="3.29.1" />
+      <PackageReference Include="Jering.Javascript.NodeJS" Version="7.0.0" />
+      <PackageReference Include="LibGit2Sharp" Version="0.31.0" />
+      <PackageReference Include="Lucene.Net" Version="4.8.0-beta00017" />
+      <PackageReference Include="Lucene.Net.Highlighter" Version="4.8.0-beta00017" />
+      <PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00017" />
+      <PackageReference Include="Microsoft.Build.Framework" Version="17.15.0-preview-25277-114">
+        <ExcludeAssets>runtime</ExcludeAssets>
+      </PackageReference>
+      <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.15.0-preview-25277-114">
+        <ExcludeAssets>runtime</ExcludeAssets>
+      </PackageReference>
+      <PackageReference Include="Microsoft.ClearScript.V8.Native.win-x64" Version="7.5.0" />
+      <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="Microsoft.TypeScript.Compiler" Version="3.1.5">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="ModelContextProtocol" Version="0.3.0-preview.4" />
+      <PackageReference Include="DiffPlex" Version="1.8.0" />
+      <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+      <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
+      <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="OmniSharp.Extensions.LanguageProtocol" Version="0.19.9" />
+      <PackageReference Include="OmniSharp.Extensions.LanguageServer" Version="0.19.9" />
+      <PackageReference Include="Serilog" Version="4.3.1-dev-02385" />
+      <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.3-dev-02320" />
+      <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+      <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="System.Threading.Channels" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="System.Threading.Tasks.Dataflow" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="TreeSitterSharp" Version="0.5.0" />
+      <PackageReference Include="TypeScriptAST.Corrected" Version="1.0.0" />
+      <PackageReference Include="YamlDotNet" Version="16.3.0" />
+      <PackageReference Include="System.IO.Pipelines" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
+      <PackageReference Include="Nito.AsyncEx" Version="5.1.2" />
+      <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="5.9.2">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00017" />
+      <PackageReference Include="Fastenshtein" Version="1.0.11" />
+      <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.100-rc.1.25451.107">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="Markdig" Version="0.41.3" />
+      <PackageReference Include="System.Reactive" Version="6.0.2" />
+      <PackageReference Include="System.CommandLine" Version="2.0.0-rc.1.25451.107" />
+      <PackageReference Include="Microsoft.Build.Locator" Version="1.9.1" />
+      <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="4.14.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="appsettings.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="mcp-code-editor.yml">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <!-- Exclude node_modules and TypeScript files from compilation -->
+    <ItemGroup>
+      <Content Remove="node_modules\**" />
+      <None Remove="node_modules\**" />
+      <Compile Remove="node_modules\**" />
+      <TypeScriptCompile Remove="**\*.ts" />
+      <TypeScriptCompile Remove="**\*.tsx" />
+    </ItemGroup>
+
+    <!-- Ensure package.json is copied to output but not compiled -->
+    <ItemGroup>
+      <None Update="package.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="package-lock.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="tsconfig.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <!-- Copy Scripts folder to output directory -->
+    <ItemGroup>
+      <None Update="Scripts\**\*">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+    <ItemGroup>
+      <Folder Include="Models\Validation\" />
+      <Folder Include="Services\Advanced\" />
+      <Folder Include="Tools\Advanced\" />
+    </ItemGroup>
+
+</Project>
