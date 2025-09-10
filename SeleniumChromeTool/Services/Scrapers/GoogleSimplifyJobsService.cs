@@ -20,8 +20,8 @@ namespace SeleniumChromeTool.Services.Scrapers
         
         // Google Custom Search API configuration
         // TODO: Move these to appsettings.json or environment variables for production
-        private const string GOOGLE_API_KEY = "AIzaSyBdy5wfQsZ0EyBHfgeOBwCc3JvTmYm0qyI"; // Replace with your actual API key
-        private const string SEARCH_ENGINE_ID = "a3e670184e9d14699"; // Replace with your actual Search Engine ID (cx)
+        private const string GOOGLE_API_KEY = ""; // Replace with your actual API key
+        private const string SEARCH_ENGINE_ID = ""; // Replace with your actual Search Engine ID (cx)
         private const string CUSTOM_SEARCH_API_URL = "https://www.googleapis.com/customsearch/v1";
         
         public override JobSite SupportedSite => JobSite.SimplifyJobs;
