@@ -22,11 +22,11 @@
       <PackageReference Include="ModelContextProtocol" Version="0.3.0-preview.4" />
       
       <!-- Microsoft Extensions for Configuration and Hosting -->
-      <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0-preview.5.25277.114" />
-      <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="10.0.0-preview.5.25277.114" />
-      <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.0-preview.5.25277.114" />
-      <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0-preview.5.25277.114" />
-      <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0-preview.5.25277.114" />
+      <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0-rc.1.25451.107" />
     </ItemGroup>
 
     <ItemGroup>
