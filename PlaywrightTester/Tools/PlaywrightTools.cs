@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using ModelContextProtocol.Server;
+using PlaywrightTester.Models;
 using PlaywrightTester.Services;
 
 namespace PlaywrightTester.Tools;
@@ -13,9 +14,37 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     public async Task<string> LaunchBrowser(
         [Description("Browser type: chrome, firefox, webkit")] string browserType = "chrome",
         [Description("Run in headless mode")] bool headless = true,
-        [Description("Session ID for this browser instance")] string sessionId = "default")
+        [Description("Session ID for this browser instance")] string sessionId = "default",
+        [Description("Viewport width in pixels")] int viewportWidth = 1920,
+        [Description("Viewport height in pixels")] int viewportHeight = 1080,
+        [Description("Device to emulate (optional): iphone12, iphone13, ipad, galaxy_s21, pixel5")] string? deviceEmulation = null,
+        [Description("Custom user agent string (optional)")] string? userAgent = null,
+        [Description("Timezone (optional, e.g., 'America/New_York')")] string? timezone = null,
+        [Description("Locale (optional, e.g., 'en-US')")] string? locale = null,
+        [Description("Color scheme preference: light, dark, or null for system default")] string? colorScheme = null,
+        [Description("Reduce motion preference: reduce, no-preference, or null for system default")] string? reducedMotion = null,
+        [Description("Enable geolocation permissions")] bool enableGeolocation = false,
+        [Description("Enable camera permissions")] bool enableCamera = false,
+        [Description("Enable microphone permissions")] bool enableMicrophone = false,
+        [Description("Extra HTTP headers as JSON object (optional)")] string? extraHttpHeaders = null)
     {
-        var result = await sessionManager.CreateSessionAsync(sessionId, browserType, headless);
+        var browserOptions = new BrowserLaunchOptions
+        {
+            ViewportWidth = viewportWidth,
+            ViewportHeight = viewportHeight,
+            DeviceEmulation = deviceEmulation,
+            UserAgent = userAgent,
+            Timezone = timezone,
+            Locale = locale,
+            ColorScheme = colorScheme,
+            ReducedMotion = reducedMotion,
+            EnableGeolocation = enableGeolocation,
+            EnableCamera = enableCamera,
+            EnableMicrophone = enableMicrophone,
+            ExtraHttpHeaders = extraHttpHeaders
+        };
+
+        var result = await sessionManager.CreateSessionAsync(sessionId, browserType, headless, browserOptions);
         
         // Also store in ToolService for backward compatibility
         var session = sessionManager.GetSession(sessionId);
@@ -932,6 +961,162 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
         catch (Exception ex)
         {
             return $"Failed to analyze layout: {ex.Message}";
+        }
+    }
+    
+    [McpServerTool]
+    [Description("Launch a browser with mobile device emulation")]
+    public async Task<string> LaunchMobileBrowser(
+        [Description("Device type: iphone12, iphone13, ipad, galaxy_s21, pixel5")] string deviceType,
+        [Description("Browser type: chrome, firefox, webkit")] string browserType = "chrome",
+        [Description("Run in headless mode")] bool headless = true,
+        [Description("Session ID for this browser instance")] string sessionId = "default")
+    {
+        return await LaunchBrowser(
+            browserType: browserType,
+            headless: headless,
+            sessionId: sessionId,
+            deviceEmulation: deviceType
+        );
+    }
+
+    [McpServerTool]
+    [Description("Launch a browser with dark mode enabled")]
+    public async Task<string> LaunchDarkModeBrowser(
+        [Description("Browser type: chrome, firefox, webkit")] string browserType = "chrome",
+        [Description("Run in headless mode")] bool headless = true,
+        [Description("Session ID for this browser instance")] string sessionId = "default",
+        [Description("Viewport width in pixels")] int viewportWidth = 1920,
+        [Description("Viewport height in pixels")] int viewportHeight = 1080)
+    {
+        return await LaunchBrowser(
+            browserType: browserType,
+            headless: headless,
+            sessionId: sessionId,
+            viewportWidth: viewportWidth,
+            viewportHeight: viewportHeight,
+            colorScheme: "dark",
+            reducedMotion: "reduce"
+        );
+    }
+
+    [McpServerTool]
+    [Description("Launch a browser with accessibility testing configuration")]
+    public async Task<string> LaunchAccessibilityBrowser(
+        [Description("Browser type: chrome, firefox, webkit")] string browserType = "chrome",
+        [Description("Run in headless mode")] bool headless = true,
+        [Description("Session ID for this browser instance")] string sessionId = "default",
+        [Description("Viewport width in pixels")] int viewportWidth = 1920,
+        [Description("Viewport height in pixels")] int viewportHeight = 1080)
+    {
+        return await LaunchBrowser(
+            browserType: browserType,
+            headless: headless,
+            sessionId: sessionId,
+            viewportWidth: viewportWidth,
+            viewportHeight: viewportHeight,
+            colorScheme: "dark",
+            reducedMotion: "reduce",
+            extraHttpHeaders: "{\"Accept-Language\": \"en-US,en;q=0.9\"}"
+        );
+    }
+
+    [McpServerTool]
+    [Description("Get current browser viewport information")]
+    public async Task<string> GetViewportInfo(
+        [Description("Session ID")] string sessionId = "default")
+    {
+        try
+        {
+            var session = sessionManager.GetSession(sessionId);
+            if (session?.Page == null)
+                return $"Session {sessionId} not found or page not available.";
+
+            var jsCode = @"
+                return {
+                    viewportWidth: window.innerWidth,
+                    viewportHeight: window.innerHeight,
+                    screenWidth: window.screen.width,
+                    screenHeight: window.screen.height,
+                    devicePixelRatio: window.devicePixelRatio,
+                    colorScheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+                    reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduce' : 'no-preference',
+                    touchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+                    userAgent: navigator.userAgent,
+                    platform: navigator.platform,
+                    language: navigator.language,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                };
+            ";
+
+            var result = await session.Page.EvaluateAsync<object>(jsCode);
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return $"Failed to get viewport info: {ex.Message}";
+        }
+    }
+
+    [McpServerTool]
+    [Description("Change viewport size of existing browser session")]
+    public async Task<string> SetViewportSize(
+        [Description("Viewport width in pixels")] int width,
+        [Description("Viewport height in pixels")] int height,
+        [Description("Session ID")] string sessionId = "default")
+    {
+        try
+        {
+            var session = sessionManager.GetSession(sessionId);
+            if (session?.Page == null)
+                return $"Session {sessionId} not found or page not available.";
+
+            await session.Page.SetViewportSizeAsync(width, height);
+            return $"Viewport size changed to {width}x{height} for session {sessionId}";
+        }
+        catch (Exception ex)
+        {
+            return $"Failed to set viewport size: {ex.Message}";
+        }
+    }
+
+    [McpServerTool]
+    [Description("Simulate device orientation change (portrait/landscape)")]
+    public async Task<string> RotateDevice(
+        [Description("Orientation: portrait or landscape")] string orientation,
+        [Description("Session ID")] string sessionId = "default")
+    {
+        try
+        {
+            var session = sessionManager.GetSession(sessionId);
+            if (session?.Page == null)
+                return $"Session {sessionId} not found or page not available.";
+
+            // Get current viewport size
+            var currentViewport = session.Page.ViewportSize;
+            if (currentViewport == null)
+                return "Unable to get current viewport size";
+
+            int newWidth, newHeight;
+            if (orientation.ToLower() == "landscape")
+            {
+                // Landscape: width > height
+                newWidth = Math.Max(currentViewport.Width, currentViewport.Height);
+                newHeight = Math.Min(currentViewport.Width, currentViewport.Height);
+            }
+            else
+            {
+                // Portrait: height > width
+                newWidth = Math.Min(currentViewport.Width, currentViewport.Height);
+                newHeight = Math.Max(currentViewport.Width, currentViewport.Height);
+            }
+
+            await session.Page.SetViewportSizeAsync(newWidth, newHeight);
+            return $"Device rotated to {orientation} orientation ({newWidth}x{newHeight}) for session {sessionId}";
+        }
+        catch (Exception ex)
+        {
+            return $"Failed to rotate device: {ex.Message}";
         }
     }
 

@@ -34,10 +34,13 @@ public class PlaywrightSessionManager
         }
     }
 
-    public async Task<string> CreateSessionAsync(string sessionId, string browserType = "chrome", bool headless = true)
+public async Task<string> CreateSessionAsync(string sessionId, string browserType = "chrome", bool headless = true, BrowserLaunchOptions? options = null)
     {
         try
         {
+            // Use default options if none provided
+            options ??= new BrowserLaunchOptions();
+
             // Initialize Playwright if needed
             _playwright ??= await Playwright.CreateAsync();
 
@@ -54,13 +57,12 @@ public class PlaywrightSessionManager
                 CreatedAt = DateTime.UtcNow
             };
 
-            // Launch browser based on type (simplified options)
+            // Launch browser based on type with simplified options
             session.Browser = browserType.ToLower() switch
             {
                 "chrome" or "chromium" => await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
                 {
                     Headless = headless
-                    // Removed Args to prevent potential JSON depth issues
                 }),
                 "firefox" => await _playwright.Firefox.LaunchAsync(new BrowserTypeLaunchOptions
                 {
@@ -73,11 +75,95 @@ public class PlaywrightSessionManager
                 _ => throw new ArgumentException($"Unsupported browser type: {browserType}")
             };
 
-            // Create browser context
-            session.Context = await session.Browser.NewContextAsync(new BrowserNewContextOptions
+            // Check for device emulation first
+            var deviceConfig = BrowserLaunchOptions.GetDeviceConfiguration(options.DeviceEmulation);
+            
+            // Create browser context options
+            var contextOptions = new BrowserNewContextOptions();
+
+            if (deviceConfig != null)
             {
-                ViewportSize = new ViewportSize { Width = 1920, Height = 1080 }
-            });
+                // Use device configuration
+                contextOptions.ViewportSize = new ViewportSize 
+                { 
+                    Width = deviceConfig.ViewportWidth, 
+                    Height = deviceConfig.ViewportHeight 
+                };
+                contextOptions.UserAgent = deviceConfig.UserAgent;
+                contextOptions.IsMobile = deviceConfig.IsMobile;
+                contextOptions.HasTouch = deviceConfig.HasTouch;
+                contextOptions.DeviceScaleFactor = deviceConfig.DeviceScaleFactor;
+            }
+            else
+            {
+                // Use custom viewport size
+                contextOptions.ViewportSize = new ViewportSize 
+                { 
+                    Width = options.ViewportWidth, 
+                    Height = options.ViewportHeight 
+                };
+                
+                // Apply custom user agent if provided
+                if (!string.IsNullOrEmpty(options.UserAgent))
+                {
+                    contextOptions.UserAgent = options.UserAgent;
+                }
+            }
+
+            // Apply timezone if provided
+            if (!string.IsNullOrEmpty(options.Timezone))
+            {
+                contextOptions.TimezoneId = options.Timezone;
+            }
+
+            // Apply locale if provided
+            if (!string.IsNullOrEmpty(options.Locale))
+            {
+                contextOptions.Locale = options.Locale;
+            }
+
+            // Apply color scheme preference
+            if (!string.IsNullOrEmpty(options.ColorScheme))
+            {
+                contextOptions.ColorScheme = options.ColorScheme.ToLower() switch
+                {
+                    "light" => ColorScheme.Light,
+                    "dark" => ColorScheme.Dark,
+                    _ => null
+                };
+            }
+
+            // Apply reduced motion preference
+            if (!string.IsNullOrEmpty(options.ReducedMotion))
+            {
+                contextOptions.ReducedMotion = options.ReducedMotion.ToLower() switch
+                {
+                    "reduce" => ReducedMotion.Reduce,
+                    "no-preference" => ReducedMotion.NoPreference,
+                    _ => null
+                };
+            }
+
+            // Set up permissions
+            var permissions = new List<string>();
+            if (options.EnableGeolocation) permissions.Add("geolocation");
+            if (options.EnableCamera) permissions.Add("camera");
+            if (options.EnableMicrophone) permissions.Add("microphone");
+            
+            if (permissions.Any())
+            {
+                contextOptions.Permissions = permissions;
+            }
+
+            // Apply extra HTTP headers
+            var extraHeaders = options.GetExtraHttpHeadersDictionary();
+            if (extraHeaders != null && extraHeaders.Any())
+            {
+                contextOptions.ExtraHTTPHeaders = extraHeaders;
+            }
+
+            // Create browser context with all options
+            session.Context = await session.Browser.NewContextAsync(contextOptions);
 
             // Create page
             session.Page = await session.Context.NewPageAsync();
@@ -92,7 +178,7 @@ public class PlaywrightSessionManager
             session.ConsoleLogs.Add(new ConsoleLogEntry
             {
                 Type = "debug",
-                Text = $"Session {sessionId} created successfully at {DateTime.UtcNow:HH:mm:ss.fff}",
+                Text = $"Session {sessionId} created successfully at {DateTime.UtcNow:HH:mm:ss.fff} with viewport {options.ViewportWidth}x{options.ViewportHeight}",
                 Timestamp = DateTime.UtcNow
             });
 
@@ -106,7 +192,13 @@ public class PlaywrightSessionManager
                 Timestamp = DateTime.UtcNow
             });
 
+            var deviceInfo = deviceConfig != null ? $" (Device: {options.DeviceEmulation})" : "";
+            var viewportInfo = deviceConfig != null 
+                ? $"{deviceConfig.ViewportWidth}x{deviceConfig.ViewportHeight}" 
+                : $"{options.ViewportWidth}x{options.ViewportHeight}";
+
             return $"Session {sessionId} created successfully with {browserType} browser. " +
+                   $"Viewport: {viewportInfo}{deviceInfo}. " +
                    $"Session is active: {session.IsActive}. " +
                    $"Total active sessions: {_sessions.Count}";
         }
@@ -114,6 +206,12 @@ public class PlaywrightSessionManager
         {
             return $"Failed to create session {sessionId}: {ex.Message}\nStack trace: {ex.StackTrace}";
         }
+    }
+
+    // Keep the original method for backward compatibility
+    public async Task<string> CreateSessionAsync(string sessionId, string browserType = "chrome", bool headless = true)
+    {
+        return await CreateSessionAsync(sessionId, browserType, headless, new BrowserLaunchOptions());
     }
 
     private async Task SetupEventListenersAsync(SessionContext session)
