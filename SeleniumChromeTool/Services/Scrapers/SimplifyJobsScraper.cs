@@ -576,7 +576,7 @@ public partial class SimplifyJobsScraper : BaseJobScraper
         catch (Exception ex)
         {
             Logger.LogError($"Error extracting job IDs: {ex.Message}");
-            return new List<string>();
+            return [];
         }
     }
 
@@ -1514,7 +1514,7 @@ public partial class SimplifyJobsScraper : BaseJobScraper
         if (job.IsRemote) score += 10;
         
         // Technology stack bonuses
-        List<string> techList = job.Technologies ?? new List<string>();
+        List<string> techList = job.Technologies ?? [];
         if (techList.Any(t => t.Contains("Azure", StringComparison.OrdinalIgnoreCase))) score += 5;
         if (techList.Any(t => t.Contains("AWS", StringComparison.OrdinalIgnoreCase))) score += 5;
         if (techList.Any(t => t.Contains("Angular", StringComparison.OrdinalIgnoreCase))) score += 5;
@@ -1527,8 +1527,7 @@ public partial class SimplifyJobsScraper : BaseJobScraper
     {
         // Basic validation for job ID format (UUIDs, etc.)
         return !string.IsNullOrEmpty(jobId) && 
-               jobId.Length >= 8 && 
-               jobId.Length <= 50 &&
+               jobId.Length is >= 8 and <= 50 &&
                !jobId.Contains(" ");
     }
 
@@ -1586,7 +1585,7 @@ public partial class SimplifyJobsScraper : BaseJobScraper
             catch { }
         }
         
-        return new List<IWebElement>();
+        return [];
     }
     
     private async Task ClickJobCardSafely(IWebElement jobCard)

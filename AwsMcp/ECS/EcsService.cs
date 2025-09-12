@@ -1,6 +1,5 @@
 using Amazon.ECS;
 using Amazon.ECS.Model;
-using Amazon.Runtime;
 using AwsMcp.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -44,7 +43,7 @@ public class EcsService
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            AWSCredentials? credentials = credentialsProvider.GetCredentials();
+            var credentials = credentialsProvider.GetCredentials();
             
             if (credentials != null)
             {
@@ -318,7 +317,7 @@ public class EcsService
             request.Cluster = cluster;
         }
         
-        ListContainerInstancesResponse? response = await _ecsClient!.ListContainerInstancesAsync(request);
+        var response = await _ecsClient!.ListContainerInstancesAsync(request);
         
         if (response.ContainerInstanceArns.Any())
         {
@@ -332,11 +331,11 @@ public class EcsService
                 describeRequest.Cluster = cluster;
             }
             
-            DescribeContainerInstancesResponse? describeResponse = await _ecsClient!.DescribeContainerInstancesAsync(describeRequest);
+            var describeResponse = await _ecsClient!.DescribeContainerInstancesAsync(describeRequest);
             return describeResponse.ContainerInstances;
         }
         
-        return new List<ContainerInstance>();
+        return [];
     }
     
     private void EnsureInitialized()

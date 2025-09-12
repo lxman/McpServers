@@ -4,7 +4,6 @@ using MongoDB.Driver;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using MongoIntegration.Configuration;
-using MongoIntegration.Services;
 
 namespace MongoIntegration.Services;
 
@@ -194,7 +193,7 @@ public class CrossServerOperations
                         {
                             ServerName = serverName,
                             Error = "Server not connected",
-                            Documents = Array.Empty<object>(),
+                            Documents = [],
                             Count = 0,
                             Success = false
                         });
@@ -218,7 +217,7 @@ public class CrossServerOperations
                     {
                         ServerName = serverName,
                         Error = ex.Message,
-                        Documents = Array.Empty<object>(),
+                        Documents = [],
                         Count = 0,
                         Success = false
                     });
@@ -324,7 +323,7 @@ public class CrossServerOperations
             
             int successfulTransfers = transferResults.Count(r => r.Success);
             long totalDocumentsToTransfer = transferResults
-                .Where(r => r.Success && r.SourceDocuments.HasValue)
+                .Where(r => r is { Success: true, SourceDocuments: not null })
                 .Sum(r => r.SourceDocuments.Value);
             
             return JsonSerializer.Serialize(new
@@ -480,7 +479,7 @@ public class CrossServerOperations
                 Type type = r.GetType();
                 PropertyInfo? healthyProperty = type.GetProperty("isHealthy");
                 object? healthyValue = healthyProperty?.GetValue(r);
-                return healthyValue is bool healthy && healthy;
+                return healthyValue is bool and true;
             });
             
             int totalServers = healthResults.Count;
@@ -516,7 +515,7 @@ public class CrossServerQueryResult
 {
     public string ServerName { get; set; } = string.Empty;
     public string? Error { get; set; }
-    public IEnumerable<object> Documents { get; set; } = Array.Empty<object>();
+    public IEnumerable<object> Documents { get; set; } = [];
     public int Count { get; set; }
     public bool Success { get; set; }
 }

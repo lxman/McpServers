@@ -5,8 +5,8 @@ namespace DesktopDriver.Services;
 
 public class SecurityManager
 {
-    private readonly List<string> _allowedDirectories = new();
-    private readonly HashSet<string> _blockedCommands = new();
+    private readonly List<string> _allowedDirectories = [];
+    private readonly HashSet<string> _blockedCommands = [];
     private readonly ILogger<SecurityManager> _logger;
     private readonly string _configPath;
 

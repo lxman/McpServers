@@ -73,7 +73,7 @@ public class ChangeTrackingService(
             UndoRedoResult result = await undoRedoOperationsService.UndoChangeAsync(changeId);
             
             // If the undo operation requires change tracking, track it
-            if (result.Success && result.RequiresChangeTracking && result.UndoContent != null)
+            if (result is { Success: true, RequiresChangeTracking: true, UndoContent: not null })
             {
                 string currentContent = result.UndoContent["current_content"].ToString() ?? "";
                 string restoredContent = result.UndoContent["restored_content"].ToString() ?? "";
@@ -117,7 +117,7 @@ public class ChangeTrackingService(
             UndoRedoResult result = await undoRedoOperationsService.RedoChangeAsync(changeId);
             
             // If the redo operation requires change tracking, track it
-            if (result.Success && result.RequiresChangeTracking && result.UndoContent != null)
+            if (result is { Success: true, RequiresChangeTracking: true, UndoContent: not null })
             {
                 string currentContent = result.UndoContent["current_content"].ToString() ?? "";
                 string restoredContent = result.UndoContent["restored_content"].ToString() ?? "";

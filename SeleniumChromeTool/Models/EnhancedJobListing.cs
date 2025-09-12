@@ -50,8 +50,8 @@ public class ApplicationCategoryInfo
 {
     public ApplicationPriority Priority { get; set; }
     public int ApplicationReadinessScore { get; set; }
-    public List<string> ReasonCodes { get; set; } = new();
-    public List<string> ActionItems { get; set; } = new();
+    public List<string> ReasonCodes { get; set; } = [];
+    public List<string> ActionItems { get; set; } = [];
     public TimeSpan EstimatedApplicationTime { get; set; }
     public UrgencyLevel DeadlineUrgency { get; set; }
     public CompetitivenessLevel CompetitivenessRating { get; set; }
@@ -64,7 +64,7 @@ public class ApplicationCategoryInfo
 public class MarketIntelligenceData
 {
     public decimal SalaryPercentile { get; set; } // Where this salary ranks in market
-    public List<string> TrendingTechnologies { get; set; } = new(); // Technologies in this job that are trending
+    public List<string> TrendingTechnologies { get; set; } = []; // Technologies in this job that are trending
     public CompanyMarketInfo? CompanyInfo { get; set; }
     public LocationMarketInfo? LocationInfo { get; set; }
     public DateTime AnalyzedAt { get; set; }
@@ -90,5 +90,5 @@ public class LocationMarketInfo
     public int JobCountInLocation { get; set; }
     public decimal AverageLocationSalary { get; set; }
     public double RemotePercentage { get; set; }
-    public List<string> TopCompaniesInLocation { get; set; } = new();
+    public List<string> TopCompaniesInLocation { get; set; } = [];
 }

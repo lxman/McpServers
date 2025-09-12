@@ -1,7 +1,5 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
-using Amazon.S3;
-using Amazon.S3.Model;
 using ModelContextProtocol.Server;
 using AwsMcp.S3;
 using AwsMcp.Configuration;
@@ -46,7 +44,7 @@ public class S3Tools
                 ForcePathStyle = forcePathStyle
             };
 
-            bool success = await _s3Service.InitializeAsync(config);
+            var success = await _s3Service.InitializeAsync(config);
             
             return JsonSerializer.Serialize(new
             {
@@ -73,7 +71,7 @@ public class S3Tools
     {
         try
         {
-            List<S3Bucket> buckets = await _s3Service.ListBucketsAsync();
+            var buckets = await _s3Service.ListBucketsAsync();
             
             return JsonSerializer.Serialize(new
             {
@@ -108,7 +106,7 @@ public class S3Tools
     {
         try
         {
-            List<S3Object> objects = await _s3Service.ListObjectsAsync(bucketName, prefix, maxKeys);
+            var objects = await _s3Service.ListObjectsAsync(bucketName, prefix, maxKeys);
             
             return JsonSerializer.Serialize(new
             {
@@ -146,7 +144,7 @@ public class S3Tools
     {
         try
         {
-            string content = await _s3Service.GetObjectContentAsync(bucketName, key);
+            var content = await _s3Service.GetObjectContentAsync(bucketName, key);
             
             return JsonSerializer.Serialize(new
             {
@@ -177,7 +175,7 @@ public class S3Tools
     {
         try
         {
-            GetObjectMetadataResponse metadata = await _s3Service.GetObjectMetadataAsync(bucketName, key);
+            var metadata = await _s3Service.GetObjectMetadataAsync(bucketName, key);
             
             return JsonSerializer.Serialize(new
             {
@@ -216,7 +214,7 @@ public class S3Tools
     {
         try
         {
-            PutObjectResponse response = await _s3Service.PutObjectAsync(bucketName, key, content, contentType);
+            var response = await _s3Service.PutObjectAsync(bucketName, key, content, contentType);
             
             return JsonSerializer.Serialize(new
             {
@@ -336,8 +334,8 @@ public class S3Tools
     {
         try
         {
-            DateTime expiry = DateTime.UtcNow.AddHours(expirationHours);
-            HttpVerb httpVerb = httpMethod.ToUpperInvariant() switch
+            var expiry = DateTime.UtcNow.AddHours(expirationHours);
+            var httpVerb = httpMethod.ToUpperInvariant() switch
             {
                 "GET" => Amazon.S3.HttpVerb.GET,
                 "PUT" => Amazon.S3.HttpVerb.PUT,
@@ -345,7 +343,7 @@ public class S3Tools
                 _ => Amazon.S3.HttpVerb.GET
             };
             
-            string url = _s3Service.GeneratePresignedUrl(bucketName, key, expiry, httpVerb);
+            var url = _s3Service.GeneratePresignedUrl(bucketName, key, expiry, httpVerb);
             
             return JsonSerializer.Serialize(new
             {
@@ -376,7 +374,7 @@ public class S3Tools
     {
         try
         {
-            bool exists = await _s3Service.BucketExistsAsync(bucketName);
+            var exists = await _s3Service.BucketExistsAsync(bucketName);
             
             return JsonSerializer.Serialize(new
             {
@@ -405,7 +403,7 @@ public class S3Tools
     {
         try
         {
-            bool exists = await _s3Service.ObjectExistsAsync(bucketName, key);
+            var exists = await _s3Service.ObjectExistsAsync(bucketName, key);
             
             return JsonSerializer.Serialize(new
             {

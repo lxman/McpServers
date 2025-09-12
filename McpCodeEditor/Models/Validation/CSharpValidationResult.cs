@@ -22,7 +22,7 @@
 
         public CSharpValidationResult()
         {
-            RoslynDiagnostics = new List<RoslynDiagnostic>();
+            RoslynDiagnostics = [];
         }
 
         /// <summary>

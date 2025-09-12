@@ -123,7 +123,7 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         
         EnhancedVariableAnalysisResult analysis = await analysisTask;
         
-        if (analysis.IsSuccessful && analysis.HandlingMapping.VariablesToReturn.Count > 0)
+        if (analysis is { IsSuccessful: true, HandlingMapping.VariablesToReturn.Count: > 0 })
         {
             // Return comma-separated variable names
             return string.Join(", ", analysis.HandlingMapping.VariablesToReturn.Select(v => v.Name));
@@ -158,7 +158,7 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         
         EnhancedVariableAnalysisResult analysis = await analysisTask;
         
-        if (analysis.IsSuccessful && analysis.HandlingMapping.VariablesToReturn.Count > 0)
+        if (analysis is { IsSuccessful: true, HandlingMapping.VariablesToReturn.Count: > 0 })
         {
             // Return the first variable that needs to be returned
             return analysis.HandlingMapping.VariablesToReturn.First().Name;

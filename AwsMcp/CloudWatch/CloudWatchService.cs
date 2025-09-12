@@ -2,10 +2,10 @@
 using Amazon.CloudWatch.Model;
 using Amazon.CloudWatchLogs;
 using Amazon.CloudWatchLogs.Model;
-using Amazon.Runtime;
 using AwsMcp.Configuration;
 using Microsoft.Extensions.Logging;
 using Metric = Amazon.CloudWatch.Model.Metric;
+using InvalidOperationException = Amazon.CloudWatchLogs.Model.InvalidOperationException;
 
 namespace AwsMcp.CloudWatch;
 
@@ -18,6 +18,16 @@ public class CloudWatchService
     private AmazonCloudWatchClient? _cloudWatchClient;
     private AmazonCloudWatchLogsClient? _logsClient;
     private AwsConfiguration? _config;
+    /// <summary>
+    /// Check if metrics client is available
+    /// </summary>
+    public bool IsMetricsClientAvailable => _cloudWatchClient != null;
+
+    /// <summary>
+    /// Check if logs client is available
+    /// </summary>
+    public bool IsLogsClientAvailable => _logsClient != null;
+
     
     public CloudWatchService(ILogger<CloudWatchService> logger)
     {
@@ -27,7 +37,11 @@ public class CloudWatchService
     /// <summary>
     /// Initialize CloudWatch clients with configuration
     /// </summary>
-    public async Task<bool> InitializeAsync(AwsConfiguration config)
+    /// <param name="config">AWS configuration</param>
+    /// <param name="testConnection">Whether to test connection during initialization (default: true)</param>
+    /// <param name="testMetricsOnly">If testing, only test metrics client (default: false)</param>
+    /// <param name="testLogsOnly">If testing, only test logs client (default: false)</param>
+    public async Task<bool> InitializeAsync(AwsConfiguration config, bool testConnection = true, bool testMetricsOnly = false, bool testLogsOnly = false)
     {
         try
         {
@@ -57,7 +71,7 @@ public class CloudWatchService
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            AWSCredentials? credentials = credentialsProvider.GetCredentials();
+            var credentials = credentialsProvider.GetCredentials();
             
             if (credentials != null)
             {
@@ -70,9 +84,57 @@ public class CloudWatchService
                 _logsClient = new AmazonCloudWatchLogsClient(logsConfig);
             }
             
-            // Test connection - use a simple request that works with pagination
-            await _cloudWatchClient.ListMetricsAsync(new ListMetricsRequest());
-            await _logsClient.DescribeLogGroupsAsync(new DescribeLogGroupsRequest { Limit = 1 });
+            // Optional connection testing with granular control
+            if (testConnection)
+            {
+                var testResults = new List<string>();
+                
+                // Test metrics client if not logs-only
+                if (!testLogsOnly)
+                {
+                    try
+                    {
+                        await _cloudWatchClient.ListMetricsAsync(new ListMetricsRequest());
+                        testResults.Add("Metrics client: OK");
+                        _logger.LogInformation("CloudWatch Metrics client connection test successful");
+                    }
+                    catch (Exception ex)
+                    {
+                        testResults.Add($"Metrics client: Failed - {ex.Message}");
+                        _logger.LogWarning(ex, "CloudWatch Metrics client connection test failed");
+                        
+                        if (testMetricsOnly)
+                        {
+                            // If we're only testing metrics and it fails, this is a critical failure
+                            throw new InvalidOperationException("CloudWatch Metrics client connection test failed", ex);
+                        }
+                    }
+                }
+                
+                // Test logs client if not metrics-only
+                if (!testMetricsOnly)
+                {
+                    try
+                    {
+                        await _logsClient.DescribeLogGroupsAsync(new DescribeLogGroupsRequest { Limit = 1 });
+                        testResults.Add("Logs client: OK");
+                        _logger.LogInformation("CloudWatch Logs client connection test successful");
+                    }
+                    catch (Exception ex)
+                    {
+                        testResults.Add($"Logs client: Failed - {ex.Message}");
+                        _logger.LogWarning(ex, "CloudWatch Logs client connection test failed");
+                        
+                        if (testLogsOnly)
+                        {
+                            // If we're only testing logs and it fails, this is a critical failure
+                            throw new InvalidOperationException("CloudWatch Logs client connection test failed", ex);
+                        }
+                    }
+                }
+                
+                _logger.LogInformation("CloudWatch connection test results: {Results}", string.Join(", ", testResults));
+            }
             
             _logger.LogInformation("CloudWatch clients initialized successfully");
             return true;
@@ -91,7 +153,7 @@ public class CloudWatchService
     /// </summary>
     public async Task<List<Metric>> ListMetricsAsync(string? namespaceName = null, string? metricName = null, int maxRecords = 500)
     {
-        EnsureInitialized();
+        EnsureMetricsInitialized();
         
         var request = new ListMetricsRequest();
         
@@ -115,7 +177,7 @@ public class CloudWatchService
                 request.NextToken = nextToken;
             }
             
-            ListMetricsResponse? response = await _cloudWatchClient!.ListMetricsAsync(request);
+            var response = await _cloudWatchClient!.ListMetricsAsync(request);
             allMetrics.AddRange(response.Metrics);
             nextToken = response.NextToken;
             
@@ -142,7 +204,7 @@ public class CloudWatchService
         List<string> statistics,
         List<Dimension>? dimensions = null)
     {
-        EnsureInitialized();
+        EnsureMetricsInitialized();
         
         var request = new GetMetricStatisticsRequest
         {
@@ -159,7 +221,7 @@ public class CloudWatchService
             request.Dimensions = dimensions;
         }
         
-        GetMetricStatisticsResponse? response = await _cloudWatchClient!.GetMetricStatisticsAsync(request);
+        var response = await _cloudWatchClient!.GetMetricStatisticsAsync(request);
         return response.Datapoints.OrderBy(d => d.Timestamp).ToList();
     }
     
@@ -168,7 +230,7 @@ public class CloudWatchService
     /// </summary>
     public async Task<PutMetricDataResponse> PutMetricDataAsync(string namespaceName, List<MetricDatum> metricData)
     {
-        EnsureInitialized();
+        EnsureMetricsInitialized();
         
         var request = new PutMetricDataRequest
         {
@@ -194,7 +256,7 @@ public class CloudWatchService
         int evaluationPeriods,
         List<Dimension>? dimensions = null)
     {
-        EnsureInitialized();
+        EnsureMetricsInitialized();
         
         var request = new PutMetricAlarmRequest
         {
@@ -222,7 +284,7 @@ public class CloudWatchService
     /// </summary>
     public async Task<List<MetricAlarm>> ListAlarmsAsync(string? stateValue = null, int maxRecords = 100)
     {
-        EnsureInitialized();
+        EnsureMetricsInitialized();
         
         var request = new DescribeAlarmsRequest
         {
@@ -234,7 +296,7 @@ public class CloudWatchService
             request.StateValue = stateValue;
         }
         
-        DescribeAlarmsResponse? response = await _cloudWatchClient!.DescribeAlarmsAsync(request);
+        var response = await _cloudWatchClient!.DescribeAlarmsAsync(request);
         return response.MetricAlarms;
     }
     
@@ -247,7 +309,7 @@ public class CloudWatchService
     /// </summary>
     public async Task<List<LogGroup>> ListLogGroupsAsync(string? logGroupNamePrefix = null, int limit = 50)
     {
-        EnsureInitialized();
+        EnsureLogsInitialized();
         
         var request = new DescribeLogGroupsRequest
         {
@@ -259,7 +321,7 @@ public class CloudWatchService
             request.LogGroupNamePrefix = logGroupNamePrefix;
         }
         
-        DescribeLogGroupsResponse? response = await _logsClient!.DescribeLogGroupsAsync(request);
+        var response = await _logsClient!.DescribeLogGroupsAsync(request);
         return response.LogGroups;
     }
     
@@ -268,7 +330,7 @@ public class CloudWatchService
     /// </summary>
     public async Task<List<LogStream>> ListLogStreamsAsync(string logGroupName, int limit = 50)
     {
-        EnsureInitialized();
+        EnsureLogsInitialized();
         
         var request = new DescribeLogStreamsRequest
         {
@@ -278,7 +340,7 @@ public class CloudWatchService
             Descending = true
         };
         
-        DescribeLogStreamsResponse? response = await _logsClient!.DescribeLogStreamsAsync(request);
+        var response = await _logsClient!.DescribeLogStreamsAsync(request);
         return response.LogStreams;
     }
     
@@ -292,7 +354,7 @@ public class CloudWatchService
         DateTime? endTime = null,
         int limit = 100)
     {
-        EnsureInitialized();
+        EnsureLogsInitialized();
         
         var request = new GetLogEventsRequest
         {
@@ -312,7 +374,7 @@ public class CloudWatchService
             request.EndTime = endTime.Value;
         }
         
-        GetLogEventsResponse? response = await _logsClient!.GetLogEventsAsync(request);
+        var response = await _logsClient!.GetLogEventsAsync(request);
         return response.Events;
     }
     
@@ -326,7 +388,7 @@ public class CloudWatchService
         DateTime? endTime = null,
         int limit = 100)
     {
-        EnsureInitialized();
+        EnsureLogsInitialized();
         
         var request = new FilterLogEventsRequest
         {
@@ -353,7 +415,7 @@ public class CloudWatchService
             request.EndTime = (long)(endTime.Value.ToUniversalTime() - epoch).TotalMilliseconds;
         }
         
-        FilterLogEventsResponse? response = await _logsClient!.FilterLogEventsAsync(request);
+        var response = await _logsClient!.FilterLogEventsAsync(request);
         return response.Events;
     }
     
@@ -362,7 +424,7 @@ public class CloudWatchService
     /// </summary>
     public async Task<CreateLogGroupResponse> CreateLogGroupAsync(string logGroupName)
     {
-        EnsureInitialized();
+        EnsureLogsInitialized();
         
         var request = new CreateLogGroupRequest
         {
@@ -377,7 +439,7 @@ public class CloudWatchService
     /// </summary>
     public async Task<DeleteLogGroupResponse> DeleteLogGroupAsync(string logGroupName)
     {
-        EnsureInitialized();
+        EnsureLogsInitialized();
         
         var request = new DeleteLogGroupRequest
         {
@@ -389,14 +451,32 @@ public class CloudWatchService
     
     #endregion
     
-    private void EnsureInitialized()
+    /// <summary>
+    /// Ensure the CloudWatch metrics client is initialized
+    /// </summary>
+    private void EnsureMetricsInitialized()
     {
-        if (_cloudWatchClient == null || _logsClient == null)
+        if (_cloudWatchClient == null)
         {
-            throw new System.InvalidOperationException("CloudWatch clients are not initialized. Call InitializeAsync first.");
+            throw new InvalidOperationException(
+                "CloudWatch Metrics client is not initialized. Call InitializeAsync first, " +
+                "or ensure you have CloudWatch metrics permissions.");
         }
     }
-    
+
+    /// <summary>
+    /// Ensure the CloudWatch logs client is initialized  
+    /// </summary>
+    private void EnsureLogsInitialized()
+    {
+        if (_logsClient == null)
+        {
+            throw new InvalidOperationException(
+                "CloudWatch Logs client is not initialized. Call InitializeAsync first, " +
+                "or ensure you have CloudWatch logs permissions.");
+        }
+    }
+
     public void Dispose()
     {
         _cloudWatchClient?.Dispose();

@@ -470,7 +470,7 @@ public class SmartDeduplicationService
 
     private HashSet<string> GetSignificantWords(string text)
     {
-        if (string.IsNullOrEmpty(text)) return new HashSet<string>();
+        if (string.IsNullOrEmpty(text)) return [];
 
         HashSet<string> words = Regex.Matches(text.ToLower(), @"\b\w{4,}\b")
             .Cast<Match>()
@@ -615,8 +615,8 @@ public class DeduplicationResult
     public int UniqueCount { get; set; }
     public int DuplicatesRemoved { get; set; }
     public double DeduplicationRate { get; set; }
-    public List<EnhancedJobListing> UniqueJobs { get; set; } = new();
-    public List<DuplicateGroup> DuplicateGroups { get; set; } = new();
+    public List<EnhancedJobListing> UniqueJobs { get; set; } = [];
+    public List<DuplicateGroup> DuplicateGroups { get; set; } = [];
     public DateTime ProcessedAt { get; set; }
 }
 
@@ -626,8 +626,8 @@ public class DeduplicationResult
 public class DuplicateGroup
 {
     public EnhancedJobListing SelectedJob { get; set; } = null!;
-    public List<EnhancedJobListing> Duplicates { get; set; } = new();
-    public List<string> MatchReasons { get; set; } = new();
+    public List<EnhancedJobListing> Duplicates { get; set; } = [];
+    public List<string> MatchReasons { get; set; } = [];
 }
 
 /// <summary>
@@ -637,6 +637,6 @@ public class DuplicateJobInfo
 {
     public bool IsDeduplicated { get; set; }
     public int DuplicateCount { get; set; }
-    public List<string> AlternateSources { get; set; } = new();
-    public List<string> DuplicateUrls { get; set; } = new();
+    public List<string> AlternateSources { get; set; } = [];
+    public List<string> DuplicateUrls { get; set; } = [];
 }

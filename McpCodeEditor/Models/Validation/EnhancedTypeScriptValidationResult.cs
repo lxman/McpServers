@@ -56,17 +56,17 @@
         /// <summary>
         /// Gets or sets the TypeScript compiler errors
         /// </summary>
-        public List<string> CompilerErrors { get; init; } = new List<string>();
+        public List<string> CompilerErrors { get; init; } = [];
 
         /// <summary>
         /// Gets or sets syntax validation errors
         /// </summary>
-        public List<string> SyntaxErrors { get; init; } = new List<string>();
+        public List<string> SyntaxErrors { get; init; } = [];
 
         /// <summary>
         /// Gets or sets type checking errors
         /// </summary>
-        public List<string> TypeErrors { get; init; } = new List<string>();
+        public List<string> TypeErrors { get; init; } = [];
 
         /// <summary>
         /// Gets or sets AST analysis results

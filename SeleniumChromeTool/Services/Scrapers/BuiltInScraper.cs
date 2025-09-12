@@ -219,7 +219,7 @@ public class BuiltInScraper : BaseJobScraper
             {
                 string line = lines[i];
                 
-                if (IsJobTitle(line) && line.Length > 10 && line.Length < 150)
+                if (IsJobTitle(line) && line.Length is > 10 and < 150)
                 {
                     Logger.LogInformation($"Found potential job title: {line}");
                     
@@ -344,7 +344,7 @@ public class BuiltInScraper : BaseJobScraper
             if (i == jobTitleIndex) continue;
             
             string line = lines[i].Trim();
-            if (line.Length > 3 && line.Length < 50 && 
+            if (line.Length is > 3 and < 50 && 
                 !IsJobTitle(line) && 
                 !line.Contains("Remote") && 
                 !line.Contains("Full-time") &&
@@ -380,7 +380,7 @@ public class BuiltInScraper : BaseJobScraper
         for (int i = jobTitleIndex + 1; i < Math.Min(lines.Length, jobTitleIndex + 5); i++)
         {
             string line = lines[i].Trim();
-            if (line.Length > 30 && line.Length < 200 && 
+            if (line.Length is > 30 and < 200 && 
                 !IsJobTitle(line) && 
                 line.Contains(" "))
             {
@@ -421,7 +421,7 @@ public class BuiltInScraper : BaseJobScraper
                         acceptButton = Driver!.FindElement(By.XPath($"//button[contains(text(), '{buttonSelector}')]"));
                     }
                     
-                    if (acceptButton != null && acceptButton.Displayed && acceptButton.Enabled)
+                    if (acceptButton is { Displayed: true, Enabled: true })
                     {
                         acceptButton.Click();
                         Logger.LogInformation("Clicked cookie consent button");
@@ -520,7 +520,7 @@ public class BuiltInScraper : BaseJobScraper
                     title = trimmedLine;
                 }
                 else if (!string.IsNullOrEmpty(title) && string.IsNullOrEmpty(company) && 
-                         trimmedLine.Length > 3 && trimmedLine.Length < 50)
+                         trimmedLine.Length is > 3 and < 50)
                 {
                     company = trimmedLine;
                 }

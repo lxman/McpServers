@@ -8,7 +8,7 @@ public class ConsoleLogEntry
     public string Url { get; set; } = "";
     public int LineNumber { get; set; }
     public int ColumnNumber { get; set; }
-    public string[] Args { get; set; } = Array.Empty<string>();
+    public string[] Args { get; set; } = [];
     public bool IsError => Type.Equals("error", StringComparison.OrdinalIgnoreCase);
     public bool IsWarning => Type.Equals("warning", StringComparison.OrdinalIgnoreCase) || Type.Equals("warn", StringComparison.OrdinalIgnoreCase);
 }

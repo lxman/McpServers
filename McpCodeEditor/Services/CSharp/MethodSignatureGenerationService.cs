@@ -137,7 +137,7 @@ public class MethodSignatureGenerationService(
             
             EnhancedVariableAnalysisResult enhancedAnalysis = await enhancedAnalysisTask;
             
-            if (enhancedAnalysis.IsSuccessful && enhancedAnalysis.HandlingMapping.VariablesToReturn.Count > 0)
+            if (enhancedAnalysis is { IsSuccessful: true, HandlingMapping.VariablesToReturn.Count: > 0 })
             {
                 IEnumerable<string> variableNames = enhancedAnalysis.HandlingMapping.VariablesToReturn.Select(v => v.Name);
                 string result = string.Join(", ", variableNames);

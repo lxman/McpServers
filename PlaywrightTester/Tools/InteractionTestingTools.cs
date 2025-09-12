@@ -253,7 +253,7 @@ public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
                             break;
                         default:
                             // Handle function keys, letters, numbers
-                            if (sequence.Key.StartsWith("F") && int.TryParse(sequence.Key[1..], out var fNum) && fNum >= 1 && fNum <= 12)
+                            if (sequence.Key.StartsWith("F") && int.TryParse(sequence.Key[1..], out var fNum) && fNum is >= 1 and <= 12)
                             {
                                 await session.Page.Keyboard.PressAsync(sequence.Key);
                             }

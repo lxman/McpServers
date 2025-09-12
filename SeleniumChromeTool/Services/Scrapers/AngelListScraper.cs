@@ -204,7 +204,7 @@ public class AngelListScraper : BaseJobScraper
                 try
                 {
                     IWebElement? closeButton = Driver.FindElement(By.CssSelector(selector));
-                    if (closeButton != null && closeButton.Displayed && closeButton.Enabled)
+                    if (closeButton is { Displayed: true, Enabled: true })
                     {
                         closeButton.Click();
                         Logger.LogInformation("Dismissed AngelList popup");
@@ -388,7 +388,7 @@ public class AngelListScraper : BaseJobScraper
                 }
                 
                 // Look for summary (longer descriptive text)
-                if (string.IsNullOrEmpty(summary) && trimmedLine.Length > 30 && trimmedLine.Length < 200)
+                if (string.IsNullOrEmpty(summary) && trimmedLine.Length is > 30 and < 200)
                 {
                     summary = trimmedLine;
                 }
@@ -482,7 +482,7 @@ public class AngelListScraper : BaseJobScraper
                 {
                     string line = lines[i];
                     
-                    if (IsJobTitle(line) && line.Length > 10 && line.Length < 150)
+                    if (IsJobTitle(line) && line.Length is > 10 and < 150)
                     {
                         Logger.LogInformation($"Found potential AngelList job title: {line}");
                         
@@ -571,7 +571,7 @@ public class AngelListScraper : BaseJobScraper
             if (i == jobTitleIndex) continue;
             
             string line = lines[i].Trim();
-            if (line.Length > 2 && line.Length < 50 && 
+            if (line.Length is > 2 and < 50 && 
                 !IsJobTitle(line) && 
                 !IsLocationText(line) &&
                 !line.Contains("•") &&
@@ -601,7 +601,7 @@ public class AngelListScraper : BaseJobScraper
         for (int i = jobTitleIndex + 1; i < Math.Min(lines.Length, jobTitleIndex + 5); i++)
         {
             string line = lines[i].Trim();
-            if (line.Length > 30 && line.Length < 300 && 
+            if (line.Length is > 30 and < 300 && 
                 !IsJobTitle(line) && 
                 !IsLocationText(line) &&
                 line.Contains(" "))

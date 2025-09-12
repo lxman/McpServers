@@ -41,10 +41,10 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
         public string ErrorMessage { get; set; } = string.Empty;
         public TestFrameworkInfo TestFramework { get; set; } = new();
         public TestMetrics Metrics { get; set; } = new();
-        public List<TestSuiteResult> TestSuites { get; set; } = new();
-        public List<TestFailure> Failures { get; set; } = new();
+        public List<TestSuiteResult> TestSuites { get; set; } = [];
+        public List<TestFailure> Failures { get; set; } = [];
         public CoverageReport Coverage { get; set; } = new();
-        public List<string> GeneratedReports { get; set; } = new();
+        public List<string> GeneratedReports { get; set; } = [];
         public TestEnvironmentInfo Environment { get; set; } = new();
     }
 
@@ -89,7 +89,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
         public int Failed { get; set; }
         public int Skipped { get; set; }
         public TimeSpan ExecutionTime { get; set; }
-        public List<IndividualTestResult> TestResults { get; set; } = new();
+        public List<IndividualTestResult> TestResults { get; set; } = [];
     }
 
     /// <summary>
@@ -128,7 +128,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
         public double BranchCoverage { get; set; }
         public double FunctionCoverage { get; set; }
         public double StatementCoverage { get; set; }
-        public List<FileCoverage> FileCoverages { get; set; } = new();
+        public List<FileCoverage> FileCoverages { get; set; } = [];
         public string CoverageReportPath { get; set; } = string.Empty;
         public CoverageThresholds Thresholds { get; set; } = new();
     }
@@ -143,7 +143,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
         public double BranchCoverage { get; set; }
         public double FunctionCoverage { get; set; }
         public double StatementCoverage { get; set; }
-        public List<int> UncoveredLines { get; set; } = new();
+        public List<int> UncoveredLines { get; set; } = [];
     }
 
     /// <summary>

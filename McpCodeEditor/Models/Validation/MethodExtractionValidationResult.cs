@@ -49,8 +49,8 @@ namespace McpCodeEditor.Models.Validation
 
         public MethodExtractionValidationResult()
         {
-            RequiredParameters = new List<ParameterInfo>();
-            ReturnValues = new List<ReturnValueInfo>();
+            RequiredParameters = [];
+            ReturnValues = [];
         }
 
         /// <summary>

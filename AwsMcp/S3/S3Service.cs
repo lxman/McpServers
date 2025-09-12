@@ -2,8 +2,6 @@
 using Amazon.S3.Model;
 using AwsMcp.Configuration;
 using Microsoft.Extensions.Logging;
-using System.Text;
-using Amazon.Runtime;
 
 namespace AwsMcp.S3;
 
@@ -46,7 +44,7 @@ public class S3Service
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            AWSCredentials? credentials = credentialsProvider.GetCredentials();
+            var credentials = credentialsProvider.GetCredentials();
             
             if (credentials != null)
             {
@@ -76,7 +74,7 @@ public class S3Service
     public async Task<List<S3Bucket>> ListBucketsAsync()
     {
         EnsureInitialized();
-        ListBucketsResponse? response = await _s3Client!.ListBucketsAsync();
+        var response = await _s3Client!.ListBucketsAsync();
         return response.Buckets;
     }
     
@@ -98,7 +96,7 @@ public class S3Service
             request.Prefix = prefix;
         }
         
-        ListObjectsV2Response? response = await _s3Client!.ListObjectsV2Async(request);
+        var response = await _s3Client!.ListObjectsV2Async(request);
         return response.S3Objects;
     }
     
@@ -109,7 +107,7 @@ public class S3Service
     {
         EnsureInitialized();
         
-        GetObjectResponse? response = await _s3Client!.GetObjectAsync(bucketName, key);
+        var response = await _s3Client!.GetObjectAsync(bucketName, key);
         using var reader = new StreamReader(response.ResponseStream);
         return await reader.ReadToEndAsync();
     }

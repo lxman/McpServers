@@ -90,7 +90,7 @@ namespace SeleniumChromeTool.Services.Scrapers
                     if (!discoveredJobIds.Any())
                     {
                         Logger.LogWarning("Still no results - returning empty list");
-                        return new List<EnhancedJobListing>();
+                        return [];
                     }
                 }
 
@@ -107,7 +107,7 @@ namespace SeleniumChromeTool.Services.Scrapers
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error in Google Custom Search SimplifyJobs discovery");
-                return new List<EnhancedJobListing>();
+                return [];
             }
         }
 

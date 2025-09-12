@@ -191,7 +191,7 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
                 IsDeclaredInExtraction = false,
                 Scope = VariableScope.Parameter,
                 IsModified = usage.IsWritten,
-                UsagePattern = usage.IsRead && usage.IsWritten ? VariableUsagePattern.ReadWrite :
+                UsagePattern = usage is { IsRead: true, IsWritten: true } ? VariableUsagePattern.ReadWrite :
                               usage.IsRead ? VariableUsagePattern.ReadOnly : VariableUsagePattern.WriteOnly
             };
             
@@ -284,15 +284,15 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
                 Type = inferredType
             };
 
-            if (usage.IsRead && !usage.IsWritten)
+            if (usage is { IsRead: true, IsWritten: false })
             {
                 result.ReadOnlyVariables.Add(variableInfo with { UsagePattern = VariableUsagePattern.ReadOnly });
             }
-            else if (!usage.IsRead && usage.IsWritten)
+            else if (usage is { IsRead: false, IsWritten: true })
             {
                 result.WriteOnlyVariables.Add(variableInfo with { UsagePattern = VariableUsagePattern.WriteOnly });
             }
-            else if (usage.IsRead && usage.IsWritten)
+            else if (usage is { IsRead: true, IsWritten: true })
             {
                 result.ReadWriteVariables.Add(variableInfo with { UsagePattern = VariableUsagePattern.ReadWrite });
             }

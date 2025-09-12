@@ -34,12 +34,12 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
         public string ComponentSelector { get; set; } = string.Empty;
         public string ErrorMessage { get; set; } = string.Empty;
         public ComponentContractInfo ContractInfo { get; set; } = new();
-        public List<InputValidationResult> InputValidations { get; set; } = new();
-        public List<OutputValidationResult> OutputValidations { get; set; } = new();
-        public List<InterfaceValidationResult> InterfaceValidations { get; set; } = new();
+        public List<InputValidationResult> InputValidations { get; set; } = [];
+        public List<OutputValidationResult> OutputValidations { get; set; } = [];
+        public List<InterfaceValidationResult> InterfaceValidations { get; set; } = [];
         public ContractComplianceScore ComplianceScore { get; set; } = new();
-        public List<ContractViolation> Violations { get; set; } = new();
-        public List<ContractRecommendation> Recommendations { get; set; } = new();
+        public List<ContractViolation> Violations { get; set; } = [];
+        public List<ContractRecommendation> Recommendations { get; set; } = [];
         public TestingEnvironmentInfo Environment { get; set; } = new();
     }
 
@@ -52,10 +52,10 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
         public string ComponentPath { get; set; } = string.Empty;
         public string ComponentSelector { get; set; } = string.Empty;
         public bool IsStandalone { get; set; }
-        public List<ComponentInput> Inputs { get; set; } = new();
-        public List<ComponentOutput> Outputs { get; set; } = new();
-        public List<ComponentMethod> PublicMethods { get; set; } = new();
-        public List<ComponentProperty> PublicProperties { get; set; } = new();
+        public List<ComponentInput> Inputs { get; set; } = [];
+        public List<ComponentOutput> Outputs { get; set; } = [];
+        public List<ComponentMethod> PublicMethods { get; set; } = [];
+        public List<ComponentProperty> PublicProperties { get; set; } = [];
         public ChangeDetectionInfo ChangeDetection { get; set; } = new();
         public ComponentLifecycleInfo Lifecycle { get; set; } = new();
     }
@@ -70,7 +70,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
         public bool IsRequired { get; set; }
         public bool HasDefaultValue { get; set; }
         public string DefaultValue { get; set; } = string.Empty;
-        public List<string> AllowedValues { get; set; } = new();
+        public List<string> AllowedValues { get; set; } = [];
         public string ValidationRules { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public bool HasTransform { get; set; }
@@ -87,7 +87,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
         public string EventType { get; set; } = string.Empty;
         public bool IsAsync { get; set; }
         public string Description { get; set; } = string.Empty;
-        public List<string> ExpectedPayloadProperties { get; set; } = new();
+        public List<string> ExpectedPayloadProperties { get; set; } = [];
         public string TriggerConditions { get; set; } = string.Empty;
     }
 
@@ -98,7 +98,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
     {
         public string Name { get; set; } = string.Empty;
         public string ReturnType { get; set; } = string.Empty;
-        public List<MethodParameter> Parameters { get; set; } = new();
+        public List<MethodParameter> Parameters { get; set; } = [];
         public string Description { get; set; } = string.Empty;
         public bool IsAsync { get; set; }
         public string AccessModifier { get; set; } = string.Empty;
@@ -137,7 +137,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
         public bool UsesSignals { get; set; }
         public bool UsesObservables { get; set; }
         public bool HasImmutableInputs { get; set; }
-        public List<string> InputDependencies { get; set; } = new();
+        public List<string> InputDependencies { get; set; } = [];
     }
 
     /// <summary>
@@ -145,7 +145,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
     /// </summary>
     public class ComponentLifecycleInfo
     {
-        public List<string> ImplementedHooks { get; set; } = new();
+        public List<string> ImplementedHooks { get; set; } = [];
         public bool HasOnInit { get; set; }
         public bool HasOnDestroy { get; set; }
         public bool HasOnChanges { get; set; }
@@ -159,7 +159,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
     {
         public string InputName { get; set; } = string.Empty;
         public bool IsValid { get; set; }
-        public List<InputTestCase> TestCases { get; set; } = new();
+        public List<InputTestCase> TestCases { get; set; } = [];
         public string ErrorMessage { get; set; } = string.Empty;
         public ValidationMetrics Metrics { get; set; } = new();
     }
@@ -185,7 +185,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
     {
         public string OutputName { get; set; } = string.Empty;
         public bool IsValid { get; set; }
-        public List<OutputTestCase> TestCases { get; set; } = new();
+        public List<OutputTestCase> TestCases { get; set; } = [];
         public string ErrorMessage { get; set; } = string.Empty;
         public ValidationMetrics Metrics { get; set; } = new();
     }
@@ -211,7 +211,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
     {
         public string InterfaceName { get; set; } = string.Empty;
         public bool IsValid { get; set; }
-        public List<InterfaceTestCase> TestCases { get; set; } = new();
+        public List<InterfaceTestCase> TestCases { get; set; } = [];
         public string ErrorMessage { get; set; } = string.Empty;
         public ValidationMetrics Metrics { get; set; } = new();
     }
@@ -223,7 +223,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
     {
         public string TestName { get; set; } = string.Empty;
         public string MethodName { get; set; } = string.Empty;
-        public List<object?> Parameters { get; set; } = new();
+        public List<object?> Parameters { get; set; } = [];
         public object? ExpectedResult { get; set; }
         public object? ActualResult { get; set; }
         public bool Passed { get; set; }
@@ -276,7 +276,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
         public string Description { get; set; } = string.Empty;
         public string Location { get; set; } = string.Empty;
         public string Recommendation { get; set; } = string.Empty;
-        public List<string> AffectedElements { get; set; } = new();
+        public List<string> AffectedElements { get; set; } = [];
     }
 
     /// <summary>
@@ -305,7 +305,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
         public bool SignalsSupported { get; set; }
         public bool StandaloneComponentsSupported { get; set; }
         public string TestingFramework { get; set; } = string.Empty;
-        public List<string> AvailableTestingLibraries { get; set; } = new();
+        public List<string> AvailableTestingLibraries { get; set; } = [];
     }
 
     [McpServerTool]
@@ -482,7 +482,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
                 TestingFramework = environmentResult.TryGetProperty("testingFramework", out var framework) ? framework.GetString() ?? "" : "",
                 AvailableTestingLibraries = environmentResult.TryGetProperty("availableTestingLibraries", out var libraries)
                     ? libraries.EnumerateArray().Select(lib => lib.GetString() ?? "").ToList()
-                    : new List<string>()
+                    : []
             };
         }
         catch (Exception ex)
@@ -700,7 +700,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
             var inputResult = new InputValidationResult
             {
                 InputName = input.Name,
-                TestCases = new List<InputTestCase>()
+                TestCases = []
             };
 
             try
@@ -762,7 +762,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
             var outputResult = new OutputValidationResult
             {
                 OutputName = output.Name,
-                TestCases = new List<OutputTestCase>()
+                TestCases = []
             };
 
             try
@@ -793,7 +793,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
                 }
 
                 // Calculate metrics
-                outputResult.Metrics = CalculateValidationMetrics(outputResult.TestCases.Select(tc => new { Passed = tc.EventEmitted && tc.PayloadValid, tc.ResponseTime }));
+                outputResult.Metrics = CalculateValidationMetrics(outputResult.TestCases.Select(tc => new { Passed = tc is { EventEmitted: true, PayloadValid: true }, tc.ResponseTime }));
                 outputResult.IsValid = outputResult.TestCases.All(tc => tc.EventEmitted);
             }
             catch (Exception ex)
@@ -818,7 +818,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
             var methodsResult = new InterfaceValidationResult
             {
                 InterfaceName = "PublicMethods",
-                TestCases = new List<InterfaceTestCase>()
+                TestCases = []
             };
 
             foreach (var method in contractInfo.PublicMethods)
@@ -827,7 +827,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
                 {
                     TestName = $"Method: {method.Name}",
                     MethodName = method.Name,
-                    Parameters = new List<object?>()
+                    Parameters = []
                 };
 
                 var testStart = DateTime.UtcNow;

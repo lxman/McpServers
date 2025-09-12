@@ -4,7 +4,7 @@ using ModelContextProtocol.Server;
 using AwsMcp.CloudWatch;
 using AwsMcp.Configuration;
 using Amazon.CloudWatch.Model;
-using Amazon.CloudWatchLogs.Model;
+using InvalidOperationException = Amazon.CloudWatchLogs.Model.InvalidOperationException;
 
 namespace AwsMcp.Tools;
 
@@ -43,7 +43,7 @@ public class CloudWatchTools
                 ServiceUrl = serviceUrl
             };
 
-            bool success = await _cloudWatchService.InitializeAsync(config);
+            var success = await _cloudWatchService.InitializeAsync(config);
             
             return JsonSerializer.Serialize(new
             {
@@ -56,11 +56,7 @@ public class CloudWatchTools
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            return HandleError(ex, "initializing CloudWatch service");
         }
     }
 
@@ -78,7 +74,7 @@ public class CloudWatchTools
     {
         try
         {
-            List<Metric> metrics = await _cloudWatchService.ListMetricsAsync(namespaceName, metricName, maxRecords);
+            var metrics = await _cloudWatchService.ListMetricsAsync(namespaceName, metricName, maxRecords);
             
             return JsonSerializer.Serialize(new
             {
@@ -96,11 +92,7 @@ public class CloudWatchTools
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            return HandleError(ex, "listing CloudWatch metrics");
         }
     }
 
@@ -124,10 +116,10 @@ public class CloudWatchTools
     {
         try
         {
-            DateTime start = DateTime.Parse(startTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
-            DateTime end = DateTime.Parse(endTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
+            var start = DateTime.Parse(startTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
+            var end = DateTime.Parse(endTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
             
-            List<string> statisticsList = statistics.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            var statisticsList = statistics.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(s => s.Trim()).ToList();
             
             List<Dimension>? dimensions = null;
@@ -141,7 +133,7 @@ public class CloudWatchTools
                 }).ToList();
             }
             
-            List<Datapoint> datapoints = await _cloudWatchService.GetMetricStatisticsAsync(
+            var datapoints = await _cloudWatchService.GetMetricStatisticsAsync(
                 namespaceName, metricName, start, end, period, statisticsList, dimensions);
             
             return JsonSerializer.Serialize(new
@@ -168,11 +160,7 @@ public class CloudWatchTools
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            return HandleError(ex, "getting CloudWatch metric statistics");
         }
     }
 
@@ -214,7 +202,7 @@ public class CloudWatchTools
                 }).ToList();
             }
             
-            await _cloudWatchService.PutMetricDataAsync(namespaceName, new List<MetricDatum> { metricDatum });
+            await _cloudWatchService.PutMetricDataAsync(namespaceName, [metricDatum]);
             
             return JsonSerializer.Serialize(new
             {
@@ -229,11 +217,7 @@ public class CloudWatchTools
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            return HandleError(ex, "putting CloudWatch metric data");
         }
     }
 
@@ -298,11 +282,7 @@ public class CloudWatchTools
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            return HandleError(ex, "creating CloudWatch alarm");
         }
     }
 
@@ -316,8 +296,8 @@ public class CloudWatchTools
     {
         try
         {
-            List<MetricAlarm> alarms = await _cloudWatchService.ListAlarmsAsync(stateValue, maxRecords);
-            
+            var alarms = await _cloudWatchService.ListAlarmsAsync(stateValue, maxRecords);
+        
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -341,11 +321,7 @@ public class CloudWatchTools
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            return HandleError(ex, "listing CloudWatch alarms");
         }
     }
 
@@ -363,7 +339,7 @@ public class CloudWatchTools
     {
         try
         {
-            List<LogGroup> logGroups = await _cloudWatchService.ListLogGroupsAsync(logGroupNamePrefix, limit);
+            var logGroups = await _cloudWatchService.ListLogGroupsAsync(logGroupNamePrefix, limit);
             
             return JsonSerializer.Serialize(new
             {
@@ -382,11 +358,7 @@ public class CloudWatchTools
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            return HandleError(ex, "listing CloudWatch log groups");
         }
     }
 
@@ -400,7 +372,7 @@ public class CloudWatchTools
     {
         try
         {
-            List<LogStream> logStreams = await _cloudWatchService.ListLogStreamsAsync(logGroupName, limit);
+            var logStreams = await _cloudWatchService.ListLogStreamsAsync(logGroupName, limit);
             
             return JsonSerializer.Serialize(new
             {
@@ -418,11 +390,7 @@ public class CloudWatchTools
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            return HandleError(ex, "listing CloudWatch log streams");
         }
     }
 
@@ -455,7 +423,7 @@ public class CloudWatchTools
                 end = DateTime.Parse(endTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
             }
             
-            List<OutputLogEvent> logEvents = await _cloudWatchService.GetLogEventsAsync(logGroupName, logStreamName, start, end, limit);
+            var logEvents = await _cloudWatchService.GetLogEventsAsync(logGroupName, logStreamName, start, end, limit);
             
             return JsonSerializer.Serialize(new
             {
@@ -475,11 +443,7 @@ public class CloudWatchTools
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            return HandleError(ex, "getting CloudWatch log events");
         }
     }
 
@@ -512,7 +476,7 @@ public class CloudWatchTools
                 end = DateTime.Parse(endTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
             }
             
-            List<FilteredLogEvent> logEvents = await _cloudWatchService.FilterLogEventsAsync(logGroupName, filterPattern, start, end, limit);
+            var logEvents = await _cloudWatchService.FilterLogEventsAsync(logGroupName, filterPattern, start, end, limit);
             
             return JsonSerializer.Serialize(new
             {
@@ -534,11 +498,7 @@ public class CloudWatchTools
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            return HandleError(ex, "filtering CloudWatch log events");
         }
     }
 
@@ -561,11 +521,7 @@ public class CloudWatchTools
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            return HandleError(ex, "creating CloudWatch log group");
         }
     }
 
@@ -588,13 +544,160 @@ public class CloudWatchTools
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            return HandleError(ex, "deleting CloudWatch log group");
         }
     }
 
     #endregion
+    
+    /// <summary>
+    /// Enhanced error handling for AWS operations with user-friendly messages
+    /// </summary>
+    private static string HandleError(Exception ex, string operation)
+    {
+        object error;
+
+        switch (ex)
+        {
+            case InvalidOperationException invalidOpEx:
+                error = new
+                {
+                    success = false,
+                    error = "CloudWatch service not initialized or missing permissions",
+                    details = invalidOpEx.Message,
+                    suggestedActions = new[]
+                    {
+                        "Ensure you have called InitializeCloudWatch first",
+                        "Check your AWS credentials and permissions", 
+                        "Verify your AWS region is correct",
+                        "For partial permissions, try initializing with testMetricsOnly or testLogsOnly parameters"
+                    },
+                    errorType = "ServiceNotInitialized"
+                };
+                break;
+            case Amazon.Runtime.AmazonServiceException awsEx:
+            {
+                var actions = awsEx.ErrorCode switch
+                {
+                    "AccessDenied" => new[]
+                    {
+                        "Check your IAM permissions for CloudWatch",
+                        "Ensure your user/role has CloudWatch:ListMetrics, CloudWatch:DescribeAlarms, or CloudWatch Logs permissions",
+                        "Try: aws sts get-caller-identity to verify your credentials"
+                    },
+                    "UnauthorizedOperation" => new[]
+                    {
+                        "Your AWS credentials don't have permission for CloudWatch operations",
+                        "Contact your AWS administrator to grant CloudWatch permissions",
+                        "Required permissions depend on the operation (metrics vs logs)"
+                    },
+                    "InvalidParameterValue" => new[]
+                    {
+                        "Check the parameters passed to the operation",
+                        "Verify metric names, namespaces, and time ranges are valid",
+                        "Ensure alarm names don't contain invalid characters"
+                    },
+                    "Throttling" => new[]
+                    {
+                        "AWS is throttling your CloudWatch requests",
+                        "Wait 30-60 seconds and try again",
+                        "Consider reducing the frequency of your requests"
+                    },
+                    "ResourceNotFound" => new[]
+                    {
+                        "The specified CloudWatch resource doesn't exist",
+                        "Check log group names, alarm names, and metric names",
+                        "Verify you're in the correct AWS region"
+                    },
+                    _ => new[]
+                    {
+                        "Check AWS CloudWatch service status at https://status.aws.amazon.com/",
+                        "Verify your parameters and try again",
+                        $"AWS Error Code: {awsEx.ErrorCode} - consult AWS documentation"
+                    }
+                };
+
+                error = new
+                {
+                    success = false,
+                    error = $"AWS CloudWatch service error: {awsEx.ErrorCode}",
+                    details = awsEx.Message,
+                    suggestedActions = actions,
+                    errorType = "AWSService",
+                    statusCode = awsEx.StatusCode.ToString(),
+                    awsErrorCode = awsEx.ErrorCode
+                };
+                break;
+            }
+            case Amazon.Runtime.AmazonClientException clientEx:
+                error = new
+                {
+                    success = false,
+                    error = "AWS client error - network or configuration issue",
+                    details = clientEx.Message,
+                    suggestedActions = new[]
+                    {
+                        "Check your internet connection",
+                        "Verify AWS endpoint configuration",
+                        "Check if you're behind a firewall or proxy",
+                        "Try with a different AWS region",
+                        "Verify your AWS service URL if using LocalStack"
+                    },
+                    errorType = "NetworkOrConfiguration"
+                };
+                break;
+            case ArgumentException argEx:
+                error = new
+                {
+                    success = false,
+                    error = "Invalid parameter provided to CloudWatch operation",
+                    details = argEx.Message,
+                    suggestedActions = new[]
+                    {
+                        "Check the format of date/time parameters (use ISO 8601 format like '2025-09-12T20:00:00Z')",
+                        "Verify all required parameters are provided",
+                        "Ensure numeric parameters (period, limit) are within valid ranges",
+                        "Check that alarm states are: OK, ALARM, or INSUFFICIENT_DATA"
+                    },
+                    errorType = "InvalidParameter"
+                };
+                break;
+            case JsonException jsonEx:
+                error = new
+                {
+                    success = false,
+                    error = "Invalid JSON format in parameters",
+                    details = jsonEx.Message,
+                    suggestedActions = new[]
+                    {
+                        "Check the format of JSON parameters like dimensionsJson",
+                        "Ensure JSON is properly escaped: [{\"Name\":\"Environment\",\"Value\":\"Production\"}]",
+                        "Use online JSON validators to verify your JSON syntax",
+                        "Common issue: Use double quotes, not single quotes in JSON"
+                    },
+                    errorType = "InvalidJSON"
+                };
+                break;
+            default:
+                error = new
+                {
+                    success = false,
+                    error = $"Unexpected error {operation}",
+                    details = ex.Message,
+                    suggestedActions = new[]
+                    {
+                        "Check the operation parameters are correct",
+                        "Verify your AWS configuration and credentials",
+                        "Try the operation again after a brief wait",
+                        "Contact support if the issue persists",
+                        $"Exception type: {ex.GetType().Name}"
+                    },
+                    errorType = "Unexpected",
+                    exceptionType = ex.GetType().Name
+                };
+                break;
+        }
+
+        return JsonSerializer.Serialize(error, new JsonSerializerOptions { WriteIndented = true });
+    }
 }

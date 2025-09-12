@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using AwsMcp.S3;
 using AwsMcp.CloudWatch;
+using AwsMcp.Configuration;
 using AwsMcp.ECS;
 using AwsMcp.ECR;
 using AwsMcp.Tools;
@@ -20,11 +21,11 @@ public class Program
         Console.SetError(TextWriter.Null);
         
         // Create the host builder with configuration
-        HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+        var builder = Host.CreateApplicationBuilder(args);
         
         // Add configuration sources
         // CRITICAL: Use absolute path to appsettings.json since working directory differs in MCP
-        string configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        var configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
         builder.Configuration
             .AddJsonFile(configPath, optional: true, reloadOnChange: true)
             .AddEnvironmentVariables()
@@ -37,6 +38,7 @@ public class Program
             .AddSingleton<CloudWatchService>()
             .AddSingleton<EcsService>()
             .AddSingleton<EcrService>()
+            .AddSingleton<AwsDiscoveryService>()  // Added Phase 2 Discovery Service
             // CRITICAL: Completely disable all logging to console/stdout
             .AddLogging(logging =>
             {
@@ -62,10 +64,11 @@ public class Program
             .WithTools<S3Tools>()
             .WithTools<CloudWatchTools>()
             .WithTools<EcsTools>()
-            .WithTools<EcrTools>();
+            .WithTools<EcrTools>()
+            .WithTools<AwsDiscoveryTools>();  // Added Phase 2 Discovery Tools
 
         // Build and run the host
-        IHost host = builder.Build();
+        var host = builder.Build();
         
         // Start the MCP server
         await host.RunAsync();

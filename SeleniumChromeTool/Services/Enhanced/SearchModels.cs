@@ -6,24 +6,24 @@ namespace SeleniumChromeTool.Services.Enhanced;
 
 public class DeduplicationRequest
 {
-    public List<EnhancedJobListing> Jobs { get; set; } = new();
+    public List<EnhancedJobListing> Jobs { get; set; } = [];
 }
 
 public class ApplicationCategorizationRequest
 {
-    public List<EnhancedJobListing> Jobs { get; set; } = new();
+    public List<EnhancedJobListing> Jobs { get; set; } = [];
     public ApplicationPreferences Preferences { get; set; } = new();
 }
 
 public class MarketIntelligenceRequest
 {
-    public List<EnhancedJobListing> Jobs { get; set; } = new();
+    public List<EnhancedJobListing> Jobs { get; set; } = [];
     public MarketAnalysisRequest AnalysisRequest { get; set; } = new();
 }
 
 public class EnhancedAnalysisRequest
 {
-    public List<EnhancedJobListing> Jobs { get; set; } = new();
+    public List<EnhancedJobListing> Jobs { get; set; } = [];
     public string? UserId { get; set; }
     public ApplicationPreferences? ApplicationPreferences { get; set; }
     public MarketAnalysisRequest? MarketAnalysisRequest { get; set; }
@@ -49,7 +49,7 @@ public class EnhancedAnalysisResult
     public DateTime CompletedAt { get; set; }
     public TimeSpan TotalProcessingTime { get; set; }
     public int OriginalJobCount { get; set; }
-    public List<string> ProcessingSteps { get; set; } = new();
+    public List<string> ProcessingSteps { get; set; } = [];
     
     public DeduplicationResult DeduplicationResult { get; set; } = new();
     public ApplicationCategorizationResult CategorizationResult { get; set; } = new();
@@ -81,13 +81,13 @@ public class EnhancedSearchResults
     public DateTime SearchEndTime { get; set; }
     public TimeSpan TotalSearchDuration { get; set; }
     
-    public List<string> SearchTermsUsed { get; set; } = new();
+    public List<string> SearchTermsUsed { get; set; } = [];
     public int TotalJobsFound { get; set; }
     
-    public List<EnhancedJobListing> HighPriorityJobs { get; set; } = new();     // 80%+ match
-    public List<EnhancedJobListing> ApplicationReadyJobs { get; set; } = new(); // 60%+ match
-    public List<EnhancedJobListing> ConsiderJobs { get; set; } = new();         // 40%+ match
-    public List<EnhancedJobListing> SkippedJobs { get; set; } = new();         // Under 40%
+    public List<EnhancedJobListing> HighPriorityJobs { get; set; } = [];     // 80%+ match
+    public List<EnhancedJobListing> ApplicationReadyJobs { get; set; } = []; // 60%+ match
+    public List<EnhancedJobListing> ConsiderJobs { get; set; } = [];         // 40%+ match
+    public List<EnhancedJobListing> SkippedJobs { get; set; } = [];         // Under 40%
     
     public int GetJobsAboveThreshold(int threshold) =>
         HighPriorityJobs.Count + ApplicationReadyJobs.Count + 
@@ -116,16 +116,16 @@ public class SalaryPreferences
 
 public class TechnologyPreferences
 {
-    public List<string> CoreTechnologies { get; set; } = new() { ".NET", "C#", "ASP.NET Core" };
-    public List<string> PreferredTechnologies { get; set; } = new() { "Azure", "Angular", "SQL Server", "Entity Framework" };
-    public List<string> BonusTechnologies { get; set; } = new() { "Kubernetes", "Docker", "Microservices", "Redis" };
+    public List<string> CoreTechnologies { get; set; } = [".NET", "C#", "ASP.NET Core"];
+    public List<string> PreferredTechnologies { get; set; } = ["Azure", "Angular", "SQL Server", "Entity Framework"];
+    public List<string> BonusTechnologies { get; set; } = ["Kubernetes", "Docker", "Microservices", "Redis"];
     public double Weight { get; set; } = 0.30; // 30% of total score
 }
 
 public class CompanyPreferences
 {
-    public List<string> PreferredStages { get; set; } = new() { "Startup", "Scale-up", "Growth" };
-    public List<string> AvoidStages { get; set; } = new() { "Enterprise-Legacy" };
+    public List<string> PreferredStages { get; set; } = ["Startup", "Scale-up", "Growth"];
+    public List<string> AvoidStages { get; set; } = ["Enterprise-Legacy"];
     public int MinEmployeeCount { get; set; } = 10;
     public int MaxEmployeeCount { get; set; } = 1000;
     public double Weight { get; set; } = 0.20; // 20% of total score
@@ -134,14 +134,14 @@ public class CompanyPreferences
 public class WorkPreferences
 {
     public bool PreferRemote { get; set; } = true;
-    public List<string> AcceptableLocations { get; set; } = new() { "Remote", "Atlanta", "United States" };
+    public List<string> AcceptableLocations { get; set; } = ["Remote", "Atlanta", "United States"];
     public double Weight { get; set; } = 0.15; // 15% of total score
 }
 
 public class ExperiencePreferences
 {
-    public List<string> TargetLevels { get; set; } = new() { "Senior", "Principal", "Lead", "Staff", "Architect" };
-    public List<string> AvoidLevels { get; set; } = new() { "Junior", "Entry", "Intern" };
+    public List<string> TargetLevels { get; set; } = ["Senior", "Principal", "Lead", "Staff", "Architect"];
+    public List<string> AvoidLevels { get; set; } = ["Junior", "Entry", "Intern"];
     public double Weight { get; set; } = 0.10; // 10% of total score
 }
 
@@ -151,7 +151,7 @@ public class ExperiencePreferences
 /// </summary>
 public class FetchJobsByIdsRequest
 {
-    public string[] JobIds { get; set; } = Array.Empty<string>();
+    public string[] JobIds { get; set; } = [];
     public string UserId { get; set; } = "default_user";
 }
 

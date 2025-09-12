@@ -505,7 +505,7 @@ public class JobScrapingController : ControllerBase
                 JobCount = results.ProcessedJobs.Count,
                 Jobs = results.ProcessedJobs.OrderByDescending(j => j.MatchScore),
                 HighPriorityJobs = results.ProcessedJobs.Where(j => j.MatchScore >= 80).ToList(),
-                ApplicationReadyJobs = results.ProcessedJobs.Where(j => j.MatchScore >= 60 && j.MatchScore < 80).ToList(),
+                ApplicationReadyJobs = results.ProcessedJobs.Where(j => j.MatchScore is >= 60 and < 80).ToList(),
                 Performance = new
                 {
                     Duration = results.TotalDuration,

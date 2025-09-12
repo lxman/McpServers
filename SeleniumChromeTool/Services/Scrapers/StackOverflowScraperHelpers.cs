@@ -39,7 +39,7 @@ public partial class StackOverflowScraper
                     ReadOnlyCollection<IWebElement>? closeButtons = driver.FindElements(By.CssSelector(selector));
                     foreach (var closeButton in closeButtons)
                     {
-                        if (closeButton?.Displayed == true && closeButton.Enabled)
+                        if (closeButton is { Displayed: true, Enabled: true })
                         {
                             closeButton.Click();
                             await Task.Delay(1000);

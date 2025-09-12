@@ -32,7 +32,7 @@ public class MarketIntelligenceService
                 JobTitle = "Software Engineer",
                 FocusArea = ".NET Development",
                 AnalysisPeriod = "Last 30 Days",
-                TargetTechnologies = new List<string> { "C#", ".NET", "ASP.NET" },
+                TargetTechnologies = ["C#", ".NET", "ASP.NET"],
                 IncludeHistoricalComparison = true
             };
         }
@@ -79,7 +79,7 @@ public class MarketIntelligenceService
     {
         return new TechnologyDemandAnalysis
         {
-            TrendingTechnologies = new List<string> { "C#", ".NET", "Azure", "React", "TypeScript" }
+            TrendingTechnologies = ["C#", ".NET", "Azure", "React", "TypeScript"]
         };
     }
 
@@ -118,11 +118,15 @@ public class MarketIntelligenceService
     {
         return new GeographicTrendAnalysis
         {
-            TopCities = new List<GeographicJobInfo>
-            {
+            TopCities =
+            [
                 new() { Location = "Remote", JobCount = jobs.Count(j => j.IsRemote) },
-                new() { Location = "Atlanta", JobCount = jobs.Count(j => j.Location.Contains("Atlanta", StringComparison.OrdinalIgnoreCase)) }
-            }
+                new()
+                {
+                    Location = "Atlanta",
+                    JobCount = jobs.Count(j => j.Location.Contains("Atlanta", StringComparison.OrdinalIgnoreCase))
+                }
+            ]
         };
     }
 
@@ -130,11 +134,11 @@ public class MarketIntelligenceService
     {
         return new ExperienceLevelDemandAnalysis
         {
-            LevelBreakdown = new List<ExperienceLevelInfo>
-            {
+            LevelBreakdown =
+            [
                 new() { Level = ExperienceLevel.Senior, JobCount = jobs.Count / 2, MarketPercentage = 50 },
                 new() { Level = ExperienceLevel.Mid, JobCount = jobs.Count / 3, MarketPercentage = 33 }
-            }
+            ]
         };
     }
 
@@ -143,18 +147,18 @@ public class MarketIntelligenceService
         return new CompetitivenessInsights
         {
             OverallCompetitiveness = CompetitivenessLevel.Medium,
-            HighCompetitionSegments = new List<string> { "Remote positions", "Senior roles" }
+            HighCompetitionSegments = ["Remote positions", "Senior roles"]
         };
     }
 
     private async Task<List<string>> GenerateMarketRecommendationsAsync(MarketIntelligenceReport report, MarketAnalysisRequest request)
     {
-        return new List<string>
-        {
+        return
+        [
             $"Market average salary is ${report.SalaryTrends.OverallStats.AverageSalary:N0}",
             $"Remote work is available in {report.RemoteWorkTrends.OverallDistribution.RemotePercentage}% of positions",
             "Focus on trending technologies: " + string.Join(", ", report.TechnologyDemand.TrendingTechnologies.Take(3))
-        };
+        ];
     }
 }
 
@@ -172,7 +176,7 @@ public class MarketIntelligenceReport
     public GeographicTrendAnalysis GeographicTrends { get; set; } = new();
     public ExperienceLevelDemandAnalysis ExperienceLevelDemand { get; set; } = new();
     public CompetitivenessInsights CompetitivenessInsights { get; set; } = new();
-    public List<string> Recommendations { get; set; } = new();
+    public List<string> Recommendations { get; set; } = [];
 }
 
 public class MarketAnalysisRequest
@@ -180,8 +184,8 @@ public class MarketAnalysisRequest
     public string JobTitle { get; set; } = string.Empty;
     public string FocusArea { get; set; } = string.Empty;
     public string AnalysisPeriod { get; set; } = "Last 30 Days";
-    public List<string> TargetTechnologies { get; set; } = new();
-    public List<string> TargetCompanies { get; set; } = new();
+    public List<string> TargetTechnologies { get; set; } = [];
+    public List<string> TargetCompanies { get; set; } = [];
     public bool IncludeHistoricalComparison { get; set; } = true;
 }
 
@@ -189,7 +193,7 @@ public class SalaryTrendAnalysis
 {
     public SalaryStatistics OverallStats { get; set; } = new();
     public Dictionary<ExperienceLevel, SalaryStatistics> ByExperienceLevel { get; set; } = new();
-    public List<CompanySalaryInfo> TopPayingCompanies { get; set; } = new();
+    public List<CompanySalaryInfo> TopPayingCompanies { get; set; } = [];
 }
 
 public class SalaryStatistics
@@ -210,14 +214,14 @@ public class CompanySalaryInfo
 
 public class TechnologyDemandAnalysis
 {
-    public List<string> TrendingTechnologies { get; set; } = new();
-    public List<TechnologyCategoryDemand> CategoryDemand { get; set; } = new();
+    public List<string> TrendingTechnologies { get; set; } = [];
+    public List<TechnologyCategoryDemand> CategoryDemand { get; set; } = [];
 }
 
 public class TechnologyCategoryDemand
 {
     public string Category { get; set; } = string.Empty;
-    public List<TechnologyDemand> Technologies { get; set; } = new();
+    public List<TechnologyDemand> Technologies { get; set; } = [];
 }
 
 public class TechnologyDemand
@@ -229,7 +233,7 @@ public class TechnologyDemand
 
 public class HiringPatternAnalysis
 {
-    public List<CompanyHiringActivity> MostActiveCompanies { get; set; } = new();
+    public List<CompanyHiringActivity> MostActiveCompanies { get; set; } = [];
     public Dictionary<string, int> HiringVelocityTrends { get; set; } = new();
     public Dictionary<string, int> CompanySizeBreakdown { get; set; } = new();
     public Dictionary<string, int> IndustryTrends { get; set; } = new();
@@ -248,7 +252,7 @@ public class RemoteWorkTrendAnalysis
 {
     public WorkArrangementDistribution OverallDistribution { get; set; } = new();
     public Dictionary<string, WorkArrangementDistribution> ByExperienceLevel { get; set; } = new();
-    public List<RemoteCompanyInfo> TopRemoteCompanies { get; set; } = new();
+    public List<RemoteCompanyInfo> TopRemoteCompanies { get; set; } = [];
 }
 
 public class WorkArrangementDistribution
@@ -268,8 +272,8 @@ public class RemoteCompanyInfo
 
 public class GeographicTrendAnalysis
 {
-    public List<GeographicJobInfo> TopCities { get; set; } = new();
-    public List<GeographicJobInfo> TopStates { get; set; } = new();
+    public List<GeographicJobInfo> TopCities { get; set; } = [];
+    public List<GeographicJobInfo> TopStates { get; set; } = [];
 }
 
 public class GeographicJobInfo
@@ -277,13 +281,13 @@ public class GeographicJobInfo
     public string Location { get; set; } = string.Empty;
     public int JobCount { get; set; }
     public decimal AverageSalary { get; set; }
-    public List<string> TopCompanies { get; set; } = new();
+    public List<string> TopCompanies { get; set; } = [];
 }
 
 public class ExperienceLevelDemandAnalysis
 {
-    public List<ExperienceLevelInfo> LevelBreakdown { get; set; } = new();
-    public List<string> CareerProgressionInsights { get; set; } = new();
+    public List<ExperienceLevelInfo> LevelBreakdown { get; set; } = [];
+    public List<string> CareerProgressionInsights { get; set; } = [];
 }
 
 public class ExperienceLevelInfo
@@ -292,14 +296,14 @@ public class ExperienceLevelInfo
     public int JobCount { get; set; }
     public double MarketPercentage { get; set; }
     public decimal AverageSalary { get; set; }
-    public List<string> TopTechnologies { get; set; } = new();
-    public List<string> TopCompanies { get; set; } = new();
+    public List<string> TopTechnologies { get; set; } = [];
+    public List<string> TopCompanies { get; set; } = [];
 }
 
 public class CompetitivenessInsights
 {
     public CompetitivenessLevel OverallCompetitiveness { get; set; }
-    public List<string> HighCompetitionSegments { get; set; } = new();
+    public List<string> HighCompetitionSegments { get; set; } = [];
     public Dictionary<string, string> MarketSaturation { get; set; } = new();
-    public List<string> OpportunityAreas { get; set; } = new();
+    public List<string> OpportunityAreas { get; set; } = [];
 }

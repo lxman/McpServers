@@ -34,12 +34,12 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
         public bool PackageJsonExists { get; set; }
         public bool TsConfigExists { get; set; }
         public WorkspaceConfiguration WorkspaceConfig { get; set; } = new();
-        public List<ProjectConfiguration> Projects { get; set; } = new();
+        public List<ProjectConfiguration> Projects { get; set; } = [];
         public BuildConfigurations BuildConfigs { get; set; } = new();
         public DependencyAnalysis Dependencies { get; set; } = new();
         public ConfigurationValidation Validation { get; set; } = new();
         public ArchitecturalInsights Insights { get; set; } = new();
-        public List<ConfigurationRecommendation> Recommendations { get; set; } = new();
+        public List<ConfigurationRecommendation> Recommendations { get; set; } = [];
         public string ErrorMessage { get; set; } = string.Empty;
     }
 
@@ -51,7 +51,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
         public int Version { get; set; }
         public string DefaultProject { get; set; } = string.Empty;
         public int ProjectCount { get; set; }
-        public List<string> ProjectNames { get; set; } = new();
+        public List<string> ProjectNames { get; set; } = [];
         public SchemaInformation Schema { get; set; } = new();
         public GlobalSettings GlobalSettings { get; set; } = new();
         public CliConfiguration Cli { get; set; } = new();
@@ -81,7 +81,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
         public BuildTarget Test { get; set; } = new();
         public BuildTarget Lint { get; set; } = new();
         public BuildTarget ExtractI18n { get; set; } = new();
-        public List<CustomTarget> CustomTargets { get; set; } = new();
+        public List<CustomTarget> CustomTargets { get; set; } = [];
     }
 
     /// <summary>
@@ -92,7 +92,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
         public string Builder { get; set; } = string.Empty;
         public Dictionary<string, object> Options { get; set; } = new();
         public Dictionary<string, BuildConfiguration> Configurations { get; set; } = new();
-        public List<string> DefaultConfiguration { get; set; } = new();
+        public List<string> DefaultConfiguration { get; set; } = [];
     }
 
     /// <summary>
@@ -107,7 +107,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
         public bool NamedChunks { get; set; }
         public bool Aot { get; set; }
         public string BudgetType { get; set; } = string.Empty;
-        public List<BudgetConfig> Budgets { get; set; } = new();
+        public List<BudgetConfig> Budgets { get; set; } = [];
         public Dictionary<string, object> AdditionalOptions { get; set; } = new();
     }
 
@@ -138,7 +138,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     /// </summary>
     public class BuildConfigurations
     {
-        public List<string> AvailableConfigurations { get; set; } = new();
+        public List<string> AvailableConfigurations { get; set; } = [];
         public string DefaultConfiguration { get; set; } = string.Empty;
         public bool HasProduction { get; set; }
         public bool HasDevelopment { get; set; }
@@ -152,9 +152,9 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     /// </summary>
     public class ConfigurationComparison
     {
-        public List<string> SharedOptions { get; set; } = new();
-        public List<string> UniqueToProduction { get; set; } = new();
-        public List<string> UniqueToDevevelopment { get; set; } = new();
+        public List<string> SharedOptions { get; set; } = [];
+        public List<string> UniqueToProduction { get; set; } = [];
+        public List<string> UniqueToDevevelopment { get; set; } = [];
         public Dictionary<string, ConfigurationDifference> Differences { get; set; } = new();
     }
 
@@ -180,7 +180,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
         public bool MinificationEnabled { get; set; }
         public bool CompressionEnabled { get; set; }
         public bool LazyLoadingSupported { get; set; }
-        public List<string> OptimizationOpportunities { get; set; } = new();
+        public List<string> OptimizationOpportunities { get; set; } = [];
     }
 
     /// <summary>
@@ -189,9 +189,9 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     public class DependencyAnalysis
     {
         public AngularDependencies Angular { get; set; } = new();
-        public List<ThirdPartyDependency> ThirdParty { get; set; } = new();
-        public List<string> DevDependencies { get; set; } = new();
-        public List<string> PeerDependencies { get; set; } = new();
+        public List<ThirdPartyDependency> ThirdParty { get; set; } = [];
+        public List<string> DevDependencies { get; set; } = [];
+        public List<string> PeerDependencies { get; set; } = [];
         public SecurityAnalysis Security { get; set; } = new();
         public VersionAnalysis Versions { get; set; } = new();
     }
@@ -205,7 +205,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
         public string CliVersion { get; set; } = string.Empty;
         public string TypeScriptVersion { get; set; } = string.Empty;
         public string RxJsVersion { get; set; } = string.Empty;
-        public List<string> AngularPackages { get; set; } = new();
+        public List<string> AngularPackages { get; set; } = [];
         public bool StandaloneSupport { get; set; }
         public bool SignalsSupport { get; set; }
         public bool ZonelessSupport { get; set; }
@@ -221,7 +221,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
         public string Category { get; set; } = string.Empty; // ui, state-management, testing, etc.
         public string Description { get; set; } = string.Empty;
         public bool IsDeprecated { get; set; }
-        public List<string> Alternatives { get; set; } = new();
+        public List<string> Alternatives { get; set; } = [];
     }
 
     /// <summary>
@@ -230,8 +230,8 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     public class SecurityAnalysis
     {
         public int VulnerabilityCount { get; set; }
-        public List<SecurityVulnerability> Vulnerabilities { get; set; } = new();
-        public List<string> OutdatedPackages { get; set; } = new();
+        public List<SecurityVulnerability> Vulnerabilities { get; set; } = [];
+        public List<string> OutdatedPackages { get; set; } = [];
         public SecurityScore Score { get; set; } = new();
     }
 
@@ -263,8 +263,8 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     public class VersionAnalysis
     {
         public bool AngularVersionsConsistent { get; set; }
-        public List<string> VersionMismatches { get; set; } = new();
-        public List<string> MajorVersionUpdatesAvailable { get; set; } = new();
+        public List<string> VersionMismatches { get; set; } = [];
+        public List<string> MajorVersionUpdatesAvailable { get; set; } = [];
         public CompatibilityMatrix Compatibility { get; set; } = new();
     }
 
@@ -276,7 +276,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
         public bool NodeCompatible { get; set; }
         public bool TypeScriptCompatible { get; set; }
         public bool RxJsCompatible { get; set; }
-        public List<string> IncompatiblePackages { get; set; } = new();
+        public List<string> IncompatiblePackages { get; set; } = [];
     }
 
     /// <summary>
@@ -285,8 +285,8 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     public class ConfigurationValidation
     {
         public bool IsValid { get; set; }
-        public List<ValidationError> Errors { get; set; } = new();
-        public List<ValidationWarning> Warnings { get; set; } = new();
+        public List<ValidationError> Errors { get; set; } = [];
+        public List<ValidationWarning> Warnings { get; set; } = [];
         public SchemaValidation Schema { get; set; } = new();
         public BestPracticesValidation BestPractices { get; set; } = new();
     }
@@ -321,7 +321,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     {
         public bool SchemaValid { get; set; }
         public string SchemaVersion { get; set; } = string.Empty;
-        public List<string> SchemaViolations { get; set; } = new();
+        public List<string> SchemaViolations { get; set; } = [];
         public bool UpgradeRecommended { get; set; }
     }
 
@@ -331,8 +331,8 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     public class BestPracticesValidation
     {
         public int Score { get; set; } // 0-100
-        public List<string> Violations { get; set; } = new();
-        public List<string> Improvements { get; set; } = new();
+        public List<string> Violations { get; set; } = [];
+        public List<string> Improvements { get; set; } = [];
         public PerformanceChecks Performance { get; set; } = new();
         public MaintenanceChecks Maintenance { get; set; } = new();
     }
@@ -346,7 +346,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
         public bool LazyLoading { get; set; }
         public bool TreeShaking { get; set; }
         public bool SourceMaps { get; set; }
-        public List<string> Recommendations { get; set; } = new();
+        public List<string> Recommendations { get; set; } = [];
     }
 
     /// <summary>
@@ -358,7 +358,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
         public bool LintingConfigured { get; set; }
         public bool TypeCheckingStrict { get; set; }
         public bool DependenciesUpToDate { get; set; }
-        public List<string> MaintenanceIssues { get; set; } = new();
+        public List<string> MaintenanceIssues { get; set; } = [];
     }
 
     /// <summary>
@@ -381,7 +381,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
         public bool IsMonorepo { get; set; }
         public int ApplicationCount { get; set; }
         public int LibraryCount { get; set; }
-        public List<string> SharedLibraries { get; set; } = new();
+        public List<string> SharedLibraries { get; set; } = [];
         public DependencyGraph Dependencies { get; set; } = new();
     }
 
@@ -404,8 +404,8 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     {
         public bool Implemented { get; set; }
         public int LazyModuleCount { get; set; }
-        public List<string> LazyRoutes { get; set; } = new();
-        public List<string> Opportunities { get; set; } = new();
+        public List<string> LazyRoutes { get; set; } = [];
+        public List<string> Opportunities { get; set; } = [];
     }
 
     /// <summary>
@@ -425,9 +425,9 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     public class ScalabilityAnalysis
     {
         public int Score { get; set; } // 0-100
-        public List<string> Strengths { get; set; } = new();
-        public List<string> Concerns { get; set; } = new();
-        public List<string> Recommendations { get; set; } = new();
+        public List<string> Strengths { get; set; } = [];
+        public List<string> Concerns { get; set; } = [];
+        public List<string> Recommendations { get; set; } = [];
         public GrowthPotential Growth { get; set; } = new();
     }
 
@@ -438,7 +438,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     {
         public string TeamSize { get; set; } = string.Empty; // small, medium, large, enterprise
         public string Complexity { get; set; } = string.Empty; // simple, moderate, complex, enterprise
-        public List<string> ScalingBottlenecks { get; set; } = new();
+        public List<string> ScalingBottlenecks { get; set; } = [];
     }
 
     /// <summary>
@@ -449,9 +449,9 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
         public string AngularVersion { get; set; } = string.Empty;
         public string TypeScriptVersion { get; set; } = string.Empty;
         public string NodeVersion { get; set; } = string.Empty;
-        public List<string> UILibraries { get; set; } = new();
-        public List<string> StateManagement { get; set; } = new();
-        public List<string> TestingFrameworks { get; set; } = new();
+        public List<string> UILibraries { get; set; } = [];
+        public List<string> StateManagement { get; set; } = [];
+        public List<string> TestingFrameworks { get; set; } = [];
         public string BuildTool { get; set; } = string.Empty;
         public TechStackRecommendations Recommendations { get; set; } = new();
     }
@@ -461,9 +461,9 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     /// </summary>
     public class TechStackRecommendations
     {
-        public List<string> Upgrades { get; set; } = new();
-        public List<string> Alternatives { get; set; } = new();
-        public List<string> NewTechnologies { get; set; } = new();
+        public List<string> Upgrades { get; set; } = [];
+        public List<string> Alternatives { get; set; } = [];
+        public List<string> NewTechnologies { get; set; } = [];
     }
 
     /// <summary>
@@ -471,8 +471,8 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     /// </summary>
     public class DependencyGraph
     {
-        public List<ProjectDependency> Projects { get; set; } = new();
-        public List<CircularDependency> CircularDependencies { get; set; } = new();
+        public List<ProjectDependency> Projects { get; set; } = [];
+        public List<CircularDependency> CircularDependencies { get; set; } = [];
         public int MaxDepth { get; set; }
         public bool HasIssues { get; set; }
     }
@@ -483,8 +483,8 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     public class ProjectDependency
     {
         public string Name { get; set; } = string.Empty;
-        public List<string> DependsOn { get; set; } = new();
-        public List<string> UsedBy { get; set; } = new();
+        public List<string> DependsOn { get; set; } = [];
+        public List<string> UsedBy { get; set; } = [];
         public int DepthLevel { get; set; }
     }
 
@@ -493,7 +493,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     /// </summary>
     public class CircularDependency
     {
-        public List<string> Cycle { get; set; } = new();
+        public List<string> Cycle { get; set; } = [];
         public string Severity { get; set; } = string.Empty;
         public string Resolution { get; set; } = string.Empty;
     }
@@ -552,7 +552,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
         public string Description { get; set; } = string.Empty;
         public string Implementation { get; set; } = string.Empty;
         public string Impact { get; set; } = string.Empty;
-        public List<string> Steps { get; set; } = new();
+        public List<string> Steps { get; set; } = [];
         public Dictionary<string, object> Examples { get; set; } = new();
     }
 
@@ -1062,7 +1062,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
 
         if (target.TryGetProperty("defaultConfiguration", out var defaultConfig))
         {
-            buildTarget.DefaultConfiguration = new List<string> { defaultConfig.GetString() ?? string.Empty };
+            buildTarget.DefaultConfiguration = [defaultConfig.GetString() ?? string.Empty];
         }
 
         return buildTarget;
@@ -1532,12 +1532,12 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
                 Description = "Minification reduces bundle size by removing unnecessary characters",
                 Implementation = "Set optimization: true in production configuration",
                 Impact = "10-30% reduction in bundle size",
-                Steps = new List<string>
-                {
+                Steps =
+                [
                     "Open angular.json",
                     "Navigate to projects > [project-name] > architect > build > configurations > production",
                     "Set \"optimization\": true"
-                }
+                ]
             });
         }
 
@@ -1558,12 +1558,12 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
                 Description = $"Found {result.Dependencies.Security.VulnerabilityCount} security vulnerabilities",
                 Implementation = "Update vulnerable packages to latest versions",
                 Impact = "Eliminates known security risks",
-                Steps = new List<string>
-                {
+                Steps =
+                [
                     "Run npm audit",
                     "Review vulnerability details",
                     "Update packages using npm update or yarn upgrade"
-                }
+                ]
             });
         }
 
@@ -1584,12 +1584,12 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
                 Description = "Testing configuration not found or incomplete",
                 Implementation = "Set up testing framework and configuration",
                 Impact = "Improves code quality and reduces bugs",
-                Steps = new List<string>
-                {
+                Steps =
+                [
                     "Ensure test target is configured in angular.json",
                     "Verify karma.conf.js exists",
                     "Add test scripts to package.json"
-                }
+                ]
             });
         }
 
@@ -1610,12 +1610,12 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
                 Description = "Single project may become difficult to maintain as application grows",
                 Implementation = "Extract common functionality into libraries",
                 Impact = "Improves code reusability and team collaboration",
-                Steps = new List<string>
-                {
+                Steps =
+                [
                     "Identify reusable components and services",
                     "Create library projects using ng generate library",
                     "Refactor shared code into libraries"
-                }
+                ]
             });
         }
 
@@ -1717,9 +1717,9 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     {
         return packageName.ToLower() switch
         {
-            "tslint" => new List<string> { "eslint", "@angular-eslint/eslint-plugin" },
-            "protractor" => new List<string> { "cypress", "@playwright/test", "webdriver.io" },
-            _ => new List<string>()
+            "tslint" => ["eslint", "@angular-eslint/eslint-plugin"],
+            "protractor" => ["cypress", "@playwright/test", "webdriver.io"],
+            _ => []
         };
     }
 
@@ -1745,7 +1745,7 @@ public class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManage
     private static List<string> GetMajorUpdatesAvailable(JsonElement packageJson)
     {
         // This would check npm registry for major version updates
-        return new List<string>();
+        return [];
     }
 
     private static CompatibilityMatrix AnalyzeCompatibilityMatrix(JsonElement packageJson)

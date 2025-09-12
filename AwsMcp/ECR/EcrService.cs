@@ -1,6 +1,5 @@
 ﻿using Amazon.ECR;
 using Amazon.ECR.Model;
-using Amazon.Runtime;
 using AwsMcp.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -44,7 +43,7 @@ public class EcrService
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            AWSCredentials? credentials = credentialsProvider.GetCredentials();
+            var credentials = credentialsProvider.GetCredentials();
             
             if (credentials != null)
             {

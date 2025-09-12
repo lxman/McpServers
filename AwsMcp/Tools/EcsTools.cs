@@ -42,7 +42,7 @@ public class EcsTools
                 ServiceUrl = serviceUrl
             };
 
-            bool success = await _ecsService.InitializeAsync(config);
+            var success = await _ecsService.InitializeAsync(config);
             
             return JsonSerializer.Serialize(new
             {
@@ -67,7 +67,7 @@ public class EcsTools
     {
         try
         {
-            ListClustersResponse response = await _ecsService.ListClustersAsync();
+            var response = await _ecsService.ListClustersAsync();
             
             return JsonSerializer.Serialize(new
             {
@@ -100,7 +100,7 @@ public class EcsTools
                 clusters = clusterNames.Split(',').Select(c => c.Trim()).ToList();
             }
 
-            DescribeClustersResponse response = await _ecsService.DescribeClustersAsync(clusters);
+            var response = await _ecsService.DescribeClustersAsync(clusters);
             
             var clusterDetails = response.Clusters.Select(cluster => new
             {
@@ -163,7 +163,7 @@ public class EcsTools
                 clusterTags = tagData?.Select(t => new Tag { Key = t["Key"], Value = t["Value"] }).ToList();
             }
 
-            CreateClusterResponse response = await _ecsService.CreateClusterAsync(clusterName, clusterTags);
+            var response = await _ecsService.CreateClusterAsync(clusterName, clusterTags);
             
             return JsonSerializer.Serialize(new
             {
@@ -194,7 +194,7 @@ public class EcsTools
     {
         try
         {
-            DeleteClusterResponse response = await _ecsService.DeleteClusterAsync(cluster);
+            var response = await _ecsService.DeleteClusterAsync(cluster);
             
             return JsonSerializer.Serialize(new
             {
@@ -225,7 +225,7 @@ public class EcsTools
     {
         try
         {
-            ListServicesResponse response = await _ecsService.ListServicesAsync(cluster);
+            var response = await _ecsService.ListServicesAsync(cluster);
             
             return JsonSerializer.Serialize(new
             {
@@ -254,8 +254,8 @@ public class EcsTools
     {
         try
         {
-            List<string> serviceList = services.Split(',').Select(s => s.Trim()).ToList();
-            DescribeServicesResponse response = await _ecsService.DescribeServicesAsync(serviceList, cluster);
+            var serviceList = services.Split(',').Select(s => s.Trim()).ToList();
+            var response = await _ecsService.DescribeServicesAsync(serviceList, cluster);
             
             var serviceDetails = response.Services.Select(service => new
             {
@@ -317,7 +317,7 @@ public class EcsTools
     {
         try
         {
-            ListTasksResponse response = await _ecsService.ListTasksAsync(cluster, serviceName);
+            var response = await _ecsService.ListTasksAsync(cluster, serviceName);
             
             return JsonSerializer.Serialize(new
             {
@@ -346,8 +346,8 @@ public class EcsTools
     {
         try
         {
-            List<string> taskList = tasks.Split(',').Select(t => t.Trim()).ToList();
-            DescribeTasksResponse response = await _ecsService.DescribeTasksAsync(taskList, cluster);
+            var taskList = tasks.Split(',').Select(t => t.Trim()).ToList();
+            var response = await _ecsService.DescribeTasksAsync(taskList, cluster);
             
             var taskDetails = response.Tasks.Select(task => new
             {
@@ -420,7 +420,7 @@ public class EcsTools
     {
         try
         {
-            ListTaskDefinitionsResponse response = await _ecsService.ListTaskDefinitionsAsync(familyPrefix);
+            var response = await _ecsService.ListTaskDefinitionsAsync(familyPrefix);
             
             return JsonSerializer.Serialize(new
             {
@@ -447,9 +447,9 @@ public class EcsTools
     {
         try
         {
-            DescribeTaskDefinitionResponse response = await _ecsService.DescribeTaskDefinitionAsync(taskDefinition);
+            var response = await _ecsService.DescribeTaskDefinitionAsync(taskDefinition);
             
-            TaskDefinition? taskDef = response.TaskDefinition;
+            var taskDef = response.TaskDefinition;
             var result = new
             {
                 TaskDefinitionArn = taskDef.TaskDefinitionArn,
@@ -526,7 +526,7 @@ public class EcsTools
     {
         try
         {
-            RunTaskResponse response = await _ecsService.RunTaskAsync(taskDefinition, cluster, count, launchType);
+            var response = await _ecsService.RunTaskAsync(taskDefinition, cluster, count, launchType);
             
             var taskDetails = response.Tasks?.Select(task => new
             {
@@ -574,7 +574,7 @@ public class EcsTools
     {
         try
         {
-            StopTaskResponse response = await _ecsService.StopTaskAsync(task, cluster, reason);
+            var response = await _ecsService.StopTaskAsync(task, cluster, reason);
             
             return JsonSerializer.Serialize(new
             {
@@ -612,7 +612,7 @@ public class EcsTools
     {
         try
         {
-            UpdateServiceResponse response = await _ecsService.UpdateServiceAsync(service, cluster, desiredCount, taskDefinition);
+            var response = await _ecsService.UpdateServiceAsync(service, cluster, desiredCount, taskDefinition);
             
             return JsonSerializer.Serialize(new
             {
@@ -647,7 +647,7 @@ public class EcsTools
     {
         try
         {
-            List<ContainerInstance> response = await _ecsService.ListContainerInstancesAsync(cluster);
+            var response = await _ecsService.ListContainerInstancesAsync(cluster);
             
             var instanceDetails = response.Select(instance => new
             {

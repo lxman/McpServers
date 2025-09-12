@@ -80,7 +80,7 @@ public class NetDeveloperJobScorer
     {
         var score = 0;
         string jobText = GetJobTextForAnalysis(job).ToLower();
-        List<string> technologies = job.Technologies?.Select(t => t.ToLower()).ToList() ?? new List<string>();
+        List<string> technologies = job.Technologies?.Select(t => t.ToLower()).ToList() ?? [];
 
         // Core technologies (required) - 50 points max
         var coreMatches = 0;
@@ -232,7 +232,7 @@ public class NetDeveloperJobScorer
         Match expMatch = Regex.Match(jobText, @"(\d+)\+?\s*years?\s*(?:of\s*)?experience", RegexOptions.IgnoreCase);
         if (expMatch.Success && int.TryParse(expMatch.Groups[1].Value, out int yearsRequired))
         {
-            if (yearsRequired >= 5 && yearsRequired <= 15)
+            if (yearsRequired is >= 5 and <= 15)
             {
                 score += 10; // Bonus for appropriate experience range
             }
@@ -305,7 +305,7 @@ public class NetDeveloperJobScorer
     private string GetJobTextForAnalysis(EnhancedJobListing job)
     {
         return $"{job.Title} {job.Description} {job.Summary} {job.Notes} " +
-               $"{string.Join(" ", job.Technologies ?? new List<string>())}";
+               $"{string.Join(" ", job.Technologies ?? [])}";
     }
 }
 

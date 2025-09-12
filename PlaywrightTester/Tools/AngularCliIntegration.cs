@@ -40,8 +40,8 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
         public string ErrorMessage { get; set; } = string.Empty;
         public bool AngularCliDetected { get; set; }
         public string AngularCliVersion { get; set; } = string.Empty;
-        public List<string> GeneratedFiles { get; set; } = new();
-        public List<string> ModifiedFiles { get; set; } = new();
+        public List<string> GeneratedFiles { get; set; } = [];
+        public List<string> ModifiedFiles { get; set; } = [];
     }
 
     /// <summary>
@@ -59,7 +59,8 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
     /// <summary>
     /// Commands that can be executed without requiring an Angular project
     /// </summary>
-    private static readonly string[] GlobalCommands = { "new", "version", "help", "--version", "completion", "analytics" };
+    private static readonly string[] GlobalCommands = ["new", "version", "help", "--version", "completion", "analytics"
+    ];
 
     /// <summary>
     /// Determines if a command requires Angular project validation
@@ -680,7 +681,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
         }
         catch
         {
-            return new List<string>();
+            return [];
         }
     }
 
@@ -729,7 +730,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                 // Ignore errors
             }
 
-            return new List<string>();
+            return [];
         });
     }
 

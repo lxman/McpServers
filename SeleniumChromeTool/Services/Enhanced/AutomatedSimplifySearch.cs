@@ -31,12 +31,12 @@ public class AutomatedSimplifySearch
         var results = new EnhancedSearchResults
         {
             SearchStartTime = DateTime.UtcNow,
-            SearchTermsUsed = new List<string>(),
+            SearchTermsUsed = [],
             TotalJobsFound = 0,
-            HighPriorityJobs = new List<EnhancedJobListing>(),
-            ApplicationReadyJobs = new List<EnhancedJobListing>(),
-            ConsiderJobs = new List<EnhancedJobListing>(),
-            SkippedJobs = new List<EnhancedJobListing>()
+            HighPriorityJobs = [],
+            ApplicationReadyJobs = [],
+            ConsiderJobs = [],
+            SkippedJobs = []
         };
 
         try
@@ -181,8 +181,7 @@ public class AutomatedSimplifySearch
         else
         {
             // Default .NET-focused search terms based on analysis
-            searchTerms.AddRange(new[]
-            {
+            searchTerms.AddRange([
                 "Senior .NET Developer",
                 "Principal Software Engineer .NET",
                 "Staff Engineer C#",
@@ -193,7 +192,7 @@ public class AutomatedSimplifySearch
                 "Lead .NET Engineer",
                 ".NET Core Developer",
                 "Senior Backend Engineer"
-            });
+            ]);
         }
 
         return searchTerms;
@@ -210,12 +209,11 @@ public class AutomatedSimplifySearch
         else
         {
             // Default location preferences based on analysis
-            locations.AddRange(new[]
-            {
+            locations.AddRange([
                 "Remote in USA",
                 "Atlanta, GA",
                 "United States"
-            });
+            ]);
         }
 
         return locations;
@@ -224,13 +222,13 @@ public class AutomatedSimplifySearch
     private List<string> GetExperienceLevels(ComprehensiveSearchRequest request)
     {
         // Based on 50 years experience profile
-        return new List<string>
-        {
+        return
+        [
             "Senior",
-            "Principal", 
+            "Principal",
             "Lead",
             "Staff",
             "Expert or higher"
-        };
+        ];
     }
 }

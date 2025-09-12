@@ -203,10 +203,10 @@ public class ApplicationManagementService
     }
 
     private List<string> GenerateReasonCodes(EnhancedJobListing job, int score, ApplicationPreferences preferences) =>
-        new List<string> { "AUTOMATED_ANALYSIS" };
+        ["AUTOMATED_ANALYSIS"];
 
     private List<string> GenerateActionItems(EnhancedJobListing job, ApplicationPreferences preferences) =>
-        new List<string> { "Review job requirements", "Customize resume", "Prepare cover letter" };
+        ["Review job requirements", "Customize resume", "Prepare cover letter"];
 
     private TimeSpan EstimateApplicationTime(EnhancedJobListing job, ApplicationPreferences preferences) =>
         TimeSpan.FromMinutes(45);
@@ -217,7 +217,7 @@ public class ApplicationManagementService
         CompetitivenessLevel.Medium;
 
     private async Task<List<ApplicationRecord>> GetExistingApplicationsAsync(string userId) =>
-        new List<ApplicationRecord>();
+        [];
 
     private async Task<bool> HasSimilarApplicationAsync(EnhancedJobListing job, string userId) => false;
 
@@ -232,7 +232,7 @@ public class ApplicationManagementService
             WeeklyApplicationPlan = result.ImmediateApplications.Concat(result.HighPriorityApplications).Take(15).ToList(),
             EstimatedDailyTime = TimeSpan.FromHours(2),
             EstimatedWeeklyTime = TimeSpan.FromHours(10),
-            Recommendations = new List<string> { "Focus on high-priority applications first" }
+            Recommendations = ["Focus on high-priority applications first"]
         };
     }
 
@@ -296,12 +296,12 @@ public class ApplicationCategorizationResult
 {
     public DateTime ProcessedAt { get; set; }
     public int TotalJobs { get; set; }
-    public List<CategorizedJob> ImmediateApplications { get; set; } = new();
-    public List<CategorizedJob> HighPriorityApplications { get; set; } = new();
-    public List<CategorizedJob> MediumPriorityApplications { get; set; } = new();
-    public List<CategorizedJob> LowPriorityApplications { get; set; } = new();
-    public List<CategorizedJob> NotRecommended { get; set; } = new();
-    public List<CategorizedJob> AlreadyApplied { get; set; } = new();
+    public List<CategorizedJob> ImmediateApplications { get; set; } = [];
+    public List<CategorizedJob> HighPriorityApplications { get; set; } = [];
+    public List<CategorizedJob> MediumPriorityApplications { get; set; } = [];
+    public List<CategorizedJob> LowPriorityApplications { get; set; } = [];
+    public List<CategorizedJob> NotRecommended { get; set; } = [];
+    public List<CategorizedJob> AlreadyApplied { get; set; } = [];
     public ApplicationInsights Insights { get; set; } = new();
 }
 
@@ -310,8 +310,8 @@ public class CategorizedJob
     public EnhancedJobListing Job { get; set; } = null!;
     public ApplicationPriority Priority { get; set; }
     public int ApplicationReadinessScore { get; set; }
-    public List<string> ReasonCodes { get; set; } = new();
-    public List<string> ActionItems { get; set; } = new();
+    public List<string> ReasonCodes { get; set; } = [];
+    public List<string> ActionItems { get; set; } = [];
     public TimeSpan EstimatedApplicationTime { get; set; }
     public UrgencyLevel DeadlineUrgency { get; set; }
     public CompetitivenessLevel CompetitivenessRating { get; set; }
@@ -324,9 +324,9 @@ public class ApplicationPreferences
     public decimal MinSalary { get; set; }
     public decimal PreferredSalary { get; set; }
     public bool PreferRemote { get; set; }
-    public List<string> PreferredLocations { get; set; } = new();
-    public List<string> TargetCompanies { get; set; } = new();
-    public List<string> RequiredTechnologies { get; set; } = new();
+    public List<string> PreferredLocations { get; set; } = [];
+    public List<string> TargetCompanies { get; set; } = [];
+    public List<string> RequiredTechnologies { get; set; } = [];
     public ExperienceLevel TargetExperienceLevel { get; set; }
     public int DailyApplicationTarget { get; set; } = 3;
     public int WeeklyApplicationTarget { get; set; } = 15;
@@ -335,11 +335,11 @@ public class ApplicationPreferences
 public class ApplicationInsights
 {
     public DateTime GeneratedAt { get; set; }
-    public List<CategorizedJob> DailyApplicationPlan { get; set; } = new();
-    public List<CategorizedJob> WeeklyApplicationPlan { get; set; } = new();
+    public List<CategorizedJob> DailyApplicationPlan { get; set; } = [];
+    public List<CategorizedJob> WeeklyApplicationPlan { get; set; } = [];
     public TimeSpan EstimatedDailyTime { get; set; }
     public TimeSpan EstimatedWeeklyTime { get; set; }
-    public List<string> Recommendations { get; set; } = new();
+    public List<string> Recommendations { get; set; } = [];
 }
 
 public class ApplicationRecord
@@ -355,7 +355,7 @@ public class ApplicationRecord
     public DateTime AppliedAt { get; set; }
     public DateTime LastUpdated { get; set; }
     public string Notes { get; set; } = string.Empty;
-    public List<string> FollowUpDates { get; set; } = new();
+    public List<string> FollowUpDates { get; set; } = [];
 }
 
 public enum ApplicationPriority

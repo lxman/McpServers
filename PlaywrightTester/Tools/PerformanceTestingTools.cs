@@ -30,7 +30,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
         public bool IsActive { get; set; } = true;
         public bool JsCoverage { get; set; } = true;
         public bool CssCoverage { get; set; } = true;
-        public List<CoverageEntry> Entries { get; set; } = new();
+        public List<CoverageEntry> Entries { get; set; } = [];
     }
 
     public class CoverageEntry
@@ -40,7 +40,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
         public int TotalBytes { get; set; }
         public int UsedBytes { get; set; }
         public double UsagePercentage { get; set; }
-        public List<CoverageRange> Ranges { get; set; } = new();
+        public List<CoverageRange> Ranges { get; set; } = [];
     }
 
     public class CoverageRange

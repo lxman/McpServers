@@ -27,8 +27,8 @@
 
         public TypeScriptValidationResult()
         {
-            CompilerDiagnostics = new List<TypeScriptDiagnostic>();
-            LinterIssues = new List<LinterIssue>();
+            CompilerDiagnostics = [];
+            LinterIssues = [];
         }
 
         /// <summary>

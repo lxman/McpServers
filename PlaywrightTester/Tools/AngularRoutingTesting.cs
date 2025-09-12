@@ -1042,7 +1042,7 @@ public class AngularRoutingTesting(PlaywrightSessionManager sessionManager)
                 return $"Session {sessionId} not found or page not available.";
 
             var routes = string.IsNullOrWhiteSpace(routesToTest) 
-                ? new string[] { } 
+                ? []
                 : routesToTest.Split(',', StringSplitOptions.RemoveEmptyEntries)
                     .Select(r => r.Trim()).ToArray();
 

@@ -92,7 +92,7 @@ public class SimplifyJobsApiService : BaseJobScraper
     public override async Task<List<EnhancedJobListing>> ScrapeJobsAsync(EnhancedScrapeRequest request, SiteConfiguration config)
     {
         Logger.LogWarning("Legacy ScrapeJobsAsync called - use FetchJobsByIdsAsync instead.");
-        return new List<EnhancedJobListing>();
+        return [];
     }
 
     /// <summary>

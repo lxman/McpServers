@@ -30,9 +30,9 @@ public class IntelligentBulkProcessor
         var result = new BulkProcessingResult
         {
             StartTime = DateTime.UtcNow,
-            ProcessedJobs = new List<EnhancedJobListing>(),
-            SkippedJobs = new List<string>(),
-            Errors = new List<string>()
+            ProcessedJobs = [],
+            SkippedJobs = [],
+            Errors = []
         };
 
         try
@@ -164,8 +164,8 @@ public class IntelligentBulkProcessor
 
             // Calculate summary statistics
             result.HighPriorityCount = result.ProcessedJobs.Count(j => j.MatchScore >= 80);
-            result.ApplicationReadyCount = result.ProcessedJobs.Count(j => j.MatchScore >= 60 && j.MatchScore < 80);
-            result.ConsiderCount = result.ProcessedJobs.Count(j => j.MatchScore >= 40 && j.MatchScore < 60);
+            result.ApplicationReadyCount = result.ProcessedJobs.Count(j => j.MatchScore is >= 60 and < 80);
+            result.ConsiderCount = result.ProcessedJobs.Count(j => j.MatchScore is >= 40 and < 60);
             result.LowPriorityCount = result.ProcessedJobs.Count(j => j.MatchScore < 40);
 
             _logger.LogInformation($"Bulk processing completed:");
@@ -266,9 +266,9 @@ public class BulkProcessingResult
     public DateTime EndTime { get; set; }
     public TimeSpan TotalDuration { get; set; }
     
-    public List<EnhancedJobListing> ProcessedJobs { get; set; } = new();
-    public List<string> SkippedJobs { get; set; } = new();
-    public List<string> Errors { get; set; } = new();
+    public List<EnhancedJobListing> ProcessedJobs { get; set; } = [];
+    public List<string> SkippedJobs { get; set; } = [];
+    public List<string> Errors { get; set; } = [];
     
     public int PagesProcessed { get; set; }
     public int HighPriorityCount { get; set; }

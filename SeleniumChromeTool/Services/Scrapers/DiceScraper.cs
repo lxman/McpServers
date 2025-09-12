@@ -173,7 +173,7 @@ public class DiceScraper : BaseJobScraper
                         acceptButton = Driver!.FindElement(By.XPath($"//button[contains(text(), '{buttonSelector}')]"));
                     }
                     
-                    if (acceptButton != null && acceptButton.Displayed && acceptButton.Enabled)
+                    if (acceptButton is { Displayed: true, Enabled: true })
                     {
                         acceptButton.Click();
                         Logger.LogInformation("Clicked cookie consent button");

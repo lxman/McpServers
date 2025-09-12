@@ -6,7 +6,7 @@ public class MongoDbConfiguration
     public string ConnectionString { get; set; } = string.Empty;
     public string DefaultDatabase { get; set; } = string.Empty;
     public bool AutoConnect { get; set; } = false;
-    public List<ConnectionProfile> ConnectionProfiles { get; set; } = new();
+    public List<ConnectionProfile> ConnectionProfiles { get; set; } = [];
     public ConnectionLimits ConnectionLimits { get; set; } = new();
     public Features Features { get; set; } = new();
 }

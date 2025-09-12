@@ -33,9 +33,9 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public bool AngularProjectDetected { get; set; }
         public bool WebpackStatsAvailable { get; set; }
         public BundleOverview Overview { get; set; } = new();
-        public List<ComponentBundleImpact> ComponentImpacts { get; set; } = new();
-        public List<ModuleBundleImpact> ModuleImpacts { get; set; } = new();
-        public List<AssetAnalysis> Assets { get; set; } = new();
+        public List<ComponentBundleImpact> ComponentImpacts { get; set; } = [];
+        public List<ModuleBundleImpact> ModuleImpacts { get; set; } = [];
+        public List<AssetAnalysis> Assets { get; set; } = [];
         public ChunkAnalysis Chunks { get; set; } = new();
         public DependencyAnalysis Dependencies { get; set; } = new();
         public BundleOptimizationRecommendations Recommendations { get; set; } = new();
@@ -82,7 +82,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         public BudgetStatus InitialBudgetStatus { get; set; } = new();
         public BudgetStatus AnyBudgetStatus { get; set; } = new();
-        public List<BudgetViolation> BudgetViolations { get; set; } = new();
+        public List<BudgetViolation> BudgetViolations { get; set; } = [];
         public RecommendedSizes RecommendedSizes { get; set; } = new();
         public SizeScore Score { get; set; } = new();
     }
@@ -109,7 +109,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public long ActualSize { get; set; }
         public long Excess { get; set; }
         public string Severity { get; set; } = string.Empty;
-        public List<string> CausingComponents { get; set; } = new();
+        public List<string> CausingComponents { get; set; } = [];
     }
 
     /// <summary>
@@ -134,7 +134,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public int LazyLoading { get; set; }
         public int VendorOptimization { get; set; }
         public string Grade { get; set; } = string.Empty; // A, B, C, D, F
-        public List<string> ScoreFactors { get; set; } = new();
+        public List<string> ScoreFactors { get; set; } = [];
     }
 
     /// <summary>
@@ -149,11 +149,11 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public long GzippedSizeBytes { get; set; }
         public double PercentageOfBundle { get; set; }
         public int DependencyCount { get; set; }
-        public List<string> Dependencies { get; set; } = new();
-        public List<ComponentDependency> ComponentDependencies { get; set; } = new();
+        public List<string> Dependencies { get; set; } = [];
+        public List<ComponentDependency> ComponentDependencies { get; set; } = [];
         public ComponentOptimization Optimization { get; set; } = new();
         public ComponentComplexity Complexity { get; set; } = new();
-        public List<string> OptimizationOpportunities { get; set; } = new();
+        public List<string> OptimizationOpportunities { get; set; } = [];
         public string ImpactLevel { get; set; } = string.Empty; // low, medium, high, critical
     }
 
@@ -181,7 +181,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public bool HasDeadCode { get; set; }
         public bool UsesStandaloneAPI { get; set; }
         public double OptimizationScore { get; set; } // 0-100
-        public List<string> OptimizationSuggestions { get; set; } = new();
+        public List<string> OptimizationSuggestions { get; set; } = [];
     }
 
     /// <summary>
@@ -211,12 +211,12 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public double PercentageOfBundle { get; set; }
         public int ComponentCount { get; set; }
         public int ServiceCount { get; set; }
-        public List<string> Components { get; set; } = new();
-        public List<string> Services { get; set; } = new();
-        public List<string> Dependencies { get; set; } = new();
+        public List<string> Components { get; set; } = [];
+        public List<string> Services { get; set; } = [];
+        public List<string> Dependencies { get; set; } = [];
         public ModuleOptimization Optimization { get; set; } = new();
         public string LoadingStrategy { get; set; } = string.Empty; // eager, lazy
-        public List<string> OptimizationOpportunities { get; set; } = new();
+        public List<string> OptimizationOpportunities { get; set; } = [];
     }
 
     /// <summary>
@@ -229,8 +229,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public bool HasCircularDependencies { get; set; }
         public bool ProperlyTreeShaken { get; set; }
         public double OptimizationScore { get; set; } // 0-100
-        public List<string> ModuleDependencies { get; set; } = new();
-        public List<string> UnusedExports { get; set; } = new();
+        public List<string> ModuleDependencies { get; set; } = [];
+        public List<string> UnusedExports { get; set; } = [];
     }
 
     /// <summary>
@@ -245,7 +245,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public double PercentageOfBundle { get; set; }
         public bool IsOptimized { get; set; }
         public AssetOptimization Optimization { get; set; } = new();
-        public List<string> OptimizationSuggestions { get; set; } = new();
+        public List<string> OptimizationSuggestions { get; set; } = [];
     }
 
     /// <summary>
@@ -258,7 +258,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public bool TreeShaken { get; set; }
         public bool HasSourceMaps { get; set; }
         public string CompressionRatio { get; set; } = string.Empty;
-        public List<string> OptimizationTechniques { get; set; } = new();
+        public List<string> OptimizationTechniques { get; set; } = [];
     }
 
     /// <summary>
@@ -266,9 +266,9 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     /// </summary>
     public class ChunkAnalysis
     {
-        public List<ChunkInfo> Chunks { get; set; } = new();
+        public List<ChunkInfo> Chunks { get; set; } = [];
         public ChunkOptimization Optimization { get; set; } = new();
-        public List<string> OptimizationOpportunities { get; set; } = new();
+        public List<string> OptimizationOpportunities { get; set; } = [];
         public SplittingStrategy RecommendedStrategy { get; set; } = new();
     }
 
@@ -282,8 +282,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public long SizeBytes { get; set; }
         public long GzippedSizeBytes { get; set; }
         public double PercentageOfBundle { get; set; }
-        public List<string> Modules { get; set; } = new();
-        public List<string> Components { get; set; } = new();
+        public List<string> Modules { get; set; } = [];
+        public List<string> Components { get; set; } = [];
         public bool IsLazyLoaded { get; set; }
         public string LoadPriority { get; set; } = string.Empty; // high, medium, low
     }
@@ -298,8 +298,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public bool HasDuplicatedCode { get; set; }
         public int ChunkCount { get; set; }
         public double AverageChunkSize { get; set; }
-        public List<string> LargeChunks { get; set; } = new();
-        public List<string> SmallChunks { get; set; } = new();
+        public List<string> LargeChunks { get; set; } = [];
+        public List<string> SmallChunks { get; set; } = [];
     }
 
     /// <summary>
@@ -308,8 +308,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     public class SplittingStrategy
     {
         public string Strategy { get; set; } = string.Empty; // feature-based, route-based, vendor-splitting
-        public List<string> RecommendedSplits { get; set; } = new();
-        public List<string> MergeOpportunities { get; set; } = new();
+        public List<string> RecommendedSplits { get; set; } = [];
+        public List<string> MergeOpportunities { get; set; } = [];
         public string Rationale { get; set; } = string.Empty;
     }
 
@@ -318,10 +318,10 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     /// </summary>
     public class DependencyAnalysis
     {
-        public List<DependencyImpact> ThirdPartyDependencies { get; set; } = new();
-        public List<DependencyImpact> InternalDependencies { get; set; } = new();
+        public List<DependencyImpact> ThirdPartyDependencies { get; set; } = [];
+        public List<DependencyImpact> InternalDependencies { get; set; } = [];
         public DependencyOptimization Optimization { get; set; } = new();
-        public List<string> OptimizationOpportunities { get; set; } = new();
+        public List<string> OptimizationOpportunities { get; set; } = [];
         public UnusedDependencies UnusedDependencies { get; set; } = new();
     }
 
@@ -337,8 +337,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public double PercentageOfBundle { get; set; }
         public bool IsTreeShakable { get; set; }
         public bool IsUsed { get; set; }
-        public List<string> UsedBy { get; set; } = new();
-        public List<string> Alternatives { get; set; } = new();
+        public List<string> UsedBy { get; set; } = [];
+        public List<string> Alternatives { get; set; } = [];
         public DependencyOptimizationInfo Optimization { get; set; } = new();
     }
 
@@ -350,8 +350,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public bool CanBeTreeShaken { get; set; }
         public bool CanBeLazyLoaded { get; set; }
         public bool HasSmallerAlternatives { get; set; }
-        public List<string> OptimizationSuggestions { get; set; } = new();
-        public List<AlternativeDependency> AlternativeDependencies { get; set; } = new();
+        public List<string> OptimizationSuggestions { get; set; } = [];
+        public List<AlternativeDependency> AlternativeDependencies { get; set; } = [];
     }
 
     /// <summary>
@@ -377,7 +377,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public int UnusedDependencies { get; set; }
         public long PotentialSavings { get; set; }
         public double OptimizationScore { get; set; } // 0-100
-        public List<string> QuickWins { get; set; } = new();
+        public List<string> QuickWins { get; set; } = [];
     }
 
     /// <summary>
@@ -385,11 +385,11 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     /// </summary>
     public class UnusedDependencies
     {
-        public List<string> CompletelyUnused { get; set; } = new();
-        public List<string> PartiallyUnused { get; set; } = new();
+        public List<string> CompletelyUnused { get; set; } = [];
+        public List<string> PartiallyUnused { get; set; } = [];
         public long PotentialSavings { get; set; }
-        public List<string> SafeToRemove { get; set; } = new();
-        public List<string> RequiresInvestigation { get; set; } = new();
+        public List<string> SafeToRemove { get; set; } = [];
+        public List<string> RequiresInvestigation { get; set; } = [];
     }
 
     /// <summary>
@@ -397,10 +397,10 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     /// </summary>
     public class BundleOptimizationRecommendations
     {
-        public List<OptimizationRecommendation> HighPriority { get; set; } = new();
-        public List<OptimizationRecommendation> MediumPriority { get; set; } = new();
-        public List<OptimizationRecommendation> LowPriority { get; set; } = new();
-        public List<OptimizationRecommendation> QuickWins { get; set; } = new();
+        public List<OptimizationRecommendation> HighPriority { get; set; } = [];
+        public List<OptimizationRecommendation> MediumPriority { get; set; } = [];
+        public List<OptimizationRecommendation> LowPriority { get; set; } = [];
+        public List<OptimizationRecommendation> QuickWins { get; set; } = [];
         public OptimizationSummary Summary { get; set; } = new();
         public ImplementationGuide Implementation { get; set; } = new();
     }
@@ -418,9 +418,9 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public long PotentialSavings { get; set; }
         public double ImplementationEffort { get; set; } // 1-10 scale
         public string Impact { get; set; } = string.Empty;
-        public List<string> Steps { get; set; } = new();
-        public List<string> AffectedFiles { get; set; } = new();
-        public List<string> Requirements { get; set; } = new();
+        public List<string> Steps { get; set; } = [];
+        public List<string> AffectedFiles { get; set; } = [];
+        public List<string> Requirements { get; set; } = [];
         public string EstimatedTime { get; set; } = string.Empty;
         public Dictionary<string, object> Examples { get; set; } = new();
     }
@@ -436,7 +436,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public int QuickWinCount { get; set; }
         public string EstimatedImplementationTime { get; set; } = string.Empty;
         public string ExpectedImpact { get; set; } = string.Empty;
-        public List<string> PrimaryFocusAreas { get; set; } = new();
+        public List<string> PrimaryFocusAreas { get; set; } = [];
     }
 
     /// <summary>
@@ -444,10 +444,10 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     /// </summary>
     public class ImplementationGuide
     {
-        public List<ImplementationPhase> Phases { get; set; } = new();
-        public List<string> Prerequisites { get; set; } = new();
-        public List<string> Tools { get; set; } = new();
-        public List<string> Resources { get; set; } = new();
+        public List<ImplementationPhase> Phases { get; set; } = [];
+        public List<string> Prerequisites { get; set; } = [];
+        public List<string> Tools { get; set; } = [];
+        public List<string> Resources { get; set; } = [];
         public string EstimatedTimeline { get; set; } = string.Empty;
     }
 
@@ -459,10 +459,10 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         public int PhaseNumber { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
-        public List<string> RecommendationIds { get; set; } = new();
+        public List<string> RecommendationIds { get; set; } = [];
         public string EstimatedDuration { get; set; } = string.Empty;
-        public List<string> Deliverables { get; set; } = new();
-        public List<string> Dependencies { get; set; } = new();
+        public List<string> Deliverables { get; set; } = [];
+        public List<string> Dependencies { get; set; } = [];
     }
 
     /// <summary>
@@ -519,8 +519,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         public int PerformanceScore { get; set; } // 0-100
         public string UserExperienceGrade { get; set; } = string.Empty; // A, B, C, D, F
-        public List<string> UserImpactFactors { get; set; } = new();
-        public List<string> ImprovementAreas { get; set; } = new();
+        public List<string> UserImpactFactors { get; set; } = [];
+        public List<string> ImprovementAreas { get; set; } = [];
     }
 
     [McpServerTool]
@@ -828,7 +828,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                     ComponentName = "AnalysisError",
                     ComponentPath = "Error during component analysis",
                     ImpactLevel = "critical",
-                    OptimizationOpportunities = new List<string> { $"Error: {ex.Message}" }
+                    OptimizationOpportunities = [$"Error: {ex.Message}"]
                 });
             }
 
@@ -867,7 +867,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 {
                     ModuleName = "AnalysisError",
                     ModulePath = "Error during module analysis",
-                    OptimizationOpportunities = new List<string> { $"Error: {ex.Message}" }
+                    OptimizationOpportunities = [$"Error: {ex.Message}"]
                 });
             }
 
@@ -920,7 +920,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 {
                     AssetName = "AnalysisError",
                     AssetType = "error",
-                    OptimizationSuggestions = new List<string> { $"Error: {ex.Message}" }
+                    OptimizationSuggestions = [$"Error: {ex.Message}"]
                 });
             }
 
@@ -1267,7 +1267,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             {
                 Overall = 0,
                 Grade = "F",
-                ScoreFactors = new List<string> { $"Error calculating score: {ex.Message}" }
+                ScoreFactors = [$"Error calculating score: {ex.Message}"]
             };
         }
 
@@ -1278,7 +1278,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var score = new SizeScore
         {
-            ScoreFactors = new List<string>()
+            ScoreFactors = []
         };
 
         try
@@ -1397,7 +1397,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         }
         catch
         {
-            return new List<string>();
+            return [];
         }
     }
 
@@ -1409,7 +1409,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         }
         catch
         {
-            return new List<string>();
+            return [];
         }
     }
 
@@ -1532,7 +1532,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var optimization = new AssetOptimization
         {
-            OptimizationTechniques = new List<string>()
+            OptimizationTechniques = []
         };
 
         var fileName = Path.GetFileName(filePath);
@@ -1639,8 +1639,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         var optimization = new ChunkOptimization
         {
             ChunkCount = chunks.Count,
-            LargeChunks = new List<string>(),
-            SmallChunks = new List<string>()
+            LargeChunks = [],
+            SmallChunks = []
         };
 
         if (chunks.Count > 0)
@@ -1655,7 +1655,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
             // Identify small chunks (< 10KB)
             optimization.SmallChunks = chunks
-                .Where(c => c.SizeBytes < 10 * 1024 && c.Type == "async")
+                .Where(c => c is { SizeBytes: < 10 * 1024, Type: "async" })
                 .Select(c => c.Name)
                 .ToList();
 
@@ -1677,7 +1677,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             opportunities.Add($"Split {largeChunks.Count} large chunk(s) (>{500}KB) into smaller pieces");
         }
 
-        var smallChunks = chunks.Where(c => c.SizeBytes < 10 * 1024 && c.Type == "async").ToList();
+        var smallChunks = chunks.Where(c => c is { SizeBytes: < 10 * 1024, Type: "async" }).ToList();
         if (smallChunks.Count > 3)
         {
             opportunities.Add($"Consider merging {smallChunks.Count} small chunks (<10KB) to reduce HTTP overhead");
@@ -1701,8 +1701,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var strategy = new SplittingStrategy
         {
-            RecommendedSplits = new List<string>(),
-            MergeOpportunities = new List<string>()
+            RecommendedSplits = [],
+            MergeOpportunities = []
         };
 
         var totalSize = chunks.Sum(c => c.SizeBytes);
@@ -1737,8 +1737,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         {
             Name = name,
             Version = version,
-            Alternatives = new List<string>(),
-            UsedBy = new List<string>()
+            Alternatives = [],
+            UsedBy = []
         };
 
         // Estimate size based on known package sizes
@@ -1781,7 +1781,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                     GzippedSizeBytes = (long)(estimatedSize * 0.7),
                     IsTreeShakable = true,
                     IsUsed = true,
-                    UsedBy = new List<string> { "application" }
+                    UsedBy = ["application"]
                 });
             }
         }
@@ -1798,7 +1798,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         var optimization = new DependencyOptimization
         {
             TotalDependencies = dependencies.Count,
-            QuickWins = new List<string>()
+            QuickWins = []
         };
 
         optimization.OptimizedDependencies = dependencies.Count(d => d.IsTreeShakable);
@@ -1860,17 +1860,20 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var unused = new UnusedDependencies
         {
-            CompletelyUnused = new List<string>(),
-            PartiallyUnused = new List<string>(),
-            SafeToRemove = new List<string>(),
-            RequiresInvestigation = new List<string>()
+            CompletelyUnused = [],
+            PartiallyUnused = [],
+            SafeToRemove =
+            [
+                "Example: unused testing dependencies in production build"
+            ],
+            RequiresInvestigation =
+            [
+                "Review all dependencies for actual usage"
+            ]
         };
 
         // This would require static analysis of the codebase
         // For now, provide general guidance
-
-        unused.SafeToRemove.Add("Example: unused testing dependencies in production build");
-        unused.RequiresInvestigation.Add("Review all dependencies for actual usage");
 
         return unused;
     }
@@ -1879,8 +1882,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var ux = new UserExperienceMetrics
         {
-            UserImpactFactors = new List<string>(),
-            ImprovementAreas = new List<string>()
+            UserImpactFactors = [],
+            ImprovementAreas = []
         };
 
         // Calculate performance score based on loading metrics
@@ -1991,7 +1994,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var optimization = new ComponentOptimization
         {
-            OptimizationSuggestions = new List<string>()
+            OptimizationSuggestions = []
         };
 
         try
@@ -2210,8 +2213,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var optimization = new ModuleOptimization
         {
-            ModuleDependencies = new List<string>(),
-            UnusedExports = new List<string>()
+            ModuleDependencies = [],
+            UnusedExports = []
         };
 
         try
@@ -2332,21 +2335,21 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var alternatives = new Dictionary<string, List<string>>
         {
-            ["moment"] = new() { "date-fns", "dayjs" },
-            ["lodash"] = new() { "lodash-es", "ramda" },
-            ["jquery"] = new() { "native DOM APIs", "cash-dom" },
-            ["bootstrap"] = new() { "@angular/material", "ng-bootstrap" }
+            ["moment"] = ["date-fns", "dayjs"],
+            ["lodash"] = ["lodash-es", "ramda"],
+            ["jquery"] = ["native DOM APIs", "cash-dom"],
+            ["bootstrap"] = ["@angular/material", "ng-bootstrap"]
         };
 
-        return alternatives.TryGetValue(packageName, out var alts) ? alts : new List<string>();
+        return alternatives.TryGetValue(packageName, out var alts) ? alts : [];
     }
 
     private DependencyOptimizationInfo AnalyzeDependencyOptimizationInfo(string name, long size)
     {
         var info = new DependencyOptimizationInfo
         {
-            OptimizationSuggestions = new List<string>(),
-            AlternativeDependencies = new List<AlternativeDependency>()
+            OptimizationSuggestions = [],
+            AlternativeDependencies = []
         };
 
         info.CanBeTreeShaken = IsTreeShakableDependency(name);
@@ -2428,13 +2431,13 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 PotentialSavings = criticalComponents.Sum(c => c.SizeBytes) / 4, // Estimate 25% savings
                 ImplementationEffort = 6,
                 Impact = "Significant reduction in initial bundle size",
-                Steps = new List<string>
-                {
+                Steps =
+                [
                     "Review component complexity and dependencies",
                     "Implement OnPush change detection strategy",
                     "Split large components into smaller pieces",
                     "Remove unused dependencies"
-                },
+                ],
                 AffectedFiles = criticalComponents.Select(c => c.ComponentPath).ToList(),
                 EstimatedTime = "2-4 weeks"
             });
@@ -2453,12 +2456,12 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 PotentialSavings = 0, // Runtime performance improvement, not bundle size
                 ImplementationEffort = 3,
                 Impact = "Better runtime performance and change detection efficiency",
-                Steps = new List<string>
-                {
+                Steps =
+                [
                     "Add ChangeDetectionStrategy.OnPush to component",
                     "Update component to use immutable data patterns",
                     "Use markForCheck() when needed"
-                },
+                ],
                 AffectedFiles = nonOnPushComponents.Select(c => c.ComponentPath).ToList(),
                 EstimatedTime = "1-2 weeks"
             });
@@ -2489,14 +2492,14 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 PotentialSavings = largeDependencies.Sum(d => d.SizeBytes) / 3, // Estimate 33% savings
                 ImplementationEffort = 7,
                 Impact = "Significant bundle size reduction",
-                Steps = new List<string>
-                {
+                Steps =
+                [
                     "Review necessity of large dependencies",
                     "Enable tree shaking where possible",
                     "Consider smaller alternatives",
                     "Implement lazy loading for non-critical dependencies"
-                },
-                Requirements = new List<string> { "Bundle analyzer", "Dependency audit" },
+                ],
+                Requirements = ["Bundle analyzer", "Dependency audit"],
                 EstimatedTime = "3-5 weeks"
             });
         }
@@ -2513,13 +2516,13 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 PotentialSavings = dependencies.UnusedDependencies.PotentialSavings,
                 ImplementationEffort = 2,
                 Impact = "Reduce bundle size and improve build performance",
-                Steps = new List<string>
-                {
+                Steps =
+                [
                     "Run dependency audit",
                     "Verify dependencies are truly unused",
                     "Remove from package.json",
                     "Test application thoroughly"
-                },
+                ],
                 EstimatedTime = "1 week"
             });
         }
@@ -2531,7 +2534,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var recommendations = new List<OptimizationRecommendation>();
 
-        var largeImages = assets.Where(a => a.AssetType == "image" && a.SizeBytes > 100 * 1024).ToList();
+        var largeImages = assets.Where(a => a is { AssetType: "image", SizeBytes: > 100 * 1024 }).ToList();
         if (largeImages.Count > 0)
         {
             recommendations.Add(new OptimizationRecommendation
@@ -2544,13 +2547,13 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 PotentialSavings = largeImages.Sum(a => a.SizeBytes) / 2, // Estimate 50% savings
                 ImplementationEffort = 3,
                 Impact = "Faster page loading and reduced bandwidth usage",
-                Steps = new List<string>
-                {
+                Steps =
+                [
                     "Compress images using tools like imagemin",
                     "Convert to WebP format where supported",
                     "Implement responsive images",
                     "Use CDN for image delivery"
-                },
+                ],
                 EstimatedTime = "1-2 weeks"
             });
         }
@@ -2568,12 +2571,12 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 PotentialSavings = unoptimizedAssets.Sum(a => a.SizeBytes) / 4, // Estimate 25% savings
                 ImplementationEffort = 2,
                 Impact = "Reduced asset sizes and faster loading",
-                Steps = new List<string>
-                {
+                Steps =
+                [
                     "Enable minification in build configuration",
                     "Configure compression",
                     "Enable source map generation for debugging"
-                },
+                ],
                 EstimatedTime = "1 week"
             });
         }
@@ -2598,13 +2601,13 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 PotentialSavings = 0, // Improves loading performance, not total size
                 ImplementationEffort = 5,
                 Impact = "Better loading performance and caching",
-                Steps = new List<string>
-                {
+                Steps =
+                [
                     "Implement route-based code splitting",
                     "Use dynamic imports for feature modules",
                     "Configure webpack optimization settings",
                     "Test lazy loading implementation"
-                },
+                ],
                 EstimatedTime = "2-3 weeks"
             });
         }
@@ -2621,13 +2624,13 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 PotentialSavings = 0, // Improves initial load performance
                 ImplementationEffort = 6,
                 Impact = "Significantly faster initial page load",
-                Steps = new List<string>
-                {
+                Steps =
+                [
                     "Configure lazy loaded routes",
                     "Create feature modules",
                     "Implement dynamic imports",
                     "Test loading performance"
-                },
+                ],
                 EstimatedTime = "3-4 weeks"
             });
         }
@@ -2651,13 +2654,13 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 PotentialSavings = overview.TotalSize / 3, // Estimate 33% savings
                 ImplementationEffort = 4,
                 Impact = "Comprehensive bundle size reduction",
-                Steps = new List<string>
-                {
+                Steps =
+                [
                     "Enable AOT compilation",
                     "Enable tree shaking",
                     "Enable minification",
                     "Configure production build settings"
-                },
+                ],
                 EstimatedTime = "1-2 weeks"
             });
         }
@@ -2674,13 +2677,13 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 PotentialSavings = overview.Distribution.VendorSize / 4, // Estimate 25% savings
                 ImplementationEffort = 5,
                 Impact = "Reduced vendor bundle size and better caching",
-                Steps = new List<string>
-                {
+                Steps =
+                [
                     "Review vendor dependencies",
                     "Enable tree shaking for third-party libraries",
                     "Configure vendor chunk splitting",
                     "Consider CDN for common libraries"
-                },
+                ],
                 EstimatedTime = "2-3 weeks"
             });
         }
@@ -2706,25 +2709,25 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var guide = new ImplementationGuide
         {
-            Prerequisites = new List<string>
-            {
+            Prerequisites =
+            [
                 "Angular CLI installed",
                 "Bundle analyzer tool",
                 "Development environment setup"
-            },
-            Tools = new List<string>
-            {
+            ],
+            Tools =
+            [
                 "webpack-bundle-analyzer",
                 "Angular DevTools",
                 "Lighthouse",
                 "npm audit"
-            },
-            Resources = new List<string>
-            {
+            ],
+            Resources =
+            [
                 "Angular Performance Guide",
                 "Bundle optimization documentation",
                 "Tree shaking best practices"
-            }
+            ]
         };
 
         // Create implementation phases
@@ -2741,7 +2744,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 Description = "Address high-priority bundle size issues",
                 RecommendationIds = highPriority.Select(r => r.Id).ToList(),
                 EstimatedDuration = "2-4 weeks",
-                Deliverables = new List<string> { "Reduced initial bundle size", "Improved loading performance" }
+                Deliverables = ["Reduced initial bundle size", "Improved loading performance"]
             });
         }
 
@@ -2754,7 +2757,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 Description = "Implement medium-priority optimizations",
                 RecommendationIds = mediumPriority.Select(r => r.Id).ToList(),
                 EstimatedDuration = "1-3 weeks",
-                Deliverables = new List<string> { "Enhanced asset optimization", "Better dependency management" }
+                Deliverables = ["Enhanced asset optimization", "Better dependency management"]
             });
         }
 
@@ -2767,7 +2770,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 Description = "Polish and fine-tune optimizations",
                 RecommendationIds = lowPriority.Select(r => r.Id).ToList(),
                 EstimatedDuration = "1-2 weeks",
-                Deliverables = new List<string> { "Comprehensive optimization", "Performance monitoring setup" }
+                Deliverables = ["Comprehensive optimization", "Performance monitoring setup"]
             });
         }
 
