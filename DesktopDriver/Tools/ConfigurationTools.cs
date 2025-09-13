@@ -261,7 +261,7 @@ For more information, check the audit logs or configuration files.";
                 try
                 {
                     // Parse and format the JSON for better readability
-                    using JsonDocument doc = System.Text.Json.JsonDocument.Parse(line);
+                    using JsonDocument doc = JsonDocument.Parse(line);
                     JsonElement root = doc.RootElement;
                     
                     DateTime timestamp = root.GetProperty("Timestamp").GetDateTime().ToLocalTime();
@@ -272,7 +272,7 @@ For more information, check the audit logs or configuration files.";
                     result.AppendLine($"{timestamp:yyyy-MM-dd HH:mm:ss} [{(success ? "SUCCESS" : "FAILED")}] {operation}");
                     result.AppendLine($"  Details: {details}");
                     
-                    if (root.TryGetProperty("Error", out JsonElement errorElement) && errorElement.ValueKind != System.Text.Json.JsonValueKind.Null)
+                    if (root.TryGetProperty("Error", out JsonElement errorElement) && errorElement.ValueKind != JsonValueKind.Null)
                     {
                         result.AppendLine($"  Error: {errorElement.GetString()}");
                     }

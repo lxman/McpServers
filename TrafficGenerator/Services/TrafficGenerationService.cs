@@ -243,7 +243,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
                 {
                     try
                     {
-                        using var tcpClient = new System.Net.Sockets.TcpClient();
+                        using var tcpClient = new TcpClient();
                         Task connectTask = tcpClient.ConnectAsync(target, port);
                         Task timeoutTask = Task.Delay(1000, cancellationToken);
                         
@@ -283,7 +283,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
 
                 try
                 {
-                    using var tcpClient = new System.Net.Sockets.TcpClient();
+                    using var tcpClient = new TcpClient();
                     await tcpClient.ConnectAsync(target, port).WaitAsync(TimeSpan.FromSeconds(2), cancellationToken);
                     
                     if (tcpClient.Connected)
@@ -344,7 +344,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
 
                     try
                     {
-                        using var tcpClient = new System.Net.Sockets.TcpClient();
+                        using var tcpClient = new TcpClient();
                         await tcpClient.ConnectAsync(target, port).WaitAsync(TimeSpan.FromSeconds(1), cancellationToken);
                         
                         response.PacketsGenerated += 3;
@@ -471,7 +471,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
             // In real implementation, this would use PacketDotNet to craft the exact packet
             
             // Simulate XMAS packet characteristics
-            using var tcpClient = new System.Net.Sockets.TcpClient();
+            using var tcpClient = new TcpClient();
             
             // Set socket options to simulate unusual packet behavior
             tcpClient.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
@@ -505,7 +505,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
             // In real implementation, this would use PacketDotNet to craft the exact packet
             
             // Simulate NULL packet characteristics  
-            using var tcpClient = new System.Net.Sockets.TcpClient();
+            using var tcpClient = new TcpClient();
             
             // Set socket options to simulate unusual packet behavior
             tcpClient.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);

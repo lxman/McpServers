@@ -193,7 +193,7 @@ public partial class SimplifyJobsScraper : BaseJobScraper
         {
             // Check URL for jobId parameter
             string currentUrl = Driver!.Url;
-            Match urlMatch = System.Text.RegularExpressions.Regex.Match(currentUrl, @"jobId=([a-f0-9-]{8,50})", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            Match urlMatch = Regex.Match(currentUrl, @"jobId=([a-f0-9-]{8,50})", RegexOptions.IgnoreCase);
             if (urlMatch.Success)
             {
                 return urlMatch.Groups[1].Value;
@@ -590,7 +590,7 @@ public partial class SimplifyJobsScraper : BaseJobScraper
             
             // First, extract job ID from current URL (as seen in the screenshot)
             string currentUrl = Driver!.Url;
-            Match urlJobIdMatch = System.Text.RegularExpressions.Regex.Match(currentUrl, @"jobId=([a-f0-9-]{8,50})", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            Match urlJobIdMatch = Regex.Match(currentUrl, @"jobId=([a-f0-9-]{8,50})", RegexOptions.IgnoreCase);
             if (urlJobIdMatch.Success)
             {
                 string urlJobId = urlJobIdMatch.Groups[1].Value;
@@ -618,8 +618,8 @@ public partial class SimplifyJobsScraper : BaseJobScraper
             
             foreach (string pattern in patterns)
             {
-                MatchCollection matches = System.Text.RegularExpressions.Regex.Matches(pageSource, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                foreach (System.Text.RegularExpressions.Match match in matches)
+                MatchCollection matches = Regex.Matches(pageSource, pattern, RegexOptions.IgnoreCase);
+                foreach (Match match in matches)
                 {
                     if (match.Success && match.Groups.Count > 1)
                     {
@@ -837,8 +837,8 @@ public partial class SimplifyJobsScraper : BaseJobScraper
                                 string? value = element.GetAttribute(attr);
                                 if (!string.IsNullOrEmpty(value))
                                 {
-                                    MatchCollection matches = System.Text.RegularExpressions.Regex.Matches(value, @"([a-f0-9-]{8,50})", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                                    foreach (System.Text.RegularExpressions.Match match in matches)
+                                    MatchCollection matches = Regex.Matches(value, @"([a-f0-9-]{8,50})", RegexOptions.IgnoreCase);
+                                    foreach (Match match in matches)
                                     {
                                         string jobId = match.Groups[1].Value;
                                         if (IsValidJobId(jobId) && !jobIds.Contains(jobId))
@@ -900,7 +900,7 @@ public partial class SimplifyJobsScraper : BaseJobScraper
                     if (newUrl != originalUrl)
                     {
                         // URL changed, extract job ID from new URL
-                        Match match = System.Text.RegularExpressions.Regex.Match(newUrl, @"/jobs/([a-f0-9-]{8,50})", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                        Match match = Regex.Match(newUrl, @"/jobs/([a-f0-9-]{8,50})", RegexOptions.IgnoreCase);
                         if (match.Success)
                         {
                             string jobId = match.Groups[1].Value;
@@ -1666,7 +1666,7 @@ public partial class SimplifyJobsScraper : BaseJobScraper
         
         foreach (string pattern in patterns)
         {
-            Match match = System.Text.RegularExpressions.Regex.Match(url, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            Match match = Regex.Match(url, pattern, RegexOptions.IgnoreCase);
             if (match.Success && IsValidJobId(match.Groups[1].Value))
             {
                 return match.Groups[1].Value;

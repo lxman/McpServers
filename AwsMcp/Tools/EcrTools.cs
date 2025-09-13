@@ -680,7 +680,7 @@ public class EcrTools
             var tagData = JsonSerializer.Deserialize<List<Dictionary<string, string>>>(tags);
             var resourceTags = tagData?.Select(t => new Tag { Key = t["Key"], Value = t["Value"] }).ToList();
 
-            if (resourceTags == null || !resourceTags.Any())
+            if (resourceTags == null || resourceTags.Count == 0)
             {
                 throw new ArgumentException("No valid tags provided");
             }

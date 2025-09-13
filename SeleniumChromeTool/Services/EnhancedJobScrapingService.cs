@@ -360,7 +360,7 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
             // Generate ObjectIds for jobs that don't have them
             foreach (EnhancedJobListing job in request.Jobs.Where(j => string.IsNullOrEmpty(j.Id)))
             {
-                job.Id = MongoDB.Bson.ObjectId.GenerateNewId().ToString();
+                job.Id = ObjectId.GenerateNewId().ToString();
                 job.ScrapedAt = DateTime.UtcNow;
             }
 

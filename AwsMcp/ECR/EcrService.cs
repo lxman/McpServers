@@ -11,12 +11,19 @@ namespace AwsMcp.ECR;
 public class EcrService
 {
     private readonly ILogger<EcrService> _logger;
+    private readonly AwsDiscoveryService _discoveryService;
     private AmazonECRClient? _ecrClient;
     private AwsConfiguration? _config;
+    private bool _isInitialized;
     
-    public EcrService(ILogger<EcrService> logger)
+    public EcrService(
+        ILogger<EcrService> logger,
+        AwsDiscoveryService discoveryService)
     {
         _logger = logger;
+        _discoveryService = discoveryService;
+        
+        _ = Task.Run(AutoInitializeAsync);
     }
     
     /// <summary>
@@ -72,7 +79,7 @@ public class EcrService
     /// </summary>
     public async Task<DescribeRepositoriesResponse> ListRepositoriesAsync()
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.DescribeRepositoriesAsync(new DescribeRepositoriesRequest());
     }
     
@@ -81,10 +88,10 @@ public class EcrService
     /// </summary>
     public async Task<DescribeRepositoriesResponse> DescribeRepositoriesAsync(List<string>? repositoryNames = null)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new DescribeRepositoriesRequest();
-        if (repositoryNames != null && repositoryNames.Any())
+        if (repositoryNames != null && repositoryNames.Count != 0)
         {
             request.RepositoryNames = repositoryNames;
         }
@@ -99,7 +106,7 @@ public class EcrService
         ImageScanningConfiguration? imageScanningConfiguration = null,
         List<Tag>? tags = null)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new CreateRepositoryRequest
         {
@@ -111,7 +118,7 @@ public class EcrService
             request.ImageScanningConfiguration = imageScanningConfiguration;
         }
         
-        if (tags != null && tags.Any())
+        if (tags != null && tags.Count != 0)
         {
             request.Tags = tags;
         }
@@ -124,7 +131,7 @@ public class EcrService
     /// </summary>
     public async Task<DeleteRepositoryResponse> DeleteRepositoryAsync(string repositoryName, bool force = false)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.DeleteRepositoryAsync(new DeleteRepositoryRequest 
         { 
             RepositoryName = repositoryName,
@@ -137,7 +144,7 @@ public class EcrService
     /// </summary>
     public async Task<ListImagesResponse> ListImagesAsync(string repositoryName)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.ListImagesAsync(new ListImagesRequest 
         { 
             RepositoryName = repositoryName 
@@ -150,14 +157,14 @@ public class EcrService
     public async Task<DescribeImagesResponse> DescribeImagesAsync(string repositoryName, 
         List<ImageIdentifier>? imageIds = null)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new DescribeImagesRequest
         {
             RepositoryName = repositoryName
         };
         
-        if (imageIds != null && imageIds.Any())
+        if (imageIds != null && imageIds.Count != 0)
         {
             request.ImageIds = imageIds;
         }
@@ -170,7 +177,7 @@ public class EcrService
     /// </summary>
     public async Task<GetAuthorizationTokenResponse> GetAuthorizationTokenAsync()
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.GetAuthorizationTokenAsync(new GetAuthorizationTokenRequest());
     }
     
@@ -180,7 +187,7 @@ public class EcrService
     public async Task<BatchDeleteImageResponse> BatchDeleteImageAsync(string repositoryName, 
         List<ImageIdentifier> imageIds)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.BatchDeleteImageAsync(new BatchDeleteImageRequest
         {
             RepositoryName = repositoryName,
@@ -194,7 +201,7 @@ public class EcrService
     public async Task<PutImageResponse> PutImageAsync(string repositoryName, 
         string imageManifest, string? imageTag = null)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new PutImageRequest
         {
@@ -215,7 +222,7 @@ public class EcrService
     /// </summary>
     public async Task<GetRepositoryPolicyResponse> GetRepositoryPolicyAsync(string repositoryName)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.GetRepositoryPolicyAsync(new GetRepositoryPolicyRequest 
         { 
             RepositoryName = repositoryName 
@@ -228,7 +235,7 @@ public class EcrService
     public async Task<SetRepositoryPolicyResponse> SetRepositoryPolicyAsync(string repositoryName, 
         string policyText)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.SetRepositoryPolicyAsync(new SetRepositoryPolicyRequest
         {
             RepositoryName = repositoryName,
@@ -241,7 +248,7 @@ public class EcrService
     /// </summary>
     public async Task<DeleteRepositoryPolicyResponse> DeleteRepositoryPolicyAsync(string repositoryName)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.DeleteRepositoryPolicyAsync(new DeleteRepositoryPolicyRequest 
         { 
             RepositoryName = repositoryName 
@@ -254,7 +261,7 @@ public class EcrService
     public async Task<DescribeImageScanFindingsResponse> DescribeImageScanFindingsAsync(
         string repositoryName, ImageIdentifier imageId)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.DescribeImageScanFindingsAsync(new DescribeImageScanFindingsRequest
         {
             RepositoryName = repositoryName,
@@ -268,7 +275,7 @@ public class EcrService
     public async Task<StartImageScanResponse> StartImageScanAsync(string repositoryName, 
         ImageIdentifier imageId)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.StartImageScanAsync(new StartImageScanRequest
         {
             RepositoryName = repositoryName,
@@ -281,7 +288,7 @@ public class EcrService
     /// </summary>
     public async Task<GetLifecyclePolicyResponse> GetLifecyclePolicyAsync(string repositoryName)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.GetLifecyclePolicyAsync(new GetLifecyclePolicyRequest 
         { 
             RepositoryName = repositoryName 
@@ -294,7 +301,7 @@ public class EcrService
     public async Task<PutLifecyclePolicyResponse> PutLifecyclePolicyAsync(string repositoryName, 
         string lifecyclePolicyText)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.PutLifecyclePolicyAsync(new PutLifecyclePolicyRequest
         {
             RepositoryName = repositoryName,
@@ -307,7 +314,7 @@ public class EcrService
     /// </summary>
     public async Task<DeleteLifecyclePolicyResponse> DeleteLifecyclePolicyAsync(string repositoryName)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.DeleteLifecyclePolicyAsync(new DeleteLifecyclePolicyRequest 
         { 
             RepositoryName = repositoryName 
@@ -319,7 +326,7 @@ public class EcrService
     /// </summary>
     public async Task<TagResourceResponse> TagResourceAsync(string resourceArn, List<Tag> tags)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.TagResourceAsync(new TagResourceRequest
         {
             ResourceArn = resourceArn,
@@ -332,7 +339,7 @@ public class EcrService
     /// </summary>
     public async Task<UntagResourceResponse> UntagResourceAsync(string resourceArn, List<string> tagKeys)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.UntagResourceAsync(new UntagResourceRequest
         {
             ResourceArn = resourceArn,
@@ -345,18 +352,61 @@ public class EcrService
     /// </summary>
     public async Task<ListTagsForResourceResponse> ListTagsForResourceAsync(string resourceArn)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecrClient!.ListTagsForResourceAsync(new ListTagsForResourceRequest 
         { 
             ResourceArn = resourceArn 
         });
     }
     
-    private void EnsureInitialized()
+    /// <summary>
+    /// Auto-initialize with discovered credentials
+    /// </summary>
+    private async Task AutoInitializeAsync()
     {
-        if (_ecrClient == null)
+        try
         {
-            throw new InvalidOperationException("ECR client is not initialized. Call InitializeAsync first.");
+            if (await _discoveryService.AutoInitializeAsync())
+            {
+                var accountInfo = await _discoveryService.GetAccountInfoAsync();
+                
+                var config = new AwsConfiguration
+                {
+                    Region = accountInfo.InferredRegion,
+                    ProfileName = Environment.GetEnvironmentVariable("AWS_PROFILE") ?? "default"
+                };
+                
+                await InitializeAsync(config);
+                _isInitialized = true;
+                _logger.LogInformation("S3 service auto-initialized successfully");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to auto-initialize S3 service. Explicit initialization may be required.");
+        }
+    }
+    
+    /// <summary>
+    /// Ensure service is initialized (wait if auto-initialization is still running)
+    /// </summary>
+    private async Task EnsureInitializedAsync()
+    {
+        // Wait for auto-initialization to complete
+        if (!_isInitialized && _ecrClient == null)
+        {
+            // Wait up to 5 seconds for auto-initialization
+            var timeout = DateTime.UtcNow.AddSeconds(5);
+            while (!_isInitialized && DateTime.UtcNow < timeout)
+            {
+                await Task.Delay(100);
+            }
+            
+            if (_ecrClient == null)
+            {
+                throw new InvalidOperationException(
+                    "S3 client could not be auto-initialized. Please ensure AWS credentials are configured properly or call InitializeAsync explicitly.");
+            }
         }
     }
     

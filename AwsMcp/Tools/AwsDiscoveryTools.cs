@@ -41,7 +41,7 @@ public class AwsDiscoveryTools
                 ServiceUrl = serviceUrl
             };
 
-            bool success = await _discoveryService.InitializeAsync(config);
+            var success = await _discoveryService.InitializeAsync(config);
             
             return JsonSerializer.Serialize(new
             {
@@ -55,6 +55,53 @@ public class AwsDiscoveryTools
         catch (Exception ex)
         {
             return HandleError(ex, "initializing AWS Discovery service");
+        }
+    }
+    
+    [McpServerTool]
+    [Description("Get current AWS account information with auto-discovered credentials")]
+    public async Task<string> GetAccountInfoAuto()
+    {
+        try
+        {
+            // Try auto-initialization first
+            if (!await _discoveryService.AutoInitializeAsync())
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "Could not auto-discover AWS credentials",
+                    suggestions = new[]
+                    {
+                        "Run 'aws configure' to set up credentials",
+                        "Ensure AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are set",
+                        "Verify your AWS CLI is working with 'aws sts get-caller-identity'"
+                    }
+                });
+            }
+        
+            // Now get account info
+            var accountInfo = await _discoveryService.GetAccountInfoAsync();
+        
+            return JsonSerializer.Serialize(new
+            {
+                success = true,
+                autoDiscovered = true,
+                accountInfo = new
+                {
+                    accountId = accountInfo.AccountId,
+                    userId = accountInfo.UserId,
+                    arn = accountInfo.Arn,
+                    principalName = accountInfo.PrincipalName,
+                    isGovCloud = accountInfo.IsGovCloud,
+                    inferredRegion = accountInfo.InferredRegion,
+                    configuredRegion = accountInfo.ConfiguredRegion
+                }
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "auto-discovering AWS account information");
         }
     }
 
@@ -325,6 +372,233 @@ public class AwsDiscoveryTools
             return HandleError(ex, "analyzing AWS environment");
         }
     }
+    
+    [McpServerTool]
+    [Description("Get help with finding and configuring AWS credentials - start here if you're unsure about your setup")]
+    public static string CredentialsHelp()
+    {
+        var helpInfo = new
+        {
+            title = "AWS Credentials Discovery & Setup Guide",
+            version = "1.0",
+            lastUpdated = "2025-09-12",
+            
+            quickStart = new
+            {
+                description = "If you're not sure about your AWS setup, follow these steps:",
+                steps = new[]
+                {
+                    "1. Run aws:detect_cli_configuration (works without credentials)",
+                    "2. If profiles found → Run aws:initialize_aws_discovery with profileName",
+                    "3. If no profiles → Follow the setup guide below",
+                    "4. Run aws:auto_discover_configuration for complete analysis"
+                }
+            },
+            
+            credentialSources = new
+            {
+                description = "AWS credentials can be found in several places (checked in this order):",
+                sources = new[]
+                {
+                    new
+                    {
+                        source = "Environment Variables",
+                        priority = 1,
+                        variables = new[] { "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION", "AWS_PROFILE" },
+                        location = string.Empty,
+                        checkCommand = "aws:detect_cli_configuration",
+                        setup = "Set environment variables directly or use 'aws configure set' commands"
+                    },
+                    new
+                    {
+                        source = "AWS CLI Profiles",
+                        priority = 2,
+                        variables = Array.Empty<string>(),
+                        location = "~/.aws/credentials and ~/.aws/config",
+                        checkCommand = "aws:detect_cli_configuration",
+                        setup = "Run 'aws configure' or 'aws configure --profile profile-name'"
+                    },
+                    new
+                    {
+                        source = "IAM Instance Profile",
+                        priority = 3,
+                        variables = Array.Empty<string>(),
+                        location = "EC2 metadata service",
+                        checkCommand = "aws:get_account_info (after initialization)",
+                        setup = "Attach IAM role to EC2 instance"
+                    },
+                    new
+                    {
+                        source = "AWS SSO",
+                        priority = 4,
+                        variables = Array.Empty<string>(),
+                        location = "SSO session cache",
+                        checkCommand = "aws:detect_cli_configuration",
+                        setup = "Run 'aws sso login'"
+                    }
+                }
+            },
+            
+            commonScenarios = new
+            {
+                description = "Common credential scenarios and solutions:",
+                scenarios = new[]
+                {
+                    new
+                    {
+                        scenario = "No AWS credentials found",
+                        detection = "aws:detect_cli_configuration returns no profiles",
+                        solution = new[]
+                        {
+                            "Run 'aws configure' to set up credentials",
+                            "Or set environment variables: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY",
+                            "Or install AWS CLI and run 'aws configure'"
+                        }
+                    },
+                    new
+                    {
+                        scenario = "AWS CLI profiles exist but incomplete",
+                        detection = "Profiles shown but hasCredentials = false",
+                        solution = new[]
+                        {
+                            "Run 'aws configure' to complete the default profile",
+                            "Or run 'aws configure --profile profile-name' for specific profiles",
+                            "Check ~/.aws/credentials file has access_key_id and secret_access_key"
+                        }
+                    },
+                    new
+                    {
+                        scenario = "Authentication fails with existing profiles",
+                        detection = "aws:get_account_info returns InvalidClientTokenId",
+                        solution = new[]
+                        {
+                            "Check if credentials are expired or deactivated",
+                            "Try: aws sts get-caller-identity from command line",
+                            "Re-run 'aws configure' with fresh credentials",
+                            "Check if you're using the correct AWS account"
+                        }
+                    },
+                    new
+                    {
+                        scenario = "Partial permissions (some services work, others don't)",
+                        detection = "aws:test_service_permissions shows mixed results",
+                        solution = new[]
+                        {
+                            "Use service-specific initialization (e.g., testMetricsOnly=true)",
+                            "Contact AWS administrator for additional permissions",
+                            "Check IAM policies attached to your user/role"
+                        }
+                    },
+                    new
+                    {
+                        scenario = "GovCloud or special regions",
+                        detection = "Region shows us-gov-* or different endpoint needed",
+                        solution = new[]
+                        {
+                            "Ensure you're using GovCloud-specific endpoints",
+                            "Verify your credentials are for the correct AWS partition",
+                            "Use region-specific initialization parameters"
+                        }
+                    }
+                }
+            },
+            
+            diagnosticWorkflow = new
+            {
+                description = "Complete diagnostic workflow for troubleshooting:",
+                steps = new[]
+                {
+                    new
+                    {
+                        step = 1,
+                        command = "aws:detect_cli_configuration",
+                        purpose = "Check for AWS CLI setup and profiles",
+                        nextStep = "If profiles found → proceed to step 2, else → setup credentials"
+                    },
+                    new
+                    {
+                        step = 2,
+                        command = "aws:initialize_aws_discovery (with profileName if found)",
+                        purpose = "Initialize discovery service with detected credentials",
+                        nextStep = "If success → step 3, else → check credential completeness"
+                    },
+                    new
+                    {
+                        step = 3,
+                        command = "aws:get_account_info",
+                        purpose = "Verify AWS authentication and get account details",
+                        nextStep = "If success → step 4, else → troubleshoot credentials"
+                    },
+                    new
+                    {
+                        step = 4,
+                        command = "aws:test_service_permissions",
+                        purpose = "Test what AWS services you can access",
+                        nextStep = "Use results to guide service-specific initialization"
+                    },
+                    new
+                    {
+                        step = 5,
+                        command = "aws:auto_discover_configuration",
+                        purpose = "Get complete setup analysis and ready-to-use commands",
+                        nextStep = "Follow the recommended initialization commands"
+                    }
+                }
+            },
+            
+            availableTools = new
+            {
+                description = "All available AWS tools (roughly in order of typical usage):",
+                discoveryTools = new[]
+                {
+                    "aws:credentials_help - This help guide",
+                    "aws:detect_cli_configuration - Check AWS CLI setup (no credentials needed)",
+                    "aws:initialize_aws_discovery - Initialize discovery service",
+                    "aws:get_account_info - Get AWS account information",
+                    "aws:auto_discover_configuration - Complete environment analysis",
+                    "aws:test_service_permissions - Test service access"
+                },
+                serviceTools = new[]
+                {
+                    "aws:initialize_s3 - Initialize S3 service",
+                    "aws:initialize_cloud_watch - Initialize CloudWatch service", 
+                    "aws:initialize_ecr - Initialize ECR service",
+                    "aws:initialize_ecs - Initialize ECS service"
+                },
+                operationalTools = new[]
+                {
+                    "S3: list_buckets, list_objects, get_object_content, etc.",
+                    "CloudWatch: list_metrics, list_alarms, get_metric_statistics, etc.",
+                    "ECR: list_repositories, describe_images, etc.",
+                    "ECS: list_clusters, list_services, run_task, etc."
+                }
+            },
+            
+            tips = new
+            {
+                description = "Pro tips for smooth AWS MCP experience:",
+                recommendations = new[]
+                {
+                    "Always start with aws:detect_cli_configuration to understand your setup",
+                    "Use aws:auto_discover_configuration for one-command complete analysis",
+                    "For partial permissions, use service-specific initialization (testMetricsOnly, testLogsOnly)",
+                    "Keep credentials in AWS CLI profiles rather than environment variables for security",
+                    "Use descriptive profile names if you have multiple AWS accounts",
+                    "Test with aws:test_service_permissions before initializing all services"
+                }
+            },
+            
+            troubleshootingResources = new
+            {
+                awsDocumentation = "https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html",
+                credentialSetup = "https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html",
+                govCloudSetup = "https://docs.aws.amazon.com/govcloud-us/latest/UserGuide/",
+                commonErrors = "Use enhanced error messages - they include specific suggestions for each error type"
+            }
+        };
+        
+        return JsonSerializer.Serialize(helpInfo, new JsonSerializerOptions { WriteIndented = true });
+    }
 
     #region Private Helper Methods
 
@@ -344,7 +618,7 @@ public class AwsDiscoveryTools
         else
         {
             var incompleteProfiles = cliConfig.Profiles.Where(p => !p.HasAccessKey || !p.HasSecretKey).ToList();
-            if (incompleteProfiles.Any())
+            if (incompleteProfiles.Count != 0)
             {
                 recommendations.Add($"Incomplete profiles found: {string.Join(", ", incompleteProfiles.Select(p => p.Name))}");
                 recommendations.Add("Complete profiles need both aws_access_key_id and aws_secret_access_key");

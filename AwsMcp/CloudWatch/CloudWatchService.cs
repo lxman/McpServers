@@ -15,9 +15,12 @@ namespace AwsMcp.CloudWatch;
 public class CloudWatchService
 {
     private readonly ILogger<CloudWatchService> _logger;
+    private readonly AwsDiscoveryService _discoveryService;
     private AmazonCloudWatchClient? _cloudWatchClient;
     private AmazonCloudWatchLogsClient? _logsClient;
     private AwsConfiguration? _config;
+    private bool _cloudWatchInitialized;
+    
     /// <summary>
     /// Check if metrics client is available
     /// </summary>
@@ -27,11 +30,15 @@ public class CloudWatchService
     /// Check if logs client is available
     /// </summary>
     public bool IsLogsClientAvailable => _logsClient != null;
-
     
-    public CloudWatchService(ILogger<CloudWatchService> logger)
+    public CloudWatchService(
+        ILogger<CloudWatchService> logger,
+        AwsDiscoveryService discoveryService)
     {
         _logger = logger;
+        _discoveryService = discoveryService;
+
+        _ = Task.Run(AutoInitializeAsync);
     }
     
     /// <summary>
@@ -153,7 +160,7 @@ public class CloudWatchService
     /// </summary>
     public async Task<List<Metric>> ListMetricsAsync(string? namespaceName = null, string? metricName = null, int maxRecords = 500)
     {
-        EnsureMetricsInitialized();
+        await EnsureMetricsInitializedAsync();
         
         var request = new ListMetricsRequest();
         
@@ -204,7 +211,7 @@ public class CloudWatchService
         List<string> statistics,
         List<Dimension>? dimensions = null)
     {
-        EnsureMetricsInitialized();
+        await EnsureMetricsInitializedAsync();
         
         var request = new GetMetricStatisticsRequest
         {
@@ -216,7 +223,7 @@ public class CloudWatchService
             Statistics = statistics // This expects List<string> in newer AWS SDK versions
         };
         
-        if (dimensions != null && dimensions.Any())
+        if (dimensions != null && dimensions.Count != 0)
         {
             request.Dimensions = dimensions;
         }
@@ -230,7 +237,7 @@ public class CloudWatchService
     /// </summary>
     public async Task<PutMetricDataResponse> PutMetricDataAsync(string namespaceName, List<MetricDatum> metricData)
     {
-        EnsureMetricsInitialized();
+        await EnsureMetricsInitializedAsync();
         
         var request = new PutMetricDataRequest
         {
@@ -256,7 +263,7 @@ public class CloudWatchService
         int evaluationPeriods,
         List<Dimension>? dimensions = null)
     {
-        EnsureMetricsInitialized();
+        await EnsureMetricsInitializedAsync();
         
         var request = new PutMetricAlarmRequest
         {
@@ -271,7 +278,7 @@ public class CloudWatchService
             EvaluationPeriods = evaluationPeriods
         };
         
-        if (dimensions != null && dimensions.Any())
+        if (dimensions != null && dimensions.Count != 0)
         {
             request.Dimensions = dimensions;
         }
@@ -284,7 +291,7 @@ public class CloudWatchService
     /// </summary>
     public async Task<List<MetricAlarm>> ListAlarmsAsync(string? stateValue = null, int maxRecords = 100)
     {
-        EnsureMetricsInitialized();
+        await EnsureMetricsInitializedAsync();
         
         var request = new DescribeAlarmsRequest
         {
@@ -309,7 +316,7 @@ public class CloudWatchService
     /// </summary>
     public async Task<List<LogGroup>> ListLogGroupsAsync(string? logGroupNamePrefix = null, int limit = 50)
     {
-        EnsureLogsInitialized();
+        await EnsureLogsInitializedAsync();
         
         var request = new DescribeLogGroupsRequest
         {
@@ -330,7 +337,7 @@ public class CloudWatchService
     /// </summary>
     public async Task<List<LogStream>> ListLogStreamsAsync(string logGroupName, int limit = 50)
     {
-        EnsureLogsInitialized();
+        await EnsureLogsInitializedAsync();
         
         var request = new DescribeLogStreamsRequest
         {
@@ -354,7 +361,7 @@ public class CloudWatchService
         DateTime? endTime = null,
         int limit = 100)
     {
-        EnsureLogsInitialized();
+        await EnsureLogsInitializedAsync();
         
         var request = new GetLogEventsRequest
         {
@@ -388,7 +395,7 @@ public class CloudWatchService
         DateTime? endTime = null,
         int limit = 100)
     {
-        EnsureLogsInitialized();
+        await EnsureLogsInitializedAsync();
         
         var request = new FilterLogEventsRequest
         {
@@ -424,7 +431,7 @@ public class CloudWatchService
     /// </summary>
     public async Task<CreateLogGroupResponse> CreateLogGroupAsync(string logGroupName)
     {
-        EnsureLogsInitialized();
+        await EnsureLogsInitializedAsync();
         
         var request = new CreateLogGroupRequest
         {
@@ -439,7 +446,7 @@ public class CloudWatchService
     /// </summary>
     public async Task<DeleteLogGroupResponse> DeleteLogGroupAsync(string logGroupName)
     {
-        EnsureLogsInitialized();
+        await EnsureLogsInitializedAsync();
         
         var request = new DeleteLogGroupRequest
         {
@@ -452,31 +459,168 @@ public class CloudWatchService
     #endregion
     
     /// <summary>
-    /// Ensure the CloudWatch metrics client is initialized
+    /// Ensure metrics client is initialized and available (async version for auto-init support)
     /// </summary>
-    private void EnsureMetricsInitialized()
+    private async Task EnsureMetricsInitializedAsync()
     {
+        // Wait for auto-initialization to complete if still running
+        if (!_cloudWatchInitialized)
+        {
+            var timeout = DateTime.UtcNow.AddSeconds(5);
+            while (!_cloudWatchInitialized && DateTime.UtcNow < timeout)
+            {
+                await Task.Delay(100);
+            }
+        }
+        
+        // Check if metrics client is available after auto-initialization
         if (_cloudWatchClient == null)
         {
             throw new InvalidOperationException(
-                "CloudWatch Metrics client is not initialized. Call InitializeAsync first, " +
-                "or ensure you have CloudWatch metrics permissions.");
+                "CloudWatch Metrics client is not available. This may be due to insufficient permissions " +
+                "(cloudwatch:ListMetrics required) or initialization failure. " +
+                "Try explicit initialization with InitializeAsync() or check your AWS permissions.");
         }
     }
 
     /// <summary>
-    /// Ensure the CloudWatch logs client is initialized  
+    /// Ensure logs client is initialized and available (async version for auto-init support)  
     /// </summary>
-    private void EnsureLogsInitialized()
+    private async Task EnsureLogsInitializedAsync()
     {
+        // Wait for auto-initialization to complete if still running
+        if (!_cloudWatchInitialized)
+        {
+            var timeout = DateTime.UtcNow.AddSeconds(5);
+            while (!_cloudWatchInitialized && DateTime.UtcNow < timeout)
+            {
+                await Task.Delay(100);
+            }
+        }
+        
+        // Check if logs client is available after auto-initialization
         if (_logsClient == null)
         {
             throw new InvalidOperationException(
-                "CloudWatch Logs client is not initialized. Call InitializeAsync first, " +
-                "or ensure you have CloudWatch logs permissions.");
+                "CloudWatch Logs client is not available. This may be due to insufficient permissions " +
+                "(logs:DescribeLogGroups required) or initialization failure. " +
+                "Try explicit initialization with InitializeAsync() or check your AWS permissions.");
         }
     }
 
+    /// <summary>
+    /// Auto-initialize with discovered credentials - handle partial permissions gracefully
+    /// </summary>
+    private async Task AutoInitializeAsync()
+    {
+        try
+        {
+            if (await _discoveryService.AutoInitializeAsync())
+            {
+                var accountInfo = await _discoveryService.GetAccountInfoAsync();
+                
+                var config = new AwsConfiguration
+                {
+                    Region = accountInfo.InferredRegion,
+                    ProfileName = Environment.GetEnvironmentVariable("AWS_PROFILE") ?? "default"
+                };
+                
+                // Try to initialize both clients, but allow partial success
+                var metricsSuccess = await TryInitializeMetricsAsync(config);
+                var logsSuccess = await TryInitializeLogsAsync(config);
+                
+                if (metricsSuccess || logsSuccess)
+                {
+                    _cloudWatchInitialized = true;
+                    _logger.LogInformation("CloudWatch service auto-initialized: Metrics={MetricsAvailable}, Logs={LogsAvailable}", 
+                        IsMetricsClientAvailable, IsLogsClientAvailable);
+                }
+                else
+                {
+                    _logger.LogWarning("CloudWatch service auto-initialization failed for both metrics and logs");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to auto-initialize CloudWatch service. Explicit initialization may be required.");
+        }
+    }
+
+    /// <summary>
+    /// Try to initialize metrics client with permission testing
+    /// </summary>
+    private async Task<bool> TryInitializeMetricsAsync(AwsConfiguration config)
+    {
+        try
+        {
+            var clientConfig = new AmazonCloudWatchConfig
+            {
+                RegionEndpoint = config.GetRegionEndpoint(),
+                Timeout = TimeSpan.FromSeconds(config.TimeoutSeconds),
+                MaxErrorRetry = config.MaxRetryAttempts,
+                UseHttp = !config.UseHttps
+            };
+            
+            var credentialsProvider = new AwsCredentialsProvider(config);
+            var credentials = credentialsProvider.GetCredentials();
+            
+            _cloudWatchClient = credentials != null 
+                ? new AmazonCloudWatchClient(credentials, clientConfig)
+                : new AmazonCloudWatchClient(clientConfig);
+            
+            // Test permissions
+            await _cloudWatchClient.ListMetricsAsync(new ListMetricsRequest());
+            
+            _logger.LogInformation("CloudWatch Metrics client initialized successfully");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogInformation("CloudWatch Metrics client not available: {Message}", ex.Message);
+            _cloudWatchClient?.Dispose();
+            _cloudWatchClient = null;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Try to initialize logs client with permission testing
+    /// </summary>
+    private async Task<bool> TryInitializeLogsAsync(AwsConfiguration config)
+    {
+        try
+        {
+            var clientConfig = new AmazonCloudWatchLogsConfig
+            {
+                RegionEndpoint = config.GetRegionEndpoint(),
+                Timeout = TimeSpan.FromSeconds(config.TimeoutSeconds),
+                MaxErrorRetry = config.MaxRetryAttempts,
+                UseHttp = !config.UseHttps
+            };
+            
+            var credentialsProvider = new AwsCredentialsProvider(config);
+            var credentials = credentialsProvider.GetCredentials();
+            
+            _logsClient = credentials != null 
+                ? new AmazonCloudWatchLogsClient(credentials, clientConfig)
+                : new AmazonCloudWatchLogsClient(clientConfig);
+            
+            // Test permissions
+            await _logsClient.DescribeLogGroupsAsync(new DescribeLogGroupsRequest { Limit = 1 });
+            
+            _logger.LogInformation("CloudWatch Logs client initialized successfully");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogInformation("CloudWatch Logs client not available: {Message}", ex.Message);
+            _logsClient?.Dispose();
+            _logsClient = null;
+            return false;
+        }
+    }
+    
     public void Dispose()
     {
         _cloudWatchClient?.Dispose();

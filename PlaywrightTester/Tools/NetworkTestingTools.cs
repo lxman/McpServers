@@ -808,7 +808,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
                 fileSize = new FileInfo(outputPath).Length,
                 timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"),
                 pageUrl = session.Page.Url,
-                entriesCount = networkData is System.Text.Json.JsonElement element ? element.GetArrayLength() : 0,
+                entriesCount = networkData is JsonElement element ? element.GetArrayLength() : 0,
                 note = "HAR file generated with network performance data. For full HAR functionality with request/response bodies, consider using dedicated HAR recording tools."
             };
 

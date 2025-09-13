@@ -2,6 +2,7 @@ using Amazon.ECS;
 using Amazon.ECS.Model;
 using AwsMcp.Configuration;
 using Microsoft.Extensions.Logging;
+using Task = System.Threading.Tasks.Task;
 
 namespace AwsMcp.ECS;
 
@@ -11,12 +12,19 @@ namespace AwsMcp.ECS;
 public class EcsService
 {
     private readonly ILogger<EcsService> _logger;
+    private readonly AwsDiscoveryService _discoveryService;
     private AmazonECSClient? _ecsClient;
     private AwsConfiguration? _config;
+    private bool _isInitialized;
     
-    public EcsService(ILogger<EcsService> logger)
+    public EcsService(
+        ILogger<EcsService> logger,
+        AwsDiscoveryService discoveryService)
     {
         _logger = logger;
+        _discoveryService = discoveryService;
+        
+        _ = Task.Run(AutoInitializeAsync);
     }
     
     /// <summary>
@@ -72,7 +80,7 @@ public class EcsService
     /// </summary>
     public async Task<ListClustersResponse> ListClustersAsync()
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecsClient!.ListClustersAsync(new ListClustersRequest());
     }
     
@@ -81,10 +89,10 @@ public class EcsService
     /// </summary>
     public async Task<DescribeClustersResponse> DescribeClustersAsync(List<string>? clusterArns = null)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new DescribeClustersRequest();
-        if (clusterArns != null && clusterArns.Any())
+        if (clusterArns != null && clusterArns.Count != 0)
         {
             request.Clusters = clusterArns;
         }
@@ -97,14 +105,14 @@ public class EcsService
     /// </summary>
     public async Task<CreateClusterResponse> CreateClusterAsync(string clusterName, List<Tag>? tags = null)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new CreateClusterRequest
         {
             ClusterName = clusterName
         };
         
-        if (tags != null && tags.Any())
+        if (tags != null && tags.Count != 0)
         {
             request.Tags = tags;
         }
@@ -117,7 +125,7 @@ public class EcsService
     /// </summary>
     public async Task<DeleteClusterResponse> DeleteClusterAsync(string cluster)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecsClient!.DeleteClusterAsync(new DeleteClusterRequest { Cluster = cluster });
     }
     
@@ -126,7 +134,7 @@ public class EcsService
     /// </summary>
     public async Task<ListServicesResponse> ListServicesAsync(string? cluster = null)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new ListServicesRequest();
         if (!string.IsNullOrEmpty(cluster))
@@ -142,7 +150,7 @@ public class EcsService
     /// </summary>
     public async Task<DescribeServicesResponse> DescribeServicesAsync(List<string> services, string? cluster = null)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new DescribeServicesRequest
         {
@@ -162,7 +170,7 @@ public class EcsService
     /// </summary>
     public async Task<ListTasksResponse> ListTasksAsync(string? cluster = null, string? serviceName = null)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new ListTasksRequest();
         if (!string.IsNullOrEmpty(cluster))
@@ -182,7 +190,7 @@ public class EcsService
     /// </summary>
     public async Task<DescribeTasksResponse> DescribeTasksAsync(List<string> tasks, string? cluster = null)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new DescribeTasksRequest
         {
@@ -202,7 +210,7 @@ public class EcsService
     /// </summary>
     public async Task<ListTaskDefinitionsResponse> ListTaskDefinitionsAsync(string? familyPrefix = null)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new ListTaskDefinitionsRequest();
         if (!string.IsNullOrEmpty(familyPrefix))
@@ -218,7 +226,7 @@ public class EcsService
     /// </summary>
     public async Task<DescribeTaskDefinitionResponse> DescribeTaskDefinitionAsync(string taskDefinition)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         return await _ecsClient!.DescribeTaskDefinitionAsync(new DescribeTaskDefinitionRequest 
         { 
             TaskDefinition = taskDefinition 
@@ -231,7 +239,7 @@ public class EcsService
     public async Task<RunTaskResponse> RunTaskAsync(string taskDefinition, string? cluster = null, 
         int count = 1, string launchType = "EC2")
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new RunTaskRequest
         {
@@ -253,7 +261,7 @@ public class EcsService
     /// </summary>
     public async Task<StopTaskResponse> StopTaskAsync(string task, string? cluster = null, string? reason = null)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new StopTaskRequest
         {
@@ -279,7 +287,7 @@ public class EcsService
     public async Task<UpdateServiceResponse> UpdateServiceAsync(string service, string? cluster = null, 
         int? desiredCount = null, string? taskDefinition = null)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new UpdateServiceRequest
         {
@@ -309,7 +317,7 @@ public class EcsService
     /// </summary>
     public async Task<List<ContainerInstance>> ListContainerInstancesAsync(string? cluster = null)
     {
-        EnsureInitialized();
+        await EnsureInitializedAsync();
         
         var request = new ListContainerInstancesRequest();
         if (!string.IsNullOrEmpty(cluster))
@@ -319,7 +327,7 @@ public class EcsService
         
         var response = await _ecsClient!.ListContainerInstancesAsync(request);
         
-        if (response.ContainerInstanceArns.Any())
+        if (response.ContainerInstanceArns.Count != 0)
         {
             var describeRequest = new DescribeContainerInstancesRequest
             {
@@ -338,11 +346,54 @@ public class EcsService
         return [];
     }
     
-    private void EnsureInitialized()
+    /// <summary>
+    /// Auto-initialize with discovered credentials
+    /// </summary>
+    private async Task AutoInitializeAsync()
     {
-        if (_ecsClient == null)
+        try
         {
-            throw new InvalidOperationException("ECS client is not initialized. Call InitializeAsync first.");
+            if (await _discoveryService.AutoInitializeAsync())
+            {
+                var accountInfo = await _discoveryService.GetAccountInfoAsync();
+                
+                var config = new AwsConfiguration
+                {
+                    Region = accountInfo.InferredRegion,
+                    ProfileName = Environment.GetEnvironmentVariable("AWS_PROFILE") ?? "default"
+                };
+                
+                await InitializeAsync(config);
+                _isInitialized = true;
+                _logger.LogInformation("S3 service auto-initialized successfully");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to auto-initialize S3 service. Explicit initialization may be required.");
+        }
+    }
+    
+    /// <summary>
+    /// Ensure service is initialized (wait if auto-initialization is still running)
+    /// </summary>
+    private async Task EnsureInitializedAsync()
+    {
+        // Wait for auto-initialization to complete
+        if (!_isInitialized && _ecsClient == null)
+        {
+            // Wait up to 5 seconds for auto-initialization
+            var timeout = DateTime.UtcNow.AddSeconds(5);
+            while (!_isInitialized && DateTime.UtcNow < timeout)
+            {
+                await Task.Delay(100);
+            }
+            
+            if (_ecsClient == null)
+            {
+                throw new InvalidOperationException(
+                    "S3 client could not be auto-initialized. Please ensure AWS credentials are configured properly or call InitializeAsync explicitly.");
+            }
         }
     }
     

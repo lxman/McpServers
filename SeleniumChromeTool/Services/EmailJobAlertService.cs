@@ -37,7 +37,7 @@ public class EmailJobAlertService
             await client.AuthenticateAsync(_username, _password);
             
             // Open INBOX
-            await client.Inbox.OpenAsync(MailKit.FolderAccess.ReadOnly);
+            await client.Inbox.OpenAsync(FolderAccess.ReadOnly);
             
             // Search for recent job alert emails
             BinarySearchQuery? searchQuery = SearchQuery.And(
@@ -168,11 +168,11 @@ public class EmailJobAlertService
             // Example: "5 new jobs for Senior .NET Developer"
             // Body contains job listings with titles, companies, locations
             
-            MatchCollection jobMatches = System.Text.RegularExpressions.Regex.Matches(body, 
+            MatchCollection jobMatches = Regex.Matches(body, 
                 @"<a[^>]*href=""([^""]*linkedin\.com/jobs/view/[^""]*)"">([^<]+)</a>.*?<td[^>]*>([^<]+)</td>.*?<td[^>]*>([^<]+)</td>",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
             
-            foreach (System.Text.RegularExpressions.Match match in jobMatches)
+            foreach (Match match in jobMatches)
             {
                 var job = new EnhancedJobListing
                 {
@@ -232,14 +232,14 @@ public class EmailJobAlertService
             {
                 _logger.LogDebug($"Trying pattern: {pattern}");
                 
-                MatchCollection jobMatches = System.Text.RegularExpressions.Regex.Matches(body,
-                    pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+                MatchCollection jobMatches = Regex.Matches(body,
+                    pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
                 
                 _logger.LogInformation($"Pattern found {jobMatches.Count} matches");
                 
                 if (jobMatches.Count > 0)
                 {
-                    foreach (System.Text.RegularExpressions.Match match in jobMatches)
+                    foreach (Match match in jobMatches)
                     {
                         var job = new EnhancedJobListing
                         {
@@ -254,8 +254,8 @@ public class EmailJobAlertService
                         };
                         
                         // Extract salary if present in email
-                        Match salaryMatch = System.Text.RegularExpressions.Regex.Match(body, 
-                            @"\$[\d,]+(?:\s*-\s*\$[\d,]+)?", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                        Match salaryMatch = Regex.Match(body, 
+                            @"\$[\d,]+(?:\s*-\s*\$[\d,]+)?", RegexOptions.IgnoreCase);
                         if (salaryMatch.Success)
                         {
                             job.Salary = salaryMatch.Value;
@@ -323,11 +323,11 @@ public class EmailJobAlertService
         try
         {
             // Dice job alert patterns - tech focused
-            MatchCollection jobMatches = System.Text.RegularExpressions.Regex.Matches(body,
+            MatchCollection jobMatches = Regex.Matches(body,
                 @"<a[^>]*href=""([^""]*dice\.com[^""]*)"">([^<]+)</a>.*?<span[^>]*>([^<]+)</span>.*?<span[^>]*>([^<]+)</span>",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
             
-            foreach (System.Text.RegularExpressions.Match match in jobMatches)
+            foreach (Match match in jobMatches)
             {
                 var job = new EnhancedJobListing
                 {
@@ -362,11 +362,11 @@ public class EmailJobAlertService
         
         try
         {
-            MatchCollection jobMatches = System.Text.RegularExpressions.Regex.Matches(body,
+            MatchCollection jobMatches = Regex.Matches(body,
                 @"<a[^>]*href=""([^""]*indeed\.com[^""]*)"">([^<]+)</a>.*?<span[^>]*>([^<]+)</span>.*?<span[^>]*>([^<]+)</span>",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+                RegexOptions.IgnoreCase | RegexOptions.Singleline);
             
-            foreach (System.Text.RegularExpressions.Match match in jobMatches)
+            foreach (Match match in jobMatches)
             {
                 var job = new EnhancedJobListing
                 {
@@ -400,13 +400,13 @@ public class EmailJobAlertService
             return "";
 
         // Remove HTML tags
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"<[^>]*>", "");
+        text = Regex.Replace(text, @"<[^>]*>", "");
         
         // Decode HTML entities
         text = System.Net.WebUtility.HtmlDecode(text);
         
         // Clean up whitespace
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ");
+        text = Regex.Replace(text, @"\s+", " ");
         
         return text.Trim();
     }
@@ -502,7 +502,7 @@ public class EmailJobAlertService
             _logger.LogInformation($"Scraping details for job: {job.Title} from {job.Url}");
             
             // Extract job listing ID from the URL to construct a direct URL
-            Match jobIdMatch = System.Text.RegularExpressions.Regex.Match(job.Url, @"jobListingId=(\d+)");
+            Match jobIdMatch = Regex.Match(job.Url, @"jobListingId=(\d+)");
             if (!jobIdMatch.Success)
             {
                 _logger.LogWarning($"Could not extract job ID from URL: {job.Url}");
@@ -584,7 +584,7 @@ public class EmailJobAlertService
             
             foreach (string pattern in companyPatterns)
             {
-                Match match = System.Text.RegularExpressions.Regex.Match(html, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                Match match = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
                 if (match.Success)
                 {
                     job.Company = CleanText(match.Groups[1].Value);
@@ -604,7 +604,7 @@ public class EmailJobAlertService
             
             foreach (string pattern in locationPatterns)
             {
-                Match match = System.Text.RegularExpressions.Regex.Match(html, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                Match match = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
                 if (match.Success)
                 {
                     job.Location = CleanText(match.Groups[1].Value);
@@ -624,11 +624,11 @@ public class EmailJobAlertService
             
             foreach (string pattern in descriptionPatterns)
             {
-                Match match = System.Text.RegularExpressions.Regex.Match(html, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+                Match match = Regex.Match(html, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
                 if (match.Success)
                 {
                     string rawDescription = match.Groups[1].Value;
-                    job.Description = CleanText(System.Text.RegularExpressions.Regex.Replace(rawDescription, @"<[^>]+>", " "));
+                    job.Description = CleanText(Regex.Replace(rawDescription, @"<[^>]+>", " "));
                     job.FullDescription = rawDescription;
                     _logger.LogDebug($"Extracted description: {job.Description?.Substring(0, Math.Min(100, job.Description.Length))}...");
                     break;
@@ -645,7 +645,7 @@ public class EmailJobAlertService
             
             foreach (string pattern in salaryPatterns)
             {
-                Match match = System.Text.RegularExpressions.Regex.Match(html, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                Match match = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
                 if (match.Success)
                 {
                     job.Salary = CleanText(match.Groups[1].Value ?? match.Value);
@@ -655,12 +655,12 @@ public class EmailJobAlertService
             }
             
             // Look for .NET/C# related skills and technologies
-            MatchCollection techMatches = System.Text.RegularExpressions.Regex.Matches(html,
+            MatchCollection techMatches = Regex.Matches(html,
                 @"\b(\.NET|C#|ASP\.NET|Azure|SQL Server|Entity Framework|MVC|Web API|Blazor|MAUI|WPF|WinForms|Visual Studio|Microsoft|Angular|React|JavaScript|TypeScript)\b",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                RegexOptions.IgnoreCase);
             
             var technologies = new List<string>();
-            foreach (System.Text.RegularExpressions.Match match in techMatches)
+            foreach (Match match in techMatches)
             {
                 string tech = match.Value;
                 if (!technologies.Contains(tech, StringComparer.OrdinalIgnoreCase))
