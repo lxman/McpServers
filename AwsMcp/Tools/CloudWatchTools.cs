@@ -4,6 +4,7 @@ using ModelContextProtocol.Server;
 using AwsMcp.CloudWatch;
 using AwsMcp.Configuration;
 using Amazon.CloudWatch.Model;
+using Amazon.CloudWatchLogs.Model;
 using InvalidOperationException = Amazon.CloudWatchLogs.Model.InvalidOperationException;
 
 namespace AwsMcp.Tools;
@@ -43,7 +44,7 @@ public class CloudWatchTools
                 ServiceUrl = serviceUrl
             };
 
-            var success = await _cloudWatchService.InitializeAsync(config);
+            bool success = await _cloudWatchService.InitializeAsync(config);
             
             return JsonSerializer.Serialize(new
             {
@@ -74,7 +75,7 @@ public class CloudWatchTools
     {
         try
         {
-            var metrics = await _cloudWatchService.ListMetricsAsync(namespaceName, metricName, maxRecords);
+            List<Metric> metrics = await _cloudWatchService.ListMetricsAsync(namespaceName, metricName, maxRecords);
             
             return JsonSerializer.Serialize(new
             {
@@ -116,10 +117,10 @@ public class CloudWatchTools
     {
         try
         {
-            var start = DateTime.Parse(startTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
-            var end = DateTime.Parse(endTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
+            DateTime start = DateTime.Parse(startTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
+            DateTime end = DateTime.Parse(endTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
             
-            var statisticsList = statistics.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            List<string> statisticsList = statistics.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(s => s.Trim()).ToList();
             
             List<Dimension>? dimensions = null;
@@ -133,7 +134,7 @@ public class CloudWatchTools
                 }).ToList();
             }
             
-            var datapoints = await _cloudWatchService.GetMetricStatisticsAsync(
+            List<Datapoint> datapoints = await _cloudWatchService.GetMetricStatisticsAsync(
                 namespaceName, metricName, start, end, period, statisticsList, dimensions);
             
             return JsonSerializer.Serialize(new
@@ -296,7 +297,7 @@ public class CloudWatchTools
     {
         try
         {
-            var alarms = await _cloudWatchService.ListAlarmsAsync(stateValue, maxRecords);
+            List<MetricAlarm> alarms = await _cloudWatchService.ListAlarmsAsync(stateValue, maxRecords);
         
             return JsonSerializer.Serialize(new
             {
@@ -339,7 +340,7 @@ public class CloudWatchTools
     {
         try
         {
-            var logGroups = await _cloudWatchService.ListLogGroupsAsync(logGroupNamePrefix, limit);
+            List<LogGroup> logGroups = await _cloudWatchService.ListLogGroupsAsync(logGroupNamePrefix, limit);
             
             return JsonSerializer.Serialize(new
             {
@@ -372,7 +373,7 @@ public class CloudWatchTools
     {
         try
         {
-            var logStreams = await _cloudWatchService.ListLogStreamsAsync(logGroupName, limit);
+            List<LogStream> logStreams = await _cloudWatchService.ListLogStreamsAsync(logGroupName, limit);
             
             return JsonSerializer.Serialize(new
             {
@@ -423,7 +424,7 @@ public class CloudWatchTools
                 end = DateTime.Parse(endTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
             }
             
-            var logEvents = await _cloudWatchService.GetLogEventsAsync(logGroupName, logStreamName, start, end, limit);
+            List<OutputLogEvent> logEvents = await _cloudWatchService.GetLogEventsAsync(logGroupName, logStreamName, start, end, limit);
             
             return JsonSerializer.Serialize(new
             {
@@ -476,7 +477,7 @@ public class CloudWatchTools
                 end = DateTime.Parse(endTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
             }
             
-            var logEvents = await _cloudWatchService.FilterLogEventsAsync(logGroupName, filterPattern, start, end, limit);
+            List<FilteredLogEvent> logEvents = await _cloudWatchService.FilterLogEventsAsync(logGroupName, filterPattern, start, end, limit);
             
             return JsonSerializer.Serialize(new
             {
@@ -577,7 +578,7 @@ public class CloudWatchTools
                 break;
             case Amazon.Runtime.AmazonServiceException awsEx:
             {
-                var actions = awsEx.ErrorCode switch
+                string[] actions = awsEx.ErrorCode switch
                 {
                     "AccessDenied" => new[]
                     {

@@ -41,7 +41,7 @@ public class AwsDiscoveryTools
                 ServiceUrl = serviceUrl
             };
 
-            var success = await _discoveryService.InitializeAsync(config);
+            bool success = await _discoveryService.InitializeAsync(config);
             
             return JsonSerializer.Serialize(new
             {
@@ -81,7 +81,7 @@ public class AwsDiscoveryTools
             }
         
             // Now get account info
-            var accountInfo = await _discoveryService.GetAccountInfoAsync();
+            AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
         
             return JsonSerializer.Serialize(new
             {
@@ -111,7 +111,7 @@ public class AwsDiscoveryTools
     {
         try
         {
-            var accountInfo = await _discoveryService.GetAccountInfoAsync();
+            AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
             
             return JsonSerializer.Serialize(new
             {
@@ -140,7 +140,7 @@ public class AwsDiscoveryTools
     {
         try
         {
-            var result = await _discoveryService.AutoDiscoverConfigurationAsync();
+            AutoDiscoveryResult result = await _discoveryService.AutoDiscoverConfigurationAsync();
             
             return JsonSerializer.Serialize(new
             {
@@ -208,10 +208,10 @@ public class AwsDiscoveryTools
     {
         try
         {
-            var results = await _discoveryService.TestServicePermissionsAsync(region);
+            List<ServicePermissionTest> results = await _discoveryService.TestServicePermissionsAsync(region);
             
-            var workingServices = results.Where(r => r.HasPermission).ToList();
-            var failedServices = results.Where(r => !r.HasPermission).ToList();
+            List<ServicePermissionTest> workingServices = results.Where(r => r.HasPermission).ToList();
+            List<ServicePermissionTest> failedServices = results.Where(r => !r.HasPermission).ToList();
             
             return JsonSerializer.Serialize(new
             {
@@ -259,7 +259,7 @@ public class AwsDiscoveryTools
     {
         try
         {
-            var cliConfig = _discoveryService.DetectCliConfiguration();
+            CliConfiguration cliConfig = _discoveryService.DetectCliConfiguration();
             
             return JsonSerializer.Serialize(new
             {
@@ -296,7 +296,7 @@ public class AwsDiscoveryTools
         try
         {
             // Run full discovery
-            var discoveryResult = await _discoveryService.AutoDiscoverConfigurationAsync();
+            AutoDiscoveryResult discoveryResult = await _discoveryService.AutoDiscoverConfigurationAsync();
             
             // Analyze the current state
             var analysis = new
@@ -617,14 +617,14 @@ public class AwsDiscoveryTools
         }
         else
         {
-            var incompleteProfiles = cliConfig.Profiles.Where(p => !p.HasAccessKey || !p.HasSecretKey).ToList();
+            List<AwsProfile> incompleteProfiles = cliConfig.Profiles.Where(p => !p.HasAccessKey || !p.HasSecretKey).ToList();
             if (incompleteProfiles.Count != 0)
             {
                 recommendations.Add($"Incomplete profiles found: {string.Join(", ", incompleteProfiles.Select(p => p.Name))}");
                 recommendations.Add("Complete profiles need both aws_access_key_id and aws_secret_access_key");
             }
             
-            var completeProfiles = cliConfig.Profiles.Where(p => p is { HasAccessKey: true, HasSecretKey: true }).ToList();
+            List<AwsProfile> completeProfiles = cliConfig.Profiles.Where(p => p is { HasAccessKey: true, HasSecretKey: true }).ToList();
             if (completeProfiles.Any())
             {
                 recommendations.Add($"Complete profiles available: {string.Join(", ", completeProfiles.Select(p => p.Name))}");
@@ -641,8 +641,8 @@ public class AwsDiscoveryTools
         if (result is { AccountInfo: not null, ServicePermissions: not null })
         {
             // Generate CloudWatch initialization
-            var cwMetrics = result.ServicePermissions.FirstOrDefault(s => s.ServiceName == "CloudWatch Metrics");
-            var cwLogs = result.ServicePermissions.FirstOrDefault(s => s.ServiceName == "CloudWatch Logs");
+            ServicePermissionTest? cwMetrics = result.ServicePermissions.FirstOrDefault(s => s.ServiceName == "CloudWatch Metrics");
+            ServicePermissionTest? cwLogs = result.ServicePermissions.FirstOrDefault(s => s.ServiceName == "CloudWatch Logs");
             
             if (cwMetrics?.HasPermission == true && cwLogs?.HasPermission == true)
             {
@@ -681,7 +681,7 @@ public class AwsDiscoveryTools
             }
             
             // Add other service initialization commands based on permissions
-            var s3Permission = result.ServicePermissions.FirstOrDefault(s => s.ServiceName == "S3");
+            ServicePermissionTest? s3Permission = result.ServicePermissions.FirstOrDefault(s => s.ServiceName == "S3");
             if (s3Permission?.HasPermission == true)
             {
                 commands["s3"] = new
@@ -692,7 +692,7 @@ public class AwsDiscoveryTools
                 };
             }
             
-            var ecrPermission = result.ServicePermissions.FirstOrDefault(s => s.ServiceName == "ECR");
+            ServicePermissionTest? ecrPermission = result.ServicePermissions.FirstOrDefault(s => s.ServiceName == "ECR");
             if (ecrPermission?.HasPermission == true)
             {
                 commands["ecr"] = new
@@ -703,7 +703,7 @@ public class AwsDiscoveryTools
                 };
             }
             
-            var ecsPermission = result.ServicePermissions.FirstOrDefault(s => s.ServiceName == "ECS");
+            ServicePermissionTest? ecsPermission = result.ServicePermissions.FirstOrDefault(s => s.ServiceName == "ECS");
             if (ecsPermission?.HasPermission == true)
             {
                 commands["ecs"] = new
@@ -744,7 +744,7 @@ public class AwsDiscoveryTools
         }
         else if (ex is Amazon.Runtime.AmazonServiceException awsEx)
         {
-            var actions = awsEx.ErrorCode switch
+            string[] actions = awsEx.ErrorCode switch
             {
                 "AccessDenied" => new[]
                 {

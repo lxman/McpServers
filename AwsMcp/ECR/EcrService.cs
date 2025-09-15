@@ -1,6 +1,8 @@
 ﻿using Amazon.ECR;
 using Amazon.ECR.Model;
+using Amazon.Runtime;
 using AwsMcp.Configuration;
+using AwsMcp.Configuration.Models;
 using Microsoft.Extensions.Logging;
 
 namespace AwsMcp.ECR;
@@ -50,7 +52,7 @@ public class EcrService
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            var credentials = credentialsProvider.GetCredentials();
+            AWSCredentials? credentials = credentialsProvider.GetCredentials();
             
             if (credentials != null)
             {
@@ -368,7 +370,7 @@ public class EcrService
         {
             if (await _discoveryService.AutoInitializeAsync())
             {
-                var accountInfo = await _discoveryService.GetAccountInfoAsync();
+                AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
                 
                 var config = new AwsConfiguration
                 {
@@ -396,7 +398,7 @@ public class EcrService
         if (!_isInitialized && _ecrClient == null)
         {
             // Wait up to 5 seconds for auto-initialization
-            var timeout = DateTime.UtcNow.AddSeconds(5);
+            DateTime timeout = DateTime.UtcNow.AddSeconds(5);
             while (!_isInitialized && DateTime.UtcNow < timeout)
             {
                 await Task.Delay(100);

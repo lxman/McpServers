@@ -15,17 +15,20 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
+        // CRITICAL: Ensure required environment variables are set before anything else
+        EnsureEnvironmentVariables();
+        
         // CRITICAL: Redirect all console output to prevent JSON-RPC corruption
         // AWS SDK and other components can write warnings to stdout
         Console.SetOut(TextWriter.Null);
         Console.SetError(TextWriter.Null);
         
         // Create the host builder with configuration
-        var builder = Host.CreateApplicationBuilder(args);
+        HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
         
         // Add configuration sources
-        // CRITICAL: Use absolute path to appsettings.json since working directory differs in MCP
-        var configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        // CRITICAL: Use an absolute path to appsettings.json since the working directory differs in MCP
+        string configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
         builder.Configuration
             .AddJsonFile(configPath, optional: true, reloadOnChange: true)
             .AddEnvironmentVariables()
@@ -42,7 +45,7 @@ public class Program
             // CRITICAL: Completely disable all logging to console/stdout
             .AddLogging(logging =>
             {
-                // Clear all default providers that might write to console
+                // Clear all default providers that might write to the console
                 logging.ClearProviders();
                 
                 // Only add a debug provider (goes to debugger, not console)
@@ -68,9 +71,41 @@ public class Program
             .WithTools<AwsDiscoveryTools>();  // Added Phase 2 Discovery Tools
 
         // Build and run the host
-        var host = builder.Build();
+        IHost host = builder.Build();
         
         // Start the MCP server
         await host.RunAsync();
+    }
+    
+    /// <summary>
+    /// Ensures required environment variables are set to prevent .NET CLI issues
+    /// </summary>
+    private static void EnsureEnvironmentVariables()
+    {
+        // Ensure PATHEXT is set (critical for Windows .NET CLI)
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PATHEXT")))
+        {
+            Environment.SetEnvironmentVariable("PATHEXT", ".COM;.EXE;.BAT;.CMD;.VBS;.JS;.WS;.MSC");
+        }
+        
+        // Ensure the PATH includes a .NET directory
+        string path = Environment.GetEnvironmentVariable("PATH") ?? "";
+        const string dotnetPath = @"C:\Program Files\dotnet";
+        if (!path.Contains(dotnetPath, StringComparison.OrdinalIgnoreCase))
+        {
+            Environment.SetEnvironmentVariable("PATH", $"{path};{dotnetPath}");
+        }
+        
+        // Set additional environment variables that .NET CLI might need
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOTNET_ROOT")))
+        {
+            Environment.SetEnvironmentVariable("DOTNET_ROOT", @"C:\Program Files\dotnet");
+        }
+        
+        // Disable .NET CLI telemetry to reduce potential issues
+        Environment.SetEnvironmentVariable("DOTNET_CLI_TELEMETRY_OPTOUT", "1");
+        
+        // Set the .NET hosting model to in-process to avoid CLI issues
+        Environment.SetEnvironmentVariable("ASPNETCORE_HOSTING_MODEL", "InProcess");
     }
 }

@@ -108,7 +108,7 @@ public partial class HubSpotScraper : BaseJobScraper
                 try
                 {
                     ReadOnlyCollection<IWebElement>? closeButtons = driver.FindElements(By.CssSelector(selector));
-                    foreach (var closeButton in closeButtons)
+                    foreach (IWebElement closeButton in closeButtons)
                     {
                         if (closeButton is { Displayed: true, Enabled: true })
                         {

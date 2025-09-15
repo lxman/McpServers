@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Microsoft.Playwright;
 using ModelContextProtocol.Server;
 using PlaywrightTester.Models;
 using PlaywrightTester.Services;
@@ -44,10 +45,10 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
             ExtraHttpHeaders = extraHttpHeaders
         };
 
-        var result = await sessionManager.CreateSessionAsync(sessionId, browserType, headless, browserOptions);
+        string result = await sessionManager.CreateSessionAsync(sessionId, browserType, headless, browserOptions);
         
         // Also store in ToolService for backward compatibility
-        var session = sessionManager.GetSession(sessionId);
+        PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
         if (session != null)
         {
             if (session.Browser != null) toolService.StoreBrowser(sessionId, session.Browser);
@@ -67,7 +68,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available. Launch browser first.";
 
@@ -89,11 +90,11 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var finalSelector = DetermineSelector(selector);
+            string finalSelector = DetermineSelector(selector);
             await session.Page.Locator(finalSelector).FillAsync(value);
             return $"Field {selector} filled in with value {value}";
         }
@@ -111,11 +112,11 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var finalSelector = DetermineSelector(selector);
+            string finalSelector = DetermineSelector(selector);
             await session.Page.Locator(finalSelector).ClickAsync();
             return $"Successfully clicked element {selector}";
         }
@@ -133,7 +134,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
@@ -155,11 +156,11 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var finalSelector = DetermineSelector(selector);
+            string finalSelector = DetermineSelector(selector);
             await session.Page.Locator(finalSelector).SelectOptionAsync(value);
             return $"Selected option '{value}' in dropdown {selector}";
         }
@@ -178,12 +179,12 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session == null)
                 return $"Session {sessionId} not found. Active sessions: [{string.Join(", ", sessionManager.GetActiveSessionIds())}]";
 
-            var logs = session.ConsoleLogs;
-            var filteredLogs = logs.AsEnumerable();
+            List<ConsoleLogEntry> logs = session.ConsoleLogs;
+            IEnumerable<ConsoleLogEntry> filteredLogs = logs.AsEnumerable();
 
             if (!string.IsNullOrEmpty(logType))
             {
@@ -229,12 +230,12 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session == null)
                 return $"Session {sessionId} not found. Active sessions: [{string.Join(", ", sessionManager.GetActiveSessionIds())}]";
 
-            var networkLogs = session.NetworkLogs;
-            var filteredLogs = networkLogs.AsEnumerable();
+            List<NetworkLogEntry> networkLogs = session.NetworkLogs;
+            IEnumerable<NetworkLogEntry> filteredLogs = networkLogs.AsEnumerable();
 
             if (!string.IsNullOrEmpty(urlFilter))
             {
@@ -286,17 +287,17 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session == null)
                 return $"Session {sessionId} not found. Active sessions: [{string.Join(", ", sessionManager.GetActiveSessionIds())}]";
 
-            var recentConsole = session.ConsoleLogs.OrderByDescending(log => log.Timestamp).Take(5).ToList();
-            var recentNetwork = session.NetworkLogs.OrderByDescending(log => log.Timestamp).Take(5).ToList();
+            List<ConsoleLogEntry> recentConsole = session.ConsoleLogs.OrderByDescending(log => log.Timestamp).Take(5).ToList();
+            List<NetworkLogEntry> recentNetwork = session.NetworkLogs.OrderByDescending(log => log.Timestamp).Take(5).ToList();
             
-            var errorCount = session.ConsoleLogs.Count(log => log.IsError);
-            var warningCount = session.ConsoleLogs.Count(log => log.IsWarning);
-            var apiCallCount = session.NetworkLogs.Count(log => log.IsApiCall);
-            var authCallCount = session.NetworkLogs.Count(log => log.IsAuthRelated);
+            int errorCount = session.ConsoleLogs.Count(log => log.IsError);
+            int warningCount = session.ConsoleLogs.Count(log => log.IsWarning);
+            int apiCallCount = session.NetworkLogs.Count(log => log.IsApiCall);
+            int authCallCount = session.NetworkLogs.Count(log => log.IsAuthRelated);
 
             var summary = new
             {
@@ -337,7 +338,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session == null)
                 return $"Session {sessionId} not found.";
 
@@ -345,14 +346,14 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
 
             if (clearConsole)
             {
-                var consoleCount = session.ConsoleLogs.Count;
+                int consoleCount = session.ConsoleLogs.Count;
                 session.ConsoleLogs.Clear();
                 clearedItems.Add($"{consoleCount} console logs");
             }
 
             if (clearNetwork)
             {
-                var networkCount = session.NetworkLogs.Count;
+                int networkCount = session.NetworkLogs.Count;
                 session.NetworkLogs.Clear();
                 clearedItems.Add($"{networkCount} network logs");
             }
@@ -372,7 +373,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var success = await sessionManager.CloseSessionAsync(sessionId);
+            bool success = await sessionManager.CloseSessionAsync(sessionId);
             if (success)
             {
                 return $"Browser session {sessionId} closed successfully";
@@ -397,11 +398,11 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var finalSelector = DetermineSelector(selector);
+            string finalSelector = DetermineSelector(selector);
             
             var jsCode = $@"
                 (() => {{
@@ -523,11 +524,11 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var container = string.IsNullOrEmpty(containerSelector) ? "document.body" : $"document.querySelector('{containerSelector.Replace("'", "\\'")}')";
+            string container = string.IsNullOrEmpty(containerSelector) ? "document.body" : $"document.querySelector('{containerSelector.Replace("'", "\\'")}')";
             
             var jsCode = $@"
                 (() => {{
@@ -621,16 +622,16 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var selectors = JsonSerializer.Deserialize<string[]>(selectorsJson);
+            string[]? selectors = JsonSerializer.Deserialize<string[]>(selectorsJson);
             if (selectors == null || selectors.Length == 0)
                 return "Invalid selectors array provided";
 
-            var finalSelectors = selectors.Select(DetermineSelector).ToArray();
-            var selectorsJsArray = JsonSerializer.Serialize(finalSelectors);
+            string[] finalSelectors = selectors.Select(DetermineSelector).ToArray();
+            string selectorsJsArray = JsonSerializer.Serialize(finalSelectors);
             
             var jsCode = $@"
                 const selectors = {selectorsJsArray};
@@ -737,7 +738,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
             
@@ -836,11 +837,11 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var container = string.IsNullOrEmpty(containerSelector) ? "document.body" : $"document.querySelector('{containerSelector.Replace("'", "\\'")}')";
+            string container = string.IsNullOrEmpty(containerSelector) ? "document.body" : $"document.querySelector('{containerSelector.Replace("'", "\\'")}')";
             
             var jsCode = $@"
                 const container = {container};
@@ -1028,7 +1029,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
@@ -1067,7 +1068,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
@@ -1088,12 +1089,12 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
             // Get current viewport size
-            var currentViewport = session.Page.ViewportSize;
+            PageViewportSizeResult? currentViewport = session.Page.ViewportSize;
             if (currentViewport == null)
                 return "Unable to get current viewport size";
 

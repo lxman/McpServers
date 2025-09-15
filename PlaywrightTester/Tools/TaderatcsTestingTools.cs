@@ -17,14 +17,14 @@ public class TaderatcsTestingTools(ToolService toolService)
     {
         try
         {
-            var page = toolService.GetPage(sessionId);
+            IPage? page = toolService.GetPage(sessionId);
             if (page == null) return $"Session {sessionId} not found.";
 
             var testResults = new List<object>();
             
             // Test 1: Form Load and Initial State
             await page.GotoAsync(baseUrl);
-            var personalTabVisible = await page.Locator("[data-testid='tab-info']").IsVisibleAsync();
+            bool personalTabVisible = await page.Locator("[data-testid='tab-info']").IsVisibleAsync();
             testResults.Add(new { test = "Form Load", passed = personalTabVisible, message = "Enrollment form loaded successfully" });
             
             // Test 2: Personal Information Form
@@ -45,8 +45,8 @@ public class TaderatcsTestingTools(ToolService toolService)
             // Test 7: Progress Tracking
             await TestProgressTracking(page, testResults);
             
-            var passedTests = testResults.Count(r => (bool)((dynamic)r).passed);
-            var totalTests = testResults.Count;
+            int passedTests = testResults.Count(r => (bool)((dynamic)r).passed);
+            int totalTests = testResults.Count;
             
             return $"TADERATCS Comprehensive Test Results: {passedTests}/{totalTests} passed\n" +
                    $"{JsonSerializer.Serialize(testResults, new JsonSerializerOptions { WriteIndented = true })}";
@@ -65,7 +65,7 @@ public class TaderatcsTestingTools(ToolService toolService)
     {
         try
         {
-            var page = toolService.GetPage(sessionId);
+            IPage? page = toolService.GetPage(sessionId);
             if (page == null) return $"Session {sessionId} not found.";
 
             return ruleType.ToLower() switch
@@ -93,7 +93,7 @@ public class TaderatcsTestingTools(ToolService toolService)
             await page.Locator("[data-testid='personal-ssn']").FillAsync("123-45-6789");
             
             // Check if sex dropdown exists and select
-            var sexDropdown = page.Locator("[data-testid='personal-sex']");
+            ILocator sexDropdown = page.Locator("[data-testid='personal-sex']");
             if (await sexDropdown.IsVisibleAsync())
             {
                 await sexDropdown.SelectOptionAsync("M");
@@ -112,7 +112,7 @@ public class TaderatcsTestingTools(ToolService toolService)
         try
         {
             // Navigate to citizenship tab if it exists
-            var citizenshipTab = page.Locator("[data-testid='citizenship-us-citizen-yes']");
+            ILocator citizenshipTab = page.Locator("[data-testid='citizenship-us-citizen-yes']");
             if (await citizenshipTab.IsVisibleAsync())
             {
                 await citizenshipTab.ClickAsync();
@@ -134,7 +134,7 @@ public class TaderatcsTestingTools(ToolService toolService)
         try
         {
             // Test address fields
-            var streetField = page.Locator("[data-testid='address-street']");
+            ILocator streetField = page.Locator("[data-testid='address-street']");
             if (await streetField.IsVisibleAsync())
             {
                 await streetField.FillAsync("123 Main Street");
@@ -160,7 +160,7 @@ public class TaderatcsTestingTools(ToolService toolService)
         try
         {
             // Test contact fields
-            var phoneField = page.Locator("[data-testid='contact-phone']");
+            ILocator phoneField = page.Locator("[data-testid='contact-phone']");
             if (await phoneField.IsVisibleAsync())
             {
                 await phoneField.FillAsync("(555) 123-4567");
@@ -188,7 +188,7 @@ public class TaderatcsTestingTools(ToolService toolService)
             await page.Locator("[data-testid='personal-last-name']").ClickAsync(); // Trigger validation
             
             // Check for validation error
-            var validationError = await page.Locator(".validation-error, .error-message, .mat-error").IsVisibleAsync();
+            bool validationError = await page.Locator(".validation-error, .error-message, .mat-error").IsVisibleAsync();
             
             results.Add(new { test = "Form Validation", passed = validationError, message = validationError ? "Validation working" : "No validation feedback found" });
         }
@@ -203,7 +203,7 @@ public class TaderatcsTestingTools(ToolService toolService)
         try
         {
             // Check for progress indicators
-            var progressElements = await page.Locator("[data-testid*='progress'], .progress-indicator, .completion-indicator").CountAsync();
+            int progressElements = await page.Locator("[data-testid*='progress'], .progress-indicator, .completion-indicator").CountAsync();
             
             results.Add(new { test = "Progress Tracking", passed = progressElements > 0, message = $"Found {progressElements} progress indicators" });
         }
@@ -232,8 +232,8 @@ public class TaderatcsTestingTools(ToolService toolService)
                 await page.Locator("[data-testid='personal-ssn']").FillAsync(testCase.ssn);
                 await page.Locator("[data-testid='personal-first-name']").ClickAsync(); // Trigger validation
                 
-                var hasError = await page.Locator(".validation-error, .error-message, .mat-error").IsVisibleAsync();
-                var actualValid = !hasError;
+                bool hasError = await page.Locator(".validation-error, .error-message, .mat-error").IsVisibleAsync();
+                bool actualValid = !hasError;
                 
                 results.Add(new 
                 { 
@@ -257,7 +257,7 @@ public class TaderatcsTestingTools(ToolService toolService)
         try
         {
             // Test SubProgram selection and requirements
-            var subProgramDropdown = page.Locator("[data-testid='subprogram-select']");
+            ILocator subProgramDropdown = page.Locator("[data-testid='subprogram-select']");
             if (!await subProgramDropdown.IsVisibleAsync())
             {
                 return "SubProgram dropdown not found - may be in different tab";
@@ -266,7 +266,7 @@ public class TaderatcsTestingTools(ToolService toolService)
             var results = new List<object>();
             var subPrograms = new[] { "FP", "NFP", "FPO" };
 
-            foreach (var program in subPrograms)
+            foreach (string program in subPrograms)
             {
                 try
                 {
@@ -274,8 +274,8 @@ public class TaderatcsTestingTools(ToolService toolService)
                     await page.WaitForTimeoutAsync(500); // Wait for UI updates
                     
                     // Check conditional field visibility
-                    var paymentRequired = await page.Locator("[data-testid*='payment']").IsVisibleAsync();
-                    var fingerprintsRequired = await page.Locator("[data-testid*='fingerprint']").IsVisibleAsync();
+                    bool paymentRequired = await page.Locator("[data-testid*='payment']").IsVisibleAsync();
+                    bool fingerprintsRequired = await page.Locator("[data-testid*='fingerprint']").IsVisibleAsync();
                     
                     results.Add(new 
                     { 
@@ -306,20 +306,20 @@ public class TaderatcsTestingTools(ToolService toolService)
 
             // Test cross-tab field dependencies
             // Example: If not US citizen, ARN should be required
-            var citizenshipTab = page.Locator("[data-testid='citizenship-us-citizen-no']");
+            ILocator citizenshipTab = page.Locator("[data-testid='citizenship-us-citizen-no']");
             if (await citizenshipTab.IsVisibleAsync())
             {
                 await citizenshipTab.ClickAsync();
                 
                 // Check if ARN field becomes required
-                var arnField = page.Locator("[data-testid='citizenship-arn']");
-                var arnRequired = await arnField.GetAttributeAsync("required") != null;
+                ILocator arnField = page.Locator("[data-testid='citizenship-arn']");
+                bool arnRequired = await arnField.GetAttributeAsync("required") != null;
                 
                 results.Add(new { test = "ARN Required for Non-US Citizens", passed = arnRequired });
             }
 
             // Test address history requirements
-            var addressCount = await page.Locator("[data-testid*='address']").CountAsync();
+            int addressCount = await page.Locator("[data-testid*='address']").CountAsync();
             results.Add(new { test = "Address Fields Present", passed = addressCount > 0 });
 
             return $"Cross-Tab Validation Results:\n{JsonSerializer.Serialize(results, new JsonSerializerOptions { WriteIndented = true })}";
