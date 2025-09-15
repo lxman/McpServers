@@ -39,7 +39,7 @@
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
       <PackageReference Include="ModelContextProtocol" Version="0.3.0-preview.4" />
-      <PackageReference Include="DiffPlex" Version="1.8.0" />
+      <PackageReference Include="DiffPlex" Version="1.9.0" />
       <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
       <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
       <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.0-rc.1.25451.107" />
@@ -67,7 +67,7 @@
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
-      <PackageReference Include="Markdig" Version="0.41.3" />
+      <PackageReference Include="Markdig" Version="0.42.0" />
       <PackageReference Include="System.Reactive" Version="6.0.2" />
       <PackageReference Include="System.CommandLine" Version="2.0.0-rc.1.25451.107" />
       <PackageReference Include="Microsoft.Build.Locator" Version="1.9.1" />
