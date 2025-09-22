@@ -26,12 +26,22 @@ public class Program
             .AddEnvironmentVariables()
             .AddCommandLine(args);
         
-        // Configure logging (minimal for MCP)
         builder.Services.AddLogging(logging =>
         {
             logging.ClearProviders();
             logging.AddDebug();
+    
+            // Add file logging to project directory (not blocked)
+            var logPath = Path.Combine(AppContext.BaseDirectory, "azure-discovery.log");
+            logging.AddFile(logPath, LogLevel.Debug);
+    
+            // Keep minimal logging for MCP protocol
             logging.SetMinimumLevel(LogLevel.Error);
+    
+            // But allow debug logging for our discovery classes
+            logging.AddFilter("AzureMcp.Authentication", LogLevel.Debug);
+    
+            // Suppress framework noise
             logging.AddFilter("Microsoft", LogLevel.None);
             logging.AddFilter("System", LogLevel.None);
             logging.AddFilter("Azure", LogLevel.None);

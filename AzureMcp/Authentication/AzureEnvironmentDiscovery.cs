@@ -17,6 +17,7 @@ namespace AzureMcp.Authentication;
 public class AzureEnvironmentDiscovery
 {
     private readonly ILogger<AzureEnvironmentDiscovery> _logger;
+    private readonly string _logPath = Path.Combine(AppContext.BaseDirectory, "azure-discovery.log");
 
     public AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger)
     {
@@ -24,20 +25,72 @@ public class AzureEnvironmentDiscovery
     }
 
     /// <summary>
-    /// Discovers everything Azure with zero configuration
+    /// Discovers Azure DevOps environments independently (no Azure RM required!)
     /// </summary>
     public async Task<AzureDiscoveryResult> DiscoverAzureEnvironmentsAsync()
     {
         var result = new AzureDiscoveryResult();
+        
+        // Log to file in project directory for debugging
+        await File.WriteAllTextAsync(_logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Starting Azure DevOps discovery...\n");
+        
+        try
+        {
+            // Focus ONLY on DevOps discovery - Azure RM is optional
+            _logger.LogInformation("🔍 Discovering Azure DevOps environments...");
+            await AddLogLine("Starting Azure DevOps discovery...");
+            
+            result.DevOpsEnvironments = await DiscoverDevOpsEnvironmentsAsync();
 
-        // 1. Discover Azure Resource Manager credentials
-        result.AzureCredential = await DiscoverAzureCredentialAsync();
-
-        // 2. Discover Azure CLI status
-        result.AzureCliInfo = await DiscoverAzureCliStatusAsync();
-
-        // 3. Discover Azure DevOps environments
-        result.DevOpsEnvironments = await DiscoverDevOpsEnvironmentsAsync();
+            await AddLogLine($"Found {result.DevOpsEnvironments.Count} DevOps environments");
+            
+            foreach (var env in result.DevOpsEnvironments)
+            {
+                await AddLogLine($"\t{env.OrganizationUrl} via {env.Source} (HasCredentials: {env.HasCredentials})");
+            }
+            
+            // Azure RM is optional - only try if user wants it
+            if (result.DevOpsEnvironments.Count > 0)
+            {
+                _logger.LogInformation("✅ Azure DevOps discovery successful");
+                await AddLogLine("DevOps discovery successful!");
+            }
+            else
+            {
+                _logger.LogWarning("❌ No Azure DevOps environments found");
+                await AddLogLine("No Azure DevOps environments found");
+            }
+            
+            // Try Azure RM as bonus feature (don't fail if this doesn't work)
+            try
+            {
+                result.AzureCredential = await DiscoverAzureCredentialAsync();
+                if (result.AzureCredential != null)
+                {
+                    await AddLogLine("Azure RM credentials available");
+                }
+            }
+            catch (Exception ex)
+            {
+                await AddLogLine($"Azure RM discovery failed: {ex.Message}");
+            }
+            
+            // Azure CLI status for info only
+            try
+            {
+                result.AzureCliInfo = await DiscoverAzureCliStatusAsync();
+            }
+            catch (Exception ex)
+            {
+                await AddLogLine($"Azure CLI status check failed: {ex.Message}");
+                result.AzureCliInfo = new AzureCliInfo { IsLoggedIn = false };
+            }
+        }
+        catch (Exception ex)
+        {
+            await AddLogLine($"Discovery failed: {ex}");
+            throw;
+        }
 
         return result;
     }
@@ -58,7 +111,7 @@ public class AzureEnvironmentDiscovery
             });
 
             // Validate credential
-            var tokenContext = new TokenRequestContext(new[] { "https://management.azure.com/.default" });
+            var tokenContext = new TokenRequestContext(["https://management.azure.com/.default"]);
             await credential.GetTokenAsync(tokenContext, CancellationToken.None);
 
             return credential;
@@ -98,26 +151,49 @@ public class AzureEnvironmentDiscovery
     private async Task<List<DevOpsEnvironmentInfo>> DiscoverDevOpsEnvironmentsAsync()
     {
         var environments = new List<DevOpsEnvironmentInfo>();
+        
+        // 0: Local config file (bypass all process context issues)
+        await AddLogLine("Trying local config file...");
+        var fileEnv = await DiscoverFromLocalConfigFile();
+        if (fileEnv != null) 
+        {
+            await AddLogLine($"Found config file environment: {fileEnv.OrganizationUrl}");
+            environments.Add(fileEnv);
+        }
+        else
+        {
+            await AddLogLine("No local config file found");
+        }
 
+
+        await AddLogLine("Calling DiscoverDevOpsEnvironmentsAsync...");
         // 1. Azure CLI DevOps extension
         var cliEnv = await DiscoverFromAzureCliDevOpsAsync();
+        await AddLogLine($"{(cliEnv is not null ? "Found" : "No")} Azure CLI DevOps environment");
         if (cliEnv != null) environments.Add(cliEnv);
 
+        var envLength = environments.Count;
+        await AddLogLine("Calling DiscoverFromCredentialManager...");
         // 2. Windows Credential Manager
-        environments.AddRange(DiscoverFromCredentialManager());
+        environments.AddRange(await DiscoverFromCredentialManager());
+        await AddLogLine($"Found {environments.Count - envLength} environments from Credential Manager");
 
+        await AddLogLine("Calling DiscoverFromEnvironmentVariables...");
         // 3. Environment variables
-        var envEnv = DiscoverFromEnvironmentVariables();
+        var envEnv = await DiscoverFromEnvironmentVariables();
+        await AddLogLine($"{(envEnv is not null ? "Found" : "No")} environment variable DevOps environment");
         if (envEnv != null) environments.Add(envEnv);
 
+        await AddLogLine("Calling DiscoverFromAzurePipelines...");
         // 4. Azure Pipelines context (if running in pipeline)
         var pipelineEnv = DiscoverFromAzurePipelines();
+        await AddLogLine($"{(pipelineEnv is not null ? "Found" : "No")} Azure Pipelines DevOps environment");
         if (pipelineEnv != null) environments.Add(pipelineEnv);
 
         // Remove duplicates and validate
         var validEnvironments = new List<DevOpsEnvironmentInfo>();
         foreach (var env in environments.GroupBy(e => e.OrganizationUrl, StringComparer.OrdinalIgnoreCase)
-                                      .Select(g => g.First()))
+                     .Select(g => g.First()))
         {
             if (await ValidateDevOpsEnvironmentAsync(env))
             {
@@ -127,12 +203,57 @@ public class AzureEnvironmentDiscovery
 
         return validEnvironments;
     }
+    
+    private async Task<DevOpsEnvironmentInfo?> DiscoverFromLocalConfigFile()
+    {
+        try
+        {
+            var configPath = Path.Combine(AppContext.BaseDirectory, "devops-config.json");
+            await AddLogLine($"Looking for config file at: {configPath}");
+        
+            if (File.Exists(configPath))
+            {
+                await AddLogLine("Config file exists, reading...");
+                var content = await File.ReadAllTextAsync(configPath);
+                await AddLogLine($"Config file content: {content}");
+            
+                var config = JsonSerializer.Deserialize<JsonElement>(content);
+                var azureDevOps = config.GetProperty("AzureDevOps");
+            
+                var orgUrl = azureDevOps.GetProperty("OrganizationUrl").GetString();
+                var pat = azureDevOps.GetProperty("PersonalAccessToken").GetString();
+            
+                if (!string.IsNullOrEmpty(orgUrl) && !string.IsNullOrEmpty(pat))
+                {
+                    await AddLogLine($"Successfully parsed config: {orgUrl}");
+                    return new DevOpsEnvironmentInfo
+                    {
+                        OrganizationUrl = orgUrl,
+                        PersonalAccessToken = pat,
+                        Source = "Local Config File",
+                        HasCredentials = true
+                    };
+                }
+            }
+            else
+            {
+                await AddLogLine("Config file does not exist");
+            }
+        }
+        catch (Exception ex)
+        {
+            await AddLogLine($"Config file discovery failed: {ex.Message}");
+        }
+    
+        return null;
+    }
 
     private async Task<DevOpsEnvironmentInfo?> DiscoverFromAzureCliDevOpsAsync()
     {
         try
         {
             var configResult = await ExecuteCommandAsync("az", "devops configure --list");
+            await AddLogLine($"configResult: Success={configResult.Success}, Output={configResult.Output}");
             if (configResult.Success && configResult.Output.Contains("organization ="))
             {
                 var lines = configResult.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -141,6 +262,7 @@ public class AzureEnvironmentDiscovery
                     if (line.StartsWith("organization =", StringComparison.OrdinalIgnoreCase))
                     {
                         var url = line.Split('=', 2)[1].Trim();
+                        await AddLogLine($"Found Azure CLI DevOps organization: {url}");
 
                         // Try to get a PAT for this organization
                         var pat = await TryGetPatForAzureCliOrgAsync(url);
@@ -163,7 +285,7 @@ public class AzureEnvironmentDiscovery
         return null;
     }
 
-    private static async Task<string?> TryGetPatForAzureCliOrgAsync(string organizationUrl)
+    private async Task<string?> TryGetPatForAzureCliOrgAsync(string organizationUrl)
     {
         // Extract org name from URL for credential lookup
         var uri = new Uri(organizationUrl);
@@ -180,11 +302,17 @@ public class AzureEnvironmentDiscovery
 
         foreach (var target in targets)
         {
+            await AddLogLine($"Attempting to get PAT from Credential Manager or env var: {target}");
             var pat = TryGetFromCredentialManager(target) ??
                      Environment.GetEnvironmentVariable(target);
             if (!string.IsNullOrEmpty(pat))
             {
+                await AddLogLine($"Recovered PAT from {target} - {pat}");
                 return pat;
+            }
+            else
+            {
+                await AddLogLine("No PAT found in this source");
             }
         }
 
@@ -192,7 +320,7 @@ public class AzureEnvironmentDiscovery
                Environment.GetEnvironmentVariable("AZURE_DEVOPS_PAT");
     }
 
-    private List<DevOpsEnvironmentInfo> DiscoverFromCredentialManager()
+    private async Task<List<DevOpsEnvironmentInfo>> DiscoverFromCredentialManager()
     {
         var environments = new List<DevOpsEnvironmentInfo>();
         var credentialTargets = new[]
@@ -206,13 +334,16 @@ public class AzureEnvironmentDiscovery
 
         foreach (var target in credentialTargets)
         {
+            await AddLogLine($"Checking Credential Manager for target: {target}");
             try
             {
                 using var cred = new Credential();
                 cred.Target = target;
+                await AddLogLine($"Found credential target: {cred.Target}, Username: {cred.Username}, Description: {cred.Description}, Password: {(string.IsNullOrEmpty(cred.Password) ? "No" : "Yes")}");
                 if (cred.Load() && !string.IsNullOrEmpty(cred.Password))
                 {
                     var orgUrl = ExtractOrgUrlFromCredential(cred);
+                    await AddLogLine($"Extracted Org URL: {orgUrl}");
                     if (!string.IsNullOrEmpty(orgUrl))
                     {
                         environments.Add(new DevOpsEnvironmentInfo
@@ -235,7 +366,7 @@ public class AzureEnvironmentDiscovery
         return environments;
     }
 
-    private static DevOpsEnvironmentInfo? DiscoverFromEnvironmentVariables()
+    private async Task<DevOpsEnvironmentInfo?> DiscoverFromEnvironmentVariables()
     {
         var patVars = new[] { "AZURE_DEVOPS_EXT_PAT", "AZURE_DEVOPS_PAT", "SYSTEM_ACCESSTOKEN" };
         var orgVars = new[] { "AZURE_DEVOPS_ORG_URL", "SYSTEM_COLLECTIONURI" };
@@ -244,7 +375,9 @@ public class AzureEnvironmentDiscovery
         string? patSource = null;
         foreach (var varName in patVars)
         {
+            await AddLogLine($"Trying to get PAT from env var: {varName}");
             pat = Environment.GetEnvironmentVariable(varName);
+            await AddLogLine($"Found PAT: {(string.IsNullOrEmpty(pat) ? "No" : "Yes")}");
             if (!string.IsNullOrEmpty(pat))
             {
                 patSource = varName;
@@ -347,6 +480,12 @@ public class AzureEnvironmentDiscovery
             return false;
         }
     }
+    
+    private async Task AddLogLine(string message)
+    {
+        var logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}\n";
+        await File.AppendAllTextAsync(_logPath, logEntry);
+    }
 
     private static string? TryGetFromCredentialManager(string target)
     {
@@ -394,7 +533,7 @@ public class AzureEnvironmentDiscovery
 public class AzureDiscoveryResult
 {
     public TokenCredential? AzureCredential { get; set; }
-    public List<DevOpsEnvironmentInfo> DevOpsEnvironments { get; set; } = new();
+    public List<DevOpsEnvironmentInfo> DevOpsEnvironments { get; set; } = [];
     public AzureCliInfo AzureCliInfo { get; set; } = new();
 }
 

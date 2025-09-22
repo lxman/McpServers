@@ -24,10 +24,17 @@
       <PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="19.225.1" />
       <PackageReference Include="Microsoft.VisualStudio.Services.Release.Client" Version="19.225.1" />
       <PackageReference Include="ModelContextProtocol" Version="0.3.0-preview.4" />
+      <PackageReference Include="Serilog.Extensions.Logging.File" Version="3.0.0" />
     </ItemGroup>
 
     <ItemGroup>
       <Folder Include="Resources\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="devops-config.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>
