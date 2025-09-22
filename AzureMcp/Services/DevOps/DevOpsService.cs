@@ -2,13 +2,16 @@
 using AzureMcp.Authentication;
 using AzureMcp.Services.DevOps.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.Build.WebApi;
 using Microsoft.TeamFoundation.Core.WebApi;
+using Microsoft.TeamFoundation.SourceControl.WebApi;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
-using Microsoft.TeamFoundation.SourceControl.WebApi;
+using Microsoft.VisualStudio.Services.ReleaseManagement.WebApi;
+using Microsoft.VisualStudio.Services.ReleaseManagement.WebApi.Clients;
 using Microsoft.VisualStudio.Services.WebApi;
-using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 using Microsoft.VisualStudio.Services.WebApi.Patch;
+using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 
 namespace AzureMcp.Services.DevOps;
 
@@ -106,7 +109,7 @@ public class DevOpsService : IDevOpsService
 
             var patchDocument = new JsonPatchDocument
             {
-                new JsonPatchOperation()
+                new JsonPatchOperation
                 {
                     Operation = Operation.Add,
                     Path = "/fields/System.Title",
@@ -119,7 +122,7 @@ public class DevOpsService : IDevOpsService
             {
                 foreach (var field in fields)
                 {
-                    patchDocument.Add(new JsonPatchOperation()
+                    patchDocument.Add(new JsonPatchOperation
                     {
                         Operation = Operation.Add,
                         Path = $"/fields/{field.Key}",
@@ -261,4 +264,449 @@ public class DevOpsService : IDevOpsService
         var match = Regex.Match(userField, @"^([^<]+)");
         return match.Success ? match.Groups[1].Value.Trim() : userField;
     }
+    
+    #region Pipeline Methods
+
+    public async Task<IEnumerable<BuildDefinitionDto>> GetBuildDefinitionsAsync(string projectName)
+    {
+        try
+        {
+            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var definitions = await buildClient.GetDefinitionsAsync(projectName);
+            var fullDefinitions = new List<BuildDefinition>();
+            foreach (var defRef in definitions)
+            {
+                var fullDef = await buildClient.GetDefinitionAsync(projectName, defRef.Id);
+                if (fullDef != null) fullDefinitions.Add(fullDef);
+            }
+            return fullDefinitions.Select(MapToBuildDefinitionDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving build definitions for project {ProjectName}", projectName);
+            throw;
+        }
+    }
+
+    public async Task<BuildDefinitionDto?> GetBuildDefinitionAsync(string projectName, int definitionId)
+    {
+        try
+        {
+            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var definition = await buildClient.GetDefinitionAsync(projectName, definitionId);
+            
+            return definition != null ? MapToBuildDefinitionDto(definition) : null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving build definition {DefinitionId} from project {ProjectName}", definitionId, projectName);
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<BuildDto>> GetBuildsAsync(string projectName, int? definitionId = null, int? top = null)
+    {
+        try
+        {
+            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var builds = await buildClient.GetBuildsAsync(
+                projectName, 
+                definitions: definitionId.HasValue ? new[] { definitionId.Value } : null,
+                top: top);
+            
+            return builds.Select(MapToBuildDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving builds for project {ProjectName}", projectName);
+            throw;
+        }
+    }
+
+    public async Task<BuildDto?> GetBuildAsync(string projectName, int buildId)
+    {
+        try
+        {
+            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var build = await buildClient.GetBuildAsync(projectName, buildId);
+            
+            return build != null ? MapToBuildDto(build) : null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving build {BuildId} from project {ProjectName}", buildId, projectName);
+            throw;
+        }
+    }
+
+    public async Task<BuildDto> QueueBuildAsync(string projectName, int definitionId, string? branch = null)
+    {
+        try
+        {
+            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            
+            var buildRequest = new Build
+            {
+                Definition = new DefinitionReference { Id = definitionId },
+                Project = new TeamProjectReference { Name = projectName }
+            };
+            
+            if (!string.IsNullOrEmpty(branch))
+            {
+                buildRequest.SourceBranch = branch;
+            }
+            
+            var queuedBuild = await buildClient.QueueBuildAsync(buildRequest, projectName);
+            return MapToBuildDto(queuedBuild);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error queuing build {DefinitionId} for project {ProjectName}", definitionId, projectName);
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<ReleaseDefinitionDto>> GetReleaseDefinitionsAsync(string projectName)
+    {
+        try
+        {
+            var releaseClient = _credentialManager.GetClient<ReleaseHttpClient>();
+            var definitions = await releaseClient.GetReleaseDefinitionsAsync(projectName);
+            
+            return definitions.Select(MapToReleaseDefinitionDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving release definitions for project {ProjectName}", projectName);
+            throw;
+        }
+    }
+
+    public async Task<ReleaseDefinitionDto?> GetReleaseDefinitionAsync(string projectName, int definitionId)
+    {
+        try
+        {
+            var releaseClient = _credentialManager.GetClient<ReleaseHttpClient>();
+            var definition = await releaseClient.GetReleaseDefinitionAsync(projectName, definitionId);
+            
+            return definition != null ? MapToReleaseDefinitionDto(definition) : null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving release definition {DefinitionId} from project {ProjectName}", definitionId, projectName);
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<ReleaseDto>> GetReleasesAsync(string projectName, int? definitionId = null)
+    {
+        try
+        {
+            var releaseClient = _credentialManager.GetClient<ReleaseHttpClient>();
+            var releases = await releaseClient.GetReleasesAsync(
+                projectName, 
+                definitionId: definitionId);
+            
+            return releases.Select(MapToReleaseDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving releases for project {ProjectName}", projectName);
+            throw;
+        }
+    }
+
+    #endregion
+
+    #region YAML File Methods
+
+    public async Task<string?> GetRepositoryFileContentAsync(string projectName, string repositoryName, string filePath, string? branch = null)
+    {
+        try
+        {
+            var gitClient = _credentialManager.GetClient<GitHttpClient>();
+            
+            var item = await gitClient.GetItemAsync(
+                project: projectName,
+                repositoryId: repositoryName,
+                filePath,
+                versionDescriptor: branch != null ? new GitVersionDescriptor 
+                { 
+                    Version = branch, 
+                    VersionType = GitVersionType.Branch 
+                } : null,
+                includeContent: true);
+            
+            return item?.Content;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving file {FilePath} from repository {RepositoryName} in project {ProjectName}", 
+                filePath, repositoryName, projectName);
+            throw;
+        }
+    }
+
+    public async Task<bool> UpdateRepositoryFileAsync(string projectName, string repositoryName, string filePath, 
+        string content, string commitMessage, string? branch = null)
+    {
+        try
+        {
+            var gitClient = _credentialManager.GetClient<GitHttpClient>();
+            
+            // Get current item to get object ID for update
+            GitItem? currentItem = null;
+            try
+            {
+                currentItem = await gitClient.GetItemAsync(
+                    repositoryId: repositoryName,
+                    path: filePath,
+                    project: projectName,
+                    versionDescriptor: branch != null ? new GitVersionDescriptor 
+                    { 
+                        Version = branch, 
+                        VersionType = GitVersionType.Branch 
+                    } : null,
+                    includeContent: true);
+            }
+            catch
+            {
+                // File doesn't exist - will be created
+            }
+
+            var targetBranch = branch ?? "refs/heads/main";
+            var changeType = currentItem != null ? VersionControlChangeType.Edit : VersionControlChangeType.Add;
+            
+            var commit = new GitCommitRef
+            {
+                Comment = commitMessage,
+                Changes =
+                [
+                    new GitChange
+                    {
+                        ChangeType = changeType,
+                        Item = new GitItem { Path = filePath },
+                        NewContent = new ItemContent
+                        {
+                            Content = content,
+                            ContentType = ItemContentType.RawText
+                        }
+                    }
+                ]
+            };
+
+            var push = new GitPush
+            {
+                RefUpdates =
+                [
+                    new GitRefUpdate
+                    {
+                        Name = targetBranch,
+                        OldObjectId = currentItem?.ObjectId ?? "0000000000000000000000000000000000000000"
+                    }
+                ],
+                Commits = [commit]
+            };
+
+            await gitClient.CreatePushAsync(push, repositoryName, projectName);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating file {FilePath} in repository {RepositoryName}", filePath, repositoryName);
+            return false;
+        }
+    }
+
+    public async Task<IEnumerable<string>> FindYamlPipelineFilesAsync(string projectName, string repositoryName)
+    {
+        try
+        {
+            var gitClient = _credentialManager.GetClient<GitHttpClient>();
+            
+            // Search for YAML files in common pipeline locations
+            var searchPaths = new[] { "/", "/.azure-pipelines", "/.github/workflows", "/pipelines", "/build" };
+            var yamlFiles = new List<string>();
+            
+            foreach (var searchPath in searchPaths)
+            {
+                try
+                {
+                    var items = await gitClient.GetItemsAsync(
+                        repositoryName,
+                        projectName,
+                        scopePath: searchPath,
+                        recursionLevel: VersionControlRecursionType.Full);
+                    
+                    var yamlItems = items.Where(item => 
+                        item.Path.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ||
+                        item.Path.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase))
+                        .Select(item => item.Path);
+                    
+                    yamlFiles.AddRange(yamlItems);
+                }
+                catch
+                {
+                    // Path might not exist, continue
+                }
+            }
+            
+            return yamlFiles.Distinct();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error finding YAML files in repository {RepositoryName}", repositoryName);
+            throw;
+        }
+    }
+
+    public async Task<string?> GetPipelineYamlAsync(string projectName, int definitionId)
+    {
+        try
+        {
+            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var definition = await buildClient.GetDefinitionAsync(projectName, definitionId);
+            
+            if (definition?.Process is YamlProcess yamlProcess)
+            {
+                var gitClient = _credentialManager.GetClient<GitHttpClient>();
+                var yamlContent = await gitClient.GetItemAsync(
+                    project: projectName,
+                    definition.Repository.Id,
+                    path: yamlProcess.YamlFilename,
+                    includeContent: true);
+                
+                return yamlContent?.Content;
+            }
+            
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving YAML for pipeline {DefinitionId}", definitionId);
+            throw;
+        }
+    }
+
+    public async Task<bool> UpdatePipelineYamlAsync(string projectName, int definitionId, string yamlContent, string commitMessage)
+    {
+        try
+        {
+            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var definition = await buildClient.GetDefinitionAsync(projectName, definitionId);
+            
+            if (definition?.Process is YamlProcess yamlProcess && definition.Repository != null)
+            {
+                return await UpdateRepositoryFileAsync(
+                    projectName,
+                    definition.Repository.Name,
+                    yamlProcess.YamlFilename,
+                    yamlContent,
+                    commitMessage);
+            }
+            
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating YAML for pipeline {DefinitionId}", definitionId);
+            return false;
+        }
+    }
+
+    #endregion
+
+    #region Mapping Methods
+
+    private static BuildDefinitionDto MapToBuildDefinitionDto(BuildDefinition definition)
+    {
+        return new BuildDefinitionDto
+        {
+            Id = definition.Id,
+            Name = definition.Name,
+            Path = definition.Path ?? "/",
+            Type = definition.Type.ToString(),
+            QueueStatus = definition.QueueStatus.ToString(),
+            Description = definition.Description,
+            Repository = definition.Repository != null ? new RepositoryDto
+            {
+                Id = definition.Repository.Id,
+                Name = definition.Repository.Name ?? "",
+                DefaultBranch = definition.Repository.DefaultBranch ?? "",
+                ProjectName = definition.Project?.Name ?? "",
+                Url = definition.Repository.Url?.ToString() ?? "",
+                WebUrl = definition.Repository.Url?.ToString() ?? ""
+            } : null,
+            YamlFilename = (definition.Process as YamlProcess)?.YamlFilename,
+            CreatedDate = definition.CreatedDate,
+            Url = definition.Url ?? "",
+            WebUrl = definition.Uri?.ToString() ?? ""
+        };
+    }
+
+    private static BuildDto MapToBuildDto(Build build)
+    {
+        return new BuildDto
+        {
+            Id = build.Id,
+            BuildNumber = build.BuildNumber,
+            Status = build.Status?.ToString() ?? "",
+            Result = build.Result?.ToString() ?? "",
+            StartTime = build.StartTime,
+            FinishTime = build.FinishTime,
+            RequestedFor = build.RequestedFor?.DisplayName,
+            RequestedBy = build.RequestedBy?.DisplayName,
+            Definition = build.Definition != null ? new BuildDefinitionDto
+            {
+                Id = build.Definition.Id,
+                Name = build.Definition.Name,
+                Path = build.Definition.Path ?? "/"
+            } : null,
+            SourceBranch = build.SourceBranch,
+            SourceVersion = build.SourceVersion,
+            Url = build.Url ?? "",
+            WebUrl = build.Uri?.ToString() ?? ""
+        };
+    }
+
+    private static ReleaseDefinitionDto MapToReleaseDefinitionDto(ReleaseDefinition definition)
+    {
+        return new ReleaseDefinitionDto
+        {
+            Id = definition.Id,
+            Name = definition.Name,
+            Path = definition.Path ?? "/",
+            Description = definition.Description,
+            CreatedOn = definition.CreatedOn,
+            CreatedBy = definition.CreatedBy?.DisplayName,
+            Url = definition.Url ?? "",
+            Environments = definition.Environments?.Select(env => new EnvironmentDto
+            {
+                Id = env.Id,
+                Name = env.Name,
+                Rank = env.Rank
+            }).ToList() ?? []
+        };
+    }
+
+    private static ReleaseDto MapToReleaseDto(Release release)
+    {
+        return new ReleaseDto
+        {
+            Id = release.Id,
+            Name = release.Name,
+            Status = release.Status.ToString(),
+            CreatedOn = release.CreatedOn,
+            CreatedBy = release.CreatedBy?.DisplayName,
+            ReleaseDefinition = release.ReleaseDefinitionReference != null ? new ReleaseDefinitionDto
+            {
+                Id = release.ReleaseDefinitionReference.Id,
+                Name = release.ReleaseDefinitionReference.Name,
+                Path = release.ReleaseDefinitionReference.Path ?? "/"
+            } : null,
+            Url = release.Links?.ToString() ?? ""
+        };
+    }
+
+    #endregion
 }

@@ -159,7 +159,6 @@ public class NoCredentialsDevOpsService : IDevOpsService
         _logger = logger;
     }
 
-    // Implement IDevOpsService methods with correct return types
     public Task<IEnumerable<ProjectDto>> GetProjectsAsync()
     {
         throw new InvalidOperationException(
@@ -204,5 +203,70 @@ public class NoCredentialsDevOpsService : IDevOpsService
     {
         throw new InvalidOperationException(
             "No Azure DevOps credentials discovered. Please set up credentials first.");
+    }
+    
+    public Task<IEnumerable<BuildDefinitionDto>> GetBuildDefinitionsAsync(string projectName)
+    {
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    }
+
+    public Task<BuildDefinitionDto?> GetBuildDefinitionAsync(string projectName, int definitionId)
+    {
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    }
+
+    public Task<IEnumerable<BuildDto>> GetBuildsAsync(string projectName, int? definitionId = null, int? top = null)
+    {
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    }
+
+    public Task<BuildDto?> GetBuildAsync(string projectName, int buildId)
+    {
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    }
+
+    public Task<BuildDto> QueueBuildAsync(string projectName, int definitionId, string? branch = null)
+    {
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    }
+
+    public Task<IEnumerable<ReleaseDefinitionDto>> GetReleaseDefinitionsAsync(string projectName)
+    {
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    }
+
+    public Task<ReleaseDefinitionDto?> GetReleaseDefinitionAsync(string projectName, int definitionId)
+    {
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    }
+
+    public Task<IEnumerable<ReleaseDto>> GetReleasesAsync(string projectName, int? definitionId = null)
+    {
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    }
+
+    public Task<string?> GetRepositoryFileContentAsync(string projectName, string repositoryName, string filePath, string? branch = null)
+    {
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    }
+
+    public Task<bool> UpdateRepositoryFileAsync(string projectName, string repositoryName, string filePath, string content, string commitMessage, string? branch = null)
+    {
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    }
+
+    public Task<IEnumerable<string>> FindYamlPipelineFilesAsync(string projectName, string repositoryName)
+    {
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    }
+
+    public Task<string?> GetPipelineYamlAsync(string projectName, int definitionId)
+    {
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    }
+
+    public Task<bool> UpdatePipelineYamlAsync(string projectName, int definitionId, string yamlContent, string commitMessage)
+    {
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
     }
 }

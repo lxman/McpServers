@@ -151,6 +151,245 @@ public class DevOpsTools
             return HandleError(ex, "GetRepository");
         }
     }
+    
+    #region Pipeline Tools
+
+    [McpServerTool]
+    [Description("List build definitions (pipelines) in a project")]
+    public async Task<string> ListBuildDefinitionsAsync(
+        [Description("Project name")] string projectName)
+    {
+        try
+        {
+            var definitions = await _devOpsService.GetBuildDefinitionsAsync(projectName);
+            return JsonSerializer.Serialize(new { success = true, buildDefinitions = definitions.ToArray() }, 
+                new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "ListBuildDefinitions");
+        }
+    }
+
+    [McpServerTool]
+    [Description("Get details of a specific build definition")]
+    public async Task<string> GetBuildDefinitionAsync(
+        [Description("Project name")] string projectName,
+        [Description("Build definition ID")] int definitionId)
+    {
+        try
+        {
+            var definition = await _devOpsService.GetBuildDefinitionAsync(projectName, definitionId);
+            return JsonSerializer.Serialize(new { success = true, buildDefinition = definition }, 
+                new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "GetBuildDefinition");
+        }
+    }
+
+    [McpServerTool]
+    [Description("List recent builds in a project")]
+    public async Task<string> ListBuildsAsync(
+        [Description("Project name")] string projectName,
+        [Description("Optional build definition ID to filter")] int? definitionId = null,
+        [Description("Maximum number of builds to return")] int? top = 10)
+    {
+        try
+        {
+            var builds = await _devOpsService.GetBuildsAsync(projectName, definitionId, top);
+            return JsonSerializer.Serialize(new { success = true, builds = builds.ToArray() }, 
+                new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "ListBuilds");
+        }
+    }
+
+    [McpServerTool]
+    [Description("Get details of a specific build")]
+    public async Task<string> GetBuildAsync(
+        [Description("Project name")] string projectName,
+        [Description("Build ID")] int buildId)
+    {
+        try
+        {
+            var build = await _devOpsService.GetBuildAsync(projectName, buildId);
+            return JsonSerializer.Serialize(new { success = true, build }, 
+                new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "GetBuild");
+        }
+    }
+
+    [McpServerTool]
+    [Description("Queue/trigger a build")]
+    public async Task<string> QueueBuildAsync(
+        [Description("Project name")] string projectName,
+        [Description("Build definition ID")] int definitionId,
+        [Description("Optional branch to build")] string? branch = null)
+    {
+        try
+        {
+            var build = await _devOpsService.QueueBuildAsync(projectName, definitionId, branch);
+            return JsonSerializer.Serialize(new { success = true, queuedBuild = build }, 
+                new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "QueueBuild");
+        }
+    }
+
+    [McpServerTool]
+    [Description("List release definitions in a project")]
+    public async Task<string> ListReleaseDefinitionsAsync(
+        [Description("Project name")] string projectName)
+    {
+        try
+        {
+            var definitions = await _devOpsService.GetReleaseDefinitionsAsync(projectName);
+            return JsonSerializer.Serialize(new { success = true, releaseDefinitions = definitions.ToArray() }, 
+                new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "ListReleaseDefinitions");
+        }
+    }
+
+    #endregion
+
+    #region YAML File Tools
+
+    [McpServerTool]
+    [Description("Get the content of a file from a repository (useful for YAML pipeline files)")]
+    public async Task<string> GetRepositoryFileAsync(
+        [Description("Project name")] string projectName,
+        [Description("Repository name")] string repositoryName,
+        [Description("File path (e.g., azure-pipelines.yml, .github/workflows/build.yml)")] string filePath,
+        [Description("Optional branch name (defaults to main/master)")] string? branch = null)
+    {
+        try
+        {
+            var content = await _devOpsService.GetRepositoryFileContentAsync(projectName, repositoryName, filePath, branch);
+            return JsonSerializer.Serialize(new { 
+                success = true, 
+                filePath, 
+                content,
+                branch = branch ?? "default",
+                repository = repositoryName,
+                project = projectName
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "GetRepositoryFile");
+        }
+    }
+
+    [McpServerTool]
+    [Description("Update a file in a repository (useful for updating YAML pipeline files)")]
+    public async Task<string> UpdateRepositoryFileAsync(
+        [Description("Project name")] string projectName,
+        [Description("Repository name")] string repositoryName,
+        [Description("File path (e.g., azure-pipelines.yml)")] string filePath,
+        [Description("New file content")] string content,
+        [Description("Commit message")] string commitMessage,
+        [Description("Optional branch name (defaults to main)")] string? branch = null)
+    {
+        try
+        {
+            var success = await _devOpsService.UpdateRepositoryFileAsync(projectName, repositoryName, filePath, content, commitMessage, branch);
+            return JsonSerializer.Serialize(new { 
+                success, 
+                message = success ? "File updated successfully" : "File update failed",
+                filePath,
+                repository = repositoryName,
+                project = projectName,
+                commitMessage
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "UpdateRepositoryFile");
+        }
+    }
+
+    [McpServerTool]
+    [Description("Find all YAML pipeline files in a repository")]
+    public async Task<string> FindYamlPipelineFilesAsync(
+        [Description("Project name")] string projectName,
+        [Description("Repository name")] string repositoryName)
+    {
+        try
+        {
+            var yamlFiles = await _devOpsService.FindYamlPipelineFilesAsync(projectName, repositoryName);
+            return JsonSerializer.Serialize(new { 
+                success = true, 
+                yamlFiles = yamlFiles.ToArray(),
+                repository = repositoryName,
+                project = projectName
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "FindYamlPipelineFiles");
+        }
+    }
+
+    [McpServerTool]
+    [Description("Get the YAML content for a specific pipeline definition")]
+    public async Task<string> GetPipelineYamlAsync(
+        [Description("Project name")] string projectName,
+        [Description("Pipeline definition ID")] int definitionId)
+    {
+        try
+        {
+            var yamlContent = await _devOpsService.GetPipelineYamlAsync(projectName, definitionId);
+            return JsonSerializer.Serialize(new { 
+                success = true, 
+                definitionId,
+                yamlContent,
+                project = projectName
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "GetPipelineYaml");
+        }
+    }
+
+    [McpServerTool]
+    [Description("Update the YAML content for a pipeline definition")]
+    public async Task<string> UpdatePipelineYamlAsync(
+        [Description("Project name")] string projectName,
+        [Description("Pipeline definition ID")] int definitionId,
+        [Description("New YAML content")] string yamlContent,
+        [Description("Commit message")] string commitMessage)
+    {
+        try
+        {
+            var success = await _devOpsService.UpdatePipelineYamlAsync(projectName, definitionId, yamlContent, commitMessage);
+            return JsonSerializer.Serialize(new { 
+                success, 
+                message = success ? "Pipeline YAML updated successfully" : "Pipeline YAML update failed",
+                definitionId,
+                project = projectName,
+                commitMessage
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "UpdatePipelineYaml");
+        }
+    }
+
+    #endregion
 
     private static string HandleError(Exception ex, string operation)
     {
