@@ -24,4 +24,10 @@ public interface IDevOpsService
     Task<IEnumerable<string>> FindYamlPipelineFilesAsync(string projectName, string repositoryName);
     Task<string?> GetPipelineYamlAsync(string projectName, int definitionId);
     Task<bool> UpdatePipelineYamlAsync(string projectName, int definitionId, string yamlContent, string commitMessage);
+    Task<IEnumerable<BuildLogDto>> GetBuildLogsAsync(string projectName, int buildId);
+    Task<BuildLogContentDto?> GetBuildLogContentAsync(string projectName, int buildId, int logId);
+    Task<BuildTimelineDto?> GetBuildTimelineAsync(string projectName, int buildId);
+    Task<IEnumerable<BuildStepLogDto>> GetBuildStepLogsAsync(string projectName, int buildId);
+    Task<string> GetCompleteBuildLogAsync(string projectName, int buildId);
+    Task<BuildLogContentDto?> GetBuildTaskLogAsync(string projectName, int buildId, string taskId);
 }

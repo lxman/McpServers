@@ -269,4 +269,22 @@ public class NoCredentialsDevOpsService : IDevOpsService
     {
         throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
     }
+    
+    public Task<IEnumerable<BuildLogDto>> GetBuildLogsAsync(string projectName, int buildId) => 
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    
+    public Task<BuildLogContentDto?> GetBuildLogContentAsync(string projectName, int buildId, int logId) => 
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    
+    public Task<BuildTimelineDto?> GetBuildTimelineAsync(string projectName, int buildId) => 
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    
+    public Task<IEnumerable<BuildStepLogDto>> GetBuildStepLogsAsync(string projectName, int buildId) => 
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    
+    public Task<string> GetCompleteBuildLogAsync(string projectName, int buildId) => 
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    
+    public Task<BuildLogContentDto?> GetBuildTaskLogAsync(string projectName, int buildId, string taskId) => 
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
 }

@@ -390,7 +390,152 @@ public class DevOpsTools
     }
 
     #endregion
+    
+    #region Build Log Tools
 
+    [McpServerTool]
+    [Description("Get build logs for a specific build")]
+    public async Task<string> GetBuildLogsAsync(
+        [Description("Project name")] string projectName,
+        [Description("Build ID")] int buildId)
+    {
+        try
+        {
+            var logs = await _devOpsService.GetBuildLogsAsync(projectName, buildId);
+            return JsonSerializer.Serialize(new { 
+                success = true, 
+                buildId,
+                project = projectName,
+                logs = logs.ToArray()
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "GetBuildLogs");
+        }
+    }
+
+    [McpServerTool]
+    [Description("Get the complete build log content for a specific build")]
+    public async Task<string> GetCompleteBuildLogAsync(
+        [Description("Project name")] string projectName,
+        [Description("Build ID")] int buildId)
+    {
+        try
+        {
+            var logContent = await _devOpsService.GetCompleteBuildLogAsync(projectName, buildId);
+            return JsonSerializer.Serialize(new { 
+                success = true, 
+                buildId,
+                project = projectName,
+                logContent
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "GetCompleteBuildLog");
+        }
+    }
+
+    [McpServerTool]
+    [Description("Get build timeline with step-by-step execution details")]
+    public async Task<string> GetBuildTimelineAsync(
+        [Description("Project name")] string projectName,
+        [Description("Build ID")] int buildId)
+    {
+        try
+        {
+            var timeline = await _devOpsService.GetBuildTimelineAsync(projectName, buildId);
+            return JsonSerializer.Serialize(new { 
+                success = true, 
+                buildId,
+                project = projectName,
+                timeline
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "GetBuildTimeline");
+        }
+    }
+
+    [McpServerTool]
+    [Description("Get detailed logs for all build steps with error/warning extraction")]
+    public async Task<string> GetBuildStepLogsAsync(
+        [Description("Project name")] string projectName,
+        [Description("Build ID")] int buildId)
+    {
+        try
+        {
+            var stepLogs = (await _devOpsService.GetBuildStepLogsAsync(projectName, buildId)).ToList();
+            return JsonSerializer.Serialize(new { 
+                success = true, 
+                buildId,
+                project = projectName,
+                stepLogs = stepLogs.ToArray(),
+                summary = new {
+                    totalSteps = stepLogs.Count,
+                    stepsWithErrors = stepLogs.Count(s => s.ErrorMessages.Count != 0),
+                    stepsWithWarnings = stepLogs.Count(s => s.WarningMessages.Count != 0)
+                }
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "GetBuildStepLogs");
+        }
+    }
+
+    [McpServerTool]
+    [Description("Get log content for a specific build log ID")]
+    public async Task<string> GetBuildLogContentAsync(
+        [Description("Project name")] string projectName,
+        [Description("Build ID")] int buildId,
+        [Description("Log ID")] int logId)
+    {
+        try
+        {
+            var logContent = await _devOpsService.GetBuildLogContentAsync(projectName, buildId, logId);
+            return JsonSerializer.Serialize(new { 
+                success = true, 
+                buildId,
+                logId,
+                project = projectName,
+                logContent
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "GetBuildLogContent");
+        }
+    }
+
+    [McpServerTool]
+    [Description("Get log content for a specific build task/step")]
+    public async Task<string> GetBuildTaskLogAsync(
+        [Description("Project name")] string projectName,
+        [Description("Build ID")] int buildId,
+        [Description("Task ID")] string taskId)
+    {
+        try
+        {
+            var taskLog = await _devOpsService.GetBuildTaskLogAsync(projectName, buildId, taskId);
+            return JsonSerializer.Serialize(new { 
+                success = true, 
+                buildId,
+                taskId,
+                project = projectName,
+                taskLog
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "GetBuildTaskLog");
+        }
+    }
+
+    #endregion
+    
     private static string HandleError(Exception ex, string operation)
     {
         var error = new

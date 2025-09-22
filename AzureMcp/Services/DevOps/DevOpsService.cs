@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.RegularExpressions;
 using AzureMcp.Authentication;
 using AzureMcp.Services.DevOps.Models;
 using Microsoft.Extensions.Logging;
@@ -706,6 +707,294 @@ public class DevOpsService : IDevOpsService
             } : null,
             Url = release.Links?.ToString() ?? ""
         };
+    }
+
+    #endregion
+    
+    #region Build Log Methods
+
+    public async Task<IEnumerable<BuildLogDto>> GetBuildLogsAsync(string projectName, int buildId)
+    {
+        try
+        {
+            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
+            
+            return logs.Select(log => new BuildLogDto
+            {
+                Id = log.Id,
+                Type = log.Type ?? string.Empty,
+                Url = log.Url ?? string.Empty,
+                CreatedOn = log.CreatedOn,
+                LastChangedOn = log.LastChangedOn,
+                LineCount = log.LineCount
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving build logs for build {BuildId} in project {ProjectName}", buildId, projectName);
+            throw;
+        }
+    }
+
+    public async Task<BuildLogContentDto?> GetBuildLogContentAsync(string projectName, int buildId, int logId)
+    {
+        try
+        {
+            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            
+            // Get the log content as a stream
+            await using var logStream = await buildClient.GetBuildLogAsync(projectName, buildId, logId);
+            using var reader = new StreamReader(logStream);
+            var content = await reader.ReadToEndAsync();
+            
+            var logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
+            var logInfo = logs.FirstOrDefault(l => l.Id == logId);
+            
+            return new BuildLogContentDto
+            {
+                LogId = logId,
+                Content = content,
+                LineCount = logInfo?.LineCount ?? content.Split('\n').Length,
+                IsTruncated = content.Length >= 100000
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving build log content for log {LogId} in build {BuildId}", logId, buildId);
+            throw;
+        }
+    }
+
+    public async Task<BuildTimelineDto?> GetBuildTimelineAsync(string projectName, int buildId)
+    {
+        try
+        {
+            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
+            
+            if (timeline?.Records == null)
+                return null;
+
+            // Build a hierarchical structure from timeline records
+            var recordDict = timeline.Records.ToDictionary(r => r.Id.ToString(), r => r);
+            var rootRecords = timeline.Records.Where(r => string.IsNullOrEmpty(r.ParentId.ToString())).ToList();
+            
+            var result = new BuildTimelineDto
+            {
+                Id = timeline.Id.ToString(),
+                Type = "Timeline",
+                Name = "Build Timeline",
+                Children = rootRecords.Select(r => MapTimelineRecord(r, recordDict)).ToList()
+            };
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving build timeline for build {BuildId} in project {ProjectName}", buildId, projectName);
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<BuildStepLogDto>> GetBuildStepLogsAsync(string projectName, int buildId)
+    {
+        try
+        {
+            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
+            
+            if (timeline?.Records == null)
+                return [];
+
+            var stepLogs = new List<BuildStepLogDto>();
+            
+            foreach (var record in timeline.Records.Where(r => r.Log != null))
+            {
+                try
+                {
+                    await using var logStream = await buildClient.GetBuildLogAsync(projectName, buildId, record.Log.Id);
+                    using var reader = new StreamReader(logStream);
+                    var logContent = await reader.ReadToEndAsync();
+                    
+                    var stepLog = new BuildStepLogDto
+                    {
+                        StepName = record.Name ?? "Unknown Step",
+                        StepId = record.Id.ToString(),
+                        StartTime = record.StartTime,
+                        FinishTime = record.FinishTime,
+                        Status = record.State?.ToString() ?? string.Empty,
+                        Result = record.Result?.ToString() ?? string.Empty,
+                        LogContent = logContent,
+                        ErrorMessages = ExtractErrorMessages(logContent),
+                        WarningMessages = ExtractWarningMessages(logContent)
+                    };
+                    
+                    stepLogs.Add(stepLog);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not retrieve log for step {StepName}", record.Name);
+                }
+            }
+            
+            return stepLogs;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving build step logs for build {BuildId}", buildId);
+            throw;
+        }
+    }
+
+    public async Task<string> GetCompleteBuildLogAsync(string projectName, int buildId)
+    {
+        try
+        {
+            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
+            
+            var combinedLog = new StringBuilder();
+            combinedLog.AppendLine($"=== COMPLETE BUILD LOG FOR BUILD {buildId} ===");
+            combinedLog.AppendLine($"Project: {projectName}");
+            combinedLog.AppendLine($"Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+            combinedLog.AppendLine();
+            
+            foreach (var log in logs.OrderBy(l => l.Id))
+            {
+                try
+                {
+                    combinedLog.AppendLine($"=== LOG {log.Id}: {log.Type} ===");
+
+                    await using var logStream = await buildClient.GetBuildLogAsync(projectName, buildId, log.Id);
+                    using var reader = new StreamReader(logStream);
+                    var content = await reader.ReadToEndAsync();
+                    
+                    combinedLog.AppendLine(content);
+                    combinedLog.AppendLine();
+                }
+                catch (Exception ex)
+                {
+                    combinedLog.AppendLine($"ERROR: Could not retrieve log {log.Id}: {ex.Message}");
+                    combinedLog.AppendLine();
+                }
+            }
+            
+            return combinedLog.ToString();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving complete build log for build {BuildId}", buildId);
+            throw;
+        }
+    }
+
+    public async Task<BuildLogContentDto?> GetBuildTaskLogAsync(string projectName, int buildId, string taskId)
+    {
+        try
+        {
+            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
+        
+            var taskRecord = timeline?.Records?.FirstOrDefault(r => r.Id.ToString() == taskId);
+            if (taskRecord?.Log == null)
+                return null;
+            
+            // Get the actual content
+            await using var logStream = await buildClient.GetBuildLogAsync(projectName, buildId, taskRecord.Log.Id);
+            using var reader = new StreamReader(logStream);
+            var content = await reader.ReadToEndAsync();
+        
+            // Get full log metadata (BuildLog has LineCount)
+            var logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
+            var fullLogInfo = logs.FirstOrDefault(l => l.Id == taskRecord.Log.Id);
+        
+            return new BuildLogContentDto
+            {
+                LogId = taskRecord.Log.Id,
+                Content = content,
+                LineCount = fullLogInfo?.LineCount ?? content.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length,
+                IsTruncated = content.Length >= 100000
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving task log for task {TaskId} in build {BuildId}", taskId, buildId);
+            throw;
+        }
+    }
+
+    #endregion
+
+    #region Helper Methods for Build Logs
+
+    private BuildTimelineDto MapTimelineRecord(TimelineRecord record, Dictionary<string, TimelineRecord> allRecords)
+    {
+        var children = allRecords.Values
+            .Where(r => r.ParentId == record.Id)
+            .Select(r => MapTimelineRecord(r, allRecords))
+            .ToList();
+        
+        return new BuildTimelineDto
+        {
+            Id = record.Id.ToString(),
+            ParentId = record.ParentId.ToString() ?? string.Empty,
+            Type = record.RecordType ?? string.Empty,
+            Name = record.Name ?? string.Empty,
+            StartTime = record.StartTime,
+            FinishTime = record.FinishTime,
+            PercentComplete = record.PercentComplete ?? 0,
+            State = record.State?.ToString() ?? string.Empty,
+            Result = record.Result?.ToString() ?? string.Empty,
+            ResultCode = Convert.ToInt32(record.ResultCode),
+            Order = record.Order ?? 0,
+            Log = record.Log != null ? new BuildLogDto
+            {
+                Id = record.Log.Id,
+                Type = record.Log.Type ?? string.Empty,
+                Url = record.Log.Url ?? string.Empty,
+                CreatedOn = DateTime.MinValue,
+                LastChangedOn = DateTime.MinValue,
+                LineCount = 0
+            } : null,
+            Children = children,
+            Issues = record.Issues
+        };
+    }
+
+    private static List<string> ExtractErrorMessages(string logContent)
+    {
+        var errors = new List<string>();
+        var lines = logContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        
+        foreach (var line in lines)
+        {
+            if (line.Contains("ERROR", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("FAILED", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("Exception", StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add(line.Trim());
+            }
+        }
+        
+        return errors;
+    }
+
+    private static List<string> ExtractWarningMessages(string logContent)
+    {
+        var warnings = new List<string>();
+        var lines = logContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        
+        foreach (var line in lines)
+        {
+            if (line.Contains("WARNING", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("WARN", StringComparison.OrdinalIgnoreCase))
+            {
+                warnings.Add(line.Trim());
+            }
+        }
+        
+        return warnings;
     }
 
     #endregion
