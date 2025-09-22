@@ -22,7 +22,7 @@ public class DevOpsTools
     {
         try
         {
-            IEnumerable<ProjectDto> projects = await _devOpsService.GetProjectsAsync();
+            var projects = await _devOpsService.GetProjectsAsync();
             return JsonSerializer.Serialize(new { success = true, projects = projects.ToArray() }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -39,7 +39,7 @@ public class DevOpsTools
     {
         try
         {
-            ProjectDto? project = await _devOpsService.GetProjectAsync(projectName);
+            var project = await _devOpsService.GetProjectAsync(projectName);
             return JsonSerializer.Serialize(new { success = true, project }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -56,7 +56,7 @@ public class DevOpsTools
     {
         try
         {
-            WorkItemDto? workItem = await _devOpsService.GetWorkItemAsync(id);
+            var workItem = await _devOpsService.GetWorkItemAsync(id);
             return JsonSerializer.Serialize(new { success = true, workItem }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -74,7 +74,7 @@ public class DevOpsTools
     {
         try
         {
-            IEnumerable<WorkItemDto> workItems = await _devOpsService.GetWorkItemsAsync(projectName, wiql);
+            var workItems = await _devOpsService.GetWorkItemsAsync(projectName, wiql);
             return JsonSerializer.Serialize(new { success = true, workItems = workItems.ToArray() }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -107,7 +107,7 @@ public class DevOpsTools
             if (priority.HasValue)
                 fields["Microsoft.VSTS.Common.Priority"] = priority.Value;
 
-            WorkItemDto workItem = await _devOpsService.CreateWorkItemAsync(projectName, workItemType, title, fields);
+            var workItem = await _devOpsService.CreateWorkItemAsync(projectName, workItemType, title, fields);
             return JsonSerializer.Serialize(new { success = true, workItem }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -124,7 +124,7 @@ public class DevOpsTools
     {
         try
         {
-            IEnumerable<RepositoryDto> repositories = await _devOpsService.GetRepositoriesAsync(projectName);
+            var repositories = await _devOpsService.GetRepositoriesAsync(projectName);
             return JsonSerializer.Serialize(new { success = true, repositories = repositories.ToArray() }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -142,7 +142,7 @@ public class DevOpsTools
     {
         try
         {
-            RepositoryDto? repository = await _devOpsService.GetRepositoryAsync(projectName, repositoryName);
+            var repository = await _devOpsService.GetRepositoryAsync(projectName, repositoryName);
             return JsonSerializer.Serialize(new { success = true, repository }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }

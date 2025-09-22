@@ -44,7 +44,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var projectClient = _credentialManager.GetClient<ProjectHttpClient>();
-            TeamProject? project = await projectClient.GetProject(projectName);
+            var project = await projectClient.GetProject(projectName);
 
             return project != null ? MapToProjectDto(project) : null;
         }
@@ -60,7 +60,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var workItemClient = _credentialManager.GetClient<WorkItemTrackingHttpClient>();
-            WorkItem? workItem = await workItemClient.GetWorkItemAsync(id, expand: WorkItemExpand.All);
+            var workItem = await workItemClient.GetWorkItemAsync(id, expand: WorkItemExpand.All);
 
             return workItem != null ? MapToWorkItemDto(workItem) : null;
         }
@@ -81,12 +81,12 @@ public class DevOpsService : IDevOpsService
             wiql ??= $"SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{projectName}' ORDER BY [System.Id] DESC";
             
             var query = new Wiql { Query = wiql };
-            WorkItemQueryResult? result = await workItemClient.QueryByWiqlAsync(query);
+            var result = await workItemClient.QueryByWiqlAsync(query);
 
             if (result?.WorkItems == null || !result.WorkItems.Any())
                 return [];
 
-            int[] ids = result.WorkItems.Select(wi => wi.Id).ToArray();
+            var ids = result.WorkItems.Select(wi => wi.Id).ToArray();
             List<WorkItem>? workItems = await workItemClient.GetWorkItemsAsync(ids, expand: WorkItemExpand.All);
 
             return workItems.Select(MapToWorkItemDto);
@@ -117,7 +117,7 @@ public class DevOpsService : IDevOpsService
             // Add additional fields if provided
             if (fields != null)
             {
-                foreach (KeyValuePair<string, object> field in fields)
+                foreach (var field in fields)
                 {
                     patchDocument.Add(new JsonPatchOperation()
                     {
@@ -128,7 +128,7 @@ public class DevOpsService : IDevOpsService
                 }
             }
 
-            WorkItem? workItem = await workItemClient.CreateWorkItemAsync(patchDocument, projectName, workItemType);
+            var workItem = await workItemClient.CreateWorkItemAsync(patchDocument, projectName, workItemType);
             return MapToWorkItemDto(workItem);
         }
         catch (Exception ex)
@@ -159,7 +159,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var gitClient = _credentialManager.GetClient<GitHttpClient>();
-            GitRepository? repository = await gitClient.GetRepositoryAsync(projectName, repositoryName);
+            var repository = await gitClient.GetRepositoryAsync(projectName, repositoryName);
 
             return repository != null ? MapToRepositoryDto(repository) : null;
         }
@@ -225,16 +225,16 @@ public class DevOpsService : IDevOpsService
 
     private static string? GetFieldValue(IDictionary<string, object> fields, string fieldName)
     {
-        return fields.TryGetValue(fieldName, out object? value) ? value?.ToString() : null;
+        return fields.TryGetValue(fieldName, out var value) ? value?.ToString() : null;
     }
 
     private static DateTime? GetDateTimeValue(IDictionary<string, object> fields, string fieldName)
     {
-        if (fields.TryGetValue(fieldName, out object? value))
+        if (fields.TryGetValue(fieldName, out var value))
         {
             if (value is DateTime dateTime)
                 return dateTime;
-            if (DateTime.TryParse(value?.ToString(), out DateTime parsed))
+            if (DateTime.TryParse(value?.ToString(), out var parsed))
                 return parsed;
         }
         return null;
@@ -242,11 +242,11 @@ public class DevOpsService : IDevOpsService
 
     private static int? GetIntValue(IDictionary<string, object> fields, string fieldName)
     {
-        if (fields.TryGetValue(fieldName, out object? value))
+        if (fields.TryGetValue(fieldName, out var value))
         {
             if (value is int intValue)
                 return intValue;
-            if (int.TryParse(value?.ToString(), out int parsed))
+            if (int.TryParse(value?.ToString(), out var parsed))
                 return parsed;
         }
         return null;
@@ -258,7 +258,7 @@ public class DevOpsService : IDevOpsService
             return string.Empty;
 
         // Azure DevOps user fields often come in format "Display Name <email@domain.com>"
-        Match match = Regex.Match(userField, @"^([^<]+)");
+        var match = Regex.Match(userField, @"^([^<]+)");
         return match.Success ? match.Groups[1].Value.Trim() : userField;
     }
 }

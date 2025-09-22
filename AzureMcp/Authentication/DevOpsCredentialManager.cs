@@ -1,7 +1,5 @@
 ﻿using CredentialManagement;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.Services.Client;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.WebApi;
 
@@ -11,69 +9,138 @@ public class DevOpsCredentialManager
 {
     private readonly ILogger<DevOpsCredentialManager> _logger;
     private readonly VssConnection _connection;
+    private readonly string _organizationUrl;
 
+    /// <summary>
+    /// Creates DevOps manager from discovered environment info (primary constructor)
+    /// </summary>
     public DevOpsCredentialManager(
-        string organizationUrl, 
-        IConfiguration configuration,
+        DevOpsEnvironmentInfo environmentInfo,
+        ILogger<DevOpsCredentialManager> logger)
+    {
+        _logger = logger;
+        _organizationUrl = environmentInfo.OrganizationUrl;
+        
+        if (string.IsNullOrEmpty(environmentInfo.PersonalAccessToken))
+        {
+            throw new InvalidOperationException(
+                $"No Personal Access Token available for {environmentInfo.OrganizationUrl}. " +
+                $"Environment was discovered via: {environmentInfo.Source}");
+        }
+
+        var credentials = new VssBasicCredential(string.Empty, environmentInfo.PersonalAccessToken);
+        _connection = new VssConnection(new Uri(environmentInfo.OrganizationUrl), credentials);
+        
+        _logger.LogInformation("Azure DevOps connection established for {Organization} (discovered via {Source})", 
+            environmentInfo.OrganizationUrl, environmentInfo.Source);
+    }
+
+    /// <summary>
+    /// Static factory method for seamless creation with discovery
+    /// </summary>
+    public static async Task<DevOpsCredentialManager?> CreateFromDiscoveryAsync(
+        ILogger<DevOpsCredentialManager> logger)
+    {
+        var discoveryLogger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<AzureEnvironmentDiscovery>();
+        var discovery = new AzureEnvironmentDiscovery(discoveryLogger);
+        var result = await discovery.DiscoverAzureEnvironmentsAsync();
+        
+        var primaryEnvironment = result.DevOpsEnvironments.FirstOrDefault();
+        if (primaryEnvironment == null)
+        {
+            logger.LogWarning("No Azure DevOps environments discovered");
+            return null;
+        }
+
+        return new DevOpsCredentialManager(primaryEnvironment, logger);
+    }
+
+    /// <summary>
+    /// Manual creation with organization URL (for advanced scenarios)
+    /// </summary>
+    public static DevOpsCredentialManager CreateManual(
+        string organizationUrl,
         ILogger<DevOpsCredentialManager> logger,
         string? credentialTarget = null)
     {
-        _logger = logger;
-        string pat = GetPersonalAccessToken(credentialTarget, configuration);
+        var pat = DiscoverPersonalAccessToken(credentialTarget, organizationUrl, logger);
         
-        var credentials = new VssBasicCredential(string.Empty, pat);
-        _connection = new VssConnection(new Uri(organizationUrl), credentials);
-        
-        _logger.LogInformation("Azure DevOps connection established for {Organization}", organizationUrl);
+        var environmentInfo = new DevOpsEnvironmentInfo
+        {
+            OrganizationUrl = organizationUrl,
+            PersonalAccessToken = pat,
+            Source = "Manual Creation",
+            HasCredentials = true,
+            CredentialTarget = credentialTarget
+        };
+
+        return new DevOpsCredentialManager(environmentInfo, logger);
     }
 
-    private string GetPersonalAccessToken(string? credentialTarget, IConfiguration configuration)
+    private static string DiscoverPersonalAccessToken(string? credentialTarget, string organizationUrl, ILogger logger)
     {
         // Try credential manager first
-        string target = credentialTarget ?? "AzureDevOps";
-        string? pat = TryGetFromCredentialManager(target);
+        var target = credentialTarget ?? "AzureDevOps";
+        var pat = TryGetFromCredentialManager(target);
         if (!string.IsNullOrEmpty(pat))
         {
-            _logger.LogDebug("Retrieved PAT from Windows Credential Manager");
+            logger.LogDebug("Retrieved PAT from Windows Credential Manager");
             return pat;
         }
         
-        // Try configuration
-        pat = configuration["AzureDevOps:PAT"];
+        // Try environment variables
+        pat = Environment.GetEnvironmentVariable("AZURE_DEVOPS_EXT_PAT") ?? 
+              Environment.GetEnvironmentVariable("AZURE_DEVOPS_PAT") ??
+              Environment.GetEnvironmentVariable("SYSTEM_ACCESSTOKEN");
         if (!string.IsNullOrEmpty(pat))
         {
-            _logger.LogDebug("Retrieved PAT from configuration");
-            return pat;
-        }
-        
-        // Try environment variable
-        pat = Environment.GetEnvironmentVariable("AZURE_DEVOPS_PAT");
-        if (!string.IsNullOrEmpty(pat))
-        {
-            _logger.LogDebug("Retrieved PAT from environment variable");
+            logger.LogDebug("Retrieved PAT from environment variable");
             return pat;
         }
         
         throw new InvalidOperationException(
-            "No Azure DevOps PAT found. Please store it in Windows Credential Manager, " +
-            "configuration, or AZURE_DEVOPS_PAT environment variable.");
+            $"No Personal Access Token found for {organizationUrl}. Please:\n" +
+            "1. Store PAT in Windows Credential Manager (target: 'AzureDevOps'), OR\n" +
+            "2. Set AZURE_DEVOPS_PAT environment variable, OR\n" +
+            "3. Configure Azure CLI: az devops configure --defaults organization=your-org-url");
     }
     
-    private string? TryGetFromCredentialManager(string target)
+    private static string? TryGetFromCredentialManager(string target)
     {
         try
         {
-            using var cred = new Credential { Target = target };
+            using var cred = new Credential();
+            cred.Target = target;
             return cred.Load() ? cred.Password : null;
         }
-        catch (Exception ex)
+        catch
         {
-            _logger.LogWarning(ex, "Failed to retrieve credential from Windows Credential Manager");
             return null;
         }
     }
     
+    // Public interface methods (compatible with existing DevOpsService)
     public T GetClient<T>() where T : VssHttpClientBase => _connection.GetClient<T>();
-    
     public VssConnection GetConnection() => _connection;
+    public string GetOrganizationUrl() => _organizationUrl;
+
+    public async Task<bool> ValidateConnectionAsync()
+    {
+        try
+        {
+            var client = _connection.GetClient<Microsoft.TeamFoundation.Core.WebApi.ProjectHttpClient>();
+            await client.GetProjects();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "DevOps connection validation failed for {Organization}", _organizationUrl);
+            return false;
+        }
+    }
+
+    public void Dispose()
+    {
+        _connection?.Dispose();
+    }
 }

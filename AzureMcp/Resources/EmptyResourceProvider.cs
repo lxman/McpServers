@@ -24,7 +24,7 @@ public class EmptyResourceProvider
     /// <returns>Empty resource collection</returns>
     [McpServerResource(Name = "empty")]
     [Description("Empty resource collection - prevents MCP initialization warnings")]
-    public async Task<string> GetEmptyResourceAsync()
+    public static async Task<string> GetEmptyResourceAsync()
     {
         await Task.CompletedTask;
         return "Empty resources list";

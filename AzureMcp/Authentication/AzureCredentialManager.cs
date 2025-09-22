@@ -1,39 +1,36 @@
 ﻿using Azure.Core;
 using Azure.Identity;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace AzureMcp.Authentication;
 
 /// <summary>
-/// Manages Azure credentials using DefaultAzureCredential for Azure services other than DevOps
+/// Pure discovery-based Azure credential manager (no config files!)
 /// </summary>
 public class AzureCredentialManager : ICredentialManager
 {
     private readonly ILogger<AzureCredentialManager> _logger;
     private readonly TokenCredential _credential;
 
-    public AzureCredentialManager(
-        IConfiguration configuration,
-        ILogger<AzureCredentialManager> logger)
+    public AzureCredentialManager(ILogger<AzureCredentialManager> logger)
     {
         _logger = logger;
         
-        var options = new DefaultAzureCredentialOptions();
+        // Pure DefaultAzureCredential with smart options
+        var options = new DefaultAzureCredentialOptions
+        {
+            ExcludeInteractiveBrowserCredential = true, // Don't pop up browser in MCP context
+            ExcludeVisualStudioCodeCredential = false,
+            ExcludeAzureCliCredential = false,
+            ExcludeEnvironmentCredential = false,
+            ExcludeManagedIdentityCredential = false,
+            ExcludeSharedTokenCacheCredential = false,
+            ExcludeAzurePowerShellCredential = false
+        };
         
-        // Allow explicit tenant configuration
-        var tenantId = configuration["Azure:TenantId"];
-        if (!string.IsNullOrEmpty(tenantId))
-            options.TenantId = tenantId;
-            
-        // Support different Azure clouds
-        var authorityHost = configuration["Azure:AuthorityHost"];
-        if (!string.IsNullOrEmpty(authorityHost))
-            options.AuthorityHost = new Uri(authorityHost);
-            
         _credential = new DefaultAzureCredential(options);
         
-        _logger.LogInformation("Azure credential manager initialized");
+        _logger.LogDebug("Azure credential manager initialized with pure discovery");
     }
     
     public TokenCredential GetCredential() => _credential;
@@ -42,7 +39,6 @@ public class AzureCredentialManager : ICredentialManager
     {
         try
         {
-            // Test the credential by requesting a token for Azure Resource Manager
             var context = new TokenRequestContext(new[] { "https://management.azure.com/.default" });
             var token = await _credential.GetTokenAsync(context, CancellationToken.None);
             
@@ -51,7 +47,7 @@ public class AzureCredentialManager : ICredentialManager
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Azure credential validation failed");
+            _logger.LogDebug(ex, "Azure credential validation failed");
             return false;
         }
     }

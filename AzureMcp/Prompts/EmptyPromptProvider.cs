@@ -24,7 +24,7 @@ public class EmptyPromptProvider
     /// <returns>Empty prompt collection</returns>
     [McpServerPrompt(Name = "empty")]
     [Description("Empty prompt collection - prevents MCP initialization warnings")]
-    public async Task<string> GetEmptyPromptAsync()
+    public static async Task<string> GetEmptyPromptAsync()
     {
         await Task.CompletedTask;
         return "Empty prompts list";
