@@ -38,7 +38,7 @@ public class AwsCredentialsProvider
         if (!string.IsNullOrEmpty(_config.ProfileName))
         {
             var chain = new CredentialProfileStoreChain();
-            if (chain.TryGetAWSCredentials(_config.ProfileName, out AWSCredentials? credentials))
+            if (chain.TryGetAWSCredentials(_config.ProfileName, out var credentials))
             {
                 return credentials;
             }

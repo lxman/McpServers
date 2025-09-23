@@ -52,7 +52,7 @@ public class EcrService
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            AWSCredentials? credentials = credentialsProvider.GetCredentials();
+            var credentials = credentialsProvider.GetCredentials();
             
             if (credentials != null)
             {
@@ -370,7 +370,7 @@ public class EcrService
         {
             if (await _discoveryService.AutoInitializeAsync())
             {
-                AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
+                var accountInfo = await _discoveryService.GetAccountInfoAsync();
                 
                 var config = new AwsConfiguration
                 {
@@ -398,7 +398,7 @@ public class EcrService
         if (!_isInitialized && _ecrClient == null)
         {
             // Wait up to 5 seconds for auto-initialization
-            DateTime timeout = DateTime.UtcNow.AddSeconds(5);
+            var timeout = DateTime.UtcNow.AddSeconds(5);
             while (!_isInitialized && DateTime.UtcNow < timeout)
             {
                 await Task.Delay(100);

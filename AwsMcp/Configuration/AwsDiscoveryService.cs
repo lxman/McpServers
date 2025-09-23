@@ -38,17 +38,17 @@ public class AwsDiscoveryService
             };
         
             // Try to detect region from CLI config
-            CliConfiguration cliConfig = DetectCliConfiguration();
-            AwsProfile? defaultProfile = cliConfig.Profiles.FirstOrDefault(p => p.Name == "default");
+            var cliConfig = DetectCliConfiguration();
+            var defaultProfile = cliConfig.Profiles.FirstOrDefault(p => p.Name == "default");
             if (defaultProfile?.Region != null)
             {
                 config.Region = defaultProfile.Region;
             }
         
             // Try profile-based credentials first
-            string profileName = Environment.GetEnvironmentVariable("AWS_PROFILE") ?? "default";
+            var profileName = Environment.GetEnvironmentVariable("AWS_PROFILE") ?? "default";
             var chain = new CredentialProfileStoreChain();
-            if (chain.TryGetAWSCredentials(profileName, out AWSCredentials? profileCredentials))
+            if (chain.TryGetAWSCredentials(profileName, out var profileCredentials))
             {
                 config.ProfileName = profileName;
                 return await InitializeAsync(config);
@@ -118,13 +118,13 @@ public class AwsDiscoveryService
 
         try
         {
-            GetCallerIdentityResponse? response = await _stsClient!.GetCallerIdentityAsync(new GetCallerIdentityRequest());
+            var response = await _stsClient!.GetCallerIdentityAsync(new GetCallerIdentityRequest());
 
             // Determine if this is GovCloud based on the ARN
-            bool isGovCloud = response.Arn.Contains("aws-us-gov") || response.Arn.Contains("-gov-") || response.Arn.Contains(".amazonaws-us-gov.com");
+            var isGovCloud = response.Arn.Contains("aws-us-gov") || response.Arn.Contains("-gov-") || response.Arn.Contains(".amazonaws-us-gov.com");
 
             // Infer region from ARN
-            string inferredRegion = InferRegionFromArn(response.Arn);
+            var inferredRegion = InferRegionFromArn(response.Arn);
 
             return new AccountInfo
             {
@@ -226,11 +226,11 @@ public class AwsDiscoveryService
         try
         {
             // Check for AWS CLI config files
-            string homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            string awsDir = Path.Combine(homeDir, ".aws");
+            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var awsDir = Path.Combine(homeDir, ".aws");
 
-            string configFile = Path.Combine(awsDir, "config");
-            string credentialsFile = Path.Combine(awsDir, "credentials");
+            var configFile = Path.Combine(awsDir, "config");
+            var credentialsFile = Path.Combine(awsDir, "credentials");
 
             config.ConfigFileExists = File.Exists(configFile);
             config.CredentialsFileExists = File.Exists(credentialsFile);
@@ -244,8 +244,8 @@ public class AwsDiscoveryService
             if (config.CredentialsFileExists)
             {
                 config.CredentialsFilePath = credentialsFile;
-                List<AwsProfile> credProfiles = ParseAwsCredentialsFile(credentialsFile);
-                foreach (AwsProfile profile in credProfiles)
+                var credProfiles = ParseAwsCredentialsFile(credentialsFile);
+                foreach (var profile in credProfiles)
                 {
                     if (!config.Profiles.Any(p => p.Name == profile.Name))
                     {
@@ -283,7 +283,7 @@ public class AwsDiscoveryService
         try
         {
             // ARN format: arn:partition:service:region:account-id:resource
-            string[] parts = arn.Split(':');
+            var parts = arn.Split(':');
             if (parts.Length >= 4 && !string.IsNullOrEmpty(parts[3]))
             {
                 return parts[3]; // Region is the 4th part (0-indexed)
@@ -293,8 +293,8 @@ public class AwsDiscoveryService
             if (parts.Length >= 2 && parts[2] == "iam")
             {
                 // Use CLI config region as fallback
-                CliConfiguration cliConfig = DetectCliConfiguration();
-                AwsProfile? defaultProfile = cliConfig.Profiles.FirstOrDefault(p => p.Name == "default");
+                var cliConfig = DetectCliConfiguration();
+                var defaultProfile = cliConfig.Profiles.FirstOrDefault(p => p.Name == "default");
                 if (defaultProfile?.Region != null)
                 {
                     return defaultProfile.Region;
@@ -326,7 +326,7 @@ public class AwsDiscoveryService
 
             if (arn.Contains(":assumed-role/"))
             {
-                string[] parts = arn.Split(":assumed-role/")[1].Split('/');
+                var parts = arn.Split(":assumed-role/")[1].Split('/');
                 return parts.Length > 1 ? $"{parts[0]} (assumed by {parts[1]})" : parts[0];
             }
         }
@@ -615,19 +615,19 @@ public class AwsDiscoveryService
 
         try
         {
-            string[] lines = File.ReadAllLines(configFile);
+            var lines = File.ReadAllLines(configFile);
             AwsProfile? currentProfile = null;
 
-            foreach (string line in lines)
+            foreach (var line in lines)
             {
-                string trimmed = line.Trim();
+                var trimmed = line.Trim();
                 if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("#"))
                     continue;
 
                 if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
                 {
                     // New profile section
-                    string profileName = trimmed.Trim('[', ']');
+                    var profileName = trimmed.Trim('[', ']');
                     if (profileName.StartsWith("profile "))
                         profileName = profileName.Substring(8);
 
@@ -636,9 +636,9 @@ public class AwsDiscoveryService
                 }
                 else if (currentProfile != null && trimmed.Contains("="))
                 {
-                    string[] parts = trimmed.Split('=', 2);
-                    string key = parts[0].Trim();
-                    string value = parts[1].Trim();
+                    var parts = trimmed.Split('=', 2);
+                    var key = parts[0].Trim();
+                    var value = parts[1].Trim();
 
                     switch (key.ToLower())
                     {
@@ -670,18 +670,18 @@ public class AwsDiscoveryService
             var chain = new CredentialProfileStoreChain();
             List<CredentialProfile>? credentialProfiles = chain.ListProfiles();
         
-            foreach (CredentialProfile credentialProfile in credentialProfiles)
+            foreach (var credentialProfile in credentialProfiles)
             {
                 var profile = new AwsProfile { Name = credentialProfile.Name };
             
                 // Actually test if credentials work
-                if (chain.TryGetAWSCredentials(credentialProfile.Name, out AWSCredentials? credentials))
+                if (chain.TryGetAWSCredentials(credentialProfile.Name, out var credentials))
                 {
                     profile.HasAccessKey = true;
                     profile.HasSecretKey = true;
                 
                     // Try to get region from the profile
-                    if (chain.TryGetProfile(credentialProfile.Name, out CredentialProfile? profileInfo))
+                    if (chain.TryGetProfile(credentialProfile.Name, out var profileInfo))
                     {
                         profile.Region = profileInfo.Region?.SystemName ?? "us-east-1";
                     }
@@ -712,8 +712,8 @@ public class AwsDiscoveryService
         // Analyze service permissions and recommend initialization strategies
         if (result.ServicePermissions != null)
         {
-            List<ServicePermissionTest> workingServices = result.ServicePermissions.Where(s => s.HasPermission).ToList();
-            List<ServicePermissionTest> failedServices = result.ServicePermissions.Where(s => !s.HasPermission).ToList();
+            var workingServices = result.ServicePermissions.Where(s => s.HasPermission).ToList();
+            var failedServices = result.ServicePermissions.Where(s => !s.HasPermission).ToList();
 
             if (workingServices.Count != 0)
             {
@@ -761,7 +761,7 @@ public class AwsDiscoveryService
 
         if (result.ServicePermissions != null)
         {
-            List<ServicePermissionTest> failedServices = result.ServicePermissions.Where(s => !s.HasPermission).ToList();
+            var failedServices = result.ServicePermissions.Where(s => !s.HasPermission).ToList();
             if (failedServices.Count != 0)
             {
                 suggestions.Add(

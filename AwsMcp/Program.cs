@@ -22,9 +22,9 @@ public class Program
         Console.SetOut(TextWriter.Null);
         Console.SetError(TextWriter.Null);
         
-        HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+        var builder = Host.CreateApplicationBuilder(args);
         
-        string configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        var configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
         builder.Configuration
             .AddJsonFile(configPath, optional: true, reloadOnChange: true)
             .AddEnvironmentVariables()
@@ -52,11 +52,12 @@ public class Program
             .WithTools<CloudWatchTools>()
             .WithTools<EcsTools>()
             .WithTools<EcrTools>()
+            .WithTools<FileSearchTools>()
             .WithTools<AwsDiscoveryTools>()
             .WithResources<EmptyResourceProvider>()
             .WithPrompts<EmptyPromptProvider>();
 
-        IHost host = builder.Build();
+        var host = builder.Build();
         
         await host.RunAsync();
     }
@@ -73,7 +74,7 @@ public class Program
         }
         
         // Ensure the PATH includes a .NET directory
-        string path = Environment.GetEnvironmentVariable("PATH") ?? "";
+        var path = Environment.GetEnvironmentVariable("PATH") ?? "";
         const string dotnetPath = @"C:\Program Files\dotnet";
         if (!path.Contains(dotnetPath, StringComparison.OrdinalIgnoreCase))
         {
