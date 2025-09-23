@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using AzureMcp.Authentication;
 using AzureMcp.Services.DevOps.Models;
@@ -924,6 +925,79 @@ public class DevOpsService : IDevOpsService
         }
     }
 
+    public async Task<string> SearchBuildLogsWithRegexAsync(
+        string projectName, int buildId, string regexPattern, 
+        int contextLines = 3, bool caseSensitive = false, int maxMatches = 50)
+    {
+        try
+        {
+            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
+            var matches = new List<object>();
+            
+            var regex = new Regex(regexPattern, caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase);
+            
+            foreach (var log in logs)
+            {
+                try
+                {
+                    await using var logStream = await buildClient.GetBuildLogAsync(projectName, buildId, log.Id);
+                    using var reader = new StreamReader(logStream);
+                    var content = await reader.ReadToEndAsync();
+                    var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                    
+                    for (var i = 0; i < lines.Length; i++)
+                    {
+                        if (regex.IsMatch(lines[i]))
+                        {
+                            var contextStart = Math.Max(0, i - contextLines);
+                            var contextEnd = Math.Min(lines.Length - 1, i + contextLines);
+                            
+                            matches.Add(new
+                            {
+                                LogId = log.Id,
+                                LogType = log.Type,
+                                LineNumber = i + 1,
+                                MatchedLine = lines[i].Trim(),
+                                Context = lines[contextStart..(contextEnd + 1)]
+                                         .Select((line, idx) => new { 
+                                             LineNum = contextStart + idx + 1, 
+                                             Content = line.Trim(),
+                                             IsMatch = contextStart + idx == i
+                                         }).ToArray(),
+                                Timestamp = ExtractTimestamp(lines[i])
+                            });
+                            
+                            if (matches.Count >= maxMatches) break;
+                        }
+                    }
+                    if (matches.Count >= maxMatches) break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not search log {LogId}", log.Id);
+                }
+            }
+            
+            return JsonSerializer.Serialize(new
+            {
+                success = true,
+                buildId,
+                project = projectName,
+                searchPattern = regexPattern,
+                searchOptions = new { contextLines, caseSensitive, maxMatches },
+                totalMatches = matches.Count,
+                summary = GenerateSearchSummary(matches, regexPattern),
+                matches = matches.ToArray()
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching build logs with regex for build {BuildId}", buildId);
+            throw;
+        }
+    }
+
     #endregion
 
     #region Helper Methods for Build Logs
@@ -995,6 +1069,42 @@ public class DevOpsService : IDevOpsService
         }
         
         return warnings;
+    }
+    
+    private static string? ExtractTimestamp(string logLine)
+    {
+        // Extract Azure DevOps timestamp format: 2025-09-22T18:55:05.6745795Z
+        var timestampMatch = Regex.Match(logLine, @"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)");
+        return timestampMatch.Success ? timestampMatch.Groups[1].Value : null;
+    }
+
+    private static object GenerateSearchSummary(List<object> matches, string pattern)
+    {
+        if (!matches.Any()) return new { message = "No matches found" };
+    
+        // Analyze matches for common patterns
+        var matchStrings = matches.Select(m => 
+            ((dynamic)m).MatchedLine.ToString().ToLower()).ToList();
+    
+        var summary = new
+        {
+            totalMatches = matches.Count,
+            commonPatterns = new
+            {
+                errorCount = matchStrings.Count(s => s.Contains("error")),
+                warningCount = matchStrings.Count(s => s.Contains("warn")),
+                kendoLicenseIssues = matchStrings.Count(s => s.Contains("tkl") || s.Contains("license")),
+                npmIssues = matchStrings.Count(s => s.Contains("npm") && (s.Contains("warn") || s.Contains("error"))),
+                dockerIssues = matchStrings.Count(s => s.Contains("#") && (s.Contains("error") || s.Contains("failed")))
+            },
+            timeRange = new
+            {
+                firstMatch = ((dynamic)matches.First()).Timestamp,
+                lastMatch = ((dynamic)matches.Last()).Timestamp
+            }
+        };
+    
+        return summary;
     }
 
     #endregion

@@ -30,4 +30,6 @@ public interface IDevOpsService
     Task<IEnumerable<BuildStepLogDto>> GetBuildStepLogsAsync(string projectName, int buildId);
     Task<string> GetCompleteBuildLogAsync(string projectName, int buildId);
     Task<BuildLogContentDto?> GetBuildTaskLogAsync(string projectName, int buildId, string taskId);
+    Task<string> SearchBuildLogsWithRegexAsync(string projectName, int buildId, string regexPattern, 
+        int contextLines = 3, bool caseSensitive = false, int maxMatches = 50);
 }

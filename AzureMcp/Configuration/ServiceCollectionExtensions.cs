@@ -287,4 +287,7 @@ public class NoCredentialsDevOpsService : IDevOpsService
     
     public Task<BuildLogContentDto?> GetBuildTaskLogAsync(string projectName, int buildId, string taskId) => 
         throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
+    
+    public Task<string> SearchBuildLogsWithRegexAsync(string projectName, int buildId, string regexPattern, int contextLines = 3, bool caseSensitive = false, int maxMatches = 50) => 
+        throw new InvalidOperationException("No Azure DevOps credentials discovered. Please set up credentials first.");
 }

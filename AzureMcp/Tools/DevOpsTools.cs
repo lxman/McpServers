@@ -392,6 +392,28 @@ public class DevOpsTools
     #endregion
     
     #region Build Log Tools
+    
+    [McpServerTool]
+    [Description("Search build logs using regex patterns with context lines")]
+    public async Task<string> SearchBuildLogsWithRegexAsync(
+        [Description("Project name")] string projectName,
+        [Description("Build ID")] int buildId,
+        [Description("Regex pattern to search for (e.g., 'kendo|license|TKL\\d+' for Kendo issues)")] string regexPattern,
+        [Description("Number of context lines around matches (default: 3)")] int contextLines = 3,
+        [Description("Case sensitive search (default: false)")] bool caseSensitive = false,
+        [Description("Maximum matches to return (default: 50)")] int maxMatches = 50)
+    {
+        try
+        {
+            var result = await _devOpsService.SearchBuildLogsWithRegexAsync(
+                projectName, buildId, regexPattern, contextLines, caseSensitive, maxMatches);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "SearchBuildLogsWithRegex");
+        }
+    }
 
     [McpServerTool]
     [Description("Get build logs for a specific build")]
