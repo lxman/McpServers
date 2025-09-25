@@ -3,16 +3,10 @@ using Microsoft.Extensions.Logging;
 
 namespace DesktopDriver.Services.Doc;
 
-public class PasswordManager
+public class PasswordManager(ILogger<PasswordManager> logger)
 {
     private readonly Dictionary<Regex, string> _patternPasswords = new();
     private readonly Dictionary<string, string> _specificPasswords = new();
-    private readonly ILogger<PasswordManager> _logger;
-
-    public PasswordManager(ILogger<PasswordManager> logger)
-    {
-        _logger = logger;
-    }
 
     public void RegisterPasswordPattern(string pattern, string password)
     {
@@ -23,11 +17,11 @@ public class PasswordManager
             var regex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
             _patternPasswords[regex] = password;
             
-            _logger.LogInformation("Registered password pattern: {Pattern}", pattern);
+            logger.LogInformation("Registered password pattern: {Pattern}", pattern);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to register password pattern: {Pattern}", pattern);
+            logger.LogError(ex, "Failed to register password pattern: {Pattern}", pattern);
         }
     }
 
@@ -36,7 +30,7 @@ public class PasswordManager
         var normalizedPath = Path.GetFullPath(filePath).ToLowerInvariant();
         _specificPasswords[normalizedPath] = password;
         
-        _logger.LogInformation("Registered specific password for file: {FilePath}", filePath);
+        logger.LogInformation("Registered specific password for file: {FilePath}", filePath);
     }
 
     public async Task AutoDetectPasswordFiles(string rootPath)
@@ -60,18 +54,18 @@ public class PasswordManager
                         var pattern = Path.Combine(directory, "**", "*").Replace("\\", "/");
                         RegisterPasswordPattern(pattern, password);
                         
-                        _logger.LogInformation("Auto-detected password from file: {PasswordFile}", passwordFile);
+                        logger.LogInformation("Auto-detected password from file: {PasswordFile}", passwordFile);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to read password file: {PasswordFile}", passwordFile);
+                    logger.LogWarning(ex, "Failed to read password file: {PasswordFile}", passwordFile);
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to auto-detect password files in: {RootPath}", rootPath);
+            logger.LogError(ex, "Failed to auto-detect password files in: {RootPath}", rootPath);
         }
     }
 
@@ -102,7 +96,7 @@ public class PasswordManager
     {
         _patternPasswords.Clear();
         _specificPasswords.Clear();
-        _logger.LogInformation("Cleared all registered passwords");
+        logger.LogInformation("Cleared all registered passwords");
     }
 
     public Dictionary<string, string> GetRegisteredPatterns()

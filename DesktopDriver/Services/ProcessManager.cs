@@ -5,17 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace DesktopDriver.Services;
 
-public class ProcessManager
+public class ProcessManager(ILogger<ProcessManager> logger, AuditLogger auditLogger)
 {
-    private readonly ILogger<ProcessManager> _logger;
-    private readonly AuditLogger _auditLogger;
     private readonly ConcurrentDictionary<string, ManagedProcess> _processes = new();
-
-    public ProcessManager(ILogger<ProcessManager> logger, AuditLogger auditLogger)
-    {
-        _logger = logger;
-        _auditLogger = auditLogger;
-    }
 
     public async Task<ProcessResult> StartProcessAsync(string command, string sessionId = "default", 
         int timeoutMs = 30000, string? workingDirectory = null)
@@ -81,7 +73,7 @@ public class ProcessManager
                     IsTimeout = false
                 };
 
-                _auditLogger.LogCommandExecution(command, result.Success, result.Error);
+                auditLogger.LogCommandExecution(command, result.Success, result.Error);
                 return result;
             }
             else
@@ -98,13 +90,13 @@ public class ProcessManager
                     IsRunning = !process.HasExited
                 };
 
-                _auditLogger.LogCommandExecution(command, true, "Process running (timeout)");
+                auditLogger.LogCommandExecution(command, true, "Process running (timeout)");
                 return result;
             }
         }
         catch (Exception ex)
         {
-            _auditLogger.LogCommandExecution(command, false, ex.Message);
+            auditLogger.LogCommandExecution(command, false, ex.Message);
             return new ProcessResult
             {
                 Success = false,
@@ -144,7 +136,7 @@ public class ProcessManager
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send input to process {SessionId}", sessionId);
+                logger.LogError(ex, "Failed to send input to process {SessionId}", sessionId);
                 return false;
             }
         }
@@ -162,12 +154,12 @@ public class ProcessManager
                     managedProcess.Process.Kill(true);
                 }
                 _processes.TryRemove(sessionId, out _);
-                _auditLogger.LogProcessOperation("Kill", managedProcess.Process.Id, true);
+                auditLogger.LogProcessOperation("Kill", managedProcess.Process.Id, true);
                 return true;
             }
             catch (Exception ex)
             {
-                _auditLogger.LogProcessOperation("Kill", managedProcess.Process.Id, false, ex.Message);
+                auditLogger.LogProcessOperation("Kill", managedProcess.Process.Id, false, ex.Message);
                 return false;
             }
         }

@@ -7,17 +7,8 @@ using ModelContextProtocol.Server;
 namespace DesktopDriver.Tools;
 
 [McpServerToolType]
-public class ConfigurationTools
+public class ConfigurationTools(SecurityManager securityManager, AuditLogger auditLogger)
 {
-    private readonly SecurityManager _securityManager;
-    private readonly AuditLogger _auditLogger;
-
-    public ConfigurationTools(SecurityManager securityManager, AuditLogger auditLogger)
-    {
-        _securityManager = securityManager;
-        _auditLogger = auditLogger;
-    }
-
     [McpServerTool]
     [Description("Get current security configuration")]
     public string GetConfiguration()
@@ -28,26 +19,26 @@ public class ConfigurationTools
             result.AppendLine("DesktopDriver Security Configuration:\n");
             
             result.AppendLine("Allowed Directories:");
-            if (!_securityManager.AllowedDirectories.Any())
+            if (!securityManager.AllowedDirectories.Any())
             {
                 result.AppendLine("  * All directories allowed (no restrictions)");
             }
             else
             {
-                foreach (var dir in _securityManager.AllowedDirectories)
+                foreach (var dir in securityManager.AllowedDirectories)
                 {
                     result.AppendLine($"  - {dir}");
                 }
             }
 
             result.AppendLine("\nBlocked Commands:");
-            if (!_securityManager.BlockedCommands.Any())
+            if (!securityManager.BlockedCommands.Any())
             {
                 result.AppendLine("  * No commands blocked");
             }
             else
             {
-                foreach (var cmd in _securityManager.BlockedCommands.OrderBy(x => x))
+                foreach (var cmd in securityManager.BlockedCommands.OrderBy(x => x))
                 {
                     result.AppendLine($"  - {cmd}");
                 }
@@ -59,12 +50,12 @@ public class ConfigurationTools
             result.AppendLine($"  OS: {Environment.OSVersion}");
             result.AppendLine($"  Current Directory: {Environment.CurrentDirectory}");
 
-            _auditLogger.LogOperation("Get_Configuration", "Configuration retrieved", true);
+            auditLogger.LogOperation("Get_Configuration", "Configuration retrieved", true);
             return result.ToString();
         }
         catch (Exception ex)
         {
-            _auditLogger.LogOperation("Get_Configuration", "Configuration retrieval", false, ex.Message);
+            auditLogger.LogOperation("Get_Configuration", "Configuration retrieval", false, ex.Message);
             return $"Error getting configuration: {ex.Message}";
         }
     }
@@ -81,17 +72,17 @@ public class ConfigurationTools
             if (!Directory.Exists(fullPath))
             {
                 var error = $"Directory does not exist: {fullPath}";
-                _auditLogger.LogOperation("Add_Allowed_Directory", fullPath, false, error);
+                auditLogger.LogOperation("Add_Allowed_Directory", fullPath, false, error);
                 return error;
             }
 
-            _securityManager.AddAllowedDirectory(fullPath);
-            _auditLogger.LogOperation("Add_Allowed_Directory", fullPath, true);
+            securityManager.AddAllowedDirectory(fullPath);
+            auditLogger.LogOperation("Add_Allowed_Directory", fullPath, true);
             return $"Directory added to allowed list: {fullPath}";
         }
         catch (Exception ex)
         {
-            _auditLogger.LogOperation("Add_Allowed_Directory", directoryPath, false, ex.Message);
+            auditLogger.LogOperation("Add_Allowed_Directory", directoryPath, false, ex.Message);
             return $"Error adding allowed directory: {ex.Message}";
         }
     }
@@ -106,17 +97,17 @@ public class ConfigurationTools
             if (string.IsNullOrWhiteSpace(commandPattern))
             {
                 var error = "Command pattern cannot be empty";
-                _auditLogger.LogOperation("Add_Blocked_Command", commandPattern, false, error);
+                auditLogger.LogOperation("Add_Blocked_Command", commandPattern, false, error);
                 return error;
             }
 
-            _securityManager.AddBlockedCommand(commandPattern);
-            _auditLogger.LogOperation("Add_Blocked_Command", commandPattern, true);
+            securityManager.AddBlockedCommand(commandPattern);
+            auditLogger.LogOperation("Add_Blocked_Command", commandPattern, true);
             return $"Command pattern added to blocked list: {commandPattern}";
         }
         catch (Exception ex)
         {
-            _auditLogger.LogOperation("Add_Blocked_Command", commandPattern, false, ex.Message);
+            auditLogger.LogOperation("Add_Blocked_Command", commandPattern, false, ex.Message);
             return $"Error adding blocked command: {ex.Message}";
         }
     }
@@ -129,7 +120,7 @@ public class ConfigurationTools
         try
         {
             var fullPath = Path.GetFullPath(directoryPath);
-            var isAllowed = _securityManager.IsDirectoryAllowed(fullPath);
+            var isAllowed = securityManager.IsDirectoryAllowed(fullPath);
             
             var result = $"Directory Access Test:\n" +
                          $"Path: {fullPath}\n" +
@@ -140,12 +131,12 @@ public class ConfigurationTools
                 result += "\nTo allow access to this directory, use AddAllowedDirectory tool.";
             }
 
-            _auditLogger.LogOperation("Test_Directory_Access", fullPath, true, $"Access: {(isAllowed ? "Allowed" : "Denied")}");
+            auditLogger.LogOperation("Test_Directory_Access", fullPath, true, $"Access: {(isAllowed ? "Allowed" : "Denied")}");
             return result;
         }
         catch (Exception ex)
         {
-            _auditLogger.LogOperation("Test_Directory_Access", directoryPath, false, ex.Message);
+            auditLogger.LogOperation("Test_Directory_Access", directoryPath, false, ex.Message);
             return $"Error testing directory access: {ex.Message}";
         }
     }
@@ -157,7 +148,7 @@ public class ConfigurationTools
     {
         try
         {
-            var isBlocked = _securityManager.IsCommandBlocked(command);
+            var isBlocked = securityManager.IsCommandBlocked(command);
             
             var result = $"Command Blocking Test:\n" +
                          $"Command: {command}\n" +
@@ -168,12 +159,12 @@ public class ConfigurationTools
                 result += "\nThis command contains blocked patterns and will not be executed.";
             }
 
-            _auditLogger.LogOperation("Test_Command_Blocking", command, true, $"Status: {(isBlocked ? "Blocked" : "Allowed")}");
+            auditLogger.LogOperation("Test_Command_Blocking", command, true, $"Status: {(isBlocked ? "Blocked" : "Allowed")}");
             return result;
         }
         catch (Exception ex)
         {
-            _auditLogger.LogOperation("Test_Command_Blocking", command, false, ex.Message);
+            auditLogger.LogOperation("Test_Command_Blocking", command, false, ex.Message);
             return $"Error testing command blocking: {ex.Message}";
         }
     }
@@ -231,7 +222,7 @@ SECURITY RECOMMENDATIONS:
 
 For more information, check the audit logs or configuration files.";
 
-        _auditLogger.LogOperation("Get_Help", "Help information provided", true);
+        auditLogger.LogOperation("Get_Help", "Help information provided", true);
         return help;
     }
 
@@ -287,12 +278,12 @@ For more information, check the audit logs or configuration files.";
                 }
             }
 
-            _auditLogger.LogOperation("Get_Audit_Log", $"Retrieved {recentLines.Length} entries", true);
+            auditLogger.LogOperation("Get_Audit_Log", $"Retrieved {recentLines.Length} entries", true);
             return result.ToString();
         }
         catch (Exception ex)
         {
-            _auditLogger.LogOperation("Get_Audit_Log", "Audit log retrieval", false, ex.Message);
+            auditLogger.LogOperation("Get_Audit_Log", "Audit log retrieval", false, ex.Message);
             return $"Error getting audit log: {ex.Message}";
         }
     }

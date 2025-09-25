@@ -19,7 +19,7 @@ public class SecurityManager
 
     public bool IsDirectoryAllowed(string path)
     {
-        if (!_allowedDirectories.Any())
+        if (_allowedDirectories.Count == 0)
             return true; // If no restrictions, allow all
 
         var normalizedPath = Path.GetFullPath(path);

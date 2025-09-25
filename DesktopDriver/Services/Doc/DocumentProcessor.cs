@@ -11,17 +11,8 @@ using DocType = DesktopDriver.Services.Doc.Models.DocumentType;
 
 namespace DesktopDriver.Services.Doc;
 
-public class DocumentProcessor
+public class DocumentProcessor(ILogger<DocumentProcessor> logger, PasswordManager passwordManager)
 {
-    private readonly ILogger<DocumentProcessor> _logger;
-    private readonly PasswordManager _passwordManager;
-
-    public DocumentProcessor(ILogger<DocumentProcessor> logger, PasswordManager passwordManager)
-    {
-        _logger = logger;
-        _passwordManager = passwordManager;
-    }
-
     public async Task<DocumentContent> ExtractContent(string filePath, string? password = null)
     {
         try
@@ -30,9 +21,9 @@ public class DocumentProcessor
             var documentType = GetDocumentType(extension);
             
             // Use provided password or try to find one
-            password ??= _passwordManager.GetPasswordForFile(filePath);
+            password ??= passwordManager.GetPasswordForFile(filePath);
 
-            _logger.LogDebug("Processing document: {FilePath} (Type: {DocumentType})", filePath, documentType);
+            logger.LogDebug("Processing document: {FilePath} (Type: {DocumentType})", filePath, documentType);
 
             var content = new DocumentContent
             {
@@ -73,7 +64,7 @@ public class DocumentProcessor
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to extract content from: {FilePath}", filePath);
+            logger.LogError(ex, "Failed to extract content from: {FilePath}", filePath);
             throw;
         }
     }
@@ -144,7 +135,7 @@ public class DocumentProcessor
         }
         catch (Exception ex) when (ex.Message.Contains("password") || ex.Message.Contains("encrypted"))
         {
-            _logger.LogWarning("Password required for Word document: {FilePath}", content.FilePath);
+            logger.LogWarning("Password required for Word document: {FilePath}", content.FilePath);
             throw new UnauthorizedAccessException($"Password required for document: {content.FilePath}");
         }
     }
@@ -157,7 +148,7 @@ public class DocumentProcessor
             content.PlainText = $"Password-protected Word document: {Path.GetFileName(content.FilePath)}";
             content.Title = Path.GetFileNameWithoutExtension(content.FilePath);
             
-            _logger.LogWarning("NPOI Word password support is limited. Consider manual extraction for: {FilePath}", content.FilePath);
+            logger.LogWarning("NPOI Word password support is limited. Consider manual extraction for: {FilePath}", content.FilePath);
         }
         catch (Exception ex)
         {
@@ -276,7 +267,7 @@ public class DocumentProcessor
         }
         catch (Exception ex) when (ex.Message.Contains("password") || ex.Message.Contains("encrypted"))
         {
-            _logger.LogWarning("Password required for Excel document: {FilePath}", content.FilePath);
+            logger.LogWarning("Password required for Excel document: {FilePath}", content.FilePath);
             throw new UnauthorizedAccessException($"Password required for document: {content.FilePath}");
         }
     }
@@ -323,7 +314,7 @@ public class DocumentProcessor
         }
         catch (Exception ex) when (ex.Message.Contains("password") || ex.Message.Contains("encrypted") || ex.Message.Contains("Bad user password"))
         {
-            _logger.LogWarning("Password required for PDF document: {FilePath}", content.FilePath);
+            logger.LogWarning("Password required for PDF document: {FilePath}", content.FilePath);
             throw new UnauthorizedAccessException($"Password required for document: {content.FilePath}");
         }
     }
@@ -337,7 +328,7 @@ public class DocumentProcessor
             {
                 content.PlainText = $"Password-protected PowerPoint document: {Path.GetFileName(content.FilePath)}";
                 content.Title = Path.GetFileNameWithoutExtension(content.FilePath);
-                _logger.LogWarning("PowerPoint password protection not fully supported: {FilePath}", content.FilePath);
+                logger.LogWarning("PowerPoint password protection not fully supported: {FilePath}", content.FilePath);
                 return;
             }
 
@@ -366,7 +357,7 @@ public class DocumentProcessor
         }
         catch (Exception ex) when (ex.Message.Contains("password") || ex.Message.Contains("encrypted"))
         {
-            _logger.LogWarning("Password required for PowerPoint document: {FilePath}", content.FilePath);
+            logger.LogWarning("Password required for PowerPoint document: {FilePath}", content.FilePath);
             throw new UnauthorizedAccessException($"Password required for document: {content.FilePath}");
         }
     }

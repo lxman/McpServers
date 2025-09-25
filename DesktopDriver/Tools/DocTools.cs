@@ -9,31 +9,14 @@ using ModelContextProtocol.Server;
 namespace DesktopDriver.Tools;
 
 [McpServerToolType]
-public class DocTools
+public class DocTools(
+    SecurityManager securityManager,
+    AuditLogger auditLogger,
+    PasswordManager passwordManager,
+    DocumentProcessor documentProcessor,
+    DocumentIndexer documentIndexer,
+    ILogger<DocTools> logger)
 {
-    private readonly SecurityManager _securityManager;
-    private readonly AuditLogger _auditLogger;
-    private readonly PasswordManager _passwordManager;
-    private readonly DocumentProcessor _documentProcessor;
-    private readonly DocumentIndexer _documentIndexer;
-    private readonly ILogger<DocTools> _logger;
-
-    public DocTools(
-        SecurityManager securityManager,
-        AuditLogger auditLogger,
-        PasswordManager passwordManager,
-        DocumentProcessor documentProcessor,
-        DocumentIndexer documentIndexer,
-        ILogger<DocTools> logger)
-    {
-        _securityManager = securityManager;
-        _auditLogger = auditLogger;
-        _passwordManager = passwordManager;
-        _documentProcessor = documentProcessor;
-        _documentIndexer = documentIndexer;
-        _logger = logger;
-    }
-
     #region Password Management
 
     [McpServerTool]
@@ -44,14 +27,14 @@ public class DocTools
     {
         try
         {
-            _passwordManager.RegisterPasswordPattern(pattern, password);
-            _auditLogger.LogPasswordOperation("RegisterPattern", pattern, true);
+            passwordManager.RegisterPasswordPattern(pattern, password);
+            auditLogger.LogPasswordOperation("RegisterPattern", pattern, true);
             return Task.FromResult($"Password pattern registered successfully: {pattern}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to register password pattern: {Pattern}", pattern);
-            _auditLogger.LogPasswordOperation("RegisterPattern", pattern, false, ex.Message);
+            logger.LogError(ex, "Failed to register password pattern: {Pattern}", pattern);
+            auditLogger.LogPasswordOperation("RegisterPattern", pattern, false, ex.Message);
             return Task.FromResult($"Failed to register password pattern: {ex.Message}");
         }
     }
@@ -64,21 +47,21 @@ public class DocTools
     {
         try
         {
-            if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(filePath)!))
+            if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(filePath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(filePath)}";
-                _auditLogger.LogPasswordOperation("RegisterSpecific", filePath, false, error);
+                auditLogger.LogPasswordOperation("RegisterSpecific", filePath, false, error);
                 return Task.FromResult(error);
             }
 
-            _passwordManager.RegisterSpecificPassword(filePath, password);
-            _auditLogger.LogPasswordOperation("RegisterSpecific", filePath, true);
+            passwordManager.RegisterSpecificPassword(filePath, password);
+            auditLogger.LogPasswordOperation("RegisterSpecific", filePath, true);
             return Task.FromResult($"Password registered for file: {Path.GetFileName(filePath)}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to register specific password: {FilePath}", filePath);
-            _auditLogger.LogPasswordOperation("RegisterSpecific", filePath, false, ex.Message);
+            logger.LogError(ex, "Failed to register specific password: {FilePath}", filePath);
+            auditLogger.LogPasswordOperation("RegisterSpecific", filePath, false, ex.Message);
             return Task.FromResult($"Failed to register password: {ex.Message}");
         }
     }
@@ -91,21 +74,21 @@ public class DocTools
         try
         {
             var fullPath = Path.GetFullPath(rootPath);
-            if (!_securityManager.IsDirectoryAllowed(fullPath))
+            if (!securityManager.IsDirectoryAllowed(fullPath))
             {
                 var error = $"Access denied to directory: {fullPath}";
-                _auditLogger.LogPasswordOperation("AutoDetect", fullPath, false, error);
+                auditLogger.LogPasswordOperation("AutoDetect", fullPath, false, error);
                 return error;
             }
 
-            await _passwordManager.AutoDetectPasswordFiles(fullPath);
-            _auditLogger.LogPasswordOperation("AutoDetect", fullPath, true);
+            await passwordManager.AutoDetectPasswordFiles(fullPath);
+            auditLogger.LogPasswordOperation("AutoDetect", fullPath, true);
             return $"Password auto-detection completed for: {rootPath}";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to auto-detect passwords: {RootPath}", rootPath);
-            _auditLogger.LogPasswordOperation("AutoDetect", rootPath, false, ex.Message);
+            logger.LogError(ex, "Failed to auto-detect passwords: {RootPath}", rootPath);
+            auditLogger.LogPasswordOperation("AutoDetect", rootPath, false, ex.Message);
             return $"Failed to auto-detect passwords: {ex.Message}";
         }
     }
@@ -130,24 +113,24 @@ public class DocTools
             {
                 try
                 {
-                    _passwordManager.RegisterPasswordPattern(pattern, password);
+                    passwordManager.RegisterPasswordPattern(pattern, password);
                     registered++;
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to register pattern: {Pattern}", pattern);
+                    logger.LogWarning(ex, "Failed to register pattern: {Pattern}", pattern);
                     failed++;
                 }
             }
 
             var result = $"Bulk password registration completed: {registered} successful, {failed} failed";
-            _auditLogger.LogPasswordOperation("BulkRegister", passwordMapJson.Substring(0, Math.Min(100, passwordMapJson.Length)), registered > 0);
+            auditLogger.LogPasswordOperation("BulkRegister", passwordMapJson.Substring(0, Math.Min(100, passwordMapJson.Length)), registered > 0);
             return Task.FromResult(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to bulk register passwords");
-            _auditLogger.LogPasswordOperation("BulkRegister", "JSON", false, ex.Message);
+            logger.LogError(ex, "Failed to bulk register passwords");
+            auditLogger.LogPasswordOperation("BulkRegister", "JSON", false, ex.Message);
             return Task.FromResult($"Failed to bulk register passwords: {ex.Message}");
         }
     }
@@ -165,21 +148,21 @@ public class DocTools
         try
         {
             var fullPath = Path.GetFullPath(filePath);
-            if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
+            if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
-                _auditLogger.LogFileOperation("ExtractContent", fullPath, false, error);
+                auditLogger.LogFileOperation("ExtractContent", fullPath, false, error);
                 return error;
             }
 
             if (!File.Exists(fullPath))
             {
                 var error = $"File not found: {fullPath}";
-                _auditLogger.LogFileOperation("ExtractContent", fullPath, false, error);
+                auditLogger.LogFileOperation("ExtractContent", fullPath, false, error);
                 return error;
             }
 
-            var content = await _documentProcessor.ExtractContent(fullPath, password);
+            var content = await documentProcessor.ExtractContent(fullPath, password);
             
             var result = $"Document: {content.FilePath}\n" +
                         $"Type: {content.DocumentType}\n" +
@@ -196,13 +179,13 @@ public class DocTools
                 result += $"\n\n... (truncated {content.PlainText.Length - 1000} more characters)";
             }
 
-            _auditLogger.LogFileOperation("ExtractContent", fullPath, true);
+            auditLogger.LogFileOperation("ExtractContent", fullPath, true);
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to extract content from: {FilePath}", filePath);
-            _auditLogger.LogFileOperation("ExtractContent", filePath, false, ex.Message);
+            logger.LogError(ex, "Failed to extract content from: {FilePath}", filePath);
+            auditLogger.LogFileOperation("ExtractContent", filePath, false, ex.Message);
             return $"Failed to extract document content: {ex.Message}";
         }
     }
@@ -216,12 +199,12 @@ public class DocTools
         try
         {
             var fullPath = Path.GetFullPath(filePath);
-            if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
+            if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 return $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
             }
 
-            var content = await _documentProcessor.ExtractContent(fullPath, password);
+            var content = await documentProcessor.ExtractContent(fullPath, password);
             var metadata = content.Metadata;
 
             var result = $"File: {metadata.FileName}\n" +
@@ -251,7 +234,7 @@ public class DocTools
             if (metadata.CharacterCount > 0)
                 result += $"Characters: {metadata.CharacterCount:N0}\n";
 
-            if (content.Sections.Any())
+            if (content.Sections.Count != 0)
                 result += $"Sections: {content.Sections.Count}\n";
             
             if (content.StructuredData.Any())
@@ -261,7 +244,7 @@ public class DocTools
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get metadata from: {FilePath}", filePath);
+            logger.LogError(ex, "Failed to get metadata from: {FilePath}", filePath);
             return $"Failed to get document metadata: {ex.Message}";
         }
     }
@@ -280,10 +263,10 @@ public class DocTools
         try
         {
             var fullPath = Path.GetFullPath(rootPath);
-            if (!_securityManager.IsDirectoryAllowed(fullPath))
+            if (!securityManager.IsDirectoryAllowed(fullPath))
             {
                 var error = $"Access denied to directory: {fullPath}";
-                _auditLogger.LogIndexOperation("CreateIndex", indexName, false, error);
+                auditLogger.LogIndexOperation("CreateIndex", indexName, false, error);
                 return error;
             }
 
@@ -300,7 +283,7 @@ public class DocTools
                 }
             }
 
-            var result = await _documentIndexer.BuildIndex(indexName, fullPath, options);
+            var result = await documentIndexer.BuildIndex(indexName, fullPath, options);
             
             var response = $"Index '{indexName}' created successfully!\n" +
                           $"Root Path: {result.RootPath}\n" +
@@ -310,7 +293,7 @@ public class DocTools
                           $"Password Protected: {result.PasswordProtected.Count:N0} documents\n" +
                           $"Total Size: {result.TotalSizeBytes / (1024 * 1024):N1} MB\n\n";
 
-            if (result.FileTypeStats.Any())
+            if (result.FileTypeStats.Count != 0)
             {
                 response += "File Types:\n";
                 foreach (var (type, count) in result.FileTypeStats.OrderByDescending(x => x.Value))
@@ -320,33 +303,30 @@ public class DocTools
                 response += "\n";
             }
 
-            if (result.Failed.Any())
+            if (result.Failed.Count != 0)
             {
                 response += "Failed Documents (first 5):\n";
-                foreach (var failed in result.Failed.Take(5))
-                {
-                    response += $"  {Path.GetFileName(failed.FilePath)}: {failed.ErrorMessage}\n";
-                }
+                response = result.Failed.Take(5).Aggregate(response, (current, failed) => current + $"  {Path.GetFileName(failed.FilePath)}: {failed.ErrorMessage}\n");
                 if (result.Failed.Count > 5)
                 {
                     response += $"  ... and {result.Failed.Count - 5} more\n";
                 }
             }
 
-            _auditLogger.LogIndexOperation("CreateIndex", indexName, true);
+            auditLogger.LogIndexOperation("CreateIndex", indexName, true);
             return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create index: {IndexName}", indexName);
-            _auditLogger.LogIndexOperation("CreateIndex", indexName, false, ex.Message);
+            logger.LogError(ex, "Failed to create index: {IndexName}", indexName);
+            auditLogger.LogIndexOperation("CreateIndex", indexName, false, ex.Message);
             return $"Failed to create index: {ex.Message}";
         }
     }
 
     [McpServerTool]
     [Description("Search documents in an index using natural language queries")]
-    public async Task<string> SearchDocuments(
+    public string SearchDocuments(
         [Description("Search query (natural language or keywords)")] string query,
         [Description("Name of the index to search")] string indexName,
         [Description("JSON search options (optional)")] string? searchOptionsJson = null)
@@ -370,7 +350,7 @@ public class DocTools
                 }
             }
 
-            var results = await _documentIndexer.Search(query, indexName, searchQuery);
+            var results = documentIndexer.Search(query, indexName, searchQuery);
             
             var response = $"Search Results for: \"{query}\"\n" +
                           $"Index: {indexName}\n" +
@@ -389,19 +369,16 @@ public class DocTools
                            $"   Modified: {result.ModifiedDate:yyyy-MM-dd}\n" +
                            $"   Size: {result.FileSizeBytes:N0} bytes\n";
 
-                if (result.Snippets.Any())
+                if (result.Snippets.Count != 0)
                 {
                     response += "   Snippets:\n";
-                    foreach (var snippet in result.Snippets.Take(2))
-                    {
-                        response += $"     \"{snippet}\"\n";
-                    }
+                    response = result.Snippets.Take(2).Aggregate(response, (current, snippet) => current + $"     \"{snippet}\"\n");
                 }
 
                 response += "\n";
             }
 
-            if (results.FileTypeCounts.Any())
+            if (results.FileTypeCounts.Count != 0)
             {
                 response += "File Types in Results:\n";
                 foreach (var (type, count) in results.FileTypeCounts)
@@ -410,57 +387,53 @@ public class DocTools
                 }
             }
 
-            _auditLogger.LogSearchOperation("Search", indexName, query, true, results.TotalHits);
+            auditLogger.LogSearchOperation("Search", indexName, query, true, results.TotalHits);
             return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Search failed: {Query} in {IndexName}", query, indexName);
-            _auditLogger.LogSearchOperation("Search", indexName, query, false);
+            logger.LogError(ex, "Search failed: {Query} in {IndexName}", query, indexName);
+            auditLogger.LogSearchOperation("Search", indexName, query, false);
             return $"Search failed: {ex.Message}";
         }
     }
 
     [McpServerTool]
     [Description("List all available document indexes")]
-    public async Task<string> ListDocumentIndexes()
+    public string ListDocumentIndexes()
     {
         try
         {
-            var indexes = await _documentIndexer.GetIndexNames();
+            var indexes = documentIndexer.GetIndexNames();
             
-            if (!indexes.Any())
+            if (indexes.Count == 0)
             {
                 return "No document indexes found. Use create_document_index to create one.";
             }
 
             var response = $"Available Document Indexes ({indexes.Count}):\n\n";
-            foreach (var indexName in indexes.OrderBy(x => x))
-            {
-                response += $"• {indexName}\n";
-            }
 
-            return response;
+            return indexes.OrderBy(x => x).Aggregate(response, (current, indexName) => current + $"• {indexName}\n");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to list indexes");
+            logger.LogError(ex, "Failed to list indexes");
             return $"Failed to list indexes: {ex.Message}";
         }
     }
 
     [McpServerTool]
     [Description("Remove a document index")]
-    public async Task<string> RemoveDocumentIndex(
+    public string RemoveDocumentIndex(
         [Description("Name of the index to remove")] string indexName)
     {
         try
         {
-            var removed = await _documentIndexer.RemoveIndex(indexName);
+            var removed = documentIndexer.RemoveIndex(indexName);
             
             if (removed)
             {
-                _auditLogger.LogIndexOperation("RemoveIndex", indexName, true);
+                auditLogger.LogIndexOperation("RemoveIndex", indexName, true);
                 return $"Index '{indexName}' removed successfully.";
             }
 
@@ -468,9 +441,25 @@ public class DocTools
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to remove index: {IndexName}", indexName);
-            _auditLogger.LogIndexOperation("RemoveIndex", indexName, false, ex.Message);
+            logger.LogError(ex, "Failed to remove index: {IndexName}", indexName);
+            auditLogger.LogIndexOperation("RemoveIndex", indexName, false, ex.Message);
             return $"Failed to remove index: {ex.Message}";
+        }
+    }
+    
+    [McpServerTool]
+    [Description("Remove duplicate documents from an index")]
+    public string DeduplicateIndex(
+        [Description("Name of the index to deduplicate")] string indexName)
+    {
+        try
+        {
+            var docCount = documentIndexer.DeduplicateIndex(indexName);
+            return $"Deduplication completed. Index '{indexName}' now contains {docCount} unique documents.";
+        }
+        catch (Exception ex)
+        {
+            return $"Deduplication failed: {ex.Message}";
         }
     }
 
@@ -488,7 +477,7 @@ public class DocTools
         try
         {
             var fullPath = Path.GetFullPath(rootPath);
-            if (!_securityManager.IsDirectoryAllowed(fullPath))
+            if (!securityManager.IsDirectoryAllowed(fullPath))
             {
                 return Task.FromResult($"Access denied to directory: {fullPath}");
             }
@@ -549,7 +538,7 @@ public class DocTools
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to discover documents: {RootPath}", rootPath);
+            logger.LogError(ex, "Failed to discover documents: {RootPath}", rootPath);
             return Task.FromResult($"Failed to discover documents: {ex.Message}");
         }
     }
@@ -560,9 +549,9 @@ public class DocTools
     {
         try
         {
-            var patterns = _passwordManager.GetRegisteredPatterns();
+            var patterns = passwordManager.GetRegisteredPatterns();
             
-            if (!patterns.Any())
+            if (patterns.Count == 0)
             {
                 return Task.FromResult("No password patterns registered. Use register_password_pattern to add some.");
             }
@@ -577,7 +566,7 @@ public class DocTools
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get registered passwords");
+            logger.LogError(ex, "Failed to get registered passwords");
             return Task.FromResult($"Failed to get registered passwords: {ex.Message}");
         }
     }

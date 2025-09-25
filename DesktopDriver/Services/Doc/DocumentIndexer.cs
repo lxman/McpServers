@@ -11,22 +11,17 @@ using Lucene.Net.Store;
 using Lucene.Net.Util;
 using Microsoft.Extensions.Logging;
 using SystemDirectory = System.IO.Directory;
+// ReSharper disable InconsistentNaming
 
 namespace DesktopDriver.Services.Doc;
 
-public class DocumentIndexer : IDisposable
+public class DocumentIndexer(ILogger<DocumentIndexer> logger, DocumentProcessor documentProcessor)
+    : IDisposable
 {
-    private readonly ILogger<DocumentIndexer> _logger;
-    private readonly DocumentProcessor _documentProcessor;
     private readonly Dictionary<string, (FSDirectory Directory, IndexWriter Writer, Analyzer Analyzer)> _indexes = new();
+    private bool _indexesDiscovered;
     
     private const LuceneVersion LUCENE_VERSION = LuceneVersion.LUCENE_48;
-
-    public DocumentIndexer(ILogger<DocumentIndexer> logger, DocumentProcessor documentProcessor)
-    {
-        _logger = logger;
-        _documentProcessor = documentProcessor;
-    }
 
     public async Task<IndexingResult> BuildIndex(string indexName, string rootPath, IndexingOptions? options = null)
     {
@@ -41,14 +36,14 @@ public class DocumentIndexer : IDisposable
 
         try
         {
-            _logger.LogInformation("Starting indexing: {IndexName} from {RootPath}", indexName, rootPath);
+            logger.LogInformation("Starting indexing: {IndexName} from {RootPath}", indexName, rootPath);
 
             // Create or get index
             var (directory, writer, analyzer) = GetOrCreateIndex(indexName);
 
             // Discover documents
             var documents = DiscoverDocuments(rootPath, options);
-            _logger.LogInformation("Found {Count} documents to index", documents.Count);
+            logger.LogInformation("Found {Count} documents to index", documents.Count);
 
             // Process documents with controlled concurrency
             var semaphore = new SemaphoreSlim(options.MaxConcurrency);
@@ -71,20 +66,20 @@ public class DocumentIndexer : IDisposable
             writer.Commit();
             
             result.EndTime = DateTime.UtcNow;
-            _logger.LogInformation("Indexing completed: {Successful} successful, {Failed} failed, Duration: {Duration}",
+            logger.LogInformation("Indexing completed: {Successful} successful, {Failed} failed, Duration: {Duration}",
                 result.Successful.Count, result.Failed.Count, result.Duration);
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to build index: {IndexName}", indexName);
+            logger.LogError(ex, "Failed to build index: {IndexName}", indexName);
             result.EndTime = DateTime.UtcNow;
             throw;
         }
     }
 
-    public async Task<SearchResults> Search(string query, string indexName, SearchQuery? searchQuery = null)
+    public SearchResults Search(string query, string indexName, SearchQuery? searchQuery = null)
     {
         searchQuery ??= new SearchQuery { Query = query };
         var stopwatch = Stopwatch.StartNew();
@@ -160,22 +155,68 @@ public class DocumentIndexer : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Search failed for query: {Query} in index: {IndexName}", query, indexName);
+            logger.LogError(ex, "Search failed for query: {Query} in index: {IndexName}", query, indexName);
             throw;
         }
     }
 
-    public Task<bool> IndexExists(string indexName)
+    public List<string> GetIndexNames()
     {
-        return Task.FromResult(_indexes.ContainsKey(indexName));
+        // Ensure existing indexes are discovered
+        EnsureIndexesDiscovered();
+    
+        var indexNames = new HashSet<string>(_indexes.Keys);
+    
+        // Add indexes that exist on disk but aren't loaded in memory
+        var indexesPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "DesktopDriver", "Indexes");
+    
+        if (SystemDirectory.Exists(indexesPath))
+        {
+            foreach (var indexDir in SystemDirectory.GetDirectories(indexesPath))
+            {
+                var indexName = Path.GetFileName(indexDir);
+                try
+                {
+                    using var directory = FSDirectory.Open(indexDir);
+                    if (DirectoryReader.IndexExists(directory))
+                    {
+                        indexNames.Add(indexName);
+                    }
+                }
+                catch
+                {
+                    // Skip invalid directories
+                }
+            }
+        }
+    
+        return indexNames.ToList();
     }
-
-    public Task<List<string>> GetIndexNames()
+    
+    public int DeduplicateIndex(string indexName)
     {
-        return Task.FromResult(_indexes.Keys.ToList());
-    }
+        if (!_indexes.TryGetValue(indexName, out var indexInfo))
+        {
+            throw new ArgumentException($"Index '{indexName}' not found or not loaded.");
+        }
 
-    public async Task<bool> RemoveIndex(string indexName)
+        var (directory, writer, analyzer) = indexInfo;
+    
+        // Force a merge to consolidate segments and remove duplicates
+        // This will merge all segments and remove documents marked for deletion
+        writer.ForceMerge(1); // Merge into a single segment
+        writer.Commit();
+    
+        logger.LogInformation("Deduplication completed for index: {IndexName}", indexName);
+    
+        // Return the number of documents after deduplication
+        using var reader = DirectoryReader.Open(directory);
+        return reader.NumDocs;
+    }
+    
+    public bool RemoveIndex(string indexName)
     {
         if (_indexes.TryGetValue(indexName, out var indexInfo))
         {
@@ -187,7 +228,7 @@ public class DocumentIndexer : IDisposable
             
             _indexes.Remove(indexName);
             
-            _logger.LogInformation("Removed index: {IndexName}", indexName);
+            logger.LogInformation("Removed index: {IndexName}", indexName);
             return true;
         }
         
@@ -204,20 +245,84 @@ public class DocumentIndexer : IDisposable
         var indexPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "DesktopDriver", "Indexes", indexName);
-        
+    
         SystemDirectory.CreateDirectory(indexPath);
-        
+    
         var directory = FSDirectory.Open(indexPath);
         var analyzer = new StandardAnalyzer(LUCENE_VERSION);
         var config = new IndexWriterConfig(LUCENE_VERSION, analyzer);
+    
+        // Check if this is an existing index
+        var isExistingIndex = IndexExists(directory);
+    
+        // If it's an existing index, open it in append mode, otherwise create new
+        if (isExistingIndex)
+        {
+            config.OpenMode = OpenMode.APPEND; // This opens existing index for updates
+            logger.LogInformation("Opening existing index: {IndexName} at {IndexPath} (reusing existing index)", indexName, indexPath);
+        }
+        else
+        {
+            config.OpenMode = OpenMode.CREATE; // This creates a new index
+            logger.LogInformation("Creating new index: {IndexName} at {IndexPath}", indexName, indexPath);
+        }
+    
         var writer = new IndexWriter(directory, config);
 
         var indexInfo = (directory, writer, analyzer);
         _indexes[indexName] = indexInfo;
-        
-        _logger.LogInformation("Created/opened index: {IndexName} at {IndexPath}", indexName, indexPath);
-        
+    
         return indexInfo;
+    }
+
+    private static bool IndexExists(FSDirectory directory)
+    {
+        try
+        {
+            return DirectoryReader.IndexExists(directory);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    
+    private void EnsureIndexesDiscovered()
+    {
+        if (_indexesDiscovered)
+            return;
+    
+        var indexesPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "DesktopDriver", "Indexes");
+    
+        if (!SystemDirectory.Exists(indexesPath))
+        {
+            _indexesDiscovered = true;
+            return;
+        }
+    
+        foreach (var indexDir in SystemDirectory.GetDirectories(indexesPath))
+        {
+            var indexName = Path.GetFileName(indexDir);
+        
+            try
+            {
+                // Check if it's a valid index
+                using var testDirectory = FSDirectory.Open(indexDir);
+                if (DirectoryReader.IndexExists(testDirectory))
+                {
+                    logger.LogInformation("Discovered existing index: {IndexName}", indexName);
+                    // Index will be loaded when first accessed via GetOrCreateIndex
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Skipping invalid index directory: {IndexName}", indexName);
+            }
+        }
+    
+        _indexesDiscovered = true;
     }
 
     private List<FileInfo> DiscoverDocuments(string rootPath, IndexingOptions options)
@@ -259,7 +364,7 @@ public class DocumentIndexer : IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to discover files with pattern: {Pattern}", pattern);
+                logger.LogWarning(ex, "Failed to discover files with pattern: {Pattern}", pattern);
             }
         }
         
@@ -271,12 +376,17 @@ public class DocumentIndexer : IDisposable
         try
         {
             // Extract document content
-            var content = await _documentProcessor.ExtractContent(fileInfo.FullName);
+            var content = await documentProcessor.ExtractContent(fileInfo.FullName);
             
             // Create Lucene document
             var doc = new Document();
             
-            // Add fields
+            // Add a unique identifier field for document replacement
+            // This is crucial for preventing duplicates
+            var uniqueId = content.FilePath.Replace("\\", "/").ToLowerInvariant();
+            doc.Add(new StringField("id", uniqueId, Field.Store.YES));
+            
+            // Add other fields
             doc.Add(new StringField("filepath", content.FilePath, Field.Store.YES));
             doc.Add(new TextField("filename", content.Metadata.FileName, Field.Store.YES));
             doc.Add(new TextField("title", content.Title, Field.Store.YES));
@@ -292,8 +402,9 @@ public class DocumentIndexer : IDisposable
             if (!string.IsNullOrWhiteSpace(content.Metadata.Keywords))
                 doc.Add(new TextField("keywords", content.Metadata.Keywords, Field.Store.YES));
             
-            // Add to index
-            writer.AddDocument(doc);
+            // Use UpdateDocument to replace existing document with same ID, or add new if it doesn't exist
+            // This prevents duplicates by replacing documents with the same "id" field
+            writer.UpdateDocument(new Term("id", uniqueId), doc);
             
             // Update statistics
             result.Successful.Add(content.FilePath);
@@ -302,7 +413,7 @@ public class DocumentIndexer : IDisposable
             var docType = content.DocumentType.ToString();
             result.FileTypeStats[docType] = result.FileTypeStats.GetValueOrDefault(docType, 0) + 1;
             
-            _logger.LogDebug("Indexed document: {FilePath}", content.FilePath);
+            logger.LogDebug("Indexed/Updated document: {FilePath}", content.FilePath);
             
             return true;
         }
@@ -315,7 +426,7 @@ public class DocumentIndexer : IDisposable
                 PasswordAttempted = true
             });
             
-            _logger.LogDebug("Password protected document: {FilePath}", fileInfo.FullName);
+            logger.LogDebug("Password protected document: {FilePath}", fileInfo.FullName);
             
             if (!options.SkipPasswordProtected)
             {
@@ -336,7 +447,7 @@ public class DocumentIndexer : IDisposable
                 ErrorMessage = ex.Message
             });
             
-            _logger.LogWarning(ex, "Failed to process document: {FilePath}", fileInfo.FullName);
+            logger.LogWarning(ex, "Failed to process document: {FilePath}", fileInfo.FullName);
             
             return false;
         }
@@ -363,7 +474,7 @@ public class DocumentIndexer : IDisposable
         var filters = new List<Query>();
 
         // File type filter
-        if (searchQuery.FileTypes.Any())
+        if (searchQuery.FileTypes.Count != 0)
         {
             var fileTypeQuery = new BooleanQuery();
             foreach (var fileType in searchQuery.FileTypes)
@@ -382,7 +493,7 @@ public class DocumentIndexer : IDisposable
             filters.Add(TermRangeQuery.NewStringRange("modified", startDate, endDate, true, true));
         }
 
-        if (!filters.Any())
+        if (filters.Count == 0)
             return baseQuery;
 
         // Combine base query with filters
@@ -457,7 +568,7 @@ public class DocumentIndexer : IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error disposing index resources");
+                logger.LogWarning(ex, "Error disposing index resources");
             }
         }
         

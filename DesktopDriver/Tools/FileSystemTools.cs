@@ -6,17 +6,8 @@ using ModelContextProtocol.Server;
 namespace DesktopDriver.Tools;
 
 [McpServerToolType]
-public class FileSystemTools
+public class FileSystemTools(SecurityManager securityManager, AuditLogger auditLogger)
 {
-    private readonly SecurityManager _securityManager;
-    private readonly AuditLogger _auditLogger;
-
-    public FileSystemTools(SecurityManager securityManager, AuditLogger auditLogger)
-    {
-        _securityManager = securityManager;
-        _auditLogger = auditLogger;
-    }
-
     [McpServerTool]
     [Description("Read the contents of a file with optional offset and length parameters")]
     public async Task<string> ReadFile(
@@ -27,29 +18,29 @@ public class FileSystemTools
         try
         {
             var fullPath = Path.GetFullPath(path);
-            if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
+            if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
-                _auditLogger.LogFileOperation("Read", fullPath, false, error);
+                auditLogger.LogFileOperation("Read", fullPath, false, error);
                 return error;
             }
 
             if (!File.Exists(fullPath))
             {
                 var error = $"File not found: {fullPath}";
-                _auditLogger.LogFileOperation("Read", fullPath, false, error);
+                auditLogger.LogFileOperation("Read", fullPath, false, error);
                 return error;
             }
 
             var lines = await File.ReadAllLinesAsync(fullPath);
             var result = GetLinesWithOffset(lines, offset, length);
             
-            _auditLogger.LogFileOperation("Read", fullPath, true);
+            auditLogger.LogFileOperation("Read", fullPath, true);
             return $"File: {fullPath}\nLines {offset} to {offset + result.Length - 1} of {lines.Length}:\n\n{string.Join('\n', result)}";
         }
         catch (Exception ex)
         {
-            _auditLogger.LogFileOperation("Read", path, false, ex.Message);
+            auditLogger.LogFileOperation("Read", path, false, ex.Message);
             return $"Error reading file: {ex.Message}";
         }
     }
@@ -64,10 +55,10 @@ public class FileSystemTools
         try
         {
             var fullPath = Path.GetFullPath(path);
-            if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
+            if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
-                _auditLogger.LogFileOperation("Write", fullPath, false, error);
+                auditLogger.LogFileOperation("Write", fullPath, false, error);
                 return error;
             }
 
@@ -77,17 +68,17 @@ public class FileSystemTools
             if (mode.ToLowerInvariant() == "append")
             {
                 await File.AppendAllTextAsync(fullPath, content);
-                _auditLogger.LogFileOperation("Append", fullPath, true);
+                auditLogger.LogFileOperation("Append", fullPath, true);
                 return $"Content appended to file: {fullPath}";
             }
 
             await File.WriteAllTextAsync(fullPath, content);
-            _auditLogger.LogFileOperation("Write", fullPath, true);
+            auditLogger.LogFileOperation("Write", fullPath, true);
             return $"Content written to file: {fullPath}";
         }
         catch (Exception ex)
         {
-            _auditLogger.LogFileOperation("Write", path, false, ex.Message);
+            auditLogger.LogFileOperation("Write", path, false, ex.Message);
             return $"Error writing file: {ex.Message}";
         }
     }
@@ -100,17 +91,17 @@ public class FileSystemTools
         try
         {
             var fullPath = Path.GetFullPath(path);
-            if (!_securityManager.IsDirectoryAllowed(fullPath))
+            if (!securityManager.IsDirectoryAllowed(fullPath))
             {
                 var error = $"Access denied to directory: {fullPath}";
-                _auditLogger.LogFileOperation("List", fullPath, false, error);
+                auditLogger.LogFileOperation("List", fullPath, false, error);
                 return error;
             }
 
             if (!Directory.Exists(fullPath))
             {
                 var error = $"Directory not found: {fullPath}";
-                _auditLogger.LogFileOperation("List", fullPath, false, error);
+                auditLogger.LogFileOperation("List", fullPath, false, error);
                 return error;
             }
 
@@ -132,12 +123,12 @@ public class FileSystemTools
                 result.AppendLine($"[FILE] {Path.GetFileName(file)} ({fileInfo.Length} bytes)");
             }
 
-            _auditLogger.LogFileOperation("List", fullPath, true);
+            auditLogger.LogFileOperation("List", fullPath, true);
             return result.ToString();
         }
         catch (Exception ex)
         {
-            _auditLogger.LogFileOperation("List", path, false, ex.Message);
+            auditLogger.LogFileOperation("List", path, false, ex.Message);
             return $"Error listing directory: {ex.Message}";
         }
     }
@@ -150,20 +141,20 @@ public class FileSystemTools
         try
         {
             var fullPath = Path.GetFullPath(path);
-            if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
+            if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to parent directory: {Path.GetDirectoryName(fullPath)}";
-                _auditLogger.LogFileOperation("CreateDir", fullPath, false, error);
+                auditLogger.LogFileOperation("CreateDir", fullPath, false, error);
                 return error;
             }
 
             Directory.CreateDirectory(fullPath);
-            _auditLogger.LogFileOperation("CreateDir", fullPath, true);
+            auditLogger.LogFileOperation("CreateDir", fullPath, true);
             return $"Directory created: {fullPath}";
         }
         catch (Exception ex)
         {
-            _auditLogger.LogFileOperation("CreateDir", path, false, ex.Message);
+            auditLogger.LogFileOperation("CreateDir", path, false, ex.Message);
             return $"Error creating directory: {ex.Message}";
         }
     }
@@ -179,11 +170,11 @@ public class FileSystemTools
             var fullSourcePath = Path.GetFullPath(sourcePath);
             var fullDestPath = Path.GetFullPath(destinationPath);
 
-            if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullSourcePath)!) ||
-                !_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullDestPath)!))
+            if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullSourcePath)!) ||
+                !securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullDestPath)!))
             {
                 var error = "Access denied to source or destination directory";
-                _auditLogger.LogFileOperation("Move", $"{fullSourcePath} -> {fullDestPath}", false, error);
+                auditLogger.LogFileOperation("Move", $"{fullSourcePath} -> {fullDestPath}", false, error);
                 return error;
             }
 
@@ -192,26 +183,26 @@ public class FileSystemTools
                 // Ensure destination directory exists
                 Directory.CreateDirectory(Path.GetDirectoryName(fullDestPath)!);
                 File.Move(fullSourcePath, fullDestPath);
-                _auditLogger.LogFileOperation("Move", $"{fullSourcePath} -> {fullDestPath}", true);
+                auditLogger.LogFileOperation("Move", $"{fullSourcePath} -> {fullDestPath}", true);
                 return $"File moved: {fullSourcePath} -> {fullDestPath}";
             }
 
             if (Directory.Exists(fullSourcePath))
             {
                 Directory.Move(fullSourcePath, fullDestPath);
-                _auditLogger.LogFileOperation("Move", $"{fullSourcePath} -> {fullDestPath}", true);
+                auditLogger.LogFileOperation("Move", $"{fullSourcePath} -> {fullDestPath}", true);
                 return $"Directory moved: {fullSourcePath} -> {fullDestPath}";
             }
 
             {
                 var error = $"Source not found: {fullSourcePath}";
-                _auditLogger.LogFileOperation("Move", $"{fullSourcePath} -> {fullDestPath}", false, error);
+                auditLogger.LogFileOperation("Move", $"{fullSourcePath} -> {fullDestPath}", false, error);
                 return error;
             }
         }
         catch (Exception ex)
         {
-            _auditLogger.LogFileOperation("Move", $"{sourcePath} -> {destinationPath}", false, ex.Message);
+            auditLogger.LogFileOperation("Move", $"{sourcePath} -> {destinationPath}", false, ex.Message);
             return $"Error moving file/directory: {ex.Message}";
         }
     }
@@ -225,36 +216,36 @@ public class FileSystemTools
         try
         {
             var fullPath = Path.GetFullPath(path);
-            if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
+            if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
-                _auditLogger.LogFileOperation("Delete", fullPath, false, error);
+                auditLogger.LogFileOperation("Delete", fullPath, false, error);
                 return error;
             }
 
             if (File.Exists(fullPath))
             {
                 File.Delete(fullPath);
-                _auditLogger.LogFileOperation("Delete", fullPath, true);
+                auditLogger.LogFileOperation("Delete", fullPath, true);
                 return $"File deleted: {fullPath}";
             }
 
             if (Directory.Exists(fullPath))
             {
                 Directory.Delete(fullPath, force);
-                _auditLogger.LogFileOperation("Delete", fullPath, true);
+                auditLogger.LogFileOperation("Delete", fullPath, true);
                 return $"Directory deleted: {fullPath}";
             }
 
             {
                 var error = $"Path not found: {fullPath}";
-                _auditLogger.LogFileOperation("Delete", fullPath, false, error);
+                auditLogger.LogFileOperation("Delete", fullPath, false, error);
                 return error;
             }
         }
         catch (Exception ex)
         {
-            _auditLogger.LogFileOperation("Delete", path, false, ex.Message);
+            auditLogger.LogFileOperation("Delete", path, false, ex.Message);
             return $"Error deleting path: {ex.Message}";
         }
     }
@@ -269,17 +260,17 @@ public class FileSystemTools
         try
         {
             var fullPath = Path.GetFullPath(searchPath);
-            if (!_securityManager.IsDirectoryAllowed(fullPath))
+            if (!securityManager.IsDirectoryAllowed(fullPath))
             {
                 var error = $"Access denied to directory: {fullPath}";
-                _auditLogger.LogFileOperation("Search", fullPath, false, error);
+                auditLogger.LogFileOperation("Search", fullPath, false, error);
                 return error;
             }
 
             if (!Directory.Exists(fullPath))
             {
                 var error = $"Directory not found: {fullPath}";
-                _auditLogger.LogFileOperation("Search", fullPath, false, error);
+                auditLogger.LogFileOperation("Search", fullPath, false, error);
                 return error;
             }
 
@@ -296,12 +287,12 @@ public class FileSystemTools
                 result.AppendLine($"{file} ({fileInfo.Length} bytes, {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm})");
             }
 
-            _auditLogger.LogFileOperation("Search", fullPath, true);
+            auditLogger.LogFileOperation("Search", fullPath, true);
             return result.ToString();
         }
         catch (Exception ex)
         {
-            _auditLogger.LogFileOperation("Search", searchPath, false, ex.Message);
+            auditLogger.LogFileOperation("Search", searchPath, false, ex.Message);
             return $"Error searching files: {ex.Message}";
         }
     }
@@ -314,17 +305,17 @@ public class FileSystemTools
         try
         {
             var fullPath = Path.GetFullPath(path);
-            if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
+            if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
-                _auditLogger.LogFileOperation("Info", fullPath, false, error);
+                auditLogger.LogFileOperation("Info", fullPath, false, error);
                 return error;
             }
 
             if (File.Exists(fullPath))
             {
                 var fileInfo = new FileInfo(fullPath);
-                _auditLogger.LogFileOperation("Info", fullPath, true);
+                auditLogger.LogFileOperation("Info", fullPath, true);
                 return $"File Information:\n" +
                        $"Path: {fullPath}\n" +
                        $"Size: {fileInfo.Length} bytes\n" +
@@ -340,7 +331,7 @@ public class FileSystemTools
                 var fileCount = dirInfo.GetFiles().Length;
                 var subDirCount = dirInfo.GetDirectories().Length;
                 
-                _auditLogger.LogFileOperation("Info", fullPath, true);
+                auditLogger.LogFileOperation("Info", fullPath, true);
                 return $"Directory Information:\n" +
                        $"Path: {fullPath}\n" +
                        $"Files: {fileCount}\n" +
@@ -353,13 +344,13 @@ public class FileSystemTools
 
             {
                 var error = $"Path not found: {fullPath}";
-                _auditLogger.LogFileOperation("Info", fullPath, false, error);
+                auditLogger.LogFileOperation("Info", fullPath, false, error);
                 return error;
             }
         }
         catch (Exception ex)
         {
-            _auditLogger.LogFileOperation("Info", path, false, ex.Message);
+            auditLogger.LogFileOperation("Info", path, false, ex.Message);
             return $"Error getting file info: {ex.Message}";
         }
     }
