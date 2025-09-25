@@ -24,7 +24,7 @@
       <PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="19.225.1" />
       <PackageReference Include="Microsoft.VisualStudio.Services.Release.Client" Version="19.225.1" />
       <PackageReference Include="ModelContextProtocol" Version="0.3.0-preview.4" />
-      <PackageReference Include="Serilog.Extensions.Logging.File" Version="3.0.0" />
+      <PackageReference Include="Serilog.Extensions.Logging.File" Version="9.0.0-dev-02303" />
     </ItemGroup>
 
     <ItemGroup>
