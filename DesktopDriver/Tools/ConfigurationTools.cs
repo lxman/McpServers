@@ -34,7 +34,7 @@ public class ConfigurationTools
             }
             else
             {
-                foreach (string dir in _securityManager.AllowedDirectories)
+                foreach (var dir in _securityManager.AllowedDirectories)
                 {
                     result.AppendLine($"  - {dir}");
                 }
@@ -47,7 +47,7 @@ public class ConfigurationTools
             }
             else
             {
-                foreach (string cmd in _securityManager.BlockedCommands.OrderBy(x => x))
+                foreach (var cmd in _securityManager.BlockedCommands.OrderBy(x => x))
                 {
                     result.AppendLine($"  - {cmd}");
                 }
@@ -76,7 +76,7 @@ public class ConfigurationTools
     {
         try
         {
-            string fullPath = Path.GetFullPath(directoryPath);
+            var fullPath = Path.GetFullPath(directoryPath);
             
             if (!Directory.Exists(fullPath))
             {
@@ -128,12 +128,12 @@ public class ConfigurationTools
     {
         try
         {
-            string fullPath = Path.GetFullPath(directoryPath);
-            bool isAllowed = _securityManager.IsDirectoryAllowed(fullPath);
+            var fullPath = Path.GetFullPath(directoryPath);
+            var isAllowed = _securityManager.IsDirectoryAllowed(fullPath);
             
-            string result = $"Directory Access Test:\n" +
-                            $"Path: {fullPath}\n" +
-                            $"Access: {(isAllowed ? "ALLOWED" : "DENIED")}\n";
+            var result = $"Directory Access Test:\n" +
+                         $"Path: {fullPath}\n" +
+                         $"Access: {(isAllowed ? "ALLOWED" : "DENIED")}\n";
 
             if (!isAllowed)
             {
@@ -157,11 +157,11 @@ public class ConfigurationTools
     {
         try
         {
-            bool isBlocked = _securityManager.IsCommandBlocked(command);
+            var isBlocked = _securityManager.IsCommandBlocked(command);
             
-            string result = $"Command Blocking Test:\n" +
-                            $"Command: {command}\n" +
-                            $"Status: {(isBlocked ? "BLOCKED" : "ALLOWED")}\n";
+            var result = $"Command Blocking Test:\n" +
+                         $"Command: {command}\n" +
+                         $"Status: {(isBlocked ? "BLOCKED" : "ALLOWED")}\n";
 
             if (isBlocked)
             {
@@ -242,37 +242,37 @@ For more information, check the audit logs or configuration files.";
     {
         try
         {
-            string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DesktopDriver", "logs");
-            string todayLogFile = Path.Combine(logDir, $"audit_{DateTime.Now:yyyyMMdd}.json");
+            var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DesktopDriver", "logs");
+            var todayLogFile = Path.Combine(logDir, $"audit_{DateTime.Now:yyyyMMdd}.json");
             
             if (!File.Exists(todayLogFile))
             {
                 return "No audit log found for today.";
             }
 
-            string[] lines = File.ReadAllLines(todayLogFile);
-            string[] recentLines = lines.TakeLast(count).ToArray();
+            var lines = File.ReadAllLines(todayLogFile);
+            var recentLines = lines.TakeLast(count).ToArray();
             
             var result = new StringBuilder();
             result.AppendLine($"Recent Audit Log Entries (Last {recentLines.Length}):\n");
             
-            foreach (string line in recentLines)
+            foreach (var line in recentLines)
             {
                 try
                 {
                     // Parse and format the JSON for better readability
-                    using JsonDocument doc = JsonDocument.Parse(line);
-                    JsonElement root = doc.RootElement;
+                    using var doc = JsonDocument.Parse(line);
+                    var root = doc.RootElement;
                     
-                    DateTime timestamp = root.GetProperty("Timestamp").GetDateTime().ToLocalTime();
-                    string? operation = root.GetProperty("Operation").GetString();
-                    bool success = root.GetProperty("Success").GetBoolean();
-                    string? details = root.GetProperty("Details").GetString();
+                    var timestamp = root.GetProperty("Timestamp").GetDateTime().ToLocalTime();
+                    var operation = root.GetProperty("Operation").GetString();
+                    var success = root.GetProperty("Success").GetBoolean();
+                    var details = root.GetProperty("Details").GetString();
                     
                     result.AppendLine($"{timestamp:yyyy-MM-dd HH:mm:ss} [{(success ? "SUCCESS" : "FAILED")}] {operation}");
                     result.AppendLine($"  Details: {details}");
                     
-                    if (root.TryGetProperty("Error", out JsonElement errorElement) && errorElement.ValueKind != JsonValueKind.Null)
+                    if (root.TryGetProperty("Error", out var errorElement) && errorElement.ValueKind != JsonValueKind.Null)
                     {
                         result.AppendLine($"  Error: {errorElement.GetString()}");
                     }

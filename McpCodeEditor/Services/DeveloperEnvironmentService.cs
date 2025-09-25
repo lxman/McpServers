@@ -33,7 +33,7 @@ public class DeveloperEnvironmentService
             _logger?.LogInformation("Initializing developer environment...");
 
             // Save original environment
-            foreach (object? key in Environment.GetEnvironmentVariables().Keys)
+            foreach (var key in Environment.GetEnvironmentVariables().Keys)
             {
                 _originalEnvironment[key.ToString()!] = Environment.GetEnvironmentVariable(key.ToString()!)!;
             }
@@ -83,12 +83,12 @@ public class DeveloperEnvironmentService
                 @"C:\Program Files\Microsoft Visual Studio\2022\Preview"
             };
 
-            foreach (string vsPath in possiblePaths.Where(Directory.Exists))
+            foreach (var vsPath in possiblePaths.Where(Directory.Exists))
             {
                 _logger?.LogInformation($"Found VS2022 at: {vsPath}");
 
                 // Set up MSBuild path
-                string msbuildPath = Path.Combine(vsPath, @"MSBuild\Current\Bin");
+                var msbuildPath = Path.Combine(vsPath, @"MSBuild\Current\Bin");
                 if (Directory.Exists(msbuildPath))
                 {
                     AddToPath(msbuildPath);
@@ -97,7 +97,7 @@ public class DeveloperEnvironmentService
                 }
 
                 // Set up Roslyn compilers
-                string roslyPath = Path.Combine(vsPath, @"MSBuild\Current\Bin\Roslyn");
+                var roslyPath = Path.Combine(vsPath, @"MSBuild\Current\Bin\Roslyn");
                 if (Directory.Exists(roslyPath))
                 {
                     AddToPath(roslyPath);
@@ -116,7 +116,7 @@ public class DeveloperEnvironmentService
                 }
 
                 // Try to run VsDevCmd.bat to get all environment variables
-                string vsDevCmdPath = Path.Combine(vsPath, @"Common7\Tools\VsDevCmd.bat");
+                var vsDevCmdPath = Path.Combine(vsPath, @"Common7\Tools\VsDevCmd.bat");
                 if (File.Exists(vsDevCmdPath))
                 {
                     _logger?.LogInformation($"Found VsDevCmd.bat at: {vsDevCmdPath}");
@@ -146,11 +146,11 @@ public class DeveloperEnvironmentService
                 @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community"
             };
 
-            foreach (string vsPath in possiblePaths.Where(Directory.Exists))
+            foreach (var vsPath in possiblePaths.Where(Directory.Exists))
             {
                 _logger?.LogInformation($"Found VS2019 at: {vsPath}");
 
-                string msbuildPath = Path.Combine(vsPath, @"MSBuild\Current\Bin");
+                var msbuildPath = Path.Combine(vsPath, @"MSBuild\Current\Bin");
                 if (Directory.Exists(msbuildPath))
                 {
                     AddToPath(msbuildPath);
@@ -160,7 +160,7 @@ public class DeveloperEnvironmentService
                 Environment.SetEnvironmentVariable("VSINSTALLDIR", vsPath);
                 Environment.SetEnvironmentVariable("VisualStudioVersion", "16.0");
 
-                string vsDevCmdPath = Path.Combine(vsPath, @"Common7\Tools\VsDevCmd.bat");
+                var vsDevCmdPath = Path.Combine(vsPath, @"Common7\Tools\VsDevCmd.bat");
                 if (File.Exists(vsDevCmdPath))
                 {
                     return RunAndCaptureEnvironment(vsDevCmdPath);
@@ -182,7 +182,7 @@ public class DeveloperEnvironmentService
         try
         {
             // Find dotnet.exe
-            string? dotnetPath = FindInPath("dotnet.exe");
+            var dotnetPath = FindInPath("dotnet.exe");
             if (string.IsNullOrEmpty(dotnetPath))
             {
                 dotnetPath = @"C:\Program Files\dotnet\dotnet.exe";
@@ -192,14 +192,14 @@ public class DeveloperEnvironmentService
             {
                 _logger?.LogInformation($"Found dotnet at: {dotnetPath}");
                 
-                string dotnetDir = Path.GetDirectoryName(dotnetPath)!;
+                var dotnetDir = Path.GetDirectoryName(dotnetPath)!;
                 Environment.SetEnvironmentVariable("DOTNET_ROOT", dotnetDir);
                 
                 // Find the latest SDK version
-                string sdkPath = Path.Combine(dotnetDir, "sdk");
+                var sdkPath = Path.Combine(dotnetDir, "sdk");
                 if (Directory.Exists(sdkPath))
                 {
-                    string? latestSdk = Directory.GetDirectories(sdkPath)
+                    var latestSdk = Directory.GetDirectories(sdkPath)
                         .OrderByDescending(d => d)
                         .FirstOrDefault();
                     
@@ -209,7 +209,7 @@ public class DeveloperEnvironmentService
                         AddToPath(latestSdk);
                         
                         // MSBuild is included in the SDK
-                        string msbuildDll = Path.Combine(latestSdk, "MSBuild.dll");
+                        var msbuildDll = Path.Combine(latestSdk, "MSBuild.dll");
                         if (File.Exists(msbuildDll))
                         {
                             Environment.SetEnvironmentVariable("MSBUILD_EXE_PATH", msbuildDll);
@@ -234,8 +234,8 @@ public class DeveloperEnvironmentService
             _logger?.LogInformation($"Running batch file to capture environment: {batchFile}");
 
             // Create a temporary batch file that runs VsDevCmd and then outputs all environment variables
-            string tempBatch = Path.GetTempFileName() + ".bat";
-            string tempOutput = Path.GetTempFileName();
+            var tempBatch = Path.GetTempFileName() + ".bat";
+            var tempOutput = Path.GetTempFileName();
 
             File.WriteAllText(tempBatch, $@"
 @echo off
@@ -261,10 +261,10 @@ set > ""{tempOutput}""
 
             if (File.Exists(tempOutput))
             {
-                string[] lines = File.ReadAllLines(tempOutput);
-                foreach (string line in lines)
+                var lines = File.ReadAllLines(tempOutput);
+                foreach (var line in lines)
                 {
-                    string[] parts = line.Split(['='], 2);
+                    var parts = line.Split(['='], 2);
                     if (parts.Length == 2)
                     {
                         Environment.SetEnvironmentVariable(parts[0], parts[1]);
@@ -293,7 +293,7 @@ set > ""{tempOutput}""
 
     private static void AddToPath(string path)
     {
-        string currentPath = Environment.GetEnvironmentVariable("PATH") ?? "";
+        var currentPath = Environment.GetEnvironmentVariable("PATH") ?? "";
         if (!currentPath.Contains(path, StringComparison.OrdinalIgnoreCase))
         {
             Environment.SetEnvironmentVariable("PATH", $"{path};{currentPath}");
@@ -302,13 +302,13 @@ set > ""{tempOutput}""
 
     private static string? FindInPath(string fileName)
     {
-        string? path = Environment.GetEnvironmentVariable("PATH");
+        var path = Environment.GetEnvironmentVariable("PATH");
         if (string.IsNullOrEmpty(path))
             return null;
 
-        foreach (string dir in path.Split(Path.PathSeparator))
+        foreach (var dir in path.Split(Path.PathSeparator))
         {
-            string fullPath = Path.Combine(dir, fileName);
+            var fullPath = Path.Combine(dir, fileName);
             if (File.Exists(fullPath))
                 return fullPath;
         }
@@ -330,11 +330,11 @@ set > ""{tempOutput}""
         info["DOTNET_ROOT"] = Environment.GetEnvironmentVariable("DOTNET_ROOT") ?? "Not set";
         
         // Check if MSBuild is accessible
-        string? msbuildInPath = FindInPath("MSBuild.exe");
+        var msbuildInPath = FindInPath("MSBuild.exe");
         info["MSBuild in PATH"] = msbuildInPath ?? "Not found";
 
         // Check if dotnet is accessible
-        string? dotnetInPath = FindInPath("dotnet.exe");
+        var dotnetInPath = FindInPath("dotnet.exe");
         info["Dotnet in PATH"] = dotnetInPath ?? "Not found";
 
         return info;

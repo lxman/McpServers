@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 using McpCodeEditor.Interfaces;
-using McpCodeEditor.Models.Refactoring;
 using McpCodeEditor.Tools.Common;
 using Microsoft.Extensions.Logging;
 
@@ -44,7 +43,7 @@ public class CSharpRefactoringTools : BaseToolClass
             ValidateRequiredParameter(newName, nameof(newName));
 
             _logger.LogDebug("Calling orchestrator.RenameSymbolAsync");
-            RefactoringResult result = await _refactoringOrchestrator.RenameSymbolAsync(filePath, symbolName, newName, previewOnly);
+            var result = await _refactoringOrchestrator.RenameSymbolAsync(filePath, symbolName, newName, previewOnly);
             _logger.LogDebug("Orchestrator returned: success={Success}, message={Message}", result.Success, result.Message);
             
             return result;
@@ -91,7 +90,7 @@ public class CSharpRefactoringTools : BaseToolClass
             _logger.LogDebug("Parameter validation passed, calling orchestrator");
 
             // FIXED: Correct method signature with proper parameter order and CancellationToken
-            RefactoringResult result = await _refactoringOrchestrator.ExtractMethodAsync(
+            var result = await _refactoringOrchestrator.ExtractMethodAsync(
                 filePath, methodName, startLine, endLine, previewOnly, 
                 accessModifier, isStatic, returnType, CancellationToken.None);
                 
@@ -121,7 +120,7 @@ public class CSharpRefactoringTools : BaseToolClass
             ValidateRequiredParameter(methodName, nameof(methodName));
 
             _logger.LogDebug("Calling orchestrator.InlineMethodAsync");
-            RefactoringResult result = await _refactoringOrchestrator.InlineMethodAsync(filePath, methodName, previewOnly);
+            var result = await _refactoringOrchestrator.InlineMethodAsync(filePath, methodName, previewOnly);
             _logger.LogDebug("Orchestrator returned: success={Success}, message={Message}", result.Success, result.Message);
             
             return result;
@@ -168,7 +167,7 @@ public class CSharpRefactoringTools : BaseToolClass
             }
 
             _logger.LogDebug("Calling orchestrator.IntroduceVariableAsync");
-            RefactoringResult result = await _refactoringOrchestrator.IntroduceVariableAsync(
+            var result = await _refactoringOrchestrator.IntroduceVariableAsync(
                 filePath, line, startColumn, endColumn, variableName, previewOnly);
             _logger.LogDebug("Orchestrator returned: success={Success}, message={Message}", result.Success, result.Message);
             
@@ -199,7 +198,7 @@ public class CSharpRefactoringTools : BaseToolClass
             ValidateRequiredParameter(fieldName, nameof(fieldName));
 
             _logger.LogDebug("Calling orchestrator.EncapsulateFieldAsync");
-            RefactoringResult result = await _refactoringOrchestrator.EncapsulateFieldAsync(
+            var result = await _refactoringOrchestrator.EncapsulateFieldAsync(
                 filePath, fieldName, propertyName, useAutoProperty, previewOnly);
             _logger.LogDebug("Orchestrator returned: success={Success}, message={Message}", result.Success, result.Message);
             
@@ -227,7 +226,7 @@ public class CSharpRefactoringTools : BaseToolClass
             ValidateFilePath(filePath);
 
             _logger.LogDebug("Calling orchestrator.OrganizeImportsAsync");
-            RefactoringResult result = await _refactoringOrchestrator.OrganizeImportsAsync(filePath, removeUnused, sortAlphabetically, previewOnly);
+            var result = await _refactoringOrchestrator.OrganizeImportsAsync(filePath, removeUnused, sortAlphabetically, previewOnly);
             _logger.LogDebug("Orchestrator returned: success={Success}, message={Message}", result.Success, result.Message);
             
             return result;
@@ -253,7 +252,7 @@ public class CSharpRefactoringTools : BaseToolClass
             ValidateRequiredParameter(usingNamespace, nameof(usingNamespace));
 
             _logger.LogDebug("Calling orchestrator.AddImportAsync");
-            RefactoringResult result = await _refactoringOrchestrator.AddImportAsync(filePath, $"using {usingNamespace};", previewOnly);
+            var result = await _refactoringOrchestrator.AddImportAsync(filePath, $"using {usingNamespace};", previewOnly);
             _logger.LogDebug("Orchestrator returned: success={Success}, message={Message}", result.Success, result.Message);
             
             return result;

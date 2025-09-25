@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
-using ModelContextProtocol.Server;
-using AwsMcp.ECR;
-using AwsMcp.Configuration;
 using Amazon.ECR.Model;
+using AwsMcp.Configuration;
+using AwsMcp.ECR;
+using ModelContextProtocol.Server;
 
 namespace AwsMcp.Tools;
 

@@ -26,7 +26,7 @@ public class ContextAnalysisTools(
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
-            ContextAnalysisResult result = await analysis.AnalyzeCurrentContextAsync(focusDirectory, maxFiles);
+            var result = await analysis.AnalyzeCurrentContextAsync(focusDirectory, maxFiles);
             
             if (!result.Success)
             {
@@ -92,10 +92,10 @@ public class ContextAnalysisTools(
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
-            List<string> suggestions = await analysis.GetPersonalizedSuggestionsAsync(focusDirectory, maxSuggestions);
+            var suggestions = await analysis.GetPersonalizedSuggestionsAsync(focusDirectory, maxSuggestions);
             
             // Get detailed analysis for context
-            ContextAnalysisResult fullAnalysis = await analysis.AnalyzeCurrentContextAsync(focusDirectory, 50);
+            var fullAnalysis = await analysis.AnalyzeCurrentContextAsync(focusDirectory, 50);
             
             return CreateSuccessResponse(new
             {
@@ -135,7 +135,7 @@ public class ContextAnalysisTools(
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
-            string workspacePath = focusDirectory ?? config.DefaultWorkspace;
+            var workspacePath = focusDirectory ?? config.DefaultWorkspace;
             
             if (!Directory.Exists(workspacePath))
             {
@@ -143,11 +143,11 @@ public class ContextAnalysisTools(
             }
 
             // Use intelligent project scale analysis instead of naive file counting
-            ProjectScaleAnalysis scaleAnalysis = await ProjectScaleService.AnalyzeProjectScaleAsync(workspacePath);
-            BuildArtifactDetectionResult artifactDetection = await ProjectScaleService.DetectBuildArtifactsAsync(workspacePath);
+            var scaleAnalysis = await ProjectScaleService.AnalyzeProjectScaleAsync(workspacePath);
+            var artifactDetection = await ProjectScaleService.DetectBuildArtifactsAsync(workspacePath);
             
             // Get context analysis with intelligent filtering
-            ContextAnalysisResult contextAnalysis = await analysis.AnalyzeCurrentContextAsync(focusDirectory, 1000);
+            var contextAnalysis = await analysis.AnalyzeCurrentContextAsync(focusDirectory, 1000);
             
             return CreateSuccessResponse(new
             {

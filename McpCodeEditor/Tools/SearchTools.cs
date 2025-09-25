@@ -18,7 +18,7 @@ public class SearchTools(SearchService searchService) : BaseToolClass
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
-            bool success = await searchService.RebuildIndexAsync();
+            var success = await searchService.RebuildIndexAsync();
             
             return CreateSuccessResponse(new
             {
@@ -54,7 +54,7 @@ public class SearchTools(SearchService searchService) : BaseToolClass
                 CaseSensitive = caseSensitive
             };
 
-            List<SearchResult> results = await searchService.SearchSymbolsAsync(query, options);
+            var results = await searchService.SearchSymbolsAsync(query, options);
 
             return CreateSuccessResponse(new
             {
@@ -110,7 +110,7 @@ public class SearchTools(SearchService searchService) : BaseToolClass
                 IncludeStrings = includeStrings
             };
 
-            List<SearchResult> results = await searchService.SearchTextAsync(query, options);
+            var results = await searchService.SearchTextAsync(query, options);
 
             return CreateSuccessResponse(new
             {

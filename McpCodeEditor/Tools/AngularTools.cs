@@ -29,7 +29,7 @@ public class AngularTools(AngularComponentRefactorer angularRefactorer) : BaseTo
                 throw new ArgumentException("File must be an Angular component (.component.ts file).", nameof(filePath));
             }
 
-            AngularComponentAnalysisResult result = await angularRefactorer.AnalyzeComponentAsync(filePath);
+            var result = await angularRefactorer.AnalyzeComponentAsync(filePath);
             return result;
         });
     }
@@ -81,7 +81,7 @@ public class AngularTools(AngularComponentRefactorer angularRefactorer) : BaseTo
                 MaintainDependencyInjection = maintainDependencyInjection
             };
 
-            AngularComponentRefactoringResult result = await angularRefactorer.ExtractLifecycleLogicAsync(
+            var result = await angularRefactorer.ExtractLifecycleLogicAsync(
                 filePath, hookName, options);
             return result;
         });
@@ -120,7 +120,7 @@ public class AngularTools(AngularComponentRefactorer angularRefactorer) : BaseTo
                 OptimizeImports = optimizeImports
             };
 
-            AngularComponentRefactoringResult result = await angularRefactorer.SeparateBusinessLogicAsync(
+            var result = await angularRefactorer.SeparateBusinessLogicAsync(
                 filePath, options);
             return result;
         });
@@ -156,7 +156,7 @@ public class AngularTools(AngularComponentRefactorer angularRefactorer) : BaseTo
                 MaintainEventBindings = maintainEventBindings
             };
 
-            AngularComponentRefactoringResult result = await angularRefactorer.OptimizeChangeDetectionAsync(
+            var result = await angularRefactorer.OptimizeChangeDetectionAsync(
                 filePath, options);
             return result;
         });
@@ -181,7 +181,7 @@ public class AngularTools(AngularComponentRefactorer angularRefactorer) : BaseTo
                 throw new ArgumentException("File must be an Angular component (.component.ts file).", nameof(filePath));
             }
 
-            AngularComponentAnalysisResult analysisResult = await angularRefactorer.AnalyzeComponentAsync(filePath);
+            var analysisResult = await angularRefactorer.AnalyzeComponentAsync(filePath);
             
             if (!analysisResult.Success || analysisResult.Component == null)
             {
@@ -232,14 +232,14 @@ public class AngularTools(AngularComponentRefactorer angularRefactorer) : BaseTo
                 throw new ArgumentException("File must be an Angular component (.component.ts file).", nameof(filePath));
             }
 
-            AngularComponentAnalysisResult analysisResult = await angularRefactorer.AnalyzeComponentAsync(filePath);
+            var analysisResult = await angularRefactorer.AnalyzeComponentAsync(filePath);
             
             if (!analysisResult.Success || analysisResult.Component == null)
             {
                 throw new InvalidOperationException($"Failed to analyze component: {analysisResult.ErrorMessage}");
             }
 
-            AngularComponent component = analysisResult.Component;
+            var component = analysisResult.Component;
             
             var architectureAnalysis = new
             {

@@ -62,7 +62,7 @@ public class TypeScriptCrossFileRenamer(
         bool useSummaryMode = true,
         CancellationToken cancellationToken = default)
     {
-        RefactoringResult fullResult = await RenameSymbolAcrossFilesAsync(
+        var fullResult = await RenameSymbolAcrossFilesAsync(
             symbolName, newName, rootPath, previewOnly, cancellationToken);
 
         if (!fullResult.Success)
@@ -77,7 +77,7 @@ public class TypeScriptCrossFileRenamer(
 
         if (useSummaryMode)
         {
-            SummaryRefactoringResult summary = ConvertToSummaryResult(fullResult);
+            var summary = ConvertToSummaryResult(fullResult);
             summary.Warning = "??  This operation used summary mode to prevent large responses. " +
                               "To get full file content details, set 'useSummaryMode=false' but be aware " +
                               "this may return 100k+ characters and could terminate the conversation.";
@@ -85,7 +85,7 @@ public class TypeScriptCrossFileRenamer(
         }
         else
         {
-            SummaryRefactoringResult fullSummary = ConvertToFullSummaryResult(fullResult);
+            var fullSummary = ConvertToFullSummaryResult(fullResult);
             fullSummary.Warning = "?? LARGE RESPONSE: This result contains full file content and may be very large. " +
                                   "Consider using useSummaryMode=true for future operations to prevent conversation termination.";
             return fullSummary;
@@ -102,7 +102,7 @@ public class TypeScriptCrossFileRenamer(
         bool previewOnly = false,
         CancellationToken cancellationToken = default)
     {
-        RefactoringResult fullResult = await RenameSymbolAcrossFilesAsync(
+        var fullResult = await RenameSymbolAcrossFilesAsync(
             symbolName, newName, rootPath, previewOnly, cancellationToken);
 
         return ConvertToSummaryResult(fullResult);
@@ -121,13 +121,13 @@ public class TypeScriptCrossFileRenamer(
         try
         {
             var result = new RefactoringResult();
-            string projectRoot = rootPath ?? config.DefaultWorkspace;
+            var projectRoot = rootPath ?? config.DefaultWorkspace;
 
             // Validate symbol names
             ValidateSymbolNames(symbolName, newName);
 
             // Analyze project to understand symbol dependencies
-            TypeScriptProjectAnalyzer.ProjectAnalysisResult projectAnalysis = await projectAnalyzer.AnalyzeProjectAsync(projectRoot, cancellationToken);
+            var projectAnalysis = await projectAnalyzer.AnalyzeProjectAsync(projectRoot, cancellationToken);
             if (!projectAnalysis.Success)
             {
                 return new RefactoringResult
@@ -138,7 +138,7 @@ public class TypeScriptCrossFileRenamer(
             }
 
             // Find the symbol and its references
-            if (!projectAnalysis.Symbols.TryGetValue(symbolName, out TypeScriptProjectAnalyzer.ProjectSymbolInfo? symbolInfo))
+            if (!projectAnalysis.Symbols.TryGetValue(symbolName, out var symbolInfo))
             {
                 return new RefactoringResult
                 {
@@ -157,7 +157,7 @@ public class TypeScriptCrossFileRenamer(
             }
 
             // Plan rename operations for all affected files
-            List<FileRenameOperation> renameOperations = await PlanRenameOperationsAsync(
+            var renameOperations = await PlanRenameOperationsAsync(
                 symbolInfo, 
                 projectAnalysis, 
                 symbolName, 
@@ -175,9 +175,9 @@ public class TypeScriptCrossFileRenamer(
 
             // Execute rename operations
             var changes = new List<FileChange>();
-            foreach (FileRenameOperation operation in renameOperations)
+            foreach (var operation in renameOperations)
             {
-                FileChange change = await ExecuteRenameOperationAsync(operation, cancellationToken);
+                var change = await ExecuteRenameOperationAsync(operation, cancellationToken);
                 changes.Add(change);
             }
 
@@ -231,7 +231,7 @@ public class TypeScriptCrossFileRenamer(
         var summaryChanges = new List<SummaryFileChange>();
         var totalLinesChanged = 0;
 
-        foreach (FileChange change in fullResult.Changes)
+        foreach (var change in fullResult.Changes)
         {
             var summaryChange = new SummaryFileChange
             {
@@ -243,7 +243,7 @@ public class TypeScriptCrossFileRenamer(
             };
 
             // Add sample changes (first 3)
-            List<SummaryLineChange> sampleChanges = change.LineChanges.Take(3).Select(lc => new SummaryLineChange
+            var sampleChanges = change.LineChanges.Take(3).Select(lc => new SummaryLineChange
             {
                 LineNumber = lc.LineNumber,
                 ChangeType = lc.ChangeType,
@@ -269,7 +269,7 @@ public class TypeScriptCrossFileRenamer(
             FilesAffected = fullResult.FilesAffected,
             TotalLinesChanged = totalLinesChanged,
             Metadata = fullResult.Metadata,
-            BackupId = fullResult.Metadata.TryGetValue("backupId", out object? backupIdObj) 
+            BackupId = fullResult.Metadata.TryGetValue("backupId", out var backupIdObj) 
                 ? backupIdObj?.ToString() 
                 : null
         };
@@ -283,7 +283,7 @@ public class TypeScriptCrossFileRenamer(
         var summaryChanges = new List<SummaryFileChange>();
         var totalLinesChanged = 0;
 
-        foreach (FileChange change in fullResult.Changes)
+        foreach (var change in fullResult.Changes)
         {
             var summaryChange = new SummaryFileChange
             {
@@ -297,7 +297,7 @@ public class TypeScriptCrossFileRenamer(
             };
 
             // Add all changes with full content
-            List<SummaryLineChange> fullChanges = change.LineChanges.Select(lc => new SummaryLineChange
+            var fullChanges = change.LineChanges.Select(lc => new SummaryLineChange
             {
                 LineNumber = lc.LineNumber,
                 ChangeType = lc.ChangeType,
@@ -323,7 +323,7 @@ public class TypeScriptCrossFileRenamer(
             FilesAffected = fullResult.FilesAffected,
             TotalLinesChanged = totalLinesChanged,
             Metadata = fullResult.Metadata,
-            BackupId = fullResult.Metadata.TryGetValue("backupId", out object? backupIdObj) 
+            BackupId = fullResult.Metadata.TryGetValue("backupId", out var backupIdObj) 
                 ? backupIdObj?.ToString() 
                 : null,
             ContainsFullContent = true
@@ -338,7 +338,7 @@ public class TypeScriptCrossFileRenamer(
         const int maxLength = 60;
         if (string.IsNullOrEmpty(line)) return "";
         
-        string trimmed = line.Trim();
+        var trimmed = line.Trim();
         if (trimmed.Length <= maxLength) return trimmed;
         
         return trimmed[..(maxLength - 3)] + "...";
@@ -349,7 +349,7 @@ public class TypeScriptCrossFileRenamer(
     /// </summary>
     private static string GenerateChangeSummary(FileChange change)
     {
-        int totalChanges = change.LineChanges.Count;
+        var totalChanges = change.LineChanges.Count;
         if (totalChanges == 0) return "No changes";
         
         if (totalChanges == 1)
@@ -357,7 +357,7 @@ public class TypeScriptCrossFileRenamer(
             return $"1 line modified at line {change.LineChanges[0].LineNumber}";
         }
         
-        List<int> lineNumbers = change.LineChanges.Select(lc => lc.LineNumber).OrderBy(x => x).ToList();
+        var lineNumbers = change.LineChanges.Select(lc => lc.LineNumber).OrderBy(x => x).ToList();
         if (totalChanges <= 3)
         {
             return $"{totalChanges} lines modified at lines {string.Join(", ", lineNumbers)}";
@@ -386,27 +386,27 @@ public class TypeScriptCrossFileRenamer(
         affectedFiles.UnionWith(symbolInfo.ImportedBy);
 
         // Add files with references
-        foreach (TypeScriptProjectAnalyzer.CrossFileReference reference in symbolInfo.References)
+        foreach (var reference in symbolInfo.References)
         {
             affectedFiles.Add(reference.SourceFile);
         }
 
         // Add files with cross-file references
-        IEnumerable<TypeScriptProjectAnalyzer.CrossFileReference> crossFileRefs = projectAnalysis.CrossFileReferences
+        var crossFileRefs = projectAnalysis.CrossFileReferences
             .Where(r => r.SymbolName == symbolName);
-        foreach (TypeScriptProjectAnalyzer.CrossFileReference reference in crossFileRefs)
+        foreach (var reference in crossFileRefs)
         {
             affectedFiles.Add(reference.SourceFile);
             affectedFiles.Add(reference.TargetFile);
         }
 
         // Create operations for each affected file
-        foreach (string filePath in affectedFiles)
+        foreach (var filePath in affectedFiles)
         {
             if (!File.Exists(filePath))
                 continue;
 
-            FileRenameOperation operation = await PlanFileRenameOperationAsync(
+            var operation = await PlanFileRenameOperationAsync(
                 filePath, 
                 symbolName, 
                 newName, 
@@ -473,18 +473,18 @@ public class TypeScriptCrossFileRenamer(
     {
         await Task.CompletedTask; // Make async for consistency
 
-        string content = operation.OriginalContent;
-        string[] lines = content.Split('\n');
+        var content = operation.OriginalContent;
+        var lines = content.Split('\n');
 
         // Find import statements that reference the symbol
         var importPattern = $@"import\s*\{{[^}}]*\b{Regex.Escape(symbolName)}\b[^}}]*\}}\s*from";
-        MatchCollection importMatches = Regex.Matches(content, importPattern, RegexOptions.Multiline);
+        var importMatches = Regex.Matches(content, importPattern, RegexOptions.Multiline);
 
         foreach (Match match in importMatches)
         {
-            int lineNumber = GetLineNumber(content, match.Index);
-            string originalLine = lines[lineNumber - 1];
-            string modifiedLine = originalLine.Replace(symbolName, newName);
+            var lineNumber = GetLineNumber(content, match.Index);
+            var originalLine = lines[lineNumber - 1];
+            var modifiedLine = originalLine.Replace(symbolName, newName);
 
             operation.ImportExportChanges.Add(new ImportExportChange
             {
@@ -497,13 +497,13 @@ public class TypeScriptCrossFileRenamer(
 
         // Find export statements that reference the symbol
         var exportPattern = $@"export\s*\{{[^}}]*\b{Regex.Escape(symbolName)}\b[^}}]*\}}";
-        MatchCollection exportMatches = Regex.Matches(content, exportPattern, RegexOptions.Multiline);
+        var exportMatches = Regex.Matches(content, exportPattern, RegexOptions.Multiline);
 
         foreach (Match match in exportMatches)
         {
-            int lineNumber = GetLineNumber(content, match.Index);
-            string originalLine = lines[lineNumber - 1];
-            string modifiedLine = originalLine.Replace(symbolName, newName);
+            var lineNumber = GetLineNumber(content, match.Index);
+            var originalLine = lines[lineNumber - 1];
+            var modifiedLine = originalLine.Replace(symbolName, newName);
 
             operation.ImportExportChanges.Add(new ImportExportChange
             {
@@ -525,7 +525,7 @@ public class TypeScriptCrossFileRenamer(
     {
         await Task.CompletedTask; // Make async for consistency
 
-        string content = operation.OriginalContent;
+        var content = operation.OriginalContent;
 
         // Find various usage patterns
         var usagePatterns = new[]
@@ -537,14 +537,14 @@ public class TypeScriptCrossFileRenamer(
             ($@"\b{Regex.Escape(symbolName)}\b", "general_reference")
         };
 
-        foreach ((string? pattern, string usageType) in usagePatterns)
+        foreach ((var pattern, var usageType) in usagePatterns)
         {
-            MatchCollection matches = Regex.Matches(content, pattern, RegexOptions.Multiline);
+            var matches = Regex.Matches(content, pattern, RegexOptions.Multiline);
             foreach (Match match in matches)
             {
                 // Skip if this is already covered by import/export changes
-                int lineNumber = GetLineNumber(content, match.Index);
-                bool isImportExport = operation.ImportExportChanges
+                var lineNumber = GetLineNumber(content, match.Index);
+                var isImportExport = operation.ImportExportChanges
                     .Any(ie => ie.LineNumber == lineNumber);
 
                 if (!isImportExport)
@@ -571,13 +571,13 @@ public class TypeScriptCrossFileRenamer(
     {
         await Task.CompletedTask; // Make async for consistency
 
-        string modifiedContent = operation.OriginalContent;
+        var modifiedContent = operation.OriginalContent;
 
         // Apply import/export changes first (line-based)
         if (operation.ImportExportChanges.Count > 0)
         {
-            string[] lines = modifiedContent.Split('\n');
-            foreach (ImportExportChange change in operation.ImportExportChanges.OrderByDescending(c => c.LineNumber))
+            var lines = modifiedContent.Split('\n');
+            foreach (var change in operation.ImportExportChanges.OrderByDescending(c => c.LineNumber))
             {
                 if (change.LineNumber <= lines.Length)
                 {
@@ -588,7 +588,7 @@ public class TypeScriptCrossFileRenamer(
         }
 
         // Apply symbol renames (regex-based for more precise matching)
-        foreach (SymbolRename rename in operation.SymbolRenames)
+        foreach (var rename in operation.SymbolRenames)
         {
             modifiedContent = ApplySymbolRename(modifiedContent, rename);
         }
@@ -612,7 +612,7 @@ public class TypeScriptCrossFileRenamer(
     /// </summary>
     private static string ApplySymbolRename(string content, SymbolRename rename)
     {
-        string pattern = rename.RenameType switch
+        var pattern = rename.RenameType switch
         {
             "definition" => $@"\b{Regex.Escape(rename.OriginalName)}\b",
             "function_call" => $@"\b{Regex.Escape(rename.OriginalName)}(?=\s*\()",
@@ -635,7 +635,7 @@ public class TypeScriptCrossFileRenamer(
         string? backupId,
         CancellationToken cancellationToken)
     {
-        foreach (FileChange change in changes)
+        foreach (var change in changes)
         {
             await File.WriteAllTextAsync(change.FilePath, change.ModifiedContent, cancellationToken);
 
@@ -653,13 +653,13 @@ public class TypeScriptCrossFileRenamer(
     /// </summary>
     private static void CalculateLineChanges(string originalContent, string modifiedContent, FileChange change)
     {
-        string[] originalLines = originalContent.Split('\n');
-        string[] modifiedLines = modifiedContent.Split('\n');
+        var originalLines = originalContent.Split('\n');
+        var modifiedLines = modifiedContent.Split('\n');
 
         for (var i = 0; i < Math.Max(originalLines.Length, modifiedLines.Length); i++)
         {
-            string originalLine = i < originalLines.Length ? originalLines[i] : "";
-            string modifiedLine = i < modifiedLines.Length ? modifiedLines[i] : "";
+            var originalLine = i < originalLines.Length ? originalLines[i] : "";
+            var modifiedLine = i < modifiedLines.Length ? modifiedLines[i] : "";
 
             if (originalLine != modifiedLine)
             {
@@ -724,7 +724,7 @@ public class TypeScriptCrossFileRenamer(
     /// </summary>
     private static int GetColumnNumber(string content, int index)
     {
-        int lastNewLine = content.LastIndexOf('\n', index);
+        var lastNewLine = content.LastIndexOf('\n', index);
         return index - lastNewLine;
     }
 }

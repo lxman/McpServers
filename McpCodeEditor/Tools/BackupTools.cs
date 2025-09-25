@@ -3,7 +3,6 @@ using System.Text.Json;
 using McpCodeEditor.Interfaces;
 using ModelContextProtocol.Server;
 using McpCodeEditor.Services;
-using McpCodeEditor.Models;
 
 namespace McpCodeEditor.Tools;
 
@@ -22,8 +21,8 @@ public class BackupTools(
     {
         try
         {
-            string pathToBackup = sourcePath ?? config.DefaultWorkspace;
-            string backupId = await backupService.CreateBackupAsync(pathToBackup, description);
+            var pathToBackup = sourcePath ?? config.DefaultWorkspace;
+            var backupId = await backupService.CreateBackupAsync(pathToBackup, description);
 
             var result = new
             {
@@ -50,8 +49,8 @@ public class BackupTools(
     {
         try
         {
-            string targetWorkspace = workspacePath ?? config.DefaultWorkspace;
-            List<BackupInfo> backups = await backupService.ListBackupsAsync(targetWorkspace);
+            var targetWorkspace = workspacePath ?? config.DefaultWorkspace;
+            var backups = await backupService.ListBackupsAsync(targetWorkspace);
             
             var result = new
             {
@@ -86,7 +85,7 @@ public class BackupTools(
     {
         try
         {
-            List<BackupInfo> allBackups = await backupService.ListAllBackupsAsync();
+            var allBackups = await backupService.ListAllBackupsAsync();
             var groupedByWorkspace = allBackups.GroupBy(b => new { b.WorkspaceHash, b.WorkspaceDisplayName })
                 .Select(g => new
                 {
@@ -136,8 +135,8 @@ public class BackupTools(
     {
         try
         {
-            string sourceWorkspace = workspacePath ?? config.DefaultWorkspace;
-            bool restored = await backupService.RestoreBackupAsync(backupId, sourceWorkspace, targetPath);
+            var sourceWorkspace = workspacePath ?? config.DefaultWorkspace;
+            var restored = await backupService.RestoreBackupAsync(backupId, sourceWorkspace, targetPath);
             
             var result = new
             {
@@ -167,8 +166,8 @@ public class BackupTools(
     {
         try
         {
-            string targetWorkspace = workspacePath ?? config.DefaultWorkspace;
-            bool deleted = await backupService.DeleteBackupAsync(backupId, targetWorkspace);
+            var targetWorkspace = workspacePath ?? config.DefaultWorkspace;
+            var deleted = await backupService.DeleteBackupAsync(backupId, targetWorkspace);
             
             var result = new
             {
@@ -197,8 +196,8 @@ public class BackupTools(
     {
         try
         {
-            string targetWorkspace = workspacePath ?? config.DefaultWorkspace;
-            BackupInfo? backupInfo = await backupService.GetBackupInfoAsync(backupId, targetWorkspace);
+            var targetWorkspace = workspacePath ?? config.DefaultWorkspace;
+            var backupInfo = await backupService.GetBackupInfoAsync(backupId, targetWorkspace);
             
             if (backupInfo == null)
             {
@@ -248,8 +247,8 @@ public class BackupTools(
     {
         try
         {
-            string targetWorkspace = workspacePath ?? config.DefaultWorkspace;
-            int deletedCount = await backupService.CleanupOldBackupsAsync(targetWorkspace, keepCount);
+            var targetWorkspace = workspacePath ?? config.DefaultWorkspace;
+            var deletedCount = await backupService.CleanupOldBackupsAsync(targetWorkspace, keepCount);
             
             var result = new
             {

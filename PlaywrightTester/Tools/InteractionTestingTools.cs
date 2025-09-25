@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Text.Json;
-using Microsoft.Playwright;
 using ModelContextProtocol.Server;
 using PlaywrightTester.Services;
 
@@ -18,19 +17,19 @@ public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            string finalSourceSelector = DetermineSelector(sourceSelector);
-            string finalTargetSelector = DetermineSelector(targetSelector);
+            var finalSourceSelector = DetermineSelector(sourceSelector);
+            var finalTargetSelector = DetermineSelector(targetSelector);
             
-            ILocator sourceElement = session.Page.Locator(finalSourceSelector);
-            ILocator targetElement = session.Page.Locator(finalTargetSelector);
+            var sourceElement = session.Page.Locator(finalSourceSelector);
+            var targetElement = session.Page.Locator(finalTargetSelector);
             
             // Check if elements exist
-            int sourceCount = await sourceElement.CountAsync();
-            int targetCount = await targetElement.CountAsync();
+            var sourceCount = await sourceElement.CountAsync();
+            var targetCount = await targetElement.CountAsync();
             
             if (sourceCount == 0)
             {
@@ -153,17 +152,17 @@ public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
             // Detect platform
-            PlatformID platform = Environment.OSVersion.Platform;
-            bool isMac = platform == PlatformID.MacOSX || Environment.OSVersion.VersionString.Contains("Darwin");
+            var platform = Environment.OSVersion.Platform;
+            var isMac = platform == PlatformID.MacOSX || Environment.OSVersion.VersionString.Contains("Darwin");
             
             // Parse and normalize keyboard shortcuts
-            string normalizedKeys = NormalizeKeyboardShortcut(keys, isMac);
-            List<KeySequence> keySequences = ParseKeySequence(normalizedKeys);
+            var normalizedKeys = NormalizeKeyboardShortcut(keys, isMac);
+            var keySequences = ParseKeySequence(normalizedKeys);
             
             // Get initial page state
             var initialState = await session.Page.EvaluateAsync<object>(@"
@@ -184,9 +183,9 @@ public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
             var executedSequences = new List<object>();
             
             // Execute each key sequence
-            foreach (KeySequence sequence in keySequences)
+            foreach (var sequence in keySequences)
             {
-                DateTime sequenceStart = DateTime.Now;
+                var sequenceStart = DateTime.Now;
                 
                 if (sequence.IsModifierCombo)
                 {
@@ -254,7 +253,7 @@ public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
                             break;
                         default:
                             // Handle function keys, letters, numbers
-                            if (sequence.Key.StartsWith("F") && int.TryParse(sequence.Key[1..], out int fNum) && fNum is >= 1 and <= 12)
+                            if (sequence.Key.StartsWith("F") && int.TryParse(sequence.Key[1..], out var fNum) && fNum is >= 1 and <= 12)
                             {
                                 await session.Page.Keyboard.PressAsync(sequence.Key);
                             }
@@ -271,7 +270,7 @@ public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
                     }
                 }
                 
-                DateTime sequenceEnd = DateTime.Now;
+                var sequenceEnd = DateTime.Now;
                 executedSequences.Add(new
                 {
                     sequence = sequence.Key,
@@ -340,7 +339,7 @@ public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
     
     private static string NormalizeKeyboardShortcut(string keys, bool isMac)
     {
-        string normalized = keys.Trim();
+        var normalized = keys.Trim();
         
         // Platform-specific substitutions
         if (isMac)
@@ -368,17 +367,17 @@ public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
     private static List<KeySequence> ParseKeySequence(string keys)
     {
         var sequences = new List<KeySequence>();
-        string[] parts = keys.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var parts = keys.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         
-        foreach (string part in parts)
+        foreach (var part in parts)
         {
             var sequence = new KeySequence();
-            string[] keyParts = part.Split('+');
+            var keyParts = part.Split('+');
             
             // Parse modifiers and key
-            for (int i = 0; i < keyParts.Length; i++)
+            for (var i = 0; i < keyParts.Length; i++)
             {
-                string keyPart = keyParts[i].Trim();
+                var keyPart = keyParts[i].Trim();
                 
                 if (i == keyParts.Length - 1)
                 {

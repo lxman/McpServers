@@ -33,27 +33,27 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
     var result = new VariableScopeAnalysis();
 
     // Convert extracted lines to a syntax tree for analysis
-    string extractedCode = string.Join(Environment.NewLine, extractedLines);
+    var extractedCode = string.Join(Environment.NewLine, extractedLines);
     
     // SESSION 1 FIX: Parse as statement list instead of wrapping in method
     // This helps preserve variable declaration context
-    SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(extractedCode);
-    SyntaxNode root = await syntaxTree.GetRootAsync();
+    var syntaxTree = CSharpSyntaxTree.ParseText(extractedCode);
+    var root = await syntaxTree.GetRootAsync();
 
     // SESSION 4 FIX: Track all variable declarations and usages more precisely
     var declaredVariables = new HashSet<string>();
     var allVariableUsages = new Dictionary<string, VariableUsageInfo>();
 
     // Find all variable declarations in the extracted code
-    foreach (VariableDeclarationSyntax declaration in root.DescendantNodes().OfType<VariableDeclarationSyntax>())
+    foreach (var declaration in root.DescendantNodes().OfType<VariableDeclarationSyntax>())
     {
-        foreach (VariableDeclaratorSyntax variable in declaration.Variables)
+        foreach (var variable in declaration.Variables)
         {
-            string varName = variable.Identifier.ValueText;
+            var varName = variable.Identifier.ValueText;
             declaredVariables.Add(varName);
             
             // SESSION 4 FIX: Determine actual type from declaration
-            string varType = DetermineVariableType(declaration.Type);
+            var varType = DetermineVariableType(declaration.Type);
             
             var variableInfo = new VariableInfo
             {
@@ -73,10 +73,10 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
     // Instead of processing all identifiers, focus on specific contexts where variables are actually used
     
     // 1. Find variables in foreach loops (both collection and loop variable)
-    foreach (ForEachStatementSyntax foreachLoop in root.DescendantNodes().OfType<ForEachStatementSyntax>())
+    foreach (var foreachLoop in root.DescendantNodes().OfType<ForEachStatementSyntax>())
     {
         // Loop variable (e.g., 'order' in 'foreach (var order in orders)')
-        string loopVarName = foreachLoop.Identifier.ValueText;
+        var loopVarName = foreachLoop.Identifier.ValueText;
         declaredVariables.Add(loopVarName);
         
         var loopVarInfo = new VariableInfo
@@ -91,7 +91,7 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
         // Collection being iterated (e.g., 'orders' in 'foreach (var order in orders)')
         if (foreachLoop.Expression is IdentifierNameSyntax collectionIdentifier)
         {
-            string collectionName = collectionIdentifier.Identifier.ValueText;
+            var collectionName = collectionIdentifier.Identifier.ValueText;
             if (!IsKeywordOrType(collectionName) && !declaredVariables.Contains(collectionName))
             {
                 RecordVariableUsage(allVariableUsages, collectionName, isRead: true, isWrite: false);
@@ -101,12 +101,12 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
     }
 
     // 2. Find variables in assignment expressions (primary source of modified variables)
-    foreach (AssignmentExpressionSyntax assignment in root.DescendantNodes().OfType<AssignmentExpressionSyntax>())
+    foreach (var assignment in root.DescendantNodes().OfType<AssignmentExpressionSyntax>())
     {
         // Left side of assignment (being written to)
         if (assignment.Left is IdentifierNameSyntax leftIdentifier)
         {
-            string varName = leftIdentifier.Identifier.ValueText;
+            var varName = leftIdentifier.Identifier.ValueText;
             if (!IsKeywordOrType(varName))
             {
                 RecordVariableUsage(allVariableUsages, varName, isRead: false, isWrite: true);
@@ -115,9 +115,9 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
         }
         
         // Right side of assignment (being read from) - but only simple identifiers, not property accesses
-        foreach (IdentifierNameSyntax rightIdentifier in GetSimpleIdentifiers(assignment.Right))
+        foreach (var rightIdentifier in GetSimpleIdentifiers(assignment.Right))
         {
-            string varName = rightIdentifier.Identifier.ValueText;
+            var varName = rightIdentifier.Identifier.ValueText;
             if (!IsKeywordOrType(varName) && !declaredVariables.Contains(varName))
             {
                 RecordVariableUsage(allVariableUsages, varName, isRead: true, isWrite: false);
@@ -127,13 +127,13 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
     }
 
     // 3. Find variables in increment/decrement operations (e.g., pendingCount++)
-    foreach (PostfixUnaryExpressionSyntax postfix in root.DescendantNodes().OfType<PostfixUnaryExpressionSyntax>())
+    foreach (var postfix in root.DescendantNodes().OfType<PostfixUnaryExpressionSyntax>())
     {
         if (postfix.IsKind(SyntaxKind.PostIncrementExpression) || postfix.IsKind(SyntaxKind.PostDecrementExpression))
         {
             if (postfix.Operand is IdentifierNameSyntax identifier)
             {
-                string varName = identifier.Identifier.ValueText;
+                var varName = identifier.Identifier.ValueText;
                 if (!IsKeywordOrType(varName))
                 {
                     RecordVariableUsage(allVariableUsages, varName, isRead: true, isWrite: true);
@@ -143,13 +143,13 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
         }
     }
 
-    foreach (PrefixUnaryExpressionSyntax prefix in root.DescendantNodes().OfType<PrefixUnaryExpressionSyntax>())
+    foreach (var prefix in root.DescendantNodes().OfType<PrefixUnaryExpressionSyntax>())
     {
         if (prefix.IsKind(SyntaxKind.PreIncrementExpression) || prefix.IsKind(SyntaxKind.PreDecrementExpression))
         {
             if (prefix.Operand is IdentifierNameSyntax identifier)
             {
-                string varName = identifier.Identifier.ValueText;
+                var varName = identifier.Identifier.ValueText;
                 if (!IsKeywordOrType(varName))
                 {
                     RecordVariableUsage(allVariableUsages, varName, isRead: true, isWrite: true);
@@ -160,13 +160,13 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
     }
 
     // 4. Find variables used as method arguments (but not property accesses)
-    foreach (InvocationExpressionSyntax invocation in root.DescendantNodes().OfType<InvocationExpressionSyntax>())
+    foreach (var invocation in root.DescendantNodes().OfType<InvocationExpressionSyntax>())
     {
-        foreach (ArgumentSyntax argument in invocation.ArgumentList.Arguments)
+        foreach (var argument in invocation.ArgumentList.Arguments)
         {
-            foreach (IdentifierNameSyntax identifier in GetSimpleIdentifiers(argument.Expression))
+            foreach (var identifier in GetSimpleIdentifiers(argument.Expression))
             {
-                string varName = identifier.Identifier.ValueText;
+                var varName = identifier.Identifier.ValueText;
                 if (!IsKeywordOrType(varName) && !declaredVariables.Contains(varName))
                 {
                     RecordVariableUsage(allVariableUsages, varName, isRead: true, isWrite: false);
@@ -177,12 +177,12 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
     }
 
     // Process the collected variable usages
-    foreach (VariableUsageInfo usage in allVariableUsages.Values)
+    foreach (var usage in allVariableUsages.Values)
     {
         // If a variable is not declared in extraction, it's external
         if (!declaredVariables.Contains(usage.Name))
         {
-            string inferredType = InferVariableTypeFromUsage(usage.Name, extractedCode);
+            var inferredType = InferVariableTypeFromUsage(usage.Name, extractedCode);
             
             var variableInfo = new VariableInfo
             {
@@ -216,7 +216,7 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
         else
         {
             // Local variable - check if it's used after extraction (would need to be returned)
-            VariableInfo? localVar = result.LocalVariables.FirstOrDefault(v => v.Name == usage.Name);
+            var localVar = result.LocalVariables.FirstOrDefault(v => v.Name == usage.Name);
             if (localVar != null)
             {
                 // SESSION 1 FIX: Mark local variables that might be used after extraction
@@ -244,16 +244,16 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
         logger?.LogDebug("Starting variable usage classification");
 
         var result = new VariableUsageClassification();
-        string extractedCode = string.Join(Environment.NewLine, extractedLines);
-        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(extractedCode);
-        SyntaxNode root = await syntaxTree.GetRootAsync();
+        var extractedCode = string.Join(Environment.NewLine, extractedLines);
+        var syntaxTree = CSharpSyntaxTree.ParseText(extractedCode);
+        var root = await syntaxTree.GetRootAsync();
 
         // Collect all variable usages
         var variableUsages = new Dictionary<string, VariableUsageInfo>();
 
-        foreach (IdentifierNameSyntax identifier in root.DescendantNodes().OfType<IdentifierNameSyntax>())
+        foreach (var identifier in root.DescendantNodes().OfType<IdentifierNameSyntax>())
         {
-            string variableName = identifier.Identifier.ValueText;
+            var variableName = identifier.Identifier.ValueText;
             
             if (IsKeywordOrType(variableName))
                 continue;
@@ -274,9 +274,9 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
         }
 
         // Classify based on usage patterns
-        foreach (VariableUsageInfo usage in variableUsages.Values)
+        foreach (var usage in variableUsages.Values)
         {
-            string inferredType = InferVariableTypeFromUsage(usage.Name, extractedCode);
+            var inferredType = InferVariableTypeFromUsage(usage.Name, extractedCode);
             
             var variableInfo = new VariableInfo
             {
@@ -317,9 +317,9 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
 
         var result = new VariableHandlingMapping();
 
-        List<VariableInfo> candidateParameters = scopeAnalysis.ParameterVariables.ToList();
+        var candidateParameters = scopeAnalysis.ParameterVariables.ToList();
         
-        List<VariableInfo> filteredParameters = candidateParameters;
+        var filteredParameters = candidateParameters;
         
         if (extractedLines != null)
         {
@@ -332,7 +332,7 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
                 candidateParameters.Count, filteredParameters.Count);
         }
 
-        foreach (VariableInfo variable in filteredParameters)
+        foreach (var variable in filteredParameters)
         {
             result.ParametersToPass.Add(variable);
             
@@ -347,7 +347,7 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
         }
 
         // Local variables declared in extraction
-        foreach (VariableInfo variable in scopeAnalysis.LocalVariables)
+        foreach (var variable in scopeAnalysis.LocalVariables)
         {
             result.VariablesToDeclare.Add(variable);
             
@@ -367,7 +367,7 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
         }
         else if (result.VariablesToReturn.Count == 1)
         {
-            VariableInfo returnVar = result.VariablesToReturn.First();
+            var returnVar = result.VariablesToReturn.First();
             result.SuggestedReturnType = !string.IsNullOrEmpty(returnVar.Type) && returnVar.Type != "var" 
                 ? returnVar.Type 
                 : "int"; // Default to int for better compatibility
@@ -375,7 +375,7 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
         else
         {
             // Multiple return values require tuple
-            List<string> types = result.VariablesToReturn.Select(v => 
+            var types = result.VariablesToReturn.Select(v => 
                 !string.IsNullOrEmpty(v.Type) && v.Type != "var" ? v.Type : "int").ToList();
             result.SuggestedReturnType = $"({string.Join(", ", types)})";
         }
@@ -406,7 +406,7 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
         try
         {
             // Perform all analysis phases
-            List<SyntaxNode> nodes = syntaxNodes.ToList();
+            var nodes = syntaxNodes.ToList();
             result.ScopeAnalysis = await AnalyzeVariableScopeAsync(extractedLines, semanticModel, nodes);
             result.UsageClassification = await ClassifyVariableUsageAsync(extractedLines, semanticModel, nodes);
             
@@ -492,7 +492,7 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
     private static string InferVariableTypeFromUsage(string variableName, string code)
     {
         // Check for obvious type indicators in variable name
-        string lowerName = variableName.ToLower();
+        var lowerName = variableName.ToLower();
         
         // Integer patterns
         if (lowerName.Contains("count") || lowerName.Contains("index") || lowerName.Contains("id") || 
@@ -592,7 +592,7 @@ public async Task<VariableScopeAnalysis> AnalyzeVariableScopeAsync(
     /// </summary>
     private static bool IsWriteContext(IdentifierNameSyntax identifier)
     {
-        SyntaxNode? parent = identifier.Parent;
+        var parent = identifier.Parent;
 
         return parent switch
         {

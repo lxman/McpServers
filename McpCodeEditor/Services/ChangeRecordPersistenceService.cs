@@ -24,7 +24,7 @@ public class ChangeRecordPersistenceService(
     {
         get
         {
-            string directory = appDataPathService.GetWorkspaceDirectory(CurrentWorkspacePath);
+            var directory = appDataPathService.GetWorkspaceDirectory(CurrentWorkspacePath);
             appDataPathService.EnsureDirectoryExists(directory);
             return directory;
         }
@@ -37,7 +37,7 @@ public class ChangeRecordPersistenceService(
     {
         get
         {
-            string file = appDataPathService.GetWorkspaceChangesFile(CurrentWorkspacePath);
+            var file = appDataPathService.GetWorkspaceChangesFile(CurrentWorkspacePath);
             appDataPathService.EnsureDirectoryExists(Path.GetDirectoryName(file)!);
             return file;
         }
@@ -57,9 +57,9 @@ public class ChangeRecordPersistenceService(
 
         try
         {
-            string[] lines = await File.ReadAllLinesAsync(ChangeLogFile);
+            var lines = await File.ReadAllLinesAsync(ChangeLogFile);
 
-            foreach (string line in lines)
+            foreach (var line in lines)
             {
                 if (string.IsNullOrWhiteSpace(line))
                     continue;
@@ -98,7 +98,7 @@ public class ChangeRecordPersistenceService(
             await workspaceMetadataService.UpdateLastAccessedAsync(CurrentWorkspacePath);
         }
 
-        string jsonLine = JsonSerializer.Serialize(changeRecord) + Environment.NewLine;
+        var jsonLine = JsonSerializer.Serialize(changeRecord) + Environment.NewLine;
         await File.AppendAllTextAsync(ChangeLogFile, jsonLine);
     }
 
@@ -107,7 +107,7 @@ public class ChangeRecordPersistenceService(
     /// </summary>
     public async Task RewriteChangeLogAsync(List<ChangeRecord> changes)
     {
-        string[] lines = changes.Select(c => JsonSerializer.Serialize(c)).ToArray();
+        var lines = changes.Select(c => JsonSerializer.Serialize(c)).ToArray();
         await File.WriteAllLinesAsync(ChangeLogFile, lines);
     }
 
@@ -118,8 +118,8 @@ public class ChangeRecordPersistenceService(
     {
         try
         {
-            List<ChangeRecord> allChanges = await LoadChangeRecordsAsync();
-            ChangeRecord? changeRecord = allChanges.FirstOrDefault(c => c.Id == changeId);
+            var allChanges = await LoadChangeRecordsAsync();
+            var changeRecord = allChanges.FirstOrDefault(c => c.Id == changeId);
 
             if (changeRecord != null)
             {
@@ -141,8 +141,8 @@ public class ChangeRecordPersistenceService(
     {
         try
         {
-            List<ChangeRecord> allChanges = await LoadChangeRecordsAsync();
-            ChangeRecord? changeRecord = allChanges.FirstOrDefault(c => c.Id == changeId);
+            var allChanges = await LoadChangeRecordsAsync();
+            var changeRecord = allChanges.FirstOrDefault(c => c.Id == changeId);
 
             if (changeRecord != null)
             {
@@ -164,7 +164,7 @@ public class ChangeRecordPersistenceService(
     {
         try
         {
-            List<ChangeRecord> allChanges = await LoadChangeRecordsAsync();
+            var allChanges = await LoadChangeRecordsAsync();
             return allChanges.FirstOrDefault(c => c.Id == changeId);
         }
         catch

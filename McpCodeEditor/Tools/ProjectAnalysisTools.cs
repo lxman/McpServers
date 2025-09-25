@@ -21,8 +21,8 @@ public class ProjectAnalysisTools(
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
-            string analysisPath = projectPath ?? config.DefaultWorkspace;
-            ProjectScaleAnalysis analysis = await ProjectScaleService.AnalyzeProjectScaleAsync(analysisPath);
+            var analysisPath = projectPath ?? config.DefaultWorkspace;
+            var analysis = await ProjectScaleService.AnalyzeProjectScaleAsync(analysisPath);
             
             var result = new
             {
@@ -66,8 +66,8 @@ public class ProjectAnalysisTools(
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
-            string analysisPath = projectPath ?? config.DefaultWorkspace;
-            SourceFileStatistics stats = await ProjectScaleService.GetSourceStatisticsAsync(analysisPath);
+            var analysisPath = projectPath ?? config.DefaultWorkspace;
+            var stats = await ProjectScaleService.GetSourceStatisticsAsync(analysisPath);
             
             var result = new
             {
@@ -112,8 +112,8 @@ public class ProjectAnalysisTools(
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
-            string analysisPath = projectPath ?? config.DefaultWorkspace;
-            BuildArtifactDetectionResult detection = await ProjectScaleService.DetectBuildArtifactsAsync(analysisPath);
+            var analysisPath = projectPath ?? config.DefaultWorkspace;
+            var detection = await ProjectScaleService.DetectBuildArtifactsAsync(analysisPath);
             
             var result = new
             {

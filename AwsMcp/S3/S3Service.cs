@@ -1,8 +1,6 @@
-﻿using Amazon.Runtime;
-using Amazon.S3;
+﻿using Amazon.S3;
 using Amazon.S3.Model;
 using AwsMcp.Configuration;
-using AwsMcp.Configuration.Models;
 using Microsoft.Extensions.Logging;
 
 namespace AwsMcp.S3;

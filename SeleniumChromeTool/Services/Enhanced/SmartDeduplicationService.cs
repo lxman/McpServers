@@ -33,17 +33,17 @@ public class SmartDeduplicationService
         var duplicateGroups = new List<List<EnhancedJobListing>>();
         var processedJobs = new HashSet<string>();
         
-        foreach (EnhancedJobListing job in jobs)
+        foreach (var job in jobs)
         {
-            string jobIdentifier = GetJobIdentifier(job);
+            var jobIdentifier = GetJobIdentifier(job);
             if (processedJobs.Contains(jobIdentifier))
                 continue;
 
-            List<EnhancedJobListing> duplicates = await FindDuplicatesAsync(job, jobs);
+            var duplicates = await FindDuplicatesAsync(job, jobs);
             if (duplicates.Count > 1)
             {
                 duplicateGroups.Add(duplicates);
-                foreach (EnhancedJobListing dup in duplicates)
+                foreach (var dup in duplicates)
                 {
                     processedJobs.Add(GetJobIdentifier(dup));
                 }
@@ -57,9 +57,9 @@ public class SmartDeduplicationService
         // Select best representative from each duplicate group
         var uniqueJobs = new List<EnhancedJobListing>();
         
-        foreach (List<EnhancedJobListing> group in duplicateGroups)
+        foreach (var group in duplicateGroups)
         {
-            EnhancedJobListing bestJob = SelectBestJobFromGroup(group);
+            var bestJob = SelectBestJobFromGroup(group);
             bestJob.DuplicateInfo = new DuplicateJobInfo
             {
                 IsDeduplicated = true,
@@ -80,7 +80,7 @@ public class SmartDeduplicationService
         }
 
         // Add jobs that weren't duplicates
-        List<EnhancedJobListing> singleJobs = jobs.Where(j => !duplicateGroups.Any(g => g.Any(dj => dj.JobId == j.JobId))).ToList();
+        var singleJobs = jobs.Where(j => !duplicateGroups.Any(g => g.Any(dj => dj.JobId == j.JobId))).ToList();
         uniqueJobs.AddRange(singleJobs);
 
         result.UniqueJobs = uniqueJobs;
@@ -100,7 +100,7 @@ public class SmartDeduplicationService
     {
         var duplicates = new List<EnhancedJobListing> { targetJob };
 
-        foreach (EnhancedJobListing job in allJobs)
+        foreach (var job in allJobs)
         {
             // Skip if it's the same job instance (identical object reference or same ID)
             if (IsSameJob(targetJob, job)) continue;
@@ -197,8 +197,8 @@ public class SmartDeduplicationService
             return false;
 
         // Normalize URLs
-        string normalized1 = NormalizeUrl(url1);
-        string normalized2 = NormalizeUrl(url2);
+        var normalized1 = NormalizeUrl(url1);
+        var normalized2 = NormalizeUrl(url2);
 
         if (normalized1 == normalized2)
             return true;
@@ -219,13 +219,13 @@ public class SmartDeduplicationService
             var uri = new Uri(url.ToLower());
             
             // Remove common tracking parameters
-            string[] cleanQuery = uri.Query
+            var cleanQuery = uri.Query
                 .Replace("?", "")
                 .Split('&')
                 .Where(param => !IsTrackingParameter(param))
                 .ToArray();
 
-            string cleanQueryString = cleanQuery.Length > 0 ? "?" + string.Join("&", cleanQuery) : "";
+            var cleanQueryString = cleanQuery.Length > 0 ? "?" + string.Join("&", cleanQuery) : "";
             
             return $"{uri.Scheme}://{uri.Host}{uri.AbsolutePath}{cleanQueryString}";
         }
@@ -247,8 +247,8 @@ public class SmartDeduplicationService
     private bool CheckUrlVariations(string url1, string url2)
     {
         // Extract job IDs from URLs
-        string jobId1 = ExtractJobIdFromUrl(url1);
-        string jobId2 = ExtractJobIdFromUrl(url2);
+        var jobId1 = ExtractJobIdFromUrl(url1);
+        var jobId2 = ExtractJobIdFromUrl(url2);
 
         if (!string.IsNullOrEmpty(jobId1) && !string.IsNullOrEmpty(jobId2))
         {
@@ -276,9 +276,9 @@ public class SmartDeduplicationService
             @"/([a-f0-9]{24})"        // MongoDB ObjectId pattern
         };
 
-        foreach (string pattern in patterns)
+        foreach (var pattern in patterns)
         {
-            Match match = Regex.Match(url, pattern, RegexOptions.IgnoreCase);
+            var match = Regex.Match(url, pattern, RegexOptions.IgnoreCase);
             if (match.Success)
             {
                 return match.Groups[1].Value;
@@ -296,8 +296,8 @@ public class SmartDeduplicationService
         if (string.IsNullOrEmpty(company1) || string.IsNullOrEmpty(company2))
             return false;
 
-        string normalized1 = NormalizeCompanyName(company1);
-        string normalized2 = NormalizeCompanyName(company2);
+        var normalized1 = NormalizeCompanyName(company1);
+        var normalized2 = NormalizeCompanyName(company2);
 
         return normalized1 == normalized2 || GetStringSimilarity(normalized1, normalized2) > 0.9;
     }
@@ -309,11 +309,11 @@ public class SmartDeduplicationService
     {
         if (string.IsNullOrEmpty(companyName)) return string.Empty;
 
-        string normalized = companyName.ToLower().Trim();
+        var normalized = companyName.ToLower().Trim();
 
         // Remove common corporate suffixes
         var suffixes = new[] { ", inc.", ", inc", ", llc", ", ltd", ", corp", ", corporation", " inc", " llc", " ltd" };
-        foreach (string suffix in suffixes)
+        foreach (var suffix in suffixes)
         {
             if (normalized.EndsWith(suffix))
             {
@@ -336,8 +336,8 @@ public class SmartDeduplicationService
         if (string.IsNullOrEmpty(title1) || string.IsNullOrEmpty(title2))
             return false;
 
-        string normalized1 = NormalizeJobTitle(title1);
-        string normalized2 = NormalizeJobTitle(title2);
+        var normalized1 = NormalizeJobTitle(title1);
+        var normalized2 = NormalizeJobTitle(title2);
 
         return GetStringSimilarity(normalized1, normalized2) > 0.8;
     }
@@ -349,7 +349,7 @@ public class SmartDeduplicationService
     {
         if (string.IsNullOrEmpty(title)) return string.Empty;
 
-        string normalized = title.ToLower().Trim();
+        var normalized = title.ToLower().Trim();
 
         // Remove common variations
         normalized = Regex.Replace(normalized, @"\b(sr|senior|jr|junior)\b\.?", "");
@@ -368,8 +368,8 @@ public class SmartDeduplicationService
             return false;
 
         // Extract numeric values
-        List<decimal> nums1 = ExtractSalaryNumbers(salary1);
-        List<decimal> nums2 = ExtractSalaryNumbers(salary2);
+        var nums1 = ExtractSalaryNumbers(salary1);
+        var nums2 = ExtractSalaryNumbers(salary2);
 
         if (nums1.Count == 0 || nums2.Count == 0)
             return false;
@@ -381,11 +381,11 @@ public class SmartDeduplicationService
     private List<decimal> ExtractSalaryNumbers(string salary)
     {
         var numbers = new List<decimal>();
-        MatchCollection matches = Regex.Matches(salary.Replace(",", ""), @"\d+");
+        var matches = Regex.Matches(salary.Replace(",", ""), @"\d+");
         
         foreach (Match match in matches)
         {
-            if (decimal.TryParse(match.Value, out decimal num))
+            if (decimal.TryParse(match.Value, out var num))
             {
                 numbers.Add(num);
             }
@@ -398,19 +398,19 @@ public class SmartDeduplicationService
     {
         if (range1.Count == 0 || range2.Count == 0) return false;
 
-        decimal min1 = range1.Min();
-        decimal max1 = range1.Max();
-        decimal min2 = range2.Min();
-        decimal max2 = range2.Max();
+        var min1 = range1.Min();
+        var max1 = range1.Max();
+        var min2 = range2.Min();
+        var max2 = range2.Max();
 
         // Check for significant overlap (at least 50%)
-        decimal overlapStart = Math.Max(min1, min2);
-        decimal overlapEnd = Math.Min(max1, max2);
-        decimal overlap = Math.Max(0, overlapEnd - overlapStart);
+        var overlapStart = Math.Max(min1, min2);
+        var overlapEnd = Math.Min(max1, max2);
+        var overlap = Math.Max(0, overlapEnd - overlapStart);
         
-        decimal range1Size = max1 - min1;
-        decimal range2Size = max2 - min2;
-        decimal avgRangeSize = (range1Size + range2Size) / 2;
+        var range1Size = max1 - min1;
+        var range2Size = max2 - min2;
+        var avgRangeSize = (range1Size + range2Size) / 2;
 
         return avgRangeSize > 0 && overlap / avgRangeSize > 0.5m;
     }
@@ -423,8 +423,8 @@ public class SmartDeduplicationService
         if (string.IsNullOrEmpty(location1) || string.IsNullOrEmpty(location2))
             return false;
 
-        string normalized1 = NormalizeLocation(location1);
-        string normalized2 = NormalizeLocation(location2);
+        var normalized1 = NormalizeLocation(location1);
+        var normalized2 = NormalizeLocation(location2);
 
         return normalized1 == normalized2 || GetStringSimilarity(normalized1, normalized2) > 0.8;
     }
@@ -433,7 +433,7 @@ public class SmartDeduplicationService
     {
         if (string.IsNullOrEmpty(location)) return string.Empty;
 
-        string normalized = location.ToLower().Trim();
+        var normalized = location.ToLower().Trim();
         
         // Handle remote work variations
         if (normalized.Contains("remote"))
@@ -456,14 +456,14 @@ public class SmartDeduplicationService
             return 0.0;
 
         // Use a simplified similarity check for performance
-        HashSet<string> words1 = GetSignificantWords(desc1);
-        HashSet<string> words2 = GetSignificantWords(desc2);
+        var words1 = GetSignificantWords(desc1);
+        var words2 = GetSignificantWords(desc2);
 
         if (words1.Count == 0 || words2.Count == 0)
             return 0.0;
 
-        int intersection = words1.Intersect(words2).Count();
-        int union = words1.Union(words2).Count();
+        var intersection = words1.Intersect(words2).Count();
+        var union = words1.Union(words2).Count();
 
         return (double)intersection / union; // Jaccard similarity
     }
@@ -472,7 +472,7 @@ public class SmartDeduplicationService
     {
         if (string.IsNullOrEmpty(text)) return [];
 
-        HashSet<string> words = Regex.Matches(text.ToLower(), @"\b\w{4,}\b")
+        var words = Regex.Matches(text.ToLower(), @"\b\w{4,}\b")
             .Cast<Match>()
             .Select(m => m.Value)
             .Where(w => !IsStopWord(w))
@@ -497,8 +497,8 @@ public class SmartDeduplicationService
 
         if (s1 == s2) return 1.0;
 
-        int distance = LevenshteinDistance(s1, s2);
-        int maxLength = Math.Max(s1.Length, s2.Length);
+        var distance = LevenshteinDistance(s1, s2);
+        var maxLength = Math.Max(s1.Length, s2.Length);
         
         return 1.0 - (double)distance / maxLength;
     }
@@ -517,7 +517,7 @@ public class SmartDeduplicationService
         {
             for (var j = 1; j <= s2.Length; j++)
             {
-                int cost = s1[i - 1] == s2[j - 1] ? 0 : 1;
+                var cost = s1[i - 1] == s2[j - 1] ? 0 : 1;
                 matrix[i, j] = Math.Min(
                     Math.Min(matrix[i - 1, j] + 1, matrix[i, j - 1] + 1),
                     matrix[i - 1, j - 1] + cost);
@@ -572,7 +572,7 @@ public class SmartDeduplicationService
         // Recency
         if (job.PostedDate.HasValue)
         {
-            double daysOld = (DateTime.UtcNow - job.PostedDate.Value).TotalDays;
+            var daysOld = (DateTime.UtcNow - job.PostedDate.Value).TotalDays;
             if (daysOld < 7) score += 10;
             else if (daysOld < 30) score += 5;
         }
@@ -589,10 +589,10 @@ public class SmartDeduplicationService
 
         if (group.Count < 2) return reasons;
 
-        EnhancedJobListing first = group[0];
-        IEnumerable<EnhancedJobListing> rest = group.Skip(1);
+        var first = group[0];
+        var rest = group.Skip(1);
 
-        foreach (EnhancedJobListing job in rest)
+        foreach (var job in rest)
         {
             if (AreUrlsDuplicate(first.JobUrl, job.JobUrl))
                 reasons.Add($"URL match: {first.SourceSite} vs {job.SourceSite}");

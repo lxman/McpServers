@@ -59,18 +59,18 @@ public class ProjectDetectionService
         ];
 
         // Search each path for projects
-        foreach (string searchPath in searchPaths.Where(Directory.Exists))
+        foreach (var searchPath in searchPaths.Where(Directory.Exists))
         {
             try
             {
                 // Search immediate subdirectories for project patterns
-                IEnumerable<string> subdirs = Directory.GetDirectories(searchPath, "*", SearchOption.TopDirectoryOnly)
+                var subdirs = Directory.GetDirectories(searchPath, "*", SearchOption.TopDirectoryOnly)
                     .Take(50) // Limit to avoid performance issues
                     .Where(dir => !IsSystemDirectory(dir));
 
-                foreach (string dir in subdirs)
+                foreach (var dir in subdirs)
                 {
-                    ProjectInfo projectInfo = await AnalyzeDirectoryAsync(dir);
+                    var projectInfo = await AnalyzeDirectoryAsync(dir);
                     if (projectInfo.Type != ProjectType.Unknown)
                     {
                         projects.Add(projectInfo);
@@ -78,7 +78,7 @@ public class ProjectDetectionService
                 }
 
                 // Also check the search path itself
-                ProjectInfo rootProject = await AnalyzeDirectoryAsync(searchPath);
+                var rootProject = await AnalyzeDirectoryAsync(searchPath);
                 if (rootProject.Type != ProjectType.Unknown)
                 {
                     projects.Add(rootProject);
@@ -111,14 +111,14 @@ public class ProjectDetectionService
             Name = Path.GetFileName(path)
         };
 
-        string[] files = Directory.GetFiles(path, "*", SearchOption.TopDirectoryOnly);
-        string[] directories = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly);
-        string?[] allItems = files.Concat(directories).Select(Path.GetFileName).ToArray();
+        var files = Directory.GetFiles(path, "*", SearchOption.TopDirectoryOnly);
+        var directories = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly);
+        var allItems = files.Concat(directories).Select(Path.GetFileName).ToArray();
 
         // Check each project type
-        foreach ((ProjectType type, string[] patterns) in _projectPatterns)
+        foreach ((var type, var patterns) in _projectPatterns)
         {
-            List<string> matches = patterns.Where(pattern =>
+            var matches = patterns.Where(pattern =>
                 allItems.Any(item => MatchesPattern(item, pattern))).ToList();
 
             if (matches.Count != 0)
@@ -132,12 +132,12 @@ public class ProjectDetectionService
         // Special handling for React projects (check package.json content)
         if (projectInfo.Type == ProjectType.NodeJs)
         {
-            string packageJsonPath = Path.Combine(path, "package.json");
+            var packageJsonPath = Path.Combine(path, "package.json");
             if (File.Exists(packageJsonPath))
             {
                 try
                 {
-                    string packageContent = await File.ReadAllTextAsync(packageJsonPath);
+                    var packageContent = await File.ReadAllTextAsync(packageJsonPath);
                     if (packageContent.Contains("\"react\"") || packageContent.Contains("\"@types/react\""))
                     {
                         projectInfo.Type = ProjectType.React;
@@ -162,7 +162,7 @@ public class ProjectDetectionService
         if (projectInfo.Type != ProjectType.Unknown)
         {
             // Bonus for recently modified directories
-            DateTime lastWrite = Directory.GetLastWriteTime(path);
+            var lastWrite = Directory.GetLastWriteTime(path);
             if (lastWrite > DateTime.Now.AddDays(-30))
             {
                 projectInfo.Score += 20; // Recent activity bonus
@@ -173,7 +173,7 @@ public class ProjectDetectionService
             }
 
             // Bonus for larger projects (more likely to be active)
-            int fileCount = files.Length;
+            var fileCount = files.Length;
             if (fileCount > 50)
             {
                 projectInfo.Score += 15; // Large project bonus
@@ -195,7 +195,7 @@ public class ProjectDetectionService
     /// </summary>
     public async Task<ProjectInfo?> SuggestBestWorkspaceAsync()
     {
-        List<ProjectInfo> projects = await DetectWorkspacesAsync();
+        var projects = await DetectWorkspacesAsync();
 
         // Prefer the highest-scored project that's not a system directory
         return projects
@@ -207,7 +207,7 @@ public class ProjectDetectionService
         if (pattern.Contains('*'))
         {
             // Simple glob pattern matching
-            string regex = "^" + pattern.Replace("*", ".*").Replace("?", ".") + "$";
+            var regex = "^" + pattern.Replace("*", ".*").Replace("?", ".") + "$";
             return System.Text.RegularExpressions.Regex.IsMatch(fileName, regex,
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         }
@@ -228,7 +228,7 @@ public class ProjectDetectionService
 
     private static string GenerateDescription(ProjectInfo project)
     {
-        string desc = project.Type switch
+        var desc = project.Type switch
         {
             ProjectType.DotNet => "C#/.NET project",
             ProjectType.NodeJs => "Node.js project",

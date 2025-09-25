@@ -12,7 +12,7 @@ public class AuditLogger
     public AuditLogger(ILogger<AuditLogger> logger)
     {
         _logger = logger;
-        string logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DesktopDriver", "logs");
+        var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DesktopDriver", "logs");
         Directory.CreateDirectory(logDir);
         _auditLogPath = Path.Combine(logDir, $"audit_{DateTime.Now:yyyyMMdd}.json");
     }
@@ -35,7 +35,7 @@ public class AuditLogger
         {
             lock (_lockObject)
             {
-                string json = JsonSerializer.Serialize(logEntry, new JsonSerializerOptions { WriteIndented = false });
+                var json = JsonSerializer.Serialize(logEntry, new JsonSerializerOptions { WriteIndented = false });
                 File.AppendAllText(_auditLogPath, json + Environment.NewLine);
             }
         }

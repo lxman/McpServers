@@ -1,8 +1,6 @@
 using Amazon.ECS;
 using Amazon.ECS.Model;
-using Amazon.Runtime;
 using AwsMcp.Configuration;
-using AwsMcp.Configuration.Models;
 using Microsoft.Extensions.Logging;
 using Task = System.Threading.Tasks.Task;
 

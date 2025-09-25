@@ -101,7 +101,7 @@ public class CodeAnalysisService(CodeEditorConfigurationService config)
                 language = DetectLanguage(actualPath, sourceCode);
             }
 
-            string formattedCode = language?.ToLowerInvariant() switch
+            var formattedCode = language?.ToLowerInvariant() switch
             {
                 "csharp" or "cs" => await FormatCSharpAsync(sourceCode),
                 _ => sourceCode // For now, only C# formatting is implemented
@@ -134,8 +134,8 @@ public class CodeAnalysisService(CodeEditorConfigurationService config)
     {
         try
         {
-            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceCode);
-            SyntaxNode root = await syntaxTree.GetRootAsync();
+            var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode);
+            var root = await syntaxTree.GetRootAsync();
 
             var result = new
             {
@@ -164,9 +164,9 @@ public class CodeAnalysisService(CodeEditorConfigurationService config)
     private static async Task<object> AnalyzeGenericAsync(string sourceCode, string language, bool includeDiagnostics, bool includeSymbols, bool includeMetrics)
     {
         // For non-C# languages, provide basic analysis
-        string[] lines = sourceCode.Split('\n');
-        int nonEmptyLines = lines.Count(line => !string.IsNullOrWhiteSpace(line));
-        int commentLines = language.ToLowerInvariant() switch
+        var lines = sourceCode.Split('\n');
+        var nonEmptyLines = lines.Count(line => !string.IsNullOrWhiteSpace(line));
+        var commentLines = language.ToLowerInvariant() switch
         {
             "javascript" or "js" or "typescript" or "ts" => lines.Count(line => line.TrimStart().StartsWith("//")),
             "python" or "py" => lines.Count(line => line.TrimStart().StartsWith("#")),
@@ -188,11 +188,11 @@ public class CodeAnalysisService(CodeEditorConfigurationService config)
     {
         try
         {
-            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceCode);
-            SyntaxNode root = await syntaxTree.GetRootAsync();
+            var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode);
+            var root = await syntaxTree.GetRootAsync();
 
             var workspace = new AdhocWorkspace();
-            SyntaxNode formattedRoot = Formatter.Format(root, workspace);
+            var formattedRoot = Formatter.Format(root, workspace);
 
             return formattedRoot.ToFullString();
         }
@@ -205,7 +205,7 @@ public class CodeAnalysisService(CodeEditorConfigurationService config)
 
     private static string DetectLanguage(string path, string content)
     {
-        string extension = Path.GetExtension(path).ToLowerInvariant();
+        var extension = Path.GetExtension(path).ToLowerInvariant();
 
         return extension switch
         {
@@ -232,7 +232,7 @@ public class CodeAnalysisService(CodeEditorConfigurationService config)
 
     private object GetDiagnostics(SyntaxTree syntaxTree)
     {
-        IEnumerable<Diagnostic> diagnostics = syntaxTree.GetDiagnostics();
+        var diagnostics = syntaxTree.GetDiagnostics();
 
         return new
         {
@@ -245,7 +245,7 @@ public class CodeAnalysisService(CodeEditorConfigurationService config)
 
     private object FormatDiagnostic(Diagnostic diagnostic)
     {
-        FileLinePositionSpan lineSpan = diagnostic.Location.GetLineSpan();
+        var lineSpan = diagnostic.Location.GetLineSpan();
         return new
         {
             id = diagnostic.Id,
@@ -262,7 +262,7 @@ public class CodeAnalysisService(CodeEditorConfigurationService config)
     {
         try
         {
-            SyntaxNode root = await syntaxTree.GetRootAsync();
+            var root = await syntaxTree.GetRootAsync();
 
             return new
             {
@@ -307,9 +307,9 @@ public class CodeAnalysisService(CodeEditorConfigurationService config)
 
     private static object GetCodeMetrics(SyntaxNode root, string sourceCode)
     {
-        string[] lines = sourceCode.Split('\n');
-        int nonEmptyLines = lines.Count(line => !string.IsNullOrWhiteSpace(line));
-        int commentLines = lines.Count(line => line.TrimStart().StartsWith("//") || line.TrimStart().StartsWith("/*"));
+        var lines = sourceCode.Split('\n');
+        var nonEmptyLines = lines.Count(line => !string.IsNullOrWhiteSpace(line));
+        var commentLines = lines.Count(line => line.TrimStart().StartsWith("//") || line.TrimStart().StartsWith("/*"));
 
         return new
         {
@@ -347,23 +347,23 @@ public class CodeAnalysisService(CodeEditorConfigurationService config)
     {
         // Simplified maintainability index calculation
         // Real formula is more complex and requires Halstead metrics
-        double volume = Math.Log(codeLines + 1) * 16.2;
-        double commentRatio = codeLines > 0 ? (double)commentLines / codeLines : 0;
-        double complexityFactor = Math.Log(complexity) * 5.2;
+        var volume = Math.Log(codeLines + 1) * 16.2;
+        var commentRatio = codeLines > 0 ? (double)commentLines / codeLines : 0;
+        var complexityFactor = Math.Log(complexity) * 5.2;
 
-        double index = Math.Max(0, (171 - complexityFactor - volume + (commentRatio * 50)) * 100 / 171);
+        var index = Math.Max(0, (171 - complexityFactor - volume + (commentRatio * 50)) * 100 / 171);
         return (int)Math.Round(index);
     }
 
     private static string EstimateComplexity(string sourceCode)
     {
-        string[] lines = sourceCode.Split('\n');
+        var lines = sourceCode.Split('\n');
         var keywords = new[] { "if", "else", "while", "for", "switch", "case", "try", "catch" };
         var complexityScore = 0;
 
-        foreach (string line in lines)
+        foreach (var line in lines)
         {
-            foreach (string keyword in keywords)
+            foreach (var keyword in keywords)
             {
                 if (line.Contains(keyword))
                 {

@@ -1,5 +1,4 @@
 ﻿using McpCodeEditor.Models.Options;
-using McpCodeEditor.Models.Validation;
 using McpCodeEditor.Services.Validation;
 
 namespace McpCodeEditorTests.Services.Refactoring.CSharp
@@ -49,7 +48,7 @@ namespace SimpleTest
                 EndLine = 15
             };
 
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             // The validator should detect:
             // 1. 'result' is declared in the selected code
@@ -125,7 +124,7 @@ namespace TestExtraction
                 EndLine = 32
             };
 
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             Assert.True(result.IsValid);
             Assert.NotNull(result.Analysis);
@@ -167,7 +166,7 @@ public class Test
                 EndLine = 10
             };
 
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             Assert.True(result.IsValid);
             Assert.NotNull(result.Analysis);

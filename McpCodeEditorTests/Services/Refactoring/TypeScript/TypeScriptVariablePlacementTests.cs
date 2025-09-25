@@ -48,7 +48,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
 
             // Create real services for Phase 2 refactored functionality
             var boundaryDetectionService = new ExpressionBoundaryDetectionService(new Mock<ILogger<ExpressionBoundaryDetectionService>>().Object);
-            VariableDeclarationGeneratorService variableDeclarationService = CreateVariableDeclarationService();
+            var variableDeclarationService = CreateVariableDeclarationService();
             var mockAstAnalysis = new Mock<ITypeScriptAstAnalysisService>();
             var mockCodeModification = new Mock<ITypeScriptCodeModificationService>();
 
@@ -80,7 +80,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             // Actual (broken): Generates "const injectedAccountsClient = inject(AccountsClient);" - invalid for class members
 
             // Act
-            TestVariableDeclarationResult result = InvokeGenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine);
+            var result = InvokeGenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine);
 
             // Assert
             Assert.True(result.Success, $"Variable declaration generation failed: {result.ErrorMessage}");
@@ -101,7 +101,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const string typeAnnotation = "AccountsClient";
 
             // Act
-            TestVariableDeclarationResult result = InvokeGenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine, typeAnnotation);
+            var result = InvokeGenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine, typeAnnotation);
 
             // Assert
             Assert.True(result.Success);
@@ -119,7 +119,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int insertionLine = 15;
 
             // Act
-            TestVariableDeclarationResult result = InvokeGenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine);
+            var result = InvokeGenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine);
 
             // Assert
             Assert.True(result.Success);
@@ -141,7 +141,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int insertionLine = 20;
 
             // Act
-            TestVariableDeclarationResult result = InvokeGenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine);
+            var result = InvokeGenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine);
 
             // Assert
             Assert.True(result.Success);
@@ -162,7 +162,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const string typeAnnotation = "User[]";
 
             // Act
-            TestVariableDeclarationResult result = InvokeGenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine, typeAnnotation);
+            var result = InvokeGenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine, typeAnnotation);
 
             // Assert
             Assert.True(result.Success);
@@ -184,7 +184,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int insertionLine = 12;
 
             // Act
-            TestVariableDeclarationResult result = InvokeGenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine);
+            var result = InvokeGenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine);
 
             // Assert
             Assert.True(result.Success);
@@ -203,7 +203,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int insertionLine = 8;
 
             // Act
-            TestVariableDeclarationResult result = InvokeGenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine);
+            var result = InvokeGenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine);
 
             // Assert
             Assert.True(result.Success);
@@ -224,7 +224,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const string scopeContext = "class";
 
             // Act
-            TestPathValidationResult result = InvokeValidateVariableDeclaration(invalidDeclaration, scopeContext);
+            var result = InvokeValidateVariableDeclaration(invalidDeclaration, scopeContext);
 
             // Assert
             Assert.False(result.IsValid, "Should detect that 'const' is invalid for class members");
@@ -240,7 +240,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const string scopeContext = "class";
 
             // Act
-            TestPathValidationResult result = InvokeValidateVariableDeclaration(validDeclaration, scopeContext);
+            var result = InvokeValidateVariableDeclaration(validDeclaration, scopeContext);
 
             // Assert
             Assert.True(result.IsValid, $"Should accept valid class member syntax: {result.ErrorMessage}");
@@ -254,7 +254,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const string scopeContext = "method";
 
             // Act
-            TestPathValidationResult result = InvokeValidateVariableDeclaration(validDeclaration, scopeContext);
+            var result = InvokeValidateVariableDeclaration(validDeclaration, scopeContext);
 
             // Assert
             Assert.True(result.IsValid, $"Should accept valid method-local syntax: {result.ErrorMessage}");
@@ -268,7 +268,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const string scopeContext = "method";
 
             // Act
-            TestPathValidationResult result = InvokeValidateVariableDeclaration(invalidDeclaration, scopeContext);
+            var result = InvokeValidateVariableDeclaration(invalidDeclaration, scopeContext);
 
             // Assert
             Assert.False(result.IsValid, "Should detect that 'private readonly' is invalid for method-local variables");
@@ -297,7 +297,7 @@ export class AccountListComponent {
             const int lineNumber = 5; // Within class but outside any method
 
             // Act
-            TestScopeDetectionResult result = InvokeDetectScope(fileContent, lineNumber);
+            var result = InvokeDetectScope(fileContent, lineNumber);
 
             // Assert
             Assert.True(result.Success);
@@ -321,7 +321,7 @@ export class AccountListComponent {
             const int lineNumber = 5; // Within processData method
 
             // Act
-            TestScopeDetectionResult result = InvokeDetectScope(fileContent, lineNumber);
+            var result = InvokeDetectScope(fileContent, lineNumber);
 
             // Assert
             Assert.True(result.Success);
@@ -345,7 +345,7 @@ export class AccountListComponent {
             const int lineNumber = 5; // Within constructor
 
             // Act
-            TestScopeDetectionResult result = InvokeDetectScope(fileContent, lineNumber);
+            var result = InvokeDetectScope(fileContent, lineNumber);
 
             // Assert
             Assert.True(result.Success);
@@ -376,7 +376,7 @@ export class AccountListComponent {
             const string variableName = "injectedAccountsClient";
 
             // Act - This should extract inject(AccountsClient) into a class member
-            TestIntroduceVariableResult result = InvokeIntroduceVariable(originalCode, line, startColumn, endColumn, variableName);
+            var result = InvokeIntroduceVariable(originalCode, line, startColumn, endColumn, variableName);
 
             // Assert
             Assert.True(result.Success, $"Variable introduction failed: {result.ErrorMessage}");
@@ -406,7 +406,7 @@ export class AccountListComponent {
             const string variableName = "maxValue";
 
             // Act
-            TestIntroduceVariableResult result = InvokeIntroduceVariable(originalCode, line, startColumn, endColumn, variableName);
+            var result = InvokeIntroduceVariable(originalCode, line, startColumn, endColumn, variableName);
 
             // Assert
             Assert.True(result.Success);
@@ -424,12 +424,12 @@ export class AccountListComponent {
         /// </summary>
         private static TestVariableDeclarationResult InvokeGenerateVariableDeclaration(string variableName, string expression, string scopeContext, int insertionLine, string? typeAnnotation = null)
         {
-            VariableDeclarationGeneratorService service = CreateVariableDeclarationService();
+            var service = CreateVariableDeclarationService();
             
-            object result = service.GenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine, typeAnnotation);
+            var result = service.GenerateVariableDeclaration(variableName, expression, scopeContext, insertionLine, typeAnnotation);
             
             // Convert anonymous object to our test result type
-            Type resultType = result.GetType();
+            var resultType = result.GetType();
             return new TestVariableDeclarationResult
             {
                 Success = (bool)resultType.GetProperty("Success")!.GetValue(result)!,
@@ -446,12 +446,12 @@ export class AccountListComponent {
         /// </summary>
         private static TestPathValidationResult InvokeValidateVariableDeclaration(string declaration, string scopeContext)
         {
-            VariableDeclarationGeneratorService service = CreateVariableDeclarationService();
+            var service = CreateVariableDeclarationService();
             
-            object result = service.ValidateVariableDeclaration(declaration, scopeContext);
+            var result = service.ValidateVariableDeclaration(declaration, scopeContext);
             
             // Convert anonymous object to our test result type
-            Type resultType = result.GetType();
+            var resultType = result.GetType();
             return new TestPathValidationResult
             {
                 IsValid = (bool)resultType.GetProperty("IsValid")!.GetValue(result)!,
@@ -467,19 +467,19 @@ export class AccountListComponent {
         /// </summary>
         private static TestScopeDetectionResult InvokeDetectScope(string fileContent, int lineNumber)
         {
-            TypeScriptVariableOperations service = CreateTestService();
+            var service = CreateTestService();
             
-            MethodInfo? method = typeof(TypeScriptVariableOperations)
+            var method = typeof(TypeScriptVariableOperations)
                 .GetMethod("DetectScope", 
                     BindingFlags.NonPublic | BindingFlags.Instance);
             
             Assert.NotNull(method);
             
-            object? result = method.Invoke(service, [fileContent, lineNumber]);
+            var result = method.Invoke(service, [fileContent, lineNumber]);
             Assert.NotNull(result);
             
             // Convert anonymous object to our test result type
-            Type resultType = result.GetType();
+            var resultType = result.GetType();
             return new TestScopeDetectionResult
             {
                 Success = (bool)resultType.GetProperty("Success")!.GetValue(result)!,
@@ -496,19 +496,19 @@ export class AccountListComponent {
         /// </summary>
         private static TestIntroduceVariableResult InvokeIntroduceVariable(string fileContent, int line, int startColumn, int endColumn, string variableName)
         {
-            TypeScriptVariableOperations service = CreateTestService();
+            var service = CreateTestService();
             
-            MethodInfo? method = typeof(TypeScriptVariableOperations)
+            var method = typeof(TypeScriptVariableOperations)
                 .GetMethod("IntroduceVariable", 
                     BindingFlags.NonPublic | BindingFlags.Instance);
             
             Assert.NotNull(method);
             
-            object? result = method.Invoke(service, [fileContent, line, startColumn, endColumn, variableName]);
+            var result = method.Invoke(service, [fileContent, line, startColumn, endColumn, variableName]);
             Assert.NotNull(result);
             
             // Convert anonymous object to our test result type
-            Type resultType = result.GetType();
+            var resultType = result.GetType();
             return new TestIntroduceVariableResult
             {
                 Success = (bool)resultType.GetProperty("Success")!.GetValue(result)!,

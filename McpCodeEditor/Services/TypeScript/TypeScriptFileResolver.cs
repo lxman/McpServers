@@ -42,15 +42,15 @@ public class TypeScriptFileResolver(ILogger<TypeScriptFileResolver> logger)
                 // Get all TypeScript files
                 var allFiles = new List<string>();
                 
-                foreach (string extension in _typescriptExtensions)
+                foreach (var extension in _typescriptExtensions)
                 {
                     var pattern = $"*{extension}";
-                    string[] files = Directory.GetFiles(searchPath, pattern, SearchOption.AllDirectories);
+                    var files = Directory.GetFiles(searchPath, pattern, SearchOption.AllDirectories);
                     allFiles.AddRange(files);
                 }
 
                 // Filter excluded directories
-                string[] excludedDirs = includeNodeModules 
+                var excludedDirs = includeNodeModules 
                     ? _commonExcludedDirs.Where(d => d != "node_modules").ToArray()
                     : _commonExcludedDirs;
 
@@ -113,7 +113,7 @@ public class TypeScriptFileResolver(ILogger<TypeScriptFileResolver> logger)
             else
             {
                 // Search common development locations
-                string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
                 
                 string[] commonPaths =
                 [
@@ -128,28 +128,28 @@ public class TypeScriptFileResolver(ILogger<TypeScriptFileResolver> logger)
                 searchPaths.AddRange(commonPaths.Where(Directory.Exists));
             }
 
-            foreach (string searchPath in searchPaths)
+            foreach (var searchPath in searchPaths)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 
                 try
                 {
                     // Look for directories that contain TypeScript config files
-                    string[] tsConfigFiles = Directory.GetFiles(searchPath, "tsconfig.json", SearchOption.AllDirectories);
-                    string[] packageJsonFiles = Directory.GetFiles(searchPath, "package.json", SearchOption.AllDirectories);
+                    var tsConfigFiles = Directory.GetFiles(searchPath, "tsconfig.json", SearchOption.AllDirectories);
+                    var packageJsonFiles = Directory.GetFiles(searchPath, "package.json", SearchOption.AllDirectories);
                     
-                    List<string?> projectDirs = tsConfigFiles.Select(Path.GetDirectoryName)
+                    var projectDirs = tsConfigFiles.Select(Path.GetDirectoryName)
                         .Union(packageJsonFiles.Select(Path.GetDirectoryName))
                         .Where(dir => !string.IsNullOrEmpty(dir))
                         .Where(dir => !IsInExcludedDirectory(dir!, _commonExcludedDirs))
                         .Distinct()
                         .ToList();
 
-                    foreach (string? projectDir in projectDirs)
+                    foreach (var projectDir in projectDirs)
                     {
                         if (projectDir == null) continue;
                         
-                        TypeScriptFileDiscoveryResult fileResult = await FindTypeScriptFilesAsync(projectDir, false, cancellationToken);
+                        var fileResult = await FindTypeScriptFilesAsync(projectDir, false, cancellationToken);
                         
                         if (fileResult is { Success: true, SourceFiles.Count: > 0 })
                         {
@@ -233,13 +233,13 @@ public class TypeScriptFileResolver(ILogger<TypeScriptFileResolver> logger)
 
     private static bool IsInExcludedDirectory(string filePath, string[] excludedDirs)
     {
-        string[] pathParts = filePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var pathParts = filePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         return pathParts.Any(part => excludedDirs.Contains(part, StringComparer.OrdinalIgnoreCase));
     }
 
     private static bool IsTestFile(string filePath)
     {
-        string fileName = Path.GetFileNameWithoutExtension(filePath).ToLowerInvariant();
+        var fileName = Path.GetFileNameWithoutExtension(filePath).ToLowerInvariant();
         return fileName.Contains("test") || fileName.Contains("spec") || 
                filePath.Contains($"{Path.DirectorySeparatorChar}test{Path.DirectorySeparatorChar}") ||
                filePath.Contains($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}") ||
@@ -255,10 +255,10 @@ public class TypeScriptFileResolver(ILogger<TypeScriptFileResolver> logger)
     {
         try
         {
-            string packageJsonPath = Path.Combine(projectPath, "package.json");
+            var packageJsonPath = Path.Combine(projectPath, "package.json");
             if (!File.Exists(packageJsonPath)) return false;
 
-            string packageContent = File.ReadAllText(packageJsonPath);
+            var packageContent = File.ReadAllText(packageJsonPath);
             return packageContent.Contains("\"@angular/core\"", StringComparison.OrdinalIgnoreCase);
         }
         catch
@@ -271,10 +271,10 @@ public class TypeScriptFileResolver(ILogger<TypeScriptFileResolver> logger)
     {
         try
         {
-            string packageJsonPath = Path.Combine(projectPath, "package.json");
+            var packageJsonPath = Path.Combine(projectPath, "package.json");
             if (!File.Exists(packageJsonPath)) return false;
 
-            string packageContent = File.ReadAllText(packageJsonPath);
+            var packageContent = File.ReadAllText(packageJsonPath);
             return packageContent.Contains("\"react\"", StringComparison.OrdinalIgnoreCase);
         }
         catch

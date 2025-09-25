@@ -3,13 +3,11 @@ using Amazon.CloudWatch;
 using Amazon.CloudWatch.Model;
 using Amazon.CloudWatchLogs;
 using Amazon.CloudWatchLogs.Model;
-using Amazon.Runtime;
 using AwsMcp.CloudWatch.Models;
 using AwsMcp.Configuration;
-using AwsMcp.Configuration.Models;
 using Microsoft.Extensions.Logging;
-using Metric = Amazon.CloudWatch.Model.Metric;
 using InvalidOperationException = Amazon.CloudWatchLogs.Model.InvalidOperationException;
+using Metric = Amazon.CloudWatch.Model.Metric;
 
 namespace AwsMcp.CloudWatch;
 

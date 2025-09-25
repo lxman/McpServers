@@ -7,7 +7,7 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+        var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container
         builder.Services.AddControllers();
@@ -28,7 +28,7 @@ public class Program
             
             // Include XML comments if available
             var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
-            string xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
             if (File.Exists(xmlPath))
             {
                 c.IncludeXmlComments(xmlPath);
@@ -46,7 +46,7 @@ public class Program
             });
         });
 
-        WebApplication app = builder.Build();
+        var app = builder.Build();
 
         // Configure the HTTP request pipeline
         if (app.Environment.IsDevelopment())

@@ -30,7 +30,7 @@ public class TypeScriptRefactoringService(
         try
         {
             // Resolve relative paths to absolute paths
-            string resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
+            var resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
 
             if (!File.Exists(resolvedFilePath))
             {
@@ -42,7 +42,7 @@ public class TypeScriptRefactoringService(
             }
 
             // Validate file is TypeScript/JavaScript
-            string extension = Path.GetExtension(resolvedFilePath).ToLowerInvariant();
+            var extension = Path.GetExtension(resolvedFilePath).ToLowerInvariant();
             if (extension != ".ts" && extension != ".tsx" && extension != ".js" && extension != ".jsx")
             {
                 return new TypeScriptMethodExtractor.TypeScriptExtractionResult
@@ -52,7 +52,7 @@ public class TypeScriptRefactoringService(
                 };
             }
 
-            string sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
+            var sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
 
             // Delegate to the enhanced AST-based method extractor
             return await methodExtractor.ExtractMethodAsync(
@@ -88,7 +88,7 @@ public class TypeScriptRefactoringService(
         try
         {
             // Resolve relative paths to absolute paths
-            string resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
+            var resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
 
             if (!File.Exists(resolvedFilePath))
             {
@@ -100,7 +100,7 @@ public class TypeScriptRefactoringService(
             }
 
             // Validate file is TypeScript/JavaScript
-            string extension = Path.GetExtension(resolvedFilePath).ToLowerInvariant();
+            var extension = Path.GetExtension(resolvedFilePath).ToLowerInvariant();
             if (extension != ".ts" && extension != ".tsx" && extension != ".js" && extension != ".jsx")
             {
                 return new RefactoringResult
@@ -144,7 +144,7 @@ public class TypeScriptRefactoringService(
         try
         {
             // Resolve relative paths to absolute paths
-            string resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
+            var resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
 
             if (!File.Exists(resolvedFilePath))
             {
@@ -156,7 +156,7 @@ public class TypeScriptRefactoringService(
             }
 
             // Validate file is TypeScript/JavaScript
-            string extension = Path.GetExtension(resolvedFilePath).ToLowerInvariant();
+            var extension = Path.GetExtension(resolvedFilePath).ToLowerInvariant();
             if (extension != ".ts" && extension != ".tsx" && extension != ".js" && extension != ".jsx")
             {
                 return new RefactoringResult
@@ -198,7 +198,7 @@ public class TypeScriptRefactoringService(
         try
         {
             // Resolve relative paths to absolute paths
-            string resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
+            var resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
 
             if (!File.Exists(resolvedFilePath))
             {
@@ -210,7 +210,7 @@ public class TypeScriptRefactoringService(
             }
 
             // Validate file is TypeScript/JavaScript
-            string extension = Path.GetExtension(resolvedFilePath).ToLowerInvariant();
+            var extension = Path.GetExtension(resolvedFilePath).ToLowerInvariant();
             if (extension != ".ts" && extension != ".tsx" && extension != ".js" && extension != ".jsx")
             {
                 return new RefactoringResult
@@ -251,7 +251,7 @@ public class TypeScriptRefactoringService(
         try
         {
             // Resolve relative paths to absolute paths
-            string resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
+            var resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
 
             if (!File.Exists(resolvedFilePath))
             {
@@ -263,7 +263,7 @@ public class TypeScriptRefactoringService(
             }
 
             // Validate file is TypeScript/JavaScript
-            string extension = Path.GetExtension(resolvedFilePath).ToLowerInvariant();
+            var extension = Path.GetExtension(resolvedFilePath).ToLowerInvariant();
             if (extension != ".ts" && extension != ".tsx" && extension != ".js" && extension != ".jsx")
             {
                 return new RefactoringResult

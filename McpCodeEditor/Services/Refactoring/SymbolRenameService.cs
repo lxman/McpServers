@@ -4,7 +4,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.MSBuild;
-using Microsoft.CodeAnalysis.Text;
 using McpCodeEditor.Models;
 using McpCodeEditor.Models.Refactoring;
 
@@ -33,7 +32,7 @@ public class SymbolRenameService(
         try
         {
             // Determine the language(s) to process
-            LanguageScopeInfo languageInfo = DetermineLanguageScope(filePath);
+            var languageInfo = DetermineLanguageScope(filePath);
 
             if (languageInfo is { HasTypeScript: true, HasCSharp: true })
             {
@@ -72,8 +71,8 @@ public class SymbolRenameService(
         CancellationToken cancellationToken)
     {
         // Execute both C# and TypeScript renaming
-        RefactoringResult csharpResult = await RenameSymbolCSharpAsync(symbolName, newName, filePath, previewOnly, cancellationToken);
-        RefactoringResult typeScriptResult = await typeScriptRenameService.RenameSymbolAsync(symbolName, newName, filePath, previewOnly, cancellationToken);
+        var csharpResult = await RenameSymbolCSharpAsync(symbolName, newName, filePath, previewOnly, cancellationToken);
+        var typeScriptResult = await typeScriptRenameService.RenameSymbolAsync(symbolName, newName, filePath, previewOnly, cancellationToken);
 
         // Combine results
         var combinedResult = new RefactoringResult();
@@ -102,11 +101,11 @@ public class SymbolRenameService(
         }
 
         // Combine metadata
-        foreach (KeyValuePair<string, object> kvp in csharpResult.Metadata)
+        foreach (var kvp in csharpResult.Metadata)
         {
             combinedResult.Metadata[$"csharp_{kvp.Key}"] = kvp.Value;
         }
-        foreach (KeyValuePair<string, object> kvp in typeScriptResult.Metadata)
+        foreach (var kvp in typeScriptResult.Metadata)
         {
             combinedResult.Metadata[$"typescript_{kvp.Key}"] = kvp.Value;
         }
@@ -131,7 +130,7 @@ public class SymbolRenameService(
         try
         {
             var result = new RefactoringResult();
-            string workspaceRoot = config.DefaultWorkspace;
+            var workspaceRoot = config.DefaultWorkspace;
 
             // ENHANCED: Resolve file path if provided
             string? resolvedFilePath = null;
@@ -158,8 +157,8 @@ public class SymbolRenameService(
             }
 
             // ENHANCED: Try both MSBuild approach and simple file-based approach
-            RenameResult? renameResult = await TryMsBuildRenameAsync(symbolName, newName, resolvedFilePath, cancellationToken) ??
-                                         await TrySimpleRenameAsync(symbolName, newName, resolvedFilePath, cancellationToken);
+            var renameResult = await TryMsBuildRenameAsync(symbolName, newName, resolvedFilePath, cancellationToken) ??
+                               await TrySimpleRenameAsync(symbolName, newName, resolvedFilePath, cancellationToken);
 
             if (renameResult == null)
             {
@@ -209,14 +208,14 @@ public class SymbolRenameService(
         if (!string.IsNullOrEmpty(filePath))
         {
             // Specific file - check its extension
-            string resolvedPath = ValidateAndResolvePath(filePath);
+            var resolvedPath = ValidateAndResolvePath(filePath);
             info.HasCSharp = IsCSharpFile(resolvedPath);
             info.HasTypeScript = IsTypeScriptFile(resolvedPath);
         }
         else
         {
             // Workspace scope - check if there are files of each type
-            string workspaceRoot = config.DefaultWorkspace;
+            var workspaceRoot = config.DefaultWorkspace;
             
             info.HasCSharp = Directory.GetFiles(workspaceRoot, "*.cs", SearchOption.AllDirectories)
                 .Any(f => !IsExcludedDirectory(Path.GetDirectoryName(f) ?? ""));
@@ -242,7 +241,7 @@ public class SymbolRenameService(
     /// </summary>
     private static bool IsTypeScriptFile(string filePath)
     {
-        string extension = Path.GetExtension(filePath).ToLowerInvariant();
+        var extension = Path.GetExtension(filePath).ToLowerInvariant();
         return extension is ".ts" or ".tsx";
     }
 
@@ -257,11 +256,11 @@ public class SymbolRenameService(
     {
         try
         {
-            string workspaceRoot = config.DefaultWorkspace;
+            var workspaceRoot = config.DefaultWorkspace;
 
             // Find solution or project files
-            string[] projectFiles = Directory.GetFiles(workspaceRoot, "*.csproj", SearchOption.AllDirectories);
-            string[] solutionFiles = Directory.GetFiles(workspaceRoot, "*.sln", SearchOption.AllDirectories);
+            var projectFiles = Directory.GetFiles(workspaceRoot, "*.csproj", SearchOption.AllDirectories);
+            var solutionFiles = Directory.GetFiles(workspaceRoot, "*.sln", SearchOption.AllDirectories);
 
             if (!projectFiles.Any() && !solutionFiles.Any())
             {
@@ -291,7 +290,7 @@ public class SymbolRenameService(
             }
 
             // ENHANCED: Find the symbol using improved search
-            ISymbol? symbolToRename = await FindSymbolAsync(solution, symbolName, filePath, cancellationToken);
+            var symbolToRename = await FindSymbolAsync(solution, symbolName, filePath, cancellationToken);
 
             if (symbolToRename == null)
             {
@@ -299,7 +298,7 @@ public class SymbolRenameService(
             }
 
             // Perform the rename
-            Solution newSolution = await Renamer.RenameSymbolAsync(
+            var newSolution = await Renamer.RenameSymbolAsync(
                 solution,
                 symbolToRename,
                 new SymbolRenameOptions(),
@@ -307,7 +306,7 @@ public class SymbolRenameService(
                 cancellationToken);
 
             // Calculate changes
-            List<FileChange> changes = await CalculateChangesAsync(solution, newSolution, cancellationToken);
+            var changes = await CalculateChangesAsync(solution, newSolution, cancellationToken);
 
             return new RenameResult
             {
@@ -332,7 +331,7 @@ public class SymbolRenameService(
     {
         try
         {
-            string workspaceRoot = config.DefaultWorkspace;
+            var workspaceRoot = config.DefaultWorkspace;
             var changes = new List<FileChange>();
 
             // Get C# files to search
@@ -348,30 +347,30 @@ public class SymbolRenameService(
                     .Where(f => !IsExcludedDirectory(Path.GetDirectoryName(f) ?? ""));
             }
 
-            foreach (string file in filesToSearch)
+            foreach (var file in filesToSearch)
             {
                 if (!File.Exists(file)) continue;
 
-                string content = await File.ReadAllTextAsync(file, cancellationToken);
-                SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(content, cancellationToken: cancellationToken);
-                SyntaxNode root = await syntaxTree.GetRootAsync(cancellationToken);
+                var content = await File.ReadAllTextAsync(file, cancellationToken);
+                var syntaxTree = CSharpSyntaxTree.ParseText(content, cancellationToken: cancellationToken);
+                var root = await syntaxTree.GetRootAsync(cancellationToken);
 
                 // ENHANCED: Look for symbol declarations AND references
-                List<SyntaxNode> symbolNodes = FindSymbolNodesInFile(root, symbolName);
+                var symbolNodes = FindSymbolNodesInFile(root, symbolName);
                 
                 if (symbolNodes.Count == 0) continue;
 
                 // Perform text-based replacement
-                string modifiedContent = content;
+                var modifiedContent = content;
                 var wasModified = false;
 
                 // Replace symbol declarations and references
-                foreach (SyntaxNode symbolNode in symbolNodes.OrderByDescending(n => n.Span.Start))
+                foreach (var symbolNode in symbolNodes.OrderByDescending(n => n.Span.Start))
                 {
                     // Replace from end to start to maintain positions
-                    TextSpan span = symbolNode.Span;
-                    string before = modifiedContent[..span.Start];
-                    string after = modifiedContent[span.End..];
+                    var span = symbolNode.Span;
+                    var before = modifiedContent[..span.Start];
+                    var after = modifiedContent[span.End..];
                     modifiedContent = before + newName + after;
                     wasModified = true;
                 }
@@ -417,44 +416,44 @@ public class SymbolRenameService(
         var symbolNodes = new List<SyntaxNode>();
 
         // Find method declarations (return the identifier token as SyntaxNode via cast)
-        IEnumerable<SyntaxNode> methodDeclarations = root.DescendantNodes()
+        var methodDeclarations = root.DescendantNodes()
             .OfType<MethodDeclarationSyntax>()
             .Where(m => m.Identifier.ValueText == symbolName)
             .Select(m => (SyntaxNode)m);
 
         // Find class declarations
-        IEnumerable<SyntaxNode> classDeclarations = root.DescendantNodes()
+        var classDeclarations = root.DescendantNodes()
             .OfType<ClassDeclarationSyntax>()
             .Where(c => c.Identifier.ValueText == symbolName)
             .Select(c => (SyntaxNode)c);
 
         // Find property declarations
-        IEnumerable<SyntaxNode> propertyDeclarations = root.DescendantNodes()
+        var propertyDeclarations = root.DescendantNodes()
             .OfType<PropertyDeclarationSyntax>()
             .Where(p => p.Identifier.ValueText == symbolName)
             .Select(p => (SyntaxNode)p);
 
         // Find field declarations
-        IEnumerable<SyntaxNode> fieldDeclarations = root.DescendantNodes()
+        var fieldDeclarations = root.DescendantNodes()
             .OfType<FieldDeclarationSyntax>()
             .SelectMany(f => f.Declaration.Variables)
             .Where(v => v.Identifier.ValueText == symbolName)
             .Select(v => (SyntaxNode)v);
 
         // Find variable declarations
-        IEnumerable<SyntaxNode> variableDeclarations = root.DescendantNodes()
+        var variableDeclarations = root.DescendantNodes()
             .OfType<VariableDeclaratorSyntax>()
             .Where(v => v.Identifier.ValueText == symbolName)
             .Select(v => (SyntaxNode)v);
 
         // Find parameter declarations
-        IEnumerable<SyntaxNode> parameterDeclarations = root.DescendantNodes()
+        var parameterDeclarations = root.DescendantNodes()
             .OfType<ParameterSyntax>()
             .Where(p => p.Identifier.ValueText == symbolName)
             .Select(p => (SyntaxNode)p);
 
         // Find identifier references
-        IEnumerable<SyntaxNode> identifierReferences = root.DescendantNodes()
+        var identifierReferences = root.DescendantNodes()
             .OfType<IdentifierNameSyntax>()
             .Where(i => i.Identifier.ValueText == symbolName)
             .Cast<SyntaxNode>();
@@ -491,20 +490,20 @@ public class SymbolRenameService(
         }
 
         // Search for the symbol
-        foreach (Project proj in solution.Projects)
+        foreach (var proj in solution.Projects)
         {
-            Compilation? compilation = await proj.GetCompilationAsync(cancellationToken);
+            var compilation = await proj.GetCompilationAsync(cancellationToken);
             if (compilation == null) continue;
 
-            foreach (Document doc in proj.Documents)
+            foreach (var doc in proj.Documents)
             {
                 if (targetDocument != null && doc.Id != targetDocument.Id) continue;
 
-                SyntaxTree? syntaxTree = await doc.GetSyntaxTreeAsync(cancellationToken);
+                var syntaxTree = await doc.GetSyntaxTreeAsync(cancellationToken);
                 if (syntaxTree == null) continue;
 
-                SemanticModel? semanticModel = compilation.GetSemanticModel(syntaxTree);
-                SyntaxNode? root = await doc.GetSyntaxRootAsync(cancellationToken);
+                var semanticModel = compilation.GetSemanticModel(syntaxTree);
+                var root = await doc.GetSyntaxRootAsync(cancellationToken);
 
                 if (root == null) continue;
 
@@ -533,9 +532,9 @@ public class SymbolRenameService(
                     .Where(v => v.Identifier.ValueText == symbolName));
 
                 // Get symbol from declaration
-                foreach (SyntaxNode declaration in symbolDeclarations)
+                foreach (var declaration in symbolDeclarations)
                 {
-                    ISymbol? symbol = semanticModel?.GetDeclaredSymbol(declaration, cancellationToken);
+                    var symbol = semanticModel?.GetDeclaredSymbol(declaration, cancellationToken);
                     if (symbol != null)
                     {
                         return symbol;
@@ -543,7 +542,7 @@ public class SymbolRenameService(
                 }
 
                 // Fall back to identifier references
-                ISymbol? refSymbol = root
+                var refSymbol = root
                     .DescendantNodes()
                     .OfType<IdentifierNameSyntax>()
                     .Where(id => id.Identifier.ValueText == symbolName)
@@ -567,22 +566,22 @@ public class SymbolRenameService(
     {
         var changes = new List<FileChange>();
 
-        foreach (ProjectId projectId in originalSolution.ProjectIds)
+        foreach (var projectId in originalSolution.ProjectIds)
         {
-            Project? originalProject = originalSolution.GetProject(projectId);
-            Project? newProject = newSolution.GetProject(projectId);
+            var originalProject = originalSolution.GetProject(projectId);
+            var newProject = newSolution.GetProject(projectId);
 
             if (originalProject == null || newProject == null) continue;
 
-            foreach (DocumentId documentId in originalProject.DocumentIds)
+            foreach (var documentId in originalProject.DocumentIds)
             {
-                Document? originalDocument = originalProject.GetDocument(documentId);
-                Document? newDocument = newProject.GetDocument(documentId);
+                var originalDocument = originalProject.GetDocument(documentId);
+                var newDocument = newProject.GetDocument(documentId);
 
                 if (originalDocument?.FilePath == null || newDocument == null) continue;
 
-                SourceText originalText = await originalDocument.GetTextAsync(cancellationToken);
-                SourceText newText = await newDocument.GetTextAsync(cancellationToken);
+                var originalText = await originalDocument.GetTextAsync(cancellationToken);
+                var newText = await newDocument.GetTextAsync(cancellationToken);
 
                 if (!originalText.ContentEquals(newText))
                 {
@@ -606,13 +605,13 @@ public class SymbolRenameService(
 
     private static void CalculateLineChanges(string originalContent, string modifiedContent, FileChange change)
     {
-        string[] originalLines = originalContent.Split('\n');
-        string[] modifiedLines = modifiedContent.Split('\n');
+        var originalLines = originalContent.Split('\n');
+        var modifiedLines = modifiedContent.Split('\n');
 
         for (var i = 0; i < Math.Max(originalLines.Length, modifiedLines.Length); i++)
         {
-            string originalLine = i < originalLines.Length ? originalLines[i] : "";
-            string modifiedLine = i < modifiedLines.Length ? modifiedLines[i] : "";
+            var originalLine = i < originalLines.Length ? originalLines[i] : "";
+            var modifiedLine = i < modifiedLines.Length ? modifiedLines[i] : "";
 
             if (originalLine != modifiedLine)
             {
@@ -634,7 +633,7 @@ public class SymbolRenameService(
         string? backupId,
         CancellationToken cancellationToken)
     {
-        foreach (FileChange change in changes)
+        foreach (var change in changes)
         {
             await File.WriteAllTextAsync(change.FilePath, change.ModifiedContent, cancellationToken);
 
@@ -654,13 +653,13 @@ public class SymbolRenameService(
     private string ValidateAndResolvePath(string path)
     {
         // Convert to absolute path
-        string fullPath = Path.IsPathRooted(path) ? path : Path.Combine(config.DefaultWorkspace, path);
+        var fullPath = Path.IsPathRooted(path) ? path : Path.Combine(config.DefaultWorkspace, path);
         fullPath = Path.GetFullPath(fullPath);
 
         // Security check: ensure path is within workspace if restricted
         if (config.Security.RestrictToWorkspace)
         {
-            string workspaceFullPath = Path.GetFullPath(config.DefaultWorkspace);
+            var workspaceFullPath = Path.GetFullPath(config.DefaultWorkspace);
             if (!fullPath.StartsWith(workspaceFullPath, StringComparison.OrdinalIgnoreCase))
             {
                 throw new UnauthorizedAccessException($"Access denied: Path outside workspace: {path}");
@@ -672,7 +671,7 @@ public class SymbolRenameService(
 
     private bool IsExcludedDirectory(string path)
     {
-        string dirName = Path.GetFileName(path);
+        var dirName = Path.GetFileName(path);
         return config.ExcludedDirectories.Contains(dirName);
     }
 

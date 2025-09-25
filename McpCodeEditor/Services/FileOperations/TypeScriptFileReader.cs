@@ -23,7 +23,7 @@ public class TypeScriptFileReader(
         try
         {
             // Resolve the file path using the TypeScriptFileResolver
-            string resolvedPath = fileResolver.ResolvePath(filePath, basePath);
+            var resolvedPath = fileResolver.ResolvePath(filePath, basePath);
             
             // Validate that it's a valid TypeScript file
             if (!fileResolver.IsValidTypeScriptFile(resolvedPath))
@@ -99,7 +99,7 @@ public class TypeScriptFileReader(
         {
             var semaphore = new SemaphoreSlim(maxConcurrency, maxConcurrency);
 
-            List<string> paths = filePaths.ToList();
+            var paths = filePaths.ToList();
             IEnumerable<Task<TypeScriptFileReadResult>> tasks = paths.Select(async filePath =>
             {
                 await semaphore.WaitAsync(cancellationToken);
@@ -113,7 +113,7 @@ public class TypeScriptFileReader(
                 }
             });
 
-            TypeScriptFileReadResult[] allResults = await Task.WhenAll(tasks);
+            var allResults = await Task.WhenAll(tasks);
             results.AddRange(allResults);
 
             logger.LogDebug("Read {FileCount} TypeScript files, {SuccessCount} successful",
@@ -135,7 +135,7 @@ public class TypeScriptFileReader(
     {
         try
         {
-            string resolvedPath = fileResolver.ResolvePath(filePath, basePath);
+            var resolvedPath = fileResolver.ResolvePath(filePath, basePath);
             
             if (!fileResolver.IsValidTypeScriptFile(resolvedPath) || !File.Exists(resolvedPath))
             {
@@ -163,7 +163,7 @@ public class TypeScriptFileReader(
     {
         try
         {
-            string resolvedPath = fileResolver.ResolvePath(filePath, basePath);
+            var resolvedPath = fileResolver.ResolvePath(filePath, basePath);
             
             if (!fileResolver.IsValidTypeScriptFile(resolvedPath) || !File.Exists(resolvedPath))
             {
@@ -199,7 +199,7 @@ public class TypeScriptFileReader(
     private static async Task<string> ReadFileContentAsync(string filePath, CancellationToken cancellationToken)
     {
         // Try to detect encoding, default to UTF-8
-        Encoding encoding = DetectEncoding(filePath);
+        var encoding = DetectEncoding(filePath);
         
         using var reader = new StreamReader(filePath, encoding, detectEncodingFromByteOrderMarks: true);
         return await reader.ReadToEndAsync(cancellationToken);
@@ -215,7 +215,7 @@ public class TypeScriptFileReader(
             // Read first few bytes to detect BOM
             using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var bom = new byte[4];
-            int bytesRead = fileStream.Read(bom, 0, 4);
+            var bytesRead = fileStream.Read(bom, 0, 4);
             
             // Check for UTF-8 BOM
             if (bytesRead >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF)

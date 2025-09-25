@@ -2,7 +2,6 @@
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json;
-using AzureMcp.Services.DevOps.Models;
 
 namespace AzureMcp.Tools;
 

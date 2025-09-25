@@ -38,7 +38,7 @@ public class BulkFormatService(
         try
         {
             // Validate and resolve path
-            string? resolvedPath = ValidateAndResolvePath(rootPath);
+            var resolvedPath = ValidateAndResolvePath(rootPath);
             if (resolvedPath == null)
             {
                 return new BatchOperationResult
@@ -56,13 +56,13 @@ public class BulkFormatService(
             }
 
             // Find files to format
-            List<string> files = FindFiles(resolvedPath, options.FilePattern, options.ExcludeDirectories);
+            var files = FindFiles(resolvedPath, options.FilePattern, options.ExcludeDirectories);
             result.TotalFiles = files.Count;
 
             logger.LogInformation($"Starting bulk format operation on {files.Count} files");
 
             // Process files in parallel
-            List<BatchFileResult> fileResults = await ProcessFilesAsync(files, progressReporter, backupId, cancellationToken);
+            var fileResults = await ProcessFilesAsync(files, progressReporter, backupId, cancellationToken);
 
             // Aggregate results
             PopulateResult(result, fileResults, stopwatch.Elapsed, options);
@@ -97,9 +97,9 @@ public class BulkFormatService(
             }
 
             // For relative paths, resolve relative to the current workspace
-            string basePath = config.DefaultWorkspace;
-            string fullPath = Path.Combine(basePath, path);
-            string resolvedPath = Path.GetFullPath(fullPath);
+            var basePath = config.DefaultWorkspace;
+            var fullPath = Path.Combine(basePath, path);
+            var resolvedPath = Path.GetFullPath(fullPath);
 
             return Directory.Exists(resolvedPath) ? resolvedPath : null;
         }
@@ -126,10 +126,10 @@ public class BulkFormatService(
             },
             async (file, ct) =>
             {
-                BatchFileResult fileResult = await ProcessFileFormatAsync(file, ct);
+                var fileResult = await ProcessFileFormatAsync(file, ct);
                 fileResults.Add(fileResult);
 
-                int currentProcessed = Interlocked.Increment(ref processed);
+                var currentProcessed = Interlocked.Increment(ref processed);
                 progressReporter?.ReportProgress(currentProcessed, files.Count, file);
                 progressReporter?.ReportFileCompleted(file, fileResult.Success, fileResult.Error);
 
@@ -147,7 +147,7 @@ public class BulkFormatService(
     {
         try
         {
-            string originalContent = await File.ReadAllTextAsync(filePath, cancellationToken);
+            var originalContent = await File.ReadAllTextAsync(filePath, cancellationToken);
 
             // Only format C# files for now
             if (!filePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
@@ -165,12 +165,12 @@ public class BulkFormatService(
             }
 
             // Parse and format using Roslyn
-            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(originalContent, cancellationToken: cancellationToken);
-            SyntaxNode root = await syntaxTree.GetRootAsync(cancellationToken);
+            var syntaxTree = CSharpSyntaxTree.ParseText(originalContent, cancellationToken: cancellationToken);
+            var root = await syntaxTree.GetRootAsync(cancellationToken);
 
             using var workspace = new AdhocWorkspace();
-            SyntaxNode formattedRoot = Formatter.Format(root, workspace, cancellationToken: cancellationToken);
-            string formattedContent = formattedRoot.ToFullString();
+            var formattedRoot = Formatter.Format(root, workspace, cancellationToken: cancellationToken);
+            var formattedContent = formattedRoot.ToFullString();
 
             // Only write if content changed
             if (originalContent != formattedContent)
@@ -229,13 +229,13 @@ public class BulkFormatService(
     private List<string> FindFiles(string rootPath, string filePattern, List<string> excludeDirectories)
     {
         var files = new List<string>();
-        string searchPattern = string.IsNullOrEmpty(filePattern) ? "*" : filePattern;
+        var searchPattern = string.IsNullOrEmpty(filePattern) ? "*" : filePattern;
 
         try
         {
-            string[] allFiles = Directory.GetFiles(rootPath, searchPattern, SearchOption.AllDirectories);
+            var allFiles = Directory.GetFiles(rootPath, searchPattern, SearchOption.AllDirectories);
 
-            foreach (string file in allFiles)
+            foreach (var file in allFiles)
             {
                 if (ShouldIncludeFile(file, excludeDirectories))
                 {
@@ -254,7 +254,7 @@ public class BulkFormatService(
     private bool ShouldIncludeFile(string file, List<string> excludeDirectories)
     {
         // Check if file is in excluded directory
-        string? directory = Path.GetDirectoryName(file);
+        var directory = Path.GetDirectoryName(file);
         if (directory != null && excludeDirectories.Any(excluded =>
             directory.Contains(excluded, StringComparison.OrdinalIgnoreCase)))
         {
@@ -262,7 +262,7 @@ public class BulkFormatService(
         }
 
         // Check if file extension is allowed
-        string extension = Path.GetExtension(file).ToLowerInvariant();
+        var extension = Path.GetExtension(file).ToLowerInvariant();
         return config.AllowedExtensions.Contains(extension);
     }
 

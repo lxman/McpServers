@@ -1,15 +1,15 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using AwsMcp.CloudWatch;
+using AwsMcp.Configuration;
+using AwsMcp.ECR;
+using AwsMcp.ECS;
+using AwsMcp.Prompts;
+using AwsMcp.Resources;
+using AwsMcp.S3;
+using AwsMcp.Tools;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
-using AwsMcp.S3;
-using AwsMcp.CloudWatch;
-using AwsMcp.Configuration;
-using AwsMcp.ECS;
-using AwsMcp.ECR;
-using AwsMcp.Tools;
-using AwsMcp.Resources;
-using AwsMcp.Prompts;
 
 namespace AwsMcp;
 

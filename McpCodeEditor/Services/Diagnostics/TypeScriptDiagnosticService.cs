@@ -50,7 +50,7 @@ public class TypeScriptDiagnosticService
             
             // Test 3: Test the actual parser script
             _logger.LogInformation("Test 3: Testing parser script");
-            string scriptPath = Path.Combine(AppContext.BaseDirectory, "Scripts", "typescript-parser.js");
+            var scriptPath = Path.Combine(AppContext.BaseDirectory, "Scripts", "typescript-parser.js");
             
             if (!File.Exists(scriptPath))
             {

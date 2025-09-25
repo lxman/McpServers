@@ -122,7 +122,7 @@ public class TypeScriptAstParserService
     private string GetScriptPath()
     {
         // Try to load from Scripts directory
-        string scriptPath = Path.Combine(AppContext.BaseDirectory, "Scripts", "typescript-parser.js");
+        var scriptPath = Path.Combine(AppContext.BaseDirectory, "Scripts", "typescript-parser.js");
         
         if (File.Exists(scriptPath))
         {
@@ -132,7 +132,7 @@ public class TypeScriptAstParserService
         
         // Fallback - create a temporary script file
         _logger.LogWarning("TypeScript parser script not found at: {Path}. Creating fallback.", scriptPath);
-        string fallbackPath = Path.Combine(Path.GetTempPath(), "typescript-parser-fallback.js");
+        var fallbackPath = Path.Combine(Path.GetTempPath(), "typescript-parser-fallback.js");
         File.WriteAllText(fallbackPath, GetFallbackParserScript());
         return fallbackPath;
     }

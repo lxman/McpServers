@@ -33,8 +33,8 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
                 lineContent, startColumn, endColumn);
 
             // Convert to 0-based indexing for easier processing
-            int start0 = startColumn - 1;
-            int end0 = endColumn - 1;
+            var start0 = startColumn - 1;
+            var end0 = endColumn - 1;
 
             // REF-001 FIX: Handle empty selection properly
             if (startColumn == endColumn)
@@ -64,7 +64,7 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
             
             // SPECIAL CASE: Parentheses-specific detection (must come BEFORE AST)
             // This handles cases where the user specifically selects parentheses boundaries
-            ExpressionBoundaryResult parenthesesResult = TryDetectSpecificParenthesesSelection(lineContent, start0, end0);
+            var parenthesesResult = TryDetectSpecificParenthesesSelection(lineContent, start0, end0);
             if (parenthesesResult.Success)
             {
                 _logger.LogDebug("Boundary detection successful using parentheses method");
@@ -72,7 +72,7 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
             }
 
             // Strategy 1: AST-based parsing for the entire line
-            ExpressionBoundaryResult astResult = TryAstBasedBoundaryDetection(lineContent, start0, end0);
+            var astResult = TryAstBasedBoundaryDetection(lineContent, start0, end0);
             if (astResult.Success)
             {
                 _logger.LogDebug("Boundary detection successful using AST method");
@@ -80,7 +80,7 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
             }
 
             // Strategy 2: Pattern-based detection for common expressions
-            ExpressionBoundaryResult patternResult = TryPatternBasedBoundaryDetection(lineContent, start0, end0);
+            var patternResult = TryPatternBasedBoundaryDetection(lineContent, start0, end0);
             if (patternResult.Success)
             {
                 _logger.LogDebug("Boundary detection successful using pattern method");
@@ -116,9 +116,9 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
         {
             // Find the matching closing parenthesis using proper balancing
             var depth = 1;
-            int matchingClose = -1;
+            var matchingClose = -1;
             
-            for (int i = start0 + 1; i < lineContent.Length; i++)
+            for (var i = start0 + 1; i < lineContent.Length; i++)
             {
                 if (lineContent[i] == '(') depth++;
                 else if (lineContent[i] == ')') 
@@ -135,7 +135,7 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
             // If the user's end selection matches the balanced closing parenthesis
             if (matchingClose == end0)
             {
-                string parenthesesExpression = lineContent.Substring(start0, end0 - start0 + 1);
+                var parenthesesExpression = lineContent.Substring(start0, end0 - start0 + 1);
                 return new ExpressionBoundaryResult
                 {
                     Success = true,
@@ -156,19 +156,19 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
     private static ExpressionBoundaryResult TryPatternBasedBoundaryDetection(string lineContent, int start0, int end0)
     {
         // REF-001 FIX: Function call detection (handles Math.max, inject(), etc.)
-        ExpressionBoundaryResult functionCallResult = TryDetectFunctionCall(lineContent, start0, end0);
+        var functionCallResult = TryDetectFunctionCall(lineContent, start0, end0);
         if (functionCallResult.Success) return functionCallResult;
 
         // Property access detection (handles this.service.property)
-        ExpressionBoundaryResult propertyAccessResult = TryDetectPropertyAccess(lineContent, start0, end0);
+        var propertyAccessResult = TryDetectPropertyAccess(lineContent, start0, end0);
         if (propertyAccessResult.Success) return propertyAccessResult;
 
         // Parentheses expression detection
-        ExpressionBoundaryResult parenthesesResult = TryDetectParenthesesExpression(lineContent, start0, end0);
+        var parenthesesResult = TryDetectParenthesesExpression(lineContent, start0, end0);
         if (parenthesesResult.Success) return parenthesesResult;
 
         // String literal detection
-        ExpressionBoundaryResult stringLiteralResult = TryDetectStringLiteral(lineContent, start0, end0);
+        var stringLiteralResult = TryDetectStringLiteral(lineContent, start0, end0);
         if (stringLiteralResult.Success) return stringLiteralResult;
 
         return new ExpressionBoundaryResult { Success = false };
@@ -181,12 +181,12 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
     {
         // Look for function call patterns that might encompass or be near the selection
         var functionCallPattern = @"(\w+(?:\.\w+)*)\s*\(([^)]*)\)";
-        MatchCollection matches = Regex.Matches(lineContent, functionCallPattern);
+        var matches = Regex.Matches(lineContent, functionCallPattern);
 
         foreach (Match match in matches)
         {
-            int matchStart = match.Index;
-            int matchEnd = match.Index + match.Length;
+            var matchStart = match.Index;
+            var matchEnd = match.Index + match.Length;
 
             // REF-001 FIX: Check if selection overlaps with or is contained within this function call
             if (SelectionOverlapsOrIsNear(start0, end0, matchStart, matchEnd))
@@ -212,12 +212,12 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
     {
         // Property access pattern: word.word or this.word.word
         var propertyPattern = @"\b(\w+(?:\.\w+)+)";
-        MatchCollection matches = Regex.Matches(lineContent, propertyPattern);
+        var matches = Regex.Matches(lineContent, propertyPattern);
 
         foreach (Match match in matches)
         {
-            int matchStart = match.Index;
-            int matchEnd = match.Index + match.Length;
+            var matchStart = match.Index;
+            var matchEnd = match.Index + match.Length;
 
             if (SelectionOverlapsOrIsNear(start0, end0, matchStart, matchEnd))
             {
@@ -241,13 +241,13 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
     private static ExpressionBoundaryResult TryDetectParenthesesExpression(string lineContent, int start0, int end0)
     {
         // Find the closest balanced parentheses that contain the selection
-        for (int i = Math.Max(0, start0 - 10); i <= start0; i++)
+        for (var i = Math.Max(0, start0 - 10); i <= start0; i++)
         {
             if (i < lineContent.Length && lineContent[i] == '(')
             {
                 // Find matching closing parenthesis
                 var depth = 1;
-                for (int j = i + 1; j < lineContent.Length; j++)
+                for (var j = i + 1; j < lineContent.Length; j++)
                 {
                     if (lineContent[j] == '(') depth++;
                     else if (lineContent[j] == ')') depth--;
@@ -257,7 +257,7 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
                         // Check if selection is within these parentheses
                         if (start0 >= i && end0 <= j)
                         {
-                            string expression = lineContent.Substring(i, j - i + 1);
+                            var expression = lineContent.Substring(i, j - i + 1);
                             return new ExpressionBoundaryResult
                             {
                                 Success = true,
@@ -289,13 +289,13 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
             (@"`([^`]*)`", "StringLiteral")
         };
 
-        foreach ((string pattern, string method) in stringPatterns)
+        foreach ((var pattern, var method) in stringPatterns)
         {
-            MatchCollection matches = Regex.Matches(lineContent, pattern);
+            var matches = Regex.Matches(lineContent, pattern);
             foreach (Match match in matches)
             {
-                int matchStart = match.Index;
-                int matchEnd = match.Index + match.Length;
+                var matchStart = match.Index;
+                var matchEnd = match.Index + match.Length;
 
                 if (start0 >= matchStart && end0 <= matchEnd)
                 {
@@ -326,8 +326,8 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
         {
             if (node.Range == null) return;
 
-            int nodeStart = node.Range.Start;
-            int nodeEnd = node.Range.End;
+            var nodeStart = node.Range.Start;
+            var nodeEnd = node.Range.End;
 
             // DEFINITIVE RULE: Only consider nodes that completely contain the selection
             if (nodeStart <= start0 && nodeEnd >= end0)
@@ -335,20 +335,20 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
                 // DEFINITIVE RULE: Only consider expression nodes, not statements
                 if (IsExpressionNode(node))
                 {
-                    int size = nodeEnd - nodeStart;
+                    var size = nodeEnd - nodeStart;
                     containingExpressionNodes.Add((node, size));
                 }
             }
 
             // Visit all children
-            foreach (Node child in node.ChildNodes)
+            foreach (var child in node.ChildNodes)
             {
                 VisitNode(child);
             }
         }
 
         // Visit the entire AST
-        foreach (Statement? statement in script.Body)
+        foreach (var statement in script.Body)
         {
             VisitNode(statement);
         }
@@ -407,14 +407,14 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
         try
         {
             var parser = new JavaScriptParser();
-            Script script = parser.ParseScript(lineContent);
+            var script = parser.ParseScript(lineContent);
         
             // DEFINITIVE: Find the most specific expression node that contains the selection
-            Node? targetNode = FindMostSpecificContainingExpressionNode(script, start0, end0);
+            var targetNode = FindMostSpecificContainingExpressionNode(script, start0, end0);
         
             if (targetNode?.Range != null)
             {
-                string nodeText = GetNodeText(lineContent, targetNode);
+                var nodeText = GetNodeText(lineContent, targetNode);
             
                 if (!string.IsNullOrWhiteSpace(nodeText))
                 {
@@ -461,8 +461,8 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
     {
         if (node.Range == null) return "";
         
-        int start = Math.Max(0, node.Range.Start);
-        int end = Math.Min(source.Length, node.Range.End);
+        var start = Math.Max(0, node.Range.Start);
+        var end = Math.Min(source.Length, node.Range.End);
         
         return start >= end ? "" : source.Substring(start, end - start).Trim();
     }
@@ -505,8 +505,8 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
             };
         }
 
-        string selection = lineContent.Substring(start0, end0 - start0 + 1);
-        string trimmed = selection.Trim();
+        var selection = lineContent.Substring(start0, end0 - start0 + 1);
+        var trimmed = selection.Trim();
 
         if (string.IsNullOrEmpty(trimmed))
         {
@@ -518,10 +518,10 @@ public class ExpressionBoundaryDetectionService : IExpressionBoundaryDetectionSe
         }
 
         // Find the trimmed boundaries
-        int trimmedStart = lineContent.IndexOf(trimmed, start0, StringComparison.Ordinal);
+        var trimmedStart = lineContent.IndexOf(trimmed, start0, StringComparison.Ordinal);
         if (trimmedStart == -1) trimmedStart = start0;
 
-        int trimmedEnd = trimmedStart + trimmed.Length - 1;
+        var trimmedEnd = trimmedStart + trimmed.Length - 1;
 
         return new ExpressionBoundaryResult
         {

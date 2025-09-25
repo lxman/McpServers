@@ -18,13 +18,13 @@ namespace McpCodeEditor.Services.Analysis
         public async Task<NamespaceDependencyAnalysis> AnalyzeNamespaceDependenciesAsync(string workspacePath)
         {
             var analysis = new NamespaceDependencyAnalysis();
-            List<string> csharpFiles = GetCSharpFiles(workspacePath);
+            var csharpFiles = GetCSharpFiles(workspacePath);
 
             // Step 1: Extract all using statements and their contexts
             var usingStatements = new List<UsingStatementContext>();
-            foreach (string file in csharpFiles)
+            foreach (var file in csharpFiles)
             {
-                List<UsingStatementContext> fileUsings = await ExtractUsingStatementsAsync(file);
+                var fileUsings = await ExtractUsingStatementsAsync(file);
                 usingStatements.AddRange(fileUsings);
             }
 
@@ -49,15 +49,15 @@ namespace McpCodeEditor.Services.Analysis
             
             try
             {
-                string content = await File.ReadAllTextAsync(filePath);
-                MatchCollection matches = UsingStatementRegex.Matches(content);
+                var content = await File.ReadAllTextAsync(filePath);
+                var matches = UsingStatementRegex.Matches(content);
 
                 // Extract the file's own namespace
-                string fileNamespace = ExtractFileNamespace(content, filePath);
+                var fileNamespace = ExtractFileNamespace(content, filePath);
 
                 foreach (Match match in matches)
                 {
-                    string usingNamespace = match.Groups[1].Value;
+                    var usingNamespace = match.Groups[1].Value;
                     
                     // Skip global using statements and aliases
                     if (string.IsNullOrWhiteSpace(usingNamespace) || usingNamespace.Contains("="))
@@ -88,7 +88,7 @@ namespace McpCodeEditor.Services.Analysis
         private string ExtractFileNamespace(string content, string filePath)
         {
             // Try to find namespace declaration
-            Match namespaceMatch = Regex.Match(content, @"namespace\s+([a-zA-Z_][a-zA-Z0-9_.]*)", RegexOptions.Multiline);
+            var namespaceMatch = Regex.Match(content, @"namespace\s+([a-zA-Z_][a-zA-Z0-9_.]*)", RegexOptions.Multiline);
             if (namespaceMatch.Success)
             {
                 return namespaceMatch.Groups[1].Value;
@@ -105,9 +105,9 @@ namespace McpCodeEditor.Services.Analysis
         {
             try
             {
-                string workspacePath = configService.DefaultWorkspace;
-                string relativePath = Path.GetRelativePath(workspacePath, filePath);
-                string[] pathParts = Path.GetDirectoryName(relativePath)?.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries) ?? [];
+                var workspacePath = configService.DefaultWorkspace;
+                var relativePath = Path.GetRelativePath(workspacePath, filePath);
+                var pathParts = Path.GetDirectoryName(relativePath)?.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries) ?? [];
                 
                 // Start with project name
                 var namespaceParts = new List<string> { "McpCodeEditor" };
@@ -126,7 +126,7 @@ namespace McpCodeEditor.Services.Analysis
         /// </summary>
         private static List<NamespaceCoupling> BuildNamespaceCouplings(List<UsingStatementContext> usingStatements)
         {
-            List<NamespaceCoupling> couplingGroups = usingStatements
+            var couplingGroups = usingStatements
                 .Where(u => !u.IsSystemNamespace) // Focus on project and external package namespaces
                 .GroupBy(u => new { u.SourceNamespace, u.TargetNamespace })
                 .Select(g => new NamespaceCoupling
@@ -142,7 +142,7 @@ namespace McpCodeEditor.Services.Analysis
                 .ToList();
 
             // Calculate coupling strength and cross-platform detection
-            foreach (NamespaceCoupling coupling in couplingGroups)
+            foreach (var coupling in couplingGroups)
             {
                 coupling.CouplingStrength = CalculateCouplingStrength(coupling);
                 coupling.IsCrossPlatformCoupling = IsCrossPlatformCoupling(coupling.SourcePlatform, coupling.TargetPlatform);
@@ -159,14 +159,14 @@ namespace McpCodeEditor.Services.Analysis
             var platforms = new Dictionary<string, PlatformBoundary>();
 
             // Analyze all namespaces to identify platforms
-            List<string> allNamespaces = couplings.SelectMany(c => new[] { c.SourceNamespace, c.TargetNamespace })
+            var allNamespaces = couplings.SelectMany(c => new[] { c.SourceNamespace, c.TargetNamespace })
                 .Where(ns => !IsSystemNamespace(ns))
                 .Distinct()
                 .ToList();
 
-            foreach (string ns in allNamespaces)
+            foreach (var ns in allNamespaces)
             {
-                string platform = ClassifyPlatform(ns);
+                var platform = ClassifyPlatform(ns);
                 if (!platforms.ContainsKey(platform))
                 {
                     platforms[platform] = new PlatformBoundary
@@ -181,7 +181,7 @@ namespace McpCodeEditor.Services.Analysis
             }
 
             // Analyze coupling relationships for each platform
-            foreach (PlatformBoundary platform in platforms.Values)
+            foreach (var platform in platforms.Values)
             {
                 AnalyzePlatformCouplings(platform, couplings);
             }
@@ -194,7 +194,7 @@ namespace McpCodeEditor.Services.Analysis
         /// </summary>
         private static void AnalyzePlatformCouplings(PlatformBoundary platform, List<NamespaceCoupling> allCouplings)
         {
-            List<NamespaceCoupling> platformCouplings = allCouplings.Where(c => c.SourcePlatform == platform.PlatformName).ToList();
+            var platformCouplings = allCouplings.Where(c => c.SourcePlatform == platform.PlatformName).ToList();
 
             // Internal couplings (within the platform)
             platform.InternalCouplingCount = platformCouplings.Count(c => c.TargetPlatform == platform.PlatformName);
@@ -214,7 +214,7 @@ namespace McpCodeEditor.Services.Analysis
                 .ToList();
 
             // Calculate isolation score
-            int totalCouplings = platform.InternalCouplingCount + platform.ExternalCouplingCount;
+            var totalCouplings = platform.InternalCouplingCount + platform.ExternalCouplingCount;
             platform.IsolationScore = totalCouplings > 0 
                 ? (double)platform.InternalCouplingCount / totalCouplings 
                 : 1.0;
@@ -228,17 +228,17 @@ namespace McpCodeEditor.Services.Analysis
             var patterns = new List<string>();
 
             // Parallel Platform Strategy: Multiple platforms with high isolation
-            List<PlatformBoundary> isolatedPlatforms = analysis.PlatformBoundaries.Where(p => p.IsolationScore > 0.8).ToList();
+            var isolatedPlatforms = analysis.PlatformBoundaries.Where(p => p.IsolationScore > 0.8).ToList();
             if (isolatedPlatforms.Count >= 2)
             {
                 patterns.Add($"Parallel Platform Strategy: {isolatedPlatforms.Count} isolated platforms detected");
             }
 
             // Shared Core Architecture: Common core with multiple consumers
-            List<PlatformBoundary> sharedCorePlatforms = analysis.PlatformBoundaries.Where(p => p.Type == PlatformType.Core).ToList();
+            var sharedCorePlatforms = analysis.PlatformBoundaries.Where(p => p.Type == PlatformType.Core).ToList();
             if (sharedCorePlatforms.Count != 0)
             {
-                int consumingPlatforms = analysis.Couplings
+                var consumingPlatforms = analysis.Couplings
                     .Where(c => sharedCorePlatforms.Any(sp => sp.Namespaces.Contains(c.TargetNamespace)))
                     .Select(c => c.SourcePlatform)
                     .Distinct()
@@ -268,10 +268,10 @@ namespace McpCodeEditor.Services.Analysis
 
         private static string ClassifyPlatform(string ns)
         {
-            string[] parts = ns.Split('.');
+            var parts = ns.Split('.');
             if (parts.Length > 1)
             {
-                string platformIndicator = parts[1].ToLowerInvariant();
+                var platformIndicator = parts[1].ToLowerInvariant();
                 if (platformIndicator.Contains("angular") || platformIndicator.Contains("web")) return "Angular";
                 if (platformIndicator.Contains("wpf") || platformIndicator.Contains("desktop")) return "WPF";
                 if (platformIndicator.Contains("api") || platformIndicator.Contains("service")) return "API";
@@ -300,7 +300,7 @@ namespace McpCodeEditor.Services.Analysis
 
         private static string GetNamespacePattern(string ns, string platform)
         {
-            string[] parts = ns.Split('.');
+            var parts = ns.Split('.');
             if (parts.Length >= 2)
             {
                 return $"{parts[0]}.{platform}";
@@ -311,8 +311,8 @@ namespace McpCodeEditor.Services.Analysis
         private static double CalculateCouplingStrength(NamespaceCoupling coupling)
         {
             // Base strength on usage count and file spread
-            double baseStrength = Math.Min(coupling.UsageCount / 10.0, 1.0);
-            double fileSpreadBonus = Math.Min(coupling.SourceFiles.Count / 5.0, 0.5);
+            var baseStrength = Math.Min(coupling.UsageCount / 10.0, 1.0);
+            var fileSpreadBonus = Math.Min(coupling.SourceFiles.Count / 5.0, 0.5);
             return Math.Min(baseStrength + fileSpreadBonus, 1.0);
         }
 
@@ -320,7 +320,7 @@ namespace McpCodeEditor.Services.Analysis
         {
             // Check for typical layering patterns: Presentation -> Services -> DataAccess -> Models
             var layerTypes = new[] { PlatformType.Frontend, PlatformType.Services, PlatformType.DataAccess, PlatformType.Core };
-            List<PlatformType> presentLayers = analysis.PlatformBoundaries.Select(p => p.Type).Intersect(layerTypes).ToList();
+            var presentLayers = analysis.PlatformBoundaries.Select(p => p.Type).Intersect(layerTypes).ToList();
             
             return presentLayers.Count >= 3; // At least 3 layers for layered architecture
         }

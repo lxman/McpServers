@@ -203,7 +203,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
         try
         {
             // Validate session exists
-            PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
+            var session = _sessionManager.GetSession(sessionId);
             if (session == null)
             {
                 return JsonSerializer.Serialize(new UnitTestResult
@@ -242,16 +242,16 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
             }
 
             // Get environment information
-            TestEnvironmentInfo envInfo = await GetTestEnvironmentInfo(config.WorkingDirectory);
+            var envInfo = await GetTestEnvironmentInfo(config.WorkingDirectory);
 
             // Detect test framework
-            TestFrameworkInfo frameworkInfo = await DetectTestFramework(config.WorkingDirectory);
+            var frameworkInfo = await DetectTestFramework(config.WorkingDirectory);
 
             // Build the test command
-            string command = await BuildTestCommand(config, frameworkInfo);
+            var command = await BuildTestCommand(config, frameworkInfo);
 
             // Execute the test command
-            UnitTestResult result = await ExecuteTestCommand(command, config);
+            var result = await ExecuteTestCommand(command, config);
 
             // Parse test results
             result.TestFramework = frameworkInfo;
@@ -281,13 +281,13 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            string angularJsonPath = Path.Combine(directory, "angular.json");
-            string packageJsonPath = Path.Combine(directory, "package.json");
+            var angularJsonPath = Path.Combine(directory, "angular.json");
+            var packageJsonPath = Path.Combine(directory, "package.json");
             
             if (!File.Exists(angularJsonPath) || !File.Exists(packageJsonPath))
                 return false;
 
-            string packageJson = await File.ReadAllTextAsync(packageJsonPath);
+            var packageJson = await File.ReadAllTextAsync(packageJsonPath);
             return packageJson.Contains("@angular/core") || packageJson.Contains("@angular/cli");
         }
         catch
@@ -303,24 +303,24 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
         try
         {
             // Check angular.json for test configuration
-            string angularJsonPath = Path.Combine(workingDirectory, "angular.json");
+            var angularJsonPath = Path.Combine(workingDirectory, "angular.json");
             if (File.Exists(angularJsonPath))
             {
-                string angularJsonContent = await File.ReadAllTextAsync(angularJsonPath);
+                var angularJsonContent = await File.ReadAllTextAsync(angularJsonPath);
                 var angularConfig = JsonSerializer.Deserialize<JsonElement>(angularJsonContent);
 
-                if (angularConfig.TryGetProperty("projects", out JsonElement projects))
+                if (angularConfig.TryGetProperty("projects", out var projects))
                 {
-                    foreach (JsonProperty project in projects.EnumerateObject())
+                    foreach (var project in projects.EnumerateObject())
                     {
-                        if (project.Value.TryGetProperty("architect", out JsonElement architect) &&
-                            architect.TryGetProperty("test", out JsonElement testConfig))
+                        if (project.Value.TryGetProperty("architect", out var architect) &&
+                            architect.TryGetProperty("test", out var testConfig))
                         {
                             frameworkInfo.Framework = "karma"; // Default Angular framework
                             
-                            if (testConfig.TryGetProperty("options", out JsonElement options))
+                            if (testConfig.TryGetProperty("options", out var options))
                             {
-                                if (options.TryGetProperty("karmaConfig", out JsonElement karmaConfig))
+                                if (options.TryGetProperty("karmaConfig", out var karmaConfig))
                                 {
                                     frameworkInfo.ConfigFile = karmaConfig.GetString() ?? "";
                                 }
@@ -332,10 +332,10 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
             }
 
             // Check package.json for additional test frameworks
-            string packageJsonPath = Path.Combine(workingDirectory, "package.json");
+            var packageJsonPath = Path.Combine(workingDirectory, "package.json");
             if (File.Exists(packageJsonPath))
             {
-                string packageJson = await File.ReadAllTextAsync(packageJsonPath);
+                var packageJson = await File.ReadAllTextAsync(packageJsonPath);
                 
                 if (packageJson.Contains("jest"))
                 {
@@ -362,7 +362,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
                 "web-test-runner.config.js"
             };
 
-            foreach (string configFile in configFiles)
+            foreach (var configFile in configFiles)
             {
                 if (File.Exists(Path.Combine(workingDirectory, configFile)))
                 {
@@ -396,8 +396,8 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
             // Get Angular version
             try
             {
-                string ngVersionOutput = await ExecuteCommand("ng version", workingDirectory);
-                Match angularVersionMatch = Regex.Match(ngVersionOutput, @"Angular CLI:\s*([^\r\n]+)");
+                var ngVersionOutput = await ExecuteCommand("ng version", workingDirectory);
+                var angularVersionMatch = Regex.Match(ngVersionOutput, @"Angular CLI:\s*([^\r\n]+)");
                 if (angularVersionMatch.Success)
                 {
                     envInfo.AngularVersion = angularVersionMatch.Groups[1].Value.Trim();
@@ -406,11 +406,11 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
             catch
             {
                 // Try package.json fallback
-                string packageJsonPath = Path.Combine(workingDirectory, "package.json");
+                var packageJsonPath = Path.Combine(workingDirectory, "package.json");
                 if (File.Exists(packageJsonPath))
                 {
-                    string packageJson = await File.ReadAllTextAsync(packageJsonPath);
-                    Match versionMatch = Regex.Match(packageJson, @"""@angular/core"":\s*""([^""]+)""");
+                    var packageJson = await File.ReadAllTextAsync(packageJsonPath);
+                    var versionMatch = Regex.Match(packageJson, @"""@angular/core"":\s*""([^""]+)""");
                     if (versionMatch.Success)
                     {
                         envInfo.AngularVersion = versionMatch.Groups[1].Value;
@@ -434,7 +434,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            string command = browser.ToLower() switch
+            var command = browser.ToLower() switch
             {
                 "chrome" => Environment.OSVersion.Platform == PlatformID.Win32NT 
                     ? "reg query \"HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe\"" 
@@ -448,7 +448,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
             if (string.IsNullOrEmpty(command))
                 return false;
 
-            string result = await ExecuteCommand(command, "");
+            var result = await ExecuteCommand(command, "");
             return !string.IsNullOrEmpty(result) && !result.Contains("not found");
         }
         catch
@@ -505,7 +505,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
         // Generate reports
         if (config.GenerateReports)
         {
-            string reportsDir = Path.Combine(config.WorkingDirectory, "test-results");
+            var reportsDir = Path.Combine(config.WorkingDirectory, "test-results");
             Directory.CreateDirectory(reportsDir);
             
             // Add reporters based on format
@@ -566,7 +566,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            bool completed = await Task.Run(() => process.WaitForExit(config.TimeoutSeconds * 1000));
+            var completed = await Task.Run(() => process.WaitForExit(config.TimeoutSeconds * 1000));
 
             stopwatch.Stop();
             result.ExecutionTime = stopwatch.Elapsed;
@@ -600,7 +600,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            string output = result.StandardOutput;
+            var output = result.StandardOutput;
             
             // Parse basic metrics from output
             result.Metrics = ParseTestMetrics(output);
@@ -612,14 +612,14 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
             result.Failures = ParseTestFailures(output);
 
             // Look for JSON report files
-            string reportsDir = Path.Combine(config.WorkingDirectory, "test-results");
+            var reportsDir = Path.Combine(config.WorkingDirectory, "test-results");
             if (Directory.Exists(reportsDir))
             {
-                string[] jsonReports = Directory.GetFiles(reportsDir, "*.json", SearchOption.AllDirectories);
+                var jsonReports = Directory.GetFiles(reportsDir, "*.json", SearchOption.AllDirectories);
                 result.GeneratedReports.AddRange(jsonReports);
 
                 // Parse detailed results from JSON reports
-                foreach (string jsonReport in jsonReports)
+                foreach (var jsonReport in jsonReports)
                 {
                     await ParseJsonTestReport(result, jsonReport);
                 }
@@ -639,7 +639,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
         {
             // Parse Karma/Jasmine output patterns
             var karmaPattern = @"(\d+) specs?, (\d+) failures?";
-            Match karmaMatch = Regex.Match(output, karmaPattern);
+            var karmaMatch = Regex.Match(output, karmaPattern);
             if (karmaMatch.Success)
             {
                 metrics.TotalTests = int.Parse(karmaMatch.Groups[1].Value);
@@ -649,7 +649,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
 
             // Parse Jest output patterns
             var jestPattern = @"Tests:\s+(\d+) failed,\s+(\d+) passed,\s+(\d+) total";
-            Match jestMatch = Regex.Match(output, jestPattern);
+            var jestMatch = Regex.Match(output, jestPattern);
             if (jestMatch.Success)
             {
                 metrics.FailedTests = int.Parse(jestMatch.Groups[1].Value);
@@ -659,15 +659,15 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
 
             // Parse execution time
             var timePattern = @"Executed in (\d+\.?\d*) secs?";
-            Match timeMatch = Regex.Match(output, timePattern);
-            if (timeMatch.Success && double.TryParse(timeMatch.Groups[1].Value, out double seconds))
+            var timeMatch = Regex.Match(output, timePattern);
+            if (timeMatch.Success && double.TryParse(timeMatch.Groups[1].Value, out var seconds))
             {
                 metrics.TotalExecutionTime = TimeSpan.FromSeconds(seconds);
             }
 
             // Count test suites
             var suitePattern = @"(.*\.spec\.(ts|js))";
-            MatchCollection suiteMatches = Regex.Matches(output, suitePattern);
+            var suiteMatches = Regex.Matches(output, suitePattern);
             metrics.TotalSuites = suiteMatches.Count;
         }
         catch
@@ -685,15 +685,15 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
         try
         {
             // Parse test suite information from output
-            string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
             TestSuiteResult? currentSuite = null;
 
-            foreach (string line in lines)
+            foreach (var line in lines)
             {
                 // Look for suite start patterns
                 if (line.Contains(".spec.") && (line.Contains("PASSED") || line.Contains("FAILED")))
                 {
-                    string suiteName = ExtractSuiteName(line);
+                    var suiteName = ExtractSuiteName(line);
                     if (!string.IsNullOrEmpty(suiteName))
                     {
                         currentSuite = new TestSuiteResult
@@ -708,7 +708,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
                 // Parse individual test results within suites
                 if (currentSuite != null && (line.Contains("✓") || line.Contains("✗") || line.Contains("PASSED") || line.Contains("FAILED")))
                 {
-                    IndividualTestResult? testResult = ParseIndividualTest(line);
+                    var testResult = ParseIndividualTest(line);
                     if (testResult != null)
                     {
                         currentSuite.TestResults.Add(testResult);
@@ -738,11 +738,11 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
 
         try
         {
-            string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
             TestFailure? currentFailure = null;
-            bool inFailureSection = false;
+            var inFailureSection = false;
 
-            foreach (string line in lines)
+            foreach (var line in lines)
             {
                 // Look for failure start patterns
                 if (line.Contains("FAILED:") || (line.Contains("✗") && line.Contains("should")))
@@ -815,20 +815,20 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
         try
         {
             // Look for coverage directory
-            string coverageDir = Path.Combine(config.WorkingDirectory, "coverage");
+            var coverageDir = Path.Combine(config.WorkingDirectory, "coverage");
             if (Directory.Exists(coverageDir))
             {
                 result.Coverage.CoverageReportPath = coverageDir;
 
                 // Parse lcov.info file if it exists
-                string? lcovFile = Directory.GetFiles(coverageDir, "lcov.info", SearchOption.AllDirectories).FirstOrDefault();
+                var lcovFile = Directory.GetFiles(coverageDir, "lcov.info", SearchOption.AllDirectories).FirstOrDefault();
                 if (!string.IsNullOrEmpty(lcovFile))
                 {
                     await ParseLcovFile(result.Coverage, lcovFile);
                 }
 
                 // Parse coverage-summary.json if it exists
-                string? summaryFile = Directory.GetFiles(coverageDir, "coverage-summary.json", SearchOption.AllDirectories).FirstOrDefault();
+                var summaryFile = Directory.GetFiles(coverageDir, "coverage-summary.json", SearchOption.AllDirectories).FirstOrDefault();
                 if (!string.IsNullOrEmpty(summaryFile))
                 {
                     await ParseCoverageSummary(result.Coverage, summaryFile);
@@ -848,16 +848,16 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            string jsonContent = await File.ReadAllTextAsync(jsonReportPath);
+            var jsonContent = await File.ReadAllTextAsync(jsonReportPath);
             var reportData = JsonSerializer.Deserialize<JsonElement>(jsonContent);
 
             // Parse based on report format (Karma, Jest, etc.)
-            if (reportData.TryGetProperty("browsers", out JsonElement browsers))
+            if (reportData.TryGetProperty("browsers", out var browsers))
             {
                 // Karma JSON format
                 await ParseKarmaJsonReport(result, reportData);
             }
-            else if (reportData.TryGetProperty("testResults", out JsonElement testResults))
+            else if (reportData.TryGetProperty("testResults", out var testResults))
             {
                 // Jest JSON format
                 await ParseJestJsonReport(result, reportData);
@@ -887,8 +887,8 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            string lcovContent = await File.ReadAllTextAsync(lcovFile);
-            string[] lines = lcovContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var lcovContent = await File.ReadAllTextAsync(lcovFile);
+            var lines = lcovContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
             FileCoverage? currentFile = null;
             var totalLines = 0;
@@ -903,7 +903,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
             var currentFileTotalBranches = 0;
             var currentFileTotalFunctions = 0;
 
-            foreach (string line in lines)
+            foreach (var line in lines)
             {
                 if (line.StartsWith("SF:"))
                 {
@@ -919,12 +919,12 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
                     currentFileTotalBranches = 0;
                     currentFileTotalFunctions = 0;
                 }
-                else if (line.StartsWith("LF:") && int.TryParse(line.Substring(3), out int lf))
+                else if (line.StartsWith("LF:") && int.TryParse(line.Substring(3), out var lf))
                 {
                     totalLines += lf;
                     currentFileTotalLines = lf;
                 }
-                else if (line.StartsWith("LH:") && int.TryParse(line.Substring(3), out int lh))
+                else if (line.StartsWith("LH:") && int.TryParse(line.Substring(3), out var lh))
                 {
                     coveredLines += lh;
                     if (currentFile != null)
@@ -932,12 +932,12 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
                         currentFile.LineCoverage = currentFileTotalLines > 0 ? (double)lh / currentFileTotalLines * 100 : 0;
                     }
                 }
-                else if (line.StartsWith("BRF:") && int.TryParse(line.Substring(4), out int brf))
+                else if (line.StartsWith("BRF:") && int.TryParse(line.Substring(4), out var brf))
                 {
                     totalBranches += brf;
                     currentFileTotalBranches = brf;
                 }
-                else if (line.StartsWith("BRH:") && int.TryParse(line.Substring(4), out int brh))
+                else if (line.StartsWith("BRH:") && int.TryParse(line.Substring(4), out var brh))
                 {
                     coveredBranches += brh;
                     if (currentFile != null)
@@ -945,12 +945,12 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
                         currentFile.BranchCoverage = currentFileTotalBranches > 0 ? (double)brh / currentFileTotalBranches * 100 : 0;
                     }
                 }
-                else if (line.StartsWith("FNF:") && int.TryParse(line.Substring(4), out int fnf))
+                else if (line.StartsWith("FNF:") && int.TryParse(line.Substring(4), out var fnf))
                 {
                     totalFunctions += fnf;
                     currentFileTotalFunctions = fnf;
                 }
-                else if (line.StartsWith("FNH:") && int.TryParse(line.Substring(4), out int fnh))
+                else if (line.StartsWith("FNH:") && int.TryParse(line.Substring(4), out var fnh))
                 {
                     coveredFunctions += fnh;
                     if (currentFile != null)
@@ -980,31 +980,31 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            string summaryContent = await File.ReadAllTextAsync(summaryFile);
+            var summaryContent = await File.ReadAllTextAsync(summaryFile);
             var summaryData = JsonSerializer.Deserialize<JsonElement>(summaryContent);
 
-            if (summaryData.TryGetProperty("total", out JsonElement total))
+            if (summaryData.TryGetProperty("total", out var total))
             {
-                if (total.TryGetProperty("lines", out JsonElement lines) &&
-                    lines.TryGetProperty("pct", out JsonElement linesPct))
+                if (total.TryGetProperty("lines", out var lines) &&
+                    lines.TryGetProperty("pct", out var linesPct))
                 {
                     coverage.LineCoverage = linesPct.GetDouble();
                 }
 
-                if (total.TryGetProperty("branches", out JsonElement branches) &&
-                    branches.TryGetProperty("pct", out JsonElement branchesPct))
+                if (total.TryGetProperty("branches", out var branches) &&
+                    branches.TryGetProperty("pct", out var branchesPct))
                 {
                     coverage.BranchCoverage = branchesPct.GetDouble();
                 }
 
-                if (total.TryGetProperty("functions", out JsonElement functions) &&
-                    functions.TryGetProperty("pct", out JsonElement functionsPct))
+                if (total.TryGetProperty("functions", out var functions) &&
+                    functions.TryGetProperty("pct", out var functionsPct))
                 {
                     coverage.FunctionCoverage = functionsPct.GetDouble();
                 }
 
-                if (total.TryGetProperty("statements", out JsonElement statements) &&
-                    statements.TryGetProperty("pct", out JsonElement statementsPct))
+                if (total.TryGetProperty("statements", out var statements) &&
+                    statements.TryGetProperty("pct", out var statementsPct))
                 {
                     coverage.StatementCoverage = statementsPct.GetDouble();
                 }
@@ -1029,10 +1029,10 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
                 @"Lines\s*:\s*(\d+\.?\d*)%"
             };
 
-            foreach (string pattern in coveragePatterns)
+            foreach (var pattern in coveragePatterns)
             {
-                Match match = Regex.Match(output, pattern);
-                if (match.Success && double.TryParse(match.Groups[1].Value, out double percentage))
+                var match = Regex.Match(output, pattern);
+                if (match.Success && double.TryParse(match.Groups[1].Value, out var percentage))
                 {
                     if (pattern.Contains("Statements"))
                         coverage.StatementCoverage = percentage;
@@ -1069,7 +1069,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
             using var process = new Process { StartInfo = processStartInfo };
             process.Start();
             
-            string output = await process.StandardOutput.ReadToEndAsync();
+            var output = await process.StandardOutput.ReadToEndAsync();
             await process.WaitForExitAsync();
             
             return output.Trim();
@@ -1082,13 +1082,13 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
 
     private string ExtractSuiteName(string line)
     {
-        Match match = Regex.Match(line, @"([\w-]+\.spec\.(ts|js))");
+        var match = Regex.Match(line, @"([\w-]+\.spec\.(ts|js))");
         return match.Success ? match.Groups[1].Value : "";
     }
 
     private string ExtractTestName(string line)
     {
-        Match match = Regex.Match(line, @"should (.+?)(?:\s|$)");
+        var match = Regex.Match(line, @"should (.+?)(?:\s|$)");
         return match.Success ? $"should {match.Groups[1].Value}" : line.Trim();
     }
 

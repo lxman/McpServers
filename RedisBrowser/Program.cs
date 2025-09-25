@@ -15,15 +15,12 @@ public class Program
         Console.SetError(TextWriter.Null);
         
         // Create the host builder with configuration
-        HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+        var builder = Host.CreateApplicationBuilder(args);
         
         // Add configuration sources
         // CRITICAL: Use absolute path to appsettings.json since working directory differs in MCP
-        string configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
-        builder.Configuration
-            .AddJsonFile(configPath, optional: true, reloadOnChange: true)
-            .AddEnvironmentVariables()
-            .AddCommandLine(args);
+        var configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        builder.Configuration.AddJsonFile(configPath, optional: true, reloadOnChange: true);
         
         // Configure services
         builder.Services
@@ -60,7 +57,7 @@ public class Program
             .WithTools<RedisTools>();
 
         // Build and run the host
-        IHost host = builder.Build();
+        var host = builder.Build();
         
         // Start the MCP server
         await host.RunAsync();

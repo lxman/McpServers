@@ -192,7 +192,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
         logger.LogInformation("Executing {ScanType} reconnaissance against {TargetNetwork}", request.ScanType, request.TargetNetwork);
         
         response.Status = "running";
-        DateTime endTime = DateTime.UtcNow.AddSeconds(request.DurationSeconds);
+        var endTime = DateTime.UtcNow.AddSeconds(request.DurationSeconds);
 
         switch (request.ScanType.ToLowerInvariant())
         {
@@ -225,27 +225,27 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
 
     private async Task ExecutePortScanAsync(ReconnaissanceRequest request, TrafficGenerationResponse response, DateTime endTime, CancellationToken cancellationToken)
     {
-        List<string> targets = ParseNetworkRange(request.TargetNetwork);
-        string[] ports = request.Ports.Any() ? request.Ports : ["22", "23", "53", "80", "135", "139", "443", "445", "993", "995"
+        var targets = ParseNetworkRange(request.TargetNetwork);
+        var ports = request.Ports.Any() ? request.Ports : ["22", "23", "53", "80", "135", "139", "443", "445", "993", "995"
         ];
 
-        foreach (string target in targets)
+        foreach (var target in targets)
         {
             if (DateTime.UtcNow >= endTime || cancellationToken.IsCancellationRequested)
                 break;
 
-            foreach (string portStr in ports)
+            foreach (var portStr in ports)
             {
                 if (DateTime.UtcNow >= endTime || cancellationToken.IsCancellationRequested)
                     break;
 
-                if (int.TryParse(portStr, out int port))
+                if (int.TryParse(portStr, out var port))
                 {
                     try
                     {
                         using var tcpClient = new TcpClient();
-                        Task connectTask = tcpClient.ConnectAsync(target, port);
-                        Task timeoutTask = Task.Delay(1000, cancellationToken);
+                        var connectTask = tcpClient.ConnectAsync(target, port);
+                        var timeoutTask = Task.Delay(1000, cancellationToken);
                         
                         await Task.WhenAny(connectTask, timeoutTask);
                         
@@ -268,15 +268,15 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
     private async Task ExecuteServiceEnumerationAsync(ReconnaissanceRequest request, TrafficGenerationResponse response, DateTime endTime, CancellationToken cancellationToken)
     {
         // Service enumeration via banner grabbing
-        List<string> targets = ParseNetworkRange(request.TargetNetwork);
+        var targets = ParseNetworkRange(request.TargetNetwork);
         var servicePorts = new[] { 21, 22, 23, 25, 53, 80, 110, 143, 443, 993, 995 };
 
-        foreach (string target in targets)
+        foreach (var target in targets)
         {
             if (DateTime.UtcNow >= endTime || cancellationToken.IsCancellationRequested)
                 break;
 
-            foreach (int port in servicePorts)
+            foreach (var port in servicePorts)
             {
                 if (DateTime.UtcNow >= endTime || cancellationToken.IsCancellationRequested)
                     break;
@@ -288,7 +288,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
                     
                     if (tcpClient.Connected)
                     {
-                        using NetworkStream stream = tcpClient.GetStream();
+                        using var stream = tcpClient.GetStream();
                         var buffer = new byte[1024];
                         
                         try
@@ -319,9 +319,9 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
     private async Task ExecuteOsFingerprintAsync(ReconnaissanceRequest request, TrafficGenerationResponse response, DateTime endTime, CancellationToken cancellationToken)
     {
         // OS fingerprinting via various TCP options and ICMP
-        List<string> targets = ParseNetworkRange(request.TargetNetwork);
+        var targets = ParseNetworkRange(request.TargetNetwork);
 
-        foreach (string target in targets)
+        foreach (var target in targets)
         {
             if (DateTime.UtcNow >= endTime || cancellationToken.IsCancellationRequested)
                 break;
@@ -330,14 +330,14 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
             {
                 // ICMP ping for TTL analysis
                 using var ping = new Ping();
-                PingReply reply = await ping.SendPingAsync(target, 1000);
+                var reply = await ping.SendPingAsync(target, 1000);
                 
                 response.PacketsGenerated += 2; // ICMP request/reply
                 response.BytesGenerated += 64;
 
                 // TCP window size probing
                 var fingerprintPorts = new[] { 80, 443, 22 };
-                foreach (int port in fingerprintPorts)
+                foreach (var port in fingerprintPorts)
                 {
                     if (DateTime.UtcNow >= endTime || cancellationToken.IsCancellationRequested)
                         break;
@@ -370,9 +370,9 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
     {
         var dnsClient = new LookupClient();
         var subdomains = new[] { "www", "mail", "ftp", "admin", "test", "dev", "staging", "api", "app", "portal" };
-        string baseDomain = request.TargetNetwork; // Treat as domain for DNS enum
+        var baseDomain = request.TargetNetwork; // Treat as domain for DNS enum
 
-        foreach (string subdomain in subdomains)
+        foreach (var subdomain in subdomains)
         {
             if (DateTime.UtcNow >= endTime || cancellationToken.IsCancellationRequested)
                 break;
@@ -397,20 +397,20 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
     private async Task ExecuteXmasScanAsync(ReconnaissanceRequest request, TrafficGenerationResponse response, DateTime endTime, CancellationToken cancellationToken)
     {
         // XMAS scan - TCP packets with FIN+PSH+URG flags set (like a Christmas tree)
-        List<string> targets = ParseNetworkRange(request.TargetNetwork);
-        string[] ports = request.Ports.Any() ? request.Ports : ["22", "23", "53", "80", "135", "139", "443", "445", "993", "995"];
+        var targets = ParseNetworkRange(request.TargetNetwork);
+        var ports = request.Ports.Any() ? request.Ports : ["22", "23", "53", "80", "135", "139", "443", "445", "993", "995"];
 
-        foreach (string target in targets)
+        foreach (var target in targets)
         {
             if (DateTime.UtcNow >= endTime || cancellationToken.IsCancellationRequested)
                 break;
 
-            foreach (string portStr in ports)
+            foreach (var portStr in ports)
             {
                 if (DateTime.UtcNow >= endTime || cancellationToken.IsCancellationRequested)
                     break;
 
-                if (int.TryParse(portStr, out int port))
+                if (int.TryParse(portStr, out var port))
                 {
                     try
                     {
@@ -431,20 +431,20 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
     private async Task ExecuteNullScanAsync(ReconnaissanceRequest request, TrafficGenerationResponse response, DateTime endTime, CancellationToken cancellationToken)
     {
         // NULL scan - TCP packets with no flags set
-        List<string> targets = ParseNetworkRange(request.TargetNetwork);
-        string[] ports = request.Ports.Any() ? request.Ports : ["22", "23", "53", "80", "135", "139", "443", "445", "993", "995"];
+        var targets = ParseNetworkRange(request.TargetNetwork);
+        var ports = request.Ports.Any() ? request.Ports : ["22", "23", "53", "80", "135", "139", "443", "445", "993", "995"];
 
-        foreach (string target in targets)
+        foreach (var target in targets)
         {
             if (DateTime.UtcNow >= endTime || cancellationToken.IsCancellationRequested)
                 break;
 
-            foreach (string portStr in ports)
+            foreach (var portStr in ports)
             {
                 if (DateTime.UtcNow >= endTime || cancellationToken.IsCancellationRequested)
                     break;
 
-                if (int.TryParse(portStr, out int port))
+                if (int.TryParse(portStr, out var port))
                 {
                     try
                     {
@@ -476,8 +476,8 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
             // Set socket options to simulate unusual packet behavior
             tcpClient.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
             
-            Task connectTask = tcpClient.ConnectAsync(target, port);
-            Task timeoutTask = Task.Delay(500); // Shorter timeout for stealth
+            var connectTask = tcpClient.ConnectAsync(target, port);
+            var timeoutTask = Task.Delay(500); // Shorter timeout for stealth
             
             await Task.WhenAny(connectTask, timeoutTask);
             
@@ -511,8 +511,8 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
             tcpClient.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
             tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
             
-            Task connectTask = tcpClient.ConnectAsync(target, port);
-            Task timeoutTask = Task.Delay(300); // Very short timeout for NULL scan
+            var connectTask = tcpClient.ConnectAsync(target, port);
+            var timeoutTask = Task.Delay(300); // Very short timeout for NULL scan
             
             await Task.WhenAny(connectTask, timeoutTask);
             
@@ -536,7 +536,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
         logger.LogInformation("Executing {AttackType} MITM attack", request.AttackType);
         
         response.Status = "running";
-        DateTime endTime = DateTime.UtcNow.AddSeconds(request.DurationSeconds);
+        var endTime = DateTime.UtcNow.AddSeconds(request.DurationSeconds);
 
         switch (request.AttackType.ToLowerInvariant())
         {
@@ -563,7 +563,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
         
         while (DateTime.UtcNow < endTime && !cancellationToken.IsCancellationRequested)
         {
-            foreach (string targetIp in request.TargetIPs)
+            foreach (var targetIp in request.TargetIPs)
             {
                 // Simulate ARP reply packets
                 response.PacketsGenerated += 1;
@@ -583,7 +583,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
         
         while (DateTime.UtcNow < endTime && !cancellationToken.IsCancellationRequested)
         {
-            foreach (string domain in spoofDomains)
+            foreach (var domain in spoofDomains)
             {
                 // Simulate DNS response packets
                 response.PacketsGenerated += 1;
@@ -608,7 +608,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
 
         while (DateTime.UtcNow < endTime && !cancellationToken.IsCancellationRequested)
         {
-            foreach (string url in httpsUrls)
+            foreach (var url in httpsUrls)
             {
                 try
                 {
@@ -633,7 +633,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
         logger.LogInformation("Executing {Method} data exfiltration", request.Method);
         
         response.Status = "running";
-        DateTime endTime = DateTime.UtcNow.AddSeconds(request.DurationSeconds);
+        var endTime = DateTime.UtcNow.AddSeconds(request.DurationSeconds);
 
         switch (request.Method.ToLowerInvariant())
         {
@@ -656,15 +656,15 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
     private async Task ExecuteDnsTunnelingAsync(ExfiltrationRequest request, TrafficGenerationResponse response, DateTime endTime, CancellationToken cancellationToken)
     {
         var dnsClient = new LookupClient();
-        int totalBytes = request.DataSizeKB * 1024;
-        int chunkSize = Math.Min(request.ChunkSizeBytes, 255); // DNS label limit
-        int chunks = (totalBytes + chunkSize - 1) / chunkSize;
+        var totalBytes = request.DataSizeKB * 1024;
+        var chunkSize = Math.Min(request.ChunkSizeBytes, 255); // DNS label limit
+        var chunks = (totalBytes + chunkSize - 1) / chunkSize;
 
         for (var i = 0; i < chunks && DateTime.UtcNow < endTime && !cancellationToken.IsCancellationRequested; i++)
         {
             // Generate fake data chunk
-            byte[] data = GenerateRandomData(chunkSize);
-            string encodedData = Convert.ToBase64String(data).Replace("+", "-").Replace("/", "_").Replace("=", "");
+            var data = GenerateRandomData(chunkSize);
+            var encodedData = Convert.ToBase64String(data).Replace("+", "-").Replace("/", "_").Replace("=", "");
             
             // Create DNS query with data in subdomain
             var query = $"{encodedData.Substring(0, Math.Min(encodedData.Length, 63))}.{request.ExfilDomain}";
@@ -690,9 +690,9 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
     private async Task ExecuteIcmpTunnelingAsync(ExfiltrationRequest request, TrafficGenerationResponse response, DateTime endTime, CancellationToken cancellationToken)
     {
         // Simulate ICMP tunneling using ping with custom data
-        int totalBytes = request.DataSizeKB * 1024;
-        int chunkSize = Math.Min(request.ChunkSizeBytes, 1400); // ICMP data limit
-        int chunks = (totalBytes + chunkSize - 1) / chunkSize;
+        var totalBytes = request.DataSizeKB * 1024;
+        var chunkSize = Math.Min(request.ChunkSizeBytes, 1400); // ICMP data limit
+        var chunks = (totalBytes + chunkSize - 1) / chunkSize;
 
         using var ping = new Ping();
         var options = new PingOptions { DontFragment = true };
@@ -701,8 +701,8 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
         {
             try
             {
-                byte[] data = GenerateRandomData(chunkSize);
-                PingReply reply = await ping.SendPingAsync(request.TargetHost ?? "8.8.8.8", 5000, data, options);
+                var data = GenerateRandomData(chunkSize);
+                var reply = await ping.SendPingAsync(request.TargetHost ?? "8.8.8.8", 5000, data, options);
                 
                 response.PacketsGenerated += 2; // ICMP request/reply
                 response.BytesGenerated += data.Length + 28; // ICMP header overhead
@@ -720,9 +720,9 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
 
     private async Task ExecuteHttpUploadAsync(ExfiltrationRequest request, TrafficGenerationResponse response, DateTime endTime, CancellationToken cancellationToken)
     {
-        int totalBytes = request.DataSizeKB * 1024;
-        int chunkSize = Math.Min(request.ChunkSizeBytes, 1024 * 1024); // 1MB max chunks
-        int chunks = (totalBytes + chunkSize - 1) / chunkSize;
+        var totalBytes = request.DataSizeKB * 1024;
+        var chunkSize = Math.Min(request.ChunkSizeBytes, 1024 * 1024); // 1MB max chunks
+        var chunks = (totalBytes + chunkSize - 1) / chunkSize;
 
         var uploadUrl = $"https://{request.ExfilDomain}/upload";
 
@@ -730,8 +730,8 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
         {
             try
             {
-                byte[] data = GenerateRandomData(chunkSize);
-                string encodedData = Convert.ToBase64String(data);
+                var data = GenerateRandomData(chunkSize);
+                var encodedData = Convert.ToBase64String(data);
                 
                 var postData = new { chunk = i, data = encodedData, session = response.SessionId };
                 
@@ -756,7 +756,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
         logger.LogInformation("Executing {Protocol} C2 communication to {Server}", request.C2Protocol, request.C2Server);
         
         response.Status = "running";
-        DateTime endTime = DateTime.UtcNow.AddSeconds(request.DurationSeconds);
+        var endTime = DateTime.UtcNow.AddSeconds(request.DurationSeconds);
 
         switch (request.C2Protocol.ToLowerInvariant())
         {
@@ -779,7 +779,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
 
     private async Task ExecuteHttpC2Async(C2CommunicationRequest request, TrafficGenerationResponse response, DateTime endTime, CancellationToken cancellationToken)
     {
-        string[] userAgents = request.UserAgents.Any() ? request.UserAgents :
+        var userAgents = request.UserAgents.Any() ? request.UserAgents :
         [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
@@ -793,8 +793,8 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
         {
             try
             {
-                string c2Url = request.UseDGA ? GenerateDgaDomain() : request.C2Server;
-                string userAgent = userAgents[random.Next(userAgents.Length)];
+                var c2Url = request.UseDGA ? GenerateDgaDomain() : request.C2Server;
+                var userAgent = userAgents[random.Next(userAgents.Length)];
                 
                 var beaconData = new 
                 { 
@@ -814,9 +814,9 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
                 logger.LogTrace("C2 beacon {BeaconCount} to {Server}", beaconCount, c2Url);
 
                 // Calculate jittered delay
-                int baseDelay = request.BeaconInterval * 1000;
+                var baseDelay = request.BeaconInterval * 1000;
                 var jitter = (int)(baseDelay * (request.JitterPercent / 100.0));
-                int delay = baseDelay + random.Next(-jitter, jitter);
+                var delay = baseDelay + random.Next(-jitter, jitter);
 
                 await Task.Delay(Math.Max(delay, 1000), cancellationToken);
             }
@@ -838,7 +838,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
         {
             try
             {
-                string c2Domain = request.UseDGA ? GenerateDgaDomain() : request.C2Server;
+                var c2Domain = request.UseDGA ? GenerateDgaDomain() : request.C2Server;
                 var beaconData = $"{++beaconCount:x8}.{response.SessionId[..8]}.{c2Domain}";
 
                 await dnsClient.QueryAsync(beaconData, QueryType.A, cancellationToken: cancellationToken);
@@ -848,9 +848,9 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
 
                 logger.LogTrace("DNS C2 beacon {BeaconCount} to {Domain}", beaconCount, beaconData);
 
-                int baseDelay = request.BeaconInterval * 1000;
+                var baseDelay = request.BeaconInterval * 1000;
                 var jitter = (int)(baseDelay * (request.JitterPercent / 100.0));
-                int delay = baseDelay + random.Next(-jitter, jitter);
+                var delay = baseDelay + random.Next(-jitter, jitter);
 
                 await Task.Delay(Math.Max(delay, 5000), cancellationToken);
             }
@@ -872,19 +872,19 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
         {
             try
             {
-                byte[] beaconData = GenerateRandomData(32);
+                var beaconData = GenerateRandomData(32);
                 beaconData[0] = (byte)(++beaconCount & 0xFF); // Beacon counter in first byte
 
-                PingReply reply = await ping.SendPingAsync(request.C2Server, 5000, beaconData);
+                var reply = await ping.SendPingAsync(request.C2Server, 5000, beaconData);
 
                 response.PacketsGenerated += 2; // ICMP request/reply
                 response.BytesGenerated += 60;
 
                 logger.LogTrace("ICMP C2 beacon {BeaconCount} - {Status}", beaconCount, reply.Status);
 
-                int baseDelay = request.BeaconInterval * 1000;
+                var baseDelay = request.BeaconInterval * 1000;
                 var jitter = (int)(baseDelay * (request.JitterPercent / 100.0));
-                int delay = baseDelay + random.Next(-jitter, jitter);
+                var delay = baseDelay + random.Next(-jitter, jitter);
 
                 await Task.Delay(Math.Max(delay, 10000), cancellationToken);
             }
@@ -907,11 +907,11 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
         if (networkRange.Contains('/'))
         {
             // CIDR notation - simplified implementation
-            string[] parts = networkRange.Split('/');
-            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out IPAddress? baseIp) && int.TryParse(parts[1], out int prefixLength))
+            var parts = networkRange.Split('/');
+            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var baseIp) && int.TryParse(parts[1], out var prefixLength))
             {
                 // For demo purposes, generate a few IPs from the range
-                byte[] baseBytes = baseIp.GetAddressBytes();
+                var baseBytes = baseIp.GetAddressBytes();
                 for (var i = 1; i <= Math.Min(10, Math.Pow(2, 32 - prefixLength)); i++)
                 {
                     var ip = new IPAddress(new byte[] 
@@ -928,11 +928,11 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
         else if (networkRange.Contains('-'))
         {
             // Range notation like 192.168.1.1-192.168.1.10
-            string[] parts = networkRange.Split('-');
-            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out IPAddress? startIp) && IPAddress.TryParse(parts[1], out IPAddress? endIp))
+            var parts = networkRange.Split('-');
+            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var startIp) && IPAddress.TryParse(parts[1], out var endIp))
             {
-                byte[] startBytes = startIp.GetAddressBytes();
-                byte[] endBytes = endIp.GetAddressBytes();
+                var startBytes = startIp.GetAddressBytes();
+                var endBytes = endIp.GetAddressBytes();
                 
                 for (int i = startBytes[3]; i <= endBytes[3] && i <= startBytes[3] + 20; i++)
                 {
@@ -962,7 +962,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
     {
         var random = new Random();
         var tlds = new[] { "com", "net", "org", "info", "biz" };
-        int domainLength = random.Next(8, 16);
+        var domainLength = random.Next(8, 16);
         
         var domain = new string(Enumerable.Range(0, domainLength)
             .Select(_ => (char)('a' + random.Next(26)))
@@ -982,18 +982,18 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
 
     public async Task<TrafficGenerationResponse?> GetSessionAsync(string sessionId)
     {
-        _activeSessions.TryGetValue(sessionId, out TrafficGenerationResponse? session);
+        _activeSessions.TryGetValue(sessionId, out var session);
         return await Task.FromResult(session);
     }
 
     public async Task<bool> StopSessionAsync(string sessionId)
     {
-        if (_sessionCancellationTokens.TryRemove(sessionId, out CancellationTokenSource? cancellationTokenSource))
+        if (_sessionCancellationTokens.TryRemove(sessionId, out var cancellationTokenSource))
         {
             cancellationTokenSource.Cancel();
             cancellationTokenSource.Dispose();
 
-            if (_activeSessions.TryGetValue(sessionId, out TrafficGenerationResponse? session))
+            if (_activeSessions.TryGetValue(sessionId, out var session))
             {
                 session.Status = "stopped";
             }
@@ -1013,7 +1013,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
             var devices = CaptureDeviceList.Instance;
             for (var i = 0; i < devices.Count; i++)
             {
-                ILiveDevice? device = devices[i];
+                var device = devices[i];
                 interfaces.Add(new
                 {
                     Index = i,

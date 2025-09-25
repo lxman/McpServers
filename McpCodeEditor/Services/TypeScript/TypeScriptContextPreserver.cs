@@ -35,9 +35,9 @@ public class TypeScriptContextPreserver
             _logger.LogDebug("Preserving context for lines {Start}-{End}", startLine, endLine);
             
             // Get full AST and scope analysis
-            TypeScriptAst ast = await _astParser.ParseAsync(sourceCode, fileName);
-            ScopeAnalysis scope = await _astParser.AnalyzeScopeAsync(sourceCode, startLine, endLine, fileName);
-            MethodAstInfo? methodInfo = await _astParser.ExtractMethodInfoAsync(sourceCode, startLine, endLine, fileName);
+            var ast = await _astParser.ParseAsync(sourceCode, fileName);
+            var scope = await _astParser.AnalyzeScopeAsync(sourceCode, startLine, endLine, fileName);
+            var methodInfo = await _astParser.ExtractMethodInfoAsync(sourceCode, startLine, endLine, fileName);
             
             var result = new ContextPreservationResult
             {
@@ -59,9 +59,9 @@ public class TypeScriptContextPreserver
                     result.ParentClassName = scope.ParentClass?.Name;
                     
                     // Check which class members are accessed
-                    foreach (ThisReference thisRef in methodInfo.ThisReferences)
+                    foreach (var thisRef in methodInfo.ThisReferences)
                     {
-                        ClassMember? member = scope.ParentClass?.Members?.FirstOrDefault(m => m.Name == thisRef.Property);
+                        var member = scope.ParentClass?.Members?.FirstOrDefault(m => m.Name == thisRef.Property);
                         if (member != null)
                         {
                             result.AccessedClassMembers.Add(new AccessedMember
@@ -84,8 +84,8 @@ public class TypeScriptContextPreserver
                 result.ClosureVariables = scope.ClosureVariables;
                 
                 // Determine which closure variables need to be parameters
-                List<string> modifiedVars = methodInfo?.ModifiedVariables ?? [];
-                foreach (string closureVar in scope.ClosureVariables)
+                var modifiedVars = methodInfo?.ModifiedVariables ?? [];
+                foreach (var closureVar in scope.ClosureVariables)
                 {
                     result.RequiredParameters.Add(new RequiredParameter
                     {
@@ -100,10 +100,10 @@ public class TypeScriptContextPreserver
             // Analyze local variables that might need to be parameters
             if (methodInfo?.UsedVariables?.Count > 0)
             {
-                HashSet<string> localVarNames = scope.LocalVariables.Select(v => v.Name).ToHashSet();
-                HashSet<string> paramNames = methodInfo.Parameters.Select(p => p.Name).ToHashSet();
+                var localVarNames = scope.LocalVariables.Select(v => v.Name).ToHashSet();
+                var paramNames = methodInfo.Parameters.Select(p => p.Name).ToHashSet();
                 
-                foreach (string usedVar in methodInfo.UsedVariables)
+                foreach (var usedVar in methodInfo.UsedVariables)
                 {
                     // If variable is used but not defined locally or as parameter
                     if (!localVarNames.Contains(usedVar) && 
@@ -175,7 +175,7 @@ public class TypeScriptContextPreserver
         var parameters = new List<string>();
         
         // Add required parameters from context
-        foreach (RequiredParameter param in context.RequiredParameters)
+        foreach (var param in context.RequiredParameters)
         {
             parameters.Add(param.Name);
         }
@@ -197,14 +197,14 @@ public class TypeScriptContextPreserver
         else if (context.RequiredParameters.Any(p => p.IsModified))
         {
             // If variables are modified, we might need to capture the return
-            List<RequiredParameter> modifiedParams = context.RequiredParameters.Where(p => p.IsModified).ToList();
+            var modifiedParams = context.RequiredParameters.Where(p => p.IsModified).ToList();
             if (modifiedParams.Count == 1)
             {
                 callBuilder.Insert(0, $"{modifiedParams[0].Name} = ");
             }
             else if (modifiedParams.Count > 1)
             {
-                string destructuring = string.Join(", ", modifiedParams.Select(p => p.Name));
+                var destructuring = string.Join(", ", modifiedParams.Select(p => p.Name));
                 callBuilder.Insert(0, $"{{ {destructuring} }} = ");
             }
         }
@@ -231,7 +231,7 @@ public class TypeScriptContextPreserver
         methodBuilder.AppendLine($" * Extracted method: {methodName}");
         
         // Document parameters
-        foreach (RequiredParameter param in context.RequiredParameters)
+        foreach (var param in context.RequiredParameters)
         {
             methodBuilder.AppendLine($" * @param {param.Name} {param.Type} - {param.Source} variable");
         }
@@ -251,7 +251,7 @@ public class TypeScriptContextPreserver
         methodBuilder.AppendLine(" */");
         
         // Generate method signature
-        string signature = GenerateMethodSignature(context, methodName, functionType, isAsync);
+        var signature = GenerateMethodSignature(context, methodName, functionType, isAsync);
         methodBuilder.Append(signature);
         methodBuilder.AppendLine(" {");
         
@@ -263,8 +263,8 @@ public class TypeScriptContextPreserver
         }
         
         // Add the extracted code with proper indentation
-        string[] codeLines = extractedCode.Split('\n');
-        foreach (string line in codeLines)
+        var codeLines = extractedCode.Split('\n');
+        foreach (var line in codeLines)
         {
             if (!string.IsNullOrWhiteSpace(line))
             {
@@ -279,14 +279,14 @@ public class TypeScriptContextPreserver
         // Add return statement if needed
         if (context.RequiredParameters.Any(p => p.IsModified))
         {
-            List<RequiredParameter> modifiedParams = context.RequiredParameters.Where(p => p.IsModified).ToList();
+            var modifiedParams = context.RequiredParameters.Where(p => p.IsModified).ToList();
             if (modifiedParams.Count == 1)
             {
                 methodBuilder.AppendLine($"    return {modifiedParams[0].Name};");
             }
             else if (modifiedParams.Count > 1)
             {
-                string returnObj = string.Join(", ", modifiedParams.Select(p => p.Name));
+                var returnObj = string.Join(", ", modifiedParams.Select(p => p.Name));
                 methodBuilder.AppendLine($"    return {{ {returnObj} }};");
             }
         }
@@ -305,7 +305,7 @@ public class TypeScriptContextPreserver
         var signatureBuilder = new StringBuilder();
         
         // Handle async
-        bool needsAsync = isAsync || context.MethodInfo?.HasAwait == true;
+        var needsAsync = isAsync || context.MethodInfo?.HasAwait == true;
         
         switch (functionType)
         {
@@ -349,7 +349,7 @@ public class TypeScriptContextPreserver
         }
         
         // Add required parameters
-        foreach (RequiredParameter param in context.RequiredParameters)
+        foreach (var param in context.RequiredParameters)
         {
             parameters.Add($"{param.Name}: {param.Type}");
         }
@@ -360,7 +360,7 @@ public class TypeScriptContextPreserver
         // Add return type
         if (context.MethodInfo?.ReturnType != null)
         {
-            string returnType = context.MethodInfo.ReturnType;
+            var returnType = context.MethodInfo.ReturnType;
             
             // Adjust for async functions
             if (needsAsync && !returnType.StartsWith("Promise"))
@@ -486,7 +486,7 @@ public class TypeScriptContextPreserver
 
     private static bool IsImportedSymbol(string symbol, List<ImportInfo> imports)
     {
-        foreach (ImportInfo import in imports)
+        foreach (var import in imports)
         {
             if (import.DefaultImport == symbol)
                 return true;

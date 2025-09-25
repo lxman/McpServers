@@ -18,14 +18,14 @@ public class WorkspaceStatsService(
     {
         try
         {
-            string workspace = config.DefaultWorkspace;
+            var workspace = config.DefaultWorkspace;
             if (!Directory.Exists(workspace))
             {
                 return null;
             }
 
             // Use the new intelligent project scale analysis
-            SourceFileStatistics stats = await ProjectScaleService.GetSourceStatisticsAsync(workspace);
+            var stats = await ProjectScaleService.GetSourceStatisticsAsync(workspace);
             
             return new
             {
@@ -73,17 +73,17 @@ public class WorkspaceStatsService(
     {
         try
         {
-            string workspace = config.DefaultWorkspace;
+            var workspace = config.DefaultWorkspace;
             if (!Directory.Exists(workspace))
             {
                 return null;
             }
 
-            string[] files = Directory.GetFiles(workspace, "*", SearchOption.AllDirectories)
+            var files = Directory.GetFiles(workspace, "*", SearchOption.AllDirectories)
                 .Where(file => config.AllowedExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()))
                 .ToArray();
 
-            long totalSize = files.Sum(file => new FileInfo(file).Length);
+            var totalSize = files.Sum(file => new FileInfo(file).Length);
 
             var extensionStats = files
                 .GroupBy(file => Path.GetExtension(file).ToLowerInvariant())

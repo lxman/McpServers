@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using McpCodeEditor.Models;
 using McpCodeEditor.Models.Options;
 using McpCodeEditor.Services;
 using McpCodeEditor.Tools.Common;
@@ -53,7 +52,7 @@ public class BatchOperationTools(BatchOperationService batchOperationService) : 
                 CreateBackup = createBackup
             };
 
-            BatchOperationResult result = await batchOperationService.BatchReplaceAsync(rootPath, options);
+            var result = await batchOperationService.BatchReplaceAsync(rootPath, options);
             return result;
         });
     }
@@ -84,7 +83,7 @@ public class BatchOperationTools(BatchOperationService batchOperationService) : 
                 CreateBackup = createBackup
             };
 
-            BatchOperationResult result = await batchOperationService.BulkFormatAsync(rootPath, options);
+            var result = await batchOperationService.BulkFormatAsync(rootPath, options);
             return result;
         });
     }
@@ -120,7 +119,7 @@ public class BatchOperationTools(BatchOperationService batchOperationService) : 
                 CreateBackup = createBackup
             };
 
-            BatchOperationResult result = await batchOperationService.MassRenameAsync(rootPath, options);
+            var result = await batchOperationService.MassRenameAsync(rootPath, options);
             return result;
         });
     }
@@ -153,7 +152,7 @@ public class BatchOperationTools(BatchOperationService batchOperationService) : 
                 CreateBackup = createBackup
             };
 
-            BatchOperationResult result = await batchOperationService.BulkConvertAsync(rootPath, options);
+            var result = await batchOperationService.BulkConvertAsync(rootPath, options);
             return result;
         });
     }

@@ -15,7 +15,7 @@ public class WorkspaceAnalysisService(ProjectDetectionService projectDetection)
     {
         try
         {
-            ProjectInfo projectInfo = await projectDetection.AnalyzeDirectoryAsync(workspacePath);
+            var projectInfo = await projectDetection.AnalyzeDirectoryAsync(workspacePath);
             return new
             {
                 project_type = projectInfo.Type.ToString(),

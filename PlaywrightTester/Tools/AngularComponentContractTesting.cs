@@ -321,7 +321,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
         try
         {
             // Validate session exists
-            PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
+            var session = _sessionManager.GetSession(sessionId);
             if (session == null)
             {
                 return JsonSerializer.Serialize(new ContractValidationResult
@@ -473,14 +473,14 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
 
             return new TestingEnvironmentInfo
             {
-                AngularDetected = environmentResult.TryGetProperty("angularDetected", out JsonElement detected) && detected.GetBoolean(),
-                AngularVersion = environmentResult.TryGetProperty("angularVersion", out JsonElement version) ? version.GetString() ?? "" : "",
-                DevToolsAvailable = environmentResult.TryGetProperty("devToolsAvailable", out JsonElement devTools) && devTools.GetBoolean(),
-                ComponentTestingSupported = environmentResult.TryGetProperty("componentTestingSupported", out JsonElement supported) && supported.GetBoolean(),
-                SignalsSupported = environmentResult.TryGetProperty("signalsSupported", out JsonElement signals) && signals.GetBoolean(),
-                StandaloneComponentsSupported = environmentResult.TryGetProperty("standaloneComponentsSupported", out JsonElement standalone) && standalone.GetBoolean(),
-                TestingFramework = environmentResult.TryGetProperty("testingFramework", out JsonElement framework) ? framework.GetString() ?? "" : "",
-                AvailableTestingLibraries = environmentResult.TryGetProperty("availableTestingLibraries", out JsonElement libraries)
+                AngularDetected = environmentResult.TryGetProperty("angularDetected", out var detected) && detected.GetBoolean(),
+                AngularVersion = environmentResult.TryGetProperty("angularVersion", out var version) ? version.GetString() ?? "" : "",
+                DevToolsAvailable = environmentResult.TryGetProperty("devToolsAvailable", out var devTools) && devTools.GetBoolean(),
+                ComponentTestingSupported = environmentResult.TryGetProperty("componentTestingSupported", out var supported) && supported.GetBoolean(),
+                SignalsSupported = environmentResult.TryGetProperty("signalsSupported", out var signals) && signals.GetBoolean(),
+                StandaloneComponentsSupported = environmentResult.TryGetProperty("standaloneComponentsSupported", out var standalone) && standalone.GetBoolean(),
+                TestingFramework = environmentResult.TryGetProperty("testingFramework", out var framework) ? framework.GetString() ?? "" : "",
+                AvailableTestingLibraries = environmentResult.TryGetProperty("availableTestingLibraries", out var libraries)
                     ? libraries.EnumerateArray().Select(lib => lib.GetString() ?? "").ToList()
                     : []
             };
@@ -695,7 +695,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
     {
         var results = new List<InputValidationResult>();
 
-        foreach (ComponentInput input in contractInfo.Inputs)
+        foreach (var input in contractInfo.Inputs)
         {
             var inputResult = new InputValidationResult
             {
@@ -706,15 +706,15 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
             try
             {
                 // Generate test cases for the input
-                List<InputTestCase> testCases = GenerateInputTestCases(input);
+                var testCases = GenerateInputTestCases(input);
 
-                foreach (InputTestCase testCase in testCases)
+                foreach (var testCase in testCases)
                 {
-                    DateTime testStart = DateTime.UtcNow;
+                    var testStart = DateTime.UtcNow;
 
                     try
                     {
-                        bool validationResult = await ValidateInputTestCase(session, contractInfo, input, testCase);
+                        var validationResult = await ValidateInputTestCase(session, contractInfo, input, testCase);
                         testCase.Passed = validationResult;
                         testCase.ExecutionTime = DateTime.UtcNow - testStart;
 
@@ -757,7 +757,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
     {
         var results = new List<OutputValidationResult>();
 
-        foreach (ComponentOutput output in contractInfo.Outputs)
+        foreach (var output in contractInfo.Outputs)
         {
             var outputResult = new OutputValidationResult
             {
@@ -768,15 +768,15 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
             try
             {
                 // Generate test cases for the output
-                List<OutputTestCase> testCases = GenerateOutputTestCases(output);
+                var testCases = GenerateOutputTestCases(output);
 
-                foreach (OutputTestCase testCase in testCases)
+                foreach (var testCase in testCases)
                 {
-                    DateTime testStart = DateTime.UtcNow;
+                    var testStart = DateTime.UtcNow;
 
                     try
                     {
-                        (bool eventEmitted, object? payload, bool payloadValid) validationResult = await ValidateOutputTestCase(session, contractInfo, output, testCase);
+                        var validationResult = await ValidateOutputTestCase(session, contractInfo, output, testCase);
                         testCase.EventEmitted = validationResult.eventEmitted;
                         testCase.EventPayload = validationResult.payload;
                         testCase.PayloadValid = validationResult.payloadValid;
@@ -821,7 +821,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
                 TestCases = []
             };
 
-            foreach (ComponentMethod method in contractInfo.PublicMethods)
+            foreach (var method in contractInfo.PublicMethods)
             {
                 var testCase = new InterfaceTestCase
                 {
@@ -830,11 +830,11 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
                     Parameters = []
                 };
 
-                DateTime testStart = DateTime.UtcNow;
+                var testStart = DateTime.UtcNow;
 
                 try
                 {
-                    (bool success, object? result, string error) validationResult = await ValidateMethodInterface(session, contractInfo, method);
+                    var validationResult = await ValidateMethodInterface(session, contractInfo, method);
                     testCase.Passed = validationResult.success;
                     testCase.ActualResult = validationResult.result;
                     testCase.ExpectedResult = "Method callable without errors";
@@ -1041,9 +1041,9 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
 
             var result = await session.Page.EvaluateAsync<JsonElement>(jsCode);
 
-            bool eventEmitted = result.TryGetProperty("eventEmitted", out JsonElement emitted) && emitted.GetBoolean();
-            object? payload = result.TryGetProperty("payload", out JsonElement payloadElement) ? (object?)payloadElement : null;
-            bool payloadValid = result.TryGetProperty("payloadValid", out JsonElement valid) && valid.GetBoolean();
+            var eventEmitted = result.TryGetProperty("eventEmitted", out var emitted) && emitted.GetBoolean();
+            var payload = result.TryGetProperty("payload", out var payloadElement) ? (object?)payloadElement : null;
+            var payloadValid = result.TryGetProperty("payloadValid", out var valid) && valid.GetBoolean();
 
             return (eventEmitted, payload, payloadValid);
         }
@@ -1086,9 +1086,9 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
 
             var result = await session.Page.EvaluateAsync<JsonElement>(jsCode);
 
-            bool success = result.TryGetProperty("success", out JsonElement successProp) && successProp.GetBoolean();
-            object? methodResult = result.TryGetProperty("result", out JsonElement resultProp) ? (object?)resultProp : null;
-            string error = result.TryGetProperty("error", out JsonElement errorProp) ? errorProp.GetString() ?? "" : "";
+            var success = result.TryGetProperty("success", out var successProp) && successProp.GetBoolean();
+            var methodResult = result.TryGetProperty("result", out var resultProp) ? (object?)resultProp : null;
+            var error = result.TryGetProperty("error", out var errorProp) ? errorProp.GetString() ?? "" : "";
 
             return (success, methodResult, error);
         }
@@ -1100,10 +1100,10 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
 
     private ValidationMetrics CalculateValidationMetrics(IEnumerable<dynamic> testResults)
     {
-        List<dynamic> results = testResults.ToList();
-        int totalTests = results.Count;
-        int passedTests = results.Count(r => r.Passed);
-        TimeSpan totalTime = results.Aggregate(TimeSpan.Zero, (acc, r) => acc + r.ExecutionTime);
+        var results = testResults.ToList();
+        var totalTests = results.Count;
+        var passedTests = results.Count(r => r.Passed);
+        var totalTime = results.Aggregate(TimeSpan.Zero, (acc, r) => acc + r.ExecutionTime);
 
         return new ValidationMetrics
         {
@@ -1116,23 +1116,23 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
 
     private ContractComplianceScore CalculateComplianceScore(ContractValidationResult result)
     {
-        double inputScore = result.InputValidations.Any()
+        var inputScore = result.InputValidations.Any()
             ? result.InputValidations.Average(iv => iv.Metrics.PassRate)
             : 100;
 
-        double outputScore = result.OutputValidations.Any()
+        var outputScore = result.OutputValidations.Any()
             ? result.OutputValidations.Average(ov => ov.Metrics.PassRate)
             : 100;
 
-        double interfaceScore = result.InterfaceValidations.Any()
+        var interfaceScore = result.InterfaceValidations.Any()
             ? result.InterfaceValidations.Average(iv => iv.Metrics.PassRate)
             : 100;
 
-        double typeSafetyScore = CalculateTypeSafetyScore(result);
-        double errorHandlingScore = CalculateErrorHandlingScore(result);
-        double performanceScore = CalculatePerformanceScore(result);
+        var typeSafetyScore = CalculateTypeSafetyScore(result);
+        var errorHandlingScore = CalculateErrorHandlingScore(result);
+        var performanceScore = CalculatePerformanceScore(result);
 
-        double overallScore = (inputScore + outputScore + interfaceScore + typeSafetyScore + errorHandlingScore + performanceScore) / 6;
+        var overallScore = (inputScore + outputScore + interfaceScore + typeSafetyScore + errorHandlingScore + performanceScore) / 6;
 
         return new ContractComplianceScore
         {
@@ -1152,11 +1152,11 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
         var score = 100.0;
 
         // Deduct points for inputs without proper typing
-        int untypedInputs = result.ContractInfo.Inputs.Count(i => i.Type == "any" || string.IsNullOrEmpty(i.Type));
+        var untypedInputs = result.ContractInfo.Inputs.Count(i => i.Type == "any" || string.IsNullOrEmpty(i.Type));
         score -= untypedInputs * 10;
 
         // Deduct points for outputs without proper typing
-        int untypedOutputs = result.ContractInfo.Outputs.Count(o => string.IsNullOrEmpty(o.Type));
+        var untypedOutputs = result.ContractInfo.Outputs.Count(o => string.IsNullOrEmpty(o.Type));
         score -= untypedOutputs * 10;
 
         return Math.Max(0, score);
@@ -1174,7 +1174,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
         }
 
         // Check for failed validations
-        int failedValidations = result.InputValidations.Count(iv => !iv.IsValid) +
+        var failedValidations = result.InputValidations.Count(iv => !iv.IsValid) +
                                 result.OutputValidations.Count(ov => !ov.IsValid) +
                                 result.InterfaceValidations.Count(iv => !iv.IsValid);
 
@@ -1195,11 +1195,11 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
         }
 
         // Assess test execution times
-        IEnumerable<TimeSpan> allTestTimes = result.InputValidations.SelectMany(iv => iv.TestCases.Select(tc => tc.ExecutionTime))
+        var allTestTimes = result.InputValidations.SelectMany(iv => iv.TestCases.Select(tc => tc.ExecutionTime))
                           .Concat(result.OutputValidations.SelectMany(ov => ov.TestCases.Select(tc => tc.ResponseTime)))
                           .Concat(result.InterfaceValidations.SelectMany(iv => iv.TestCases.Select(tc => tc.ExecutionTime)));
 
-        double averageTime = allTestTimes.Any() ? allTestTimes.Average(t => t.TotalMilliseconds) : 0;
+        var averageTime = allTestTimes.Any() ? allTestTimes.Average(t => t.TotalMilliseconds) : 0;
 
         // Deduct points for slow operations (>100ms average)
         if (averageTime > 100)
@@ -1215,10 +1215,10 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
         var violations = new List<ContractViolation>();
 
         // Check for missing required inputs
-        IEnumerable<ComponentInput> requiredInputs = result.ContractInfo.Inputs.Where(i => i.IsRequired);
-        foreach (ComponentInput input in requiredInputs)
+        var requiredInputs = result.ContractInfo.Inputs.Where(i => i.IsRequired);
+        foreach (var input in requiredInputs)
         {
-            InputValidationResult? validation = result.InputValidations.FirstOrDefault(iv => iv.InputName == input.Name);
+            var validation = result.InputValidations.FirstOrDefault(iv => iv.InputName == input.Name);
             if (validation?.IsValid == false)
             {
                 violations.Add(new ContractViolation
@@ -1248,7 +1248,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
         }
 
         // Check for failed interface validations
-        foreach (InterfaceValidationResult interfaceValidation in result.InterfaceValidations.Where(iv => !iv.IsValid))
+        foreach (var interfaceValidation in result.InterfaceValidations.Where(iv => !iv.IsValid))
         {
             violations.Add(new ContractViolation
             {
@@ -1284,7 +1284,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
         }
 
         // Recommend input validation improvements
-        IEnumerable<InputValidationResult> invalidInputs = result.InputValidations.Where(iv => !iv.IsValid);
+        var invalidInputs = result.InputValidations.Where(iv => !iv.IsValid);
         if (invalidInputs.Any())
         {
             recommendations.Add(new ContractRecommendation

@@ -27,7 +27,7 @@ public class WorkspaceMetadataService : IWorkspaceMetadataService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // Set up metadata file path: %APPDATA%\McpCodeEditor\metadata\workspace-mappings.json
-        string metadataDir = Path.Combine(_appDataPathService.GetAppDataRoot(), "metadata");
+        var metadataDir = Path.Combine(_appDataPathService.GetAppDataRoot(), "metadata");
         _appDataPathService.EnsureDirectoryExists(metadataDir);
         _metadataFilePath = Path.Combine(metadataDir, "workspace-mappings.json");
 
@@ -41,7 +41,7 @@ public class WorkspaceMetadataService : IWorkspaceMetadataService
             throw new ArgumentException("Workspace hash cannot be null or empty", nameof(workspaceHash));
         }
 
-        List<WorkspaceMetadata> allMetadata = await LoadAllMetadataAsync();
+        var allMetadata = await LoadAllMetadataAsync();
         return allMetadata.FirstOrDefault(m => m.Hash == workspaceHash);
     }
 
@@ -52,11 +52,11 @@ public class WorkspaceMetadataService : IWorkspaceMetadataService
             throw new ArgumentException("Workspace path cannot be null or empty", nameof(workspacePath));
         }
 
-        string normalizedPath = _appDataPathService.NormalizeWorkspacePath(workspacePath);
-        List<WorkspaceMetadata> allMetadata = await LoadAllMetadataAsync();
+        var normalizedPath = _appDataPathService.NormalizeWorkspacePath(workspacePath);
+        var allMetadata = await LoadAllMetadataAsync();
         
         // First try to find by current path
-        WorkspaceMetadata? metadata = allMetadata.FirstOrDefault(m => 
+        var metadata = allMetadata.FirstOrDefault(m => 
             _appDataPathService.NormalizeWorkspacePath(m.CurrentPath) == normalizedPath);
         
         if (metadata == null)
@@ -76,13 +76,13 @@ public class WorkspaceMetadataService : IWorkspaceMetadataService
             throw new ArgumentException("Workspace path cannot be null or empty", nameof(workspacePath));
         }
 
-        string workspaceHash = _appDataPathService.GetWorkspaceHash(workspacePath);
-        WorkspaceMetadata? existing = await GetWorkspaceMetadataAsync(workspaceHash);
+        var workspaceHash = _appDataPathService.GetWorkspaceHash(workspacePath);
+        var existing = await GetWorkspaceMetadataAsync(workspaceHash);
 
         if (existing != null)
         {
             // Update existing metadata
-            string oldPath = existing.CurrentPath;
+            var oldPath = existing.CurrentPath;
             existing.CurrentPath = workspacePath;
             existing.LastAccessed = DateTime.UtcNow;
             existing.AccessCount++;
@@ -142,13 +142,13 @@ public class WorkspaceMetadataService : IWorkspaceMetadataService
             throw new ArgumentException("New path cannot be null or empty", nameof(newPath));
         }
 
-        WorkspaceMetadata? metadata = await GetWorkspaceMetadataAsync(workspaceHash);
+        var metadata = await GetWorkspaceMetadataAsync(workspaceHash);
         if (metadata == null)
         {
             return null;
         }
 
-        string oldPath = metadata.CurrentPath;
+        var oldPath = metadata.CurrentPath;
         metadata.CurrentPath = newPath;
         metadata.LastAccessed = DateTime.UtcNow;
 
@@ -166,7 +166,7 @@ public class WorkspaceMetadataService : IWorkspaceMetadataService
 
     public async Task<List<WorkspaceMetadata>> GetRecentWorkspacesAsync(int maxCount = 10)
     {
-        List<WorkspaceMetadata> allMetadata = await LoadAllMetadataAsync();
+        var allMetadata = await LoadAllMetadataAsync();
         return allMetadata
             .OrderByDescending(m => m.LastAccessed)
             .Take(maxCount)
@@ -180,8 +180,8 @@ public class WorkspaceMetadataService : IWorkspaceMetadataService
             throw new ArgumentException("Workspace hash cannot be null or empty", nameof(workspaceHash));
         }
 
-        List<WorkspaceMetadata> allMetadata = await LoadAllMetadataAsync();
-        WorkspaceMetadata? toRemove = allMetadata.FirstOrDefault(m => m.Hash == workspaceHash);
+        var allMetadata = await LoadAllMetadataAsync();
+        var toRemove = allMetadata.FirstOrDefault(m => m.Hash == workspaceHash);
         
         if (toRemove == null)
         {
@@ -202,8 +202,8 @@ public class WorkspaceMetadataService : IWorkspaceMetadataService
 
     public async Task<List<WorkspaceMetadata>> GetUnusedWorkspacesAsync(int daysUnused = 90)
     {
-        DateTime cutoffDate = DateTime.UtcNow.AddDays(-daysUnused);
-        List<WorkspaceMetadata> allMetadata = await LoadAllMetadataAsync();
+        var cutoffDate = DateTime.UtcNow.AddDays(-daysUnused);
+        var allMetadata = await LoadAllMetadataAsync();
         
         return allMetadata
             .Where(m => m.LastAccessed < cutoffDate)
@@ -213,7 +213,7 @@ public class WorkspaceMetadataService : IWorkspaceMetadataService
 
     public async Task<WorkspaceMetadata?> UpdateWorkspaceTagsAsync(string workspaceHash, List<string> tags)
     {
-        WorkspaceMetadata? metadata = await GetWorkspaceMetadataAsync(workspaceHash);
+        var metadata = await GetWorkspaceMetadataAsync(workspaceHash);
         if (metadata == null)
         {
             return null;
@@ -227,7 +227,7 @@ public class WorkspaceMetadataService : IWorkspaceMetadataService
 
     public async Task<WorkspaceMetadata?> UpdateWorkspaceNotesAsync(string workspaceHash, string notes)
     {
-        WorkspaceMetadata? metadata = await GetWorkspaceMetadataAsync(workspaceHash);
+        var metadata = await GetWorkspaceMetadataAsync(workspaceHash);
         if (metadata == null)
         {
             return null;
@@ -246,8 +246,8 @@ public class WorkspaceMetadataService : IWorkspaceMetadataService
             return [];
         }
 
-        List<WorkspaceMetadata> allMetadata = await LoadAllMetadataAsync();
-        string lowerSearchTerm = searchTerm.ToLowerInvariant();
+        var allMetadata = await LoadAllMetadataAsync();
+        var lowerSearchTerm = searchTerm.ToLowerInvariant();
         
         return allMetadata
             .Where(m => m.DisplayName.Contains(lowerSearchTerm, StringComparison.InvariantCultureIgnoreCase) ||
@@ -273,18 +273,18 @@ public class WorkspaceMetadataService : IWorkspaceMetadataService
                 return [];
             }
 
-            string jsonContent = await File.ReadAllTextAsync(_metadataFilePath);
+            var jsonContent = await File.ReadAllTextAsync(_metadataFilePath);
             if (string.IsNullOrWhiteSpace(jsonContent))
             {
                 _logger.LogDebug("Metadata file is empty, returning empty list");
                 return [];
             }
 
-            List<WorkspaceMetadata> metadata = JsonSerializer.Deserialize<List<WorkspaceMetadata>>(jsonContent) ?? [];
+            var metadata = JsonSerializer.Deserialize<List<WorkspaceMetadata>>(jsonContent) ?? [];
             
             // Update cache
             _metadataCache.Clear();
-            foreach (WorkspaceMetadata item in metadata)
+            foreach (var item in metadata)
             {
                 _metadataCache[item.Hash] = item;
             }
@@ -306,13 +306,13 @@ public class WorkspaceMetadataService : IWorkspaceMetadataService
 
     private async Task SaveMetadataAsync(WorkspaceMetadata metadata)
     {
-        List<WorkspaceMetadata> allMetadata = await LoadAllMetadataAsync();
+        var allMetadata = await LoadAllMetadataAsync();
         
         // Update or add the metadata
-        WorkspaceMetadata? existing = allMetadata.FirstOrDefault(m => m.Hash == metadata.Hash);
+        var existing = allMetadata.FirstOrDefault(m => m.Hash == metadata.Hash);
         if (existing != null)
         {
-            int index = allMetadata.IndexOf(existing);
+            var index = allMetadata.IndexOf(existing);
             allMetadata[index] = metadata;
         }
         else
@@ -337,7 +337,7 @@ public class WorkspaceMetadataService : IWorkspaceMetadataService
                 PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
             };
 
-            string jsonContent = JsonSerializer.Serialize(allMetadata, options);
+            var jsonContent = JsonSerializer.Serialize(allMetadata, options);
             await File.WriteAllTextAsync(_metadataFilePath, jsonContent);
             
             _logger.LogDebug("Saved {Count} workspace metadata entries to file", allMetadata.Count);

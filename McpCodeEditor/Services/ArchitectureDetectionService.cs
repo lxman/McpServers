@@ -28,33 +28,33 @@ public class ArchitectureDetectionService(
         try
         {
             // Use injected project discovery service
-            List<ProjectInfo> projects = await projectDiscovery.GetProjectsInDirectoryAsync(rootPath, cancellationToken);
+            var projects = await projectDiscovery.GetProjectsInDirectoryAsync(rootPath, cancellationToken);
 
             // Debug: Log what projects were found
             Console.WriteLine($"Found {projects.Count} projects:");
-            foreach (ProjectInfo proj in projects)
+            foreach (var proj in projects)
             {
                 Console.WriteLine($"  - {proj.Name} ({proj.Type}) at {proj.Path}");
             }
 
             // Use injected pattern detection strategy service for all detection strategies
-            List<ArchitecturePattern> solutionPatterns = await patternDetectionStrategy.DetectSolutionBasedPatternsAsync(rootPath, projects, cancellationToken);
+            var solutionPatterns = await patternDetectionStrategy.DetectSolutionBasedPatternsAsync(rootPath, projects, cancellationToken);
             detectedPatterns.AddRange(solutionPatterns);
 
-            List<ArchitecturePattern> directoryPatterns = await patternDetectionStrategy.DetectDirectoryBasedPatternsAsync(rootPath, projects, cancellationToken);
+            var directoryPatterns = await patternDetectionStrategy.DetectDirectoryBasedPatternsAsync(rootPath, projects, cancellationToken);
             detectedPatterns.AddRange(directoryPatterns);
 
-            List<ArchitecturePattern> namingPatterns = await patternDetectionStrategy.DetectNamingBasedPatternsAsync(rootPath, projects, cancellationToken);
+            var namingPatterns = await patternDetectionStrategy.DetectNamingBasedPatternsAsync(rootPath, projects, cancellationToken);
             detectedPatterns.AddRange(namingPatterns);
 
-            List<ArchitecturePattern> combinationPatterns = await patternDetectionStrategy.DetectProjectCombinationPatternsAsync(rootPath, projects, cancellationToken);
+            var combinationPatterns = await patternDetectionStrategy.DetectProjectCombinationPatternsAsync(rootPath, projects, cancellationToken);
             detectedPatterns.AddRange(combinationPatterns);
 
             // Remove duplicates and merge similar patterns
             detectedPatterns = MergeAndDeduplicatePatterns(detectedPatterns);
 
             // Calculate final confidence scores
-            foreach (ArchitecturePattern pattern in detectedPatterns)
+            foreach (var pattern in detectedPatterns)
             {
                 pattern.ConfidenceScore = CalculatePatternConfidence(pattern);
             }
@@ -97,10 +97,10 @@ public class ArchitectureDetectionService(
             return Math.Min(1.0, baseConfidence);
         }
 
-        double totalWeight = pattern.Indicators.Sum(i => i.Weight);
-        double maxPossibleWeight = pattern.Indicators.Count * 2.0; // Assuming max weight is 2.0 per indicator
+        var totalWeight = pattern.Indicators.Sum(i => i.Weight);
+        var maxPossibleWeight = pattern.Indicators.Count * 2.0; // Assuming max weight is 2.0 per indicator
 
-        double calculatedConfidence = Math.Min(1.0, totalWeight / maxPossibleWeight);
+        var calculatedConfidence = Math.Min(1.0, totalWeight / maxPossibleWeight);
         
         // Boost confidence for strong pattern matches
         if (pattern.ProjectPaths?.Count >= 2) calculatedConfidence += 0.1;

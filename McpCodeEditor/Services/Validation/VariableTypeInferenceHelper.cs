@@ -15,21 +15,21 @@ public static class VariableTypeInferenceHelper
         var inferences = new List<(string Name, string Type)>();
         var processedVariables = new HashSet<string>();
 
-        string[] lines = selectedCode.Split('\n');
+        var lines = selectedCode.Split('\n');
         
-        foreach (string line in lines)
+        foreach (var line in lines)
         {
-            string trimmed = line.Trim();
+            var trimmed = line.Trim();
             
             // Enhanced Pattern 1: Variables used in foreach loops (better collection detection)
-            Match foreachMatch = Regex.Match(trimmed, @"foreach\s*\(\s*(\w+)\s+\w+\s+in\s+(\w+)\s*\)");
+            var foreachMatch = Regex.Match(trimmed, @"foreach\s*\(\s*(\w+)\s+\w+\s+in\s+(\w+)\s*\)");
             if (foreachMatch.Success && !processedVariables.Contains(foreachMatch.Groups[2].Value))
             {
-                string collectionName = foreachMatch.Groups[2].Value;
-                string elementType = foreachMatch.Groups[1].Value;
+                var collectionName = foreachMatch.Groups[2].Value;
+                var elementType = foreachMatch.Groups[1].Value;
                 
                 // Try to infer better collection type based on element type
-                string collectionType = elementType switch
+                var collectionType = elementType switch
                 {
                     "var" => "List<object>",
                     "string" => "List<string>",
@@ -43,10 +43,10 @@ public static class VariableTypeInferenceHelper
             }
 
             // Enhanced Pattern 2: Variables with arithmetic operations (better numeric detection)
-            MatchCollection arithmeticMatches = Regex.Matches(trimmed, @"(\w+)\s*([+\-*/]=|\+\+|--|[+\-*/])\s*(\w+|[\d.]+)");
+            var arithmeticMatches = Regex.Matches(trimmed, @"(\w+)\s*([+\-*/]=|\+\+|--|[+\-*/])\s*(\w+|[\d.]+)");
             foreach (Match match in arithmeticMatches)
             {
-                string varName = match.Groups[1].Value;
+                var varName = match.Groups[1].Value;
                 if (!processedVariables.Contains(varName) && !IsKeyword(varName))
                 {
                     // Better inference based on operation and naming
@@ -76,16 +76,16 @@ public static class VariableTypeInferenceHelper
             }
 
             // Enhanced Pattern 3: Variables used with property access (better object detection)
-            MatchCollection propertyMatches = Regex.Matches(trimmed, @"(\w+)\.(\w+)");
+            var propertyMatches = Regex.Matches(trimmed, @"(\w+)\.(\w+)");
             foreach (Match match in propertyMatches)
             {
-                string varName = match.Groups[1].Value;
-                string propertyName = match.Groups[2].Value;
+                var varName = match.Groups[1].Value;
+                var propertyName = match.Groups[2].Value;
                 
                 if (!processedVariables.Contains(varName) && !IsKeyword(varName))
                 {
                     // Try to infer better type based on property names
-                    string inferredType = propertyName switch
+                    var inferredType = propertyName switch
                     {
                         "Status" or "Name" or "Title" => "Order",  // Common business object
                         "Amount" or "Price" or "Cost" => "Order",
@@ -100,11 +100,11 @@ public static class VariableTypeInferenceHelper
             }
 
             // Enhanced Pattern 4: Variable declarations with explicit types
-            MatchCollection declarationMatches = Regex.Matches(trimmed, @"\b(int|double|float|decimal|string|bool|var|List<\w+>)\s+(\w+)\s*=");
+            var declarationMatches = Regex.Matches(trimmed, @"\b(int|double|float|decimal|string|bool|var|List<\w+>)\s+(\w+)\s*=");
             foreach (Match match in declarationMatches)
             {
-                string declaredType = match.Groups[1].Value;
-                string varName = match.Groups[2].Value;
+                var declaredType = match.Groups[1].Value;
+                var varName = match.Groups[2].Value;
                 
                 if (!processedVariables.Contains(varName))
                 {
@@ -115,15 +115,15 @@ public static class VariableTypeInferenceHelper
             }
 
             // Enhanced Pattern 5: Method calls that suggest variable types
-            MatchCollection methodCallMatches = Regex.Matches(trimmed, @"(\w+)\s*=\s*\w+\.(\w+)\(");
+            var methodCallMatches = Regex.Matches(trimmed, @"(\w+)\s*=\s*\w+\.(\w+)\(");
             foreach (Match match in methodCallMatches)
             {
-                string varName = match.Groups[1].Value;
-                string methodName = match.Groups[2].Value;
+                var varName = match.Groups[1].Value;
+                var methodName = match.Groups[2].Value;
                 
                 if (!processedVariables.Contains(varName) && !IsKeyword(varName))
                 {
-                    string inferredType = methodName switch
+                    var inferredType = methodName switch
                     {
                         "Where" or "Select" or "OrderBy" => "IEnumerable<object>",
                         "FirstOrDefault" or "SingleOrDefault" => "object",

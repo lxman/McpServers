@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
-using ModelContextProtocol.Server;
 using AwsMcp.Configuration;
 using AwsMcp.Configuration.Models;
+using ModelContextProtocol.Server;
 
 namespace AwsMcp.Tools;
 

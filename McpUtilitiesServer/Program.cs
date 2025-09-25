@@ -8,10 +8,10 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        Console.Error.WriteLine("McpUtilitiesServer - Starting MCP server...");
+        await Console.Error.WriteLineAsync("McpUtilitiesServer - Starting MCP server...");
 
         // Create application builder with proper logging setup
-        HostApplicationBuilder builder = Host.CreateApplicationBuilder();
+        var builder = Host.CreateApplicationBuilder();
 
         // Configure all logs to go to stderr instead of stdout
         // This is important for stdio transport since stdout is reserved for MCP communication
@@ -26,7 +26,7 @@ public class Program
             .WithStdioServerTransport()
             .WithTools<TimeUtilities>();
 
-        IHost host = builder.Build();
+        var host = builder.Build();
 
         await Console.Error.WriteLineAsync("MCP time utilities server ready to handle requests");
         await host.RunAsync();

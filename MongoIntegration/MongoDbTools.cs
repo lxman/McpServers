@@ -17,7 +17,7 @@ public class MongoDbTools
         _mongoDbService = mongoDbService;
         
         // Create cross-server operations with logger
-        ILogger<CrossServerOperations> logger = LoggerFactory.Create(builder => builder.AddConsole())
+        var logger = LoggerFactory.Create(builder => builder.AddConsole())
             .CreateLogger<CrossServerOperations>();
         
         // Access the connection manager through the public property
@@ -36,7 +36,7 @@ public class MongoDbTools
     {
         try
         {
-            string result = await _mongoDbService.ConnectAsync(connectionString, databaseName);
+            var result = await _mongoDbService.ConnectAsync(connectionString, databaseName);
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -70,7 +70,7 @@ public class MongoDbTools
     {
         try
         {
-            string result = await _mongoDbService.ConnectToServerAsync(serverName, connectionString, databaseName);
+            var result = await _mongoDbService.ConnectToServerAsync(serverName, connectionString, databaseName);
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -100,7 +100,7 @@ public class MongoDbTools
     {
         try
         {
-            string result = _mongoDbService.Disconnect();
+            var result = _mongoDbService.Disconnect();
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -127,7 +127,7 @@ public class MongoDbTools
     {
         try
         {
-            string result = _mongoDbService.DisconnectFromServer(serverName);
+            var result = _mongoDbService.DisconnectFromServer(serverName);
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -152,8 +152,8 @@ public class MongoDbTools
     {
         try
         {
-            string primaryStatus = _mongoDbService.GetConnectionStatus();
-            string allConnections = _mongoDbService.ListActiveConnections();
+            var primaryStatus = _mongoDbService.GetConnectionStatus();
+            var allConnections = _mongoDbService.ListActiveConnections();
             
             // Parse the connections JSON to enhance it
             var connectionsObj = JsonSerializer.Deserialize<dynamic>(allConnections);
@@ -334,11 +334,11 @@ public class MongoDbTools
         try
         {
             // First connect with the profile
-            string connectResult = await _mongoDbService.ConnectWithProfileAsync(profileName);
+            var connectResult = await _mongoDbService.ConnectWithProfileAsync(profileName);
             
             // Parse the connect result to check if it was successful
             var connectObj = JsonSerializer.Deserialize<JsonElement>(connectResult);
-            bool wasSuccessful = !connectResult.Contains("not found") && !connectResult.Contains("incomplete");
+            var wasSuccessful = !connectResult.Contains("not found") && !connectResult.Contains("incomplete");
             
             if (!wasSuccessful)
             {
@@ -353,10 +353,10 @@ public class MongoDbTools
             }
             
             // Get the server name that was connected
-            string serverName = profileName.Replace(" ", "_").ToLowerInvariant();
+            var serverName = profileName.Replace(" ", "_").ToLowerInvariant();
             
             // Now list available databases
-            string databasesResult = await _mongoDbService.ListDatabasesAsync(serverName);
+            var databasesResult = await _mongoDbService.ListDatabasesAsync(serverName);
             var databasesObj = JsonSerializer.Deserialize<JsonElement>(databasesResult);
             
             return JsonSerializer.Serialize(new
@@ -431,13 +431,13 @@ public class MongoDbTools
         // Pre-operation validation
         if (serverName == "default")
         {
-            string? validationError = ValidateDefaultConnection("query");
+            var validationError = ValidateDefaultConnection("query");
             if (validationError != null) return validationError;
         }
 
         try
         {
-            string result = await _mongoDbService.QueryAsync(serverName, collectionName, filter, limit, skip);
+            var result = await _mongoDbService.QueryAsync(serverName, collectionName, filter, limit, skip);
             
             // Parse and enhance result with operation context
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
@@ -480,13 +480,13 @@ public class MongoDbTools
         // Pre-operation validation
         if (serverName == "default")
         {
-            string? validationError = ValidateDefaultConnection("insert");
+            var validationError = ValidateDefaultConnection("insert");
             if (validationError != null) return validationError;
         }
 
         try
         {
-            string result = await _mongoDbService.InsertOneAsync(serverName, collectionName, document);
+            var result = await _mongoDbService.InsertOneAsync(serverName, collectionName, document);
             
             // Parse and enhance result with operation context
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
@@ -528,13 +528,13 @@ public class MongoDbTools
         // Pre-operation validation
         if (serverName == "default")
         {
-            string? validationError = ValidateDefaultConnection("insert_many");
+            var validationError = ValidateDefaultConnection("insert_many");
             if (validationError != null) return validationError;
         }
 
         try
         {
-            string result = await _mongoDbService.InsertManyAsync(serverName, collectionName, documents);
+            var result = await _mongoDbService.InsertManyAsync(serverName, collectionName, documents);
             
             // Parse and enhance result with operation context
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
@@ -575,13 +575,13 @@ public class MongoDbTools
         // Pre-operation validation
         if (serverName == "default")
         {
-            string? validationError = ValidateDefaultConnection("update_one");
+            var validationError = ValidateDefaultConnection("update_one");
             if (validationError != null) return validationError;
         }
 
         try
         {
-            string result = await _mongoDbService.UpdateOneAsync(serverName, collectionName, filter, update);
+            var result = await _mongoDbService.UpdateOneAsync(serverName, collectionName, filter, update);
             
             // Parse and enhance result with operation context
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
@@ -623,13 +623,13 @@ public class MongoDbTools
         // Pre-operation validation
         if (serverName == "default")
         {
-            string? validationError = ValidateDefaultConnection("update_many");
+            var validationError = ValidateDefaultConnection("update_many");
             if (validationError != null) return validationError;
         }
 
         try
         {
-            string result = await _mongoDbService.UpdateManyAsync(serverName, collectionName, filter, update);
+            var result = await _mongoDbService.UpdateManyAsync(serverName, collectionName, filter, update);
             
             // Parse and enhance result with operation context
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
@@ -669,13 +669,13 @@ public class MongoDbTools
         // Pre-operation validation
         if (serverName == "default")
         {
-            string? validationError = ValidateDefaultConnection("delete_one");
+            var validationError = ValidateDefaultConnection("delete_one");
             if (validationError != null) return validationError;
         }
 
         try
         {
-            string result = await _mongoDbService.DeleteOneAsync(serverName, collectionName, filter);
+            var result = await _mongoDbService.DeleteOneAsync(serverName, collectionName, filter);
             
             // Parse and enhance result with operation context
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
@@ -714,13 +714,13 @@ public class MongoDbTools
         // Pre-operation validation
         if (serverName == "default")
         {
-            string? validationError = ValidateDefaultConnection("delete_many");
+            var validationError = ValidateDefaultConnection("delete_many");
             if (validationError != null) return validationError;
         }
 
         try
         {
-            string result = await _mongoDbService.DeleteManyAsync(serverName, collectionName, filter);
+            var result = await _mongoDbService.DeleteManyAsync(serverName, collectionName, filter);
             
             // Parse and enhance result with operation context
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
@@ -759,13 +759,13 @@ public class MongoDbTools
         // Pre-operation validation
         if (serverName == "default")
         {
-            string? validationError = ValidateDefaultConnection("aggregate");
+            var validationError = ValidateDefaultConnection("aggregate");
             if (validationError != null) return validationError;
         }
 
         try
         {
-            string result = await _mongoDbService.AggregateAsync(serverName, collectionName, pipeline);
+            var result = await _mongoDbService.AggregateAsync(serverName, collectionName, pipeline);
             
             // Parse and enhance result with operation context
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
@@ -805,13 +805,13 @@ public class MongoDbTools
         // Pre-operation validation
         if (serverName == "default")
         {
-            string? validationError = ValidateDefaultConnection("count_documents");
+            var validationError = ValidateDefaultConnection("count_documents");
             if (validationError != null) return validationError;
         }
 
         try
         {
-            string result = await _mongoDbService.CountDocumentsAsync(serverName, collectionName, filter);
+            var result = await _mongoDbService.CountDocumentsAsync(serverName, collectionName, filter);
             
             // Parse and enhance result with operation context
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
@@ -856,13 +856,13 @@ public class MongoDbTools
         // Pre-operation validation
         if (serverName == "default")
         {
-            string? validationError = ValidateDefaultConnection("create_index");
+            var validationError = ValidateDefaultConnection("create_index");
             if (validationError != null) return validationError;
         }
 
         try
         {
-            string result = await _mongoDbService.CreateIndexAsync(serverName, collectionName, indexKeys, indexName);
+            var result = await _mongoDbService.CreateIndexAsync(serverName, collectionName, indexKeys, indexName);
             
             // Parse and enhance result with operation context
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
@@ -899,13 +899,13 @@ public class MongoDbTools
         // Pre-operation validation
         if (serverName == "default")
         {
-            string? validationError = ValidateDefaultConnection("drop_collection");
+            var validationError = ValidateDefaultConnection("drop_collection");
             if (validationError != null) return validationError;
         }
 
         try
         {
-            string result = await _mongoDbService.DropCollectionAsync(serverName, collectionName);
+            var result = await _mongoDbService.DropCollectionAsync(serverName, collectionName);
             
             // Parse and enhance result with operation context
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
@@ -940,13 +940,13 @@ public class MongoDbTools
         // Pre-operation validation
         if (serverName == "default")
         {
-            string? validationError = ValidateDefaultConnection("list_collections");
+            var validationError = ValidateDefaultConnection("list_collections");
             if (validationError != null) return validationError;
         }
 
         try
         {
-            string result = await _mongoDbService.ListCollectionsAsync(serverName);
+            var result = await _mongoDbService.ListCollectionsAsync(serverName);
             
             // Parse and enhance result with operation context
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
@@ -982,13 +982,13 @@ public class MongoDbTools
         // Pre-operation validation
         if (serverName == "default")
         {
-            string? validationError = ValidateDefaultConnection("execute_command");
+            var validationError = ValidateDefaultConnection("execute_command");
             if (validationError != null) return validationError;
         }
 
         try
         {
-            string result = await _mongoDbService.ExecuteCommandAsync(serverName, command);
+            var result = await _mongoDbService.ExecuteCommandAsync(serverName, command);
             
             // Parse and enhance result with operation context
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
@@ -1023,7 +1023,7 @@ public class MongoDbTools
     {
         try
         {
-            string result = _mongoDbService.ListActiveConnections();
+            var result = _mongoDbService.ListActiveConnections();
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
             
             return JsonSerializer.Serialize(new
@@ -1055,7 +1055,7 @@ public class MongoDbTools
     {
         try
         {
-            string result = _mongoDbService.SetDefaultServer(serverName);
+            var result = _mongoDbService.SetDefaultServer(serverName);
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -1084,7 +1084,7 @@ public class MongoDbTools
     {
         try
         {
-            string result = _mongoDbService.GetServerConnectionStatus(serverName);
+            var result = _mongoDbService.GetServerConnectionStatus(serverName);
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
             
             return JsonSerializer.Serialize(new
@@ -1115,7 +1115,7 @@ public class MongoDbTools
     {
         try
         {
-            string result = await _mongoDbService.PingServerAsync(serverName);
+            var result = await _mongoDbService.PingServerAsync(serverName);
             var resultObj = JsonSerializer.Deserialize<JsonElement>(result);
             
             return JsonSerializer.Serialize(new
@@ -1125,7 +1125,7 @@ public class MongoDbTools
                 serverName = serverName,
                 pingSuccessful = resultObj.GetProperty("pingSuccessful").GetBoolean(),
                 isHealthy = resultObj.GetProperty("isHealthy").GetBoolean(),
-                responseTimeMs = resultObj.TryGetProperty("lastPingDuration", out JsonElement duration) 
+                responseTimeMs = resultObj.TryGetProperty("lastPingDuration", out var duration) 
                     ? (double?)duration.GetDouble() : null
             }, new JsonSerializerOptions { WriteIndented = true });
         }
@@ -1191,7 +1191,7 @@ public class MongoDbTools
     {
         try
         {
-            string[]? serverNames = JsonSerializer.Deserialize<string[]>(serverNamesJson);
+            var serverNames = JsonSerializer.Deserialize<string[]>(serverNamesJson);
             if (serverNames == null || serverNames.Length == 0)
             {
                 return JsonSerializer.Serialize(new
@@ -1229,7 +1229,7 @@ public class MongoDbTools
     {
         try
         {
-            string[]? collectionNames = JsonSerializer.Deserialize<string[]>(collectionNamesJson);
+            var collectionNames = JsonSerializer.Deserialize<string[]>(collectionNamesJson);
             if (collectionNames == null || collectionNames.Length == 0)
             {
                 return JsonSerializer.Serialize(new

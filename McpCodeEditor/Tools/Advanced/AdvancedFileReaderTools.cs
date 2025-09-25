@@ -16,7 +16,7 @@ namespace McpCodeEditor.Tools.Advanced
         {
             return await ExecuteWithErrorHandlingAsync(async () =>
             {
-                FileReadResult result = await fileReader.ReadRangeAsync(filePath, startLine, endLine);
+                var result = await fileReader.ReadRangeAsync(filePath, startLine, endLine);
                 
                 return new
                 {
@@ -39,7 +39,7 @@ namespace McpCodeEditor.Tools.Advanced
         {
             return await ExecuteWithErrorHandlingAsync(async () =>
             {
-                FileReadResult result = await fileReader.ReadAroundLineAsync(filePath, lineNumber, contextLines);
+                var result = await fileReader.ReadAroundLineAsync(filePath, lineNumber, contextLines);
                 
                 return new
                 {
@@ -61,7 +61,7 @@ namespace McpCodeEditor.Tools.Advanced
         {
             return await ExecuteWithErrorHandlingAsync(async () =>
             {
-                FileReadResult result = await fileReader.ReadNextChunkAsync(filePath, startLine, maxLines);
+                var result = await fileReader.ReadNextChunkAsync(filePath, startLine, maxLines);
                 
                 return new
                 {
@@ -87,7 +87,7 @@ namespace McpCodeEditor.Tools.Advanced
         {
             return await ExecuteWithErrorHandlingAsync(async () =>
             {
-                FileReadResult result = await fileReader.ReadMethodAsync(filePath, methodName, contextLines);
+                var result = await fileReader.ReadMethodAsync(filePath, methodName, contextLines);
                 
                 return new
                 {
@@ -109,7 +109,7 @@ namespace McpCodeEditor.Tools.Advanced
         {
             return await ExecuteWithErrorHandlingAsync(async () =>
             {
-                FileReadResult result = await fileReader.ReadClassAsync(filePath, className);
+                var result = await fileReader.ReadClassAsync(filePath, className);
                 
                 return new
                 {
@@ -131,7 +131,7 @@ namespace McpCodeEditor.Tools.Advanced
         {
             return await ExecuteWithErrorHandlingAsync(async () =>
             {
-                FileStructureResult result = await fileReader.GetFileOutlineAsync(filePath);
+                var result = await fileReader.GetFileOutlineAsync(filePath);
                 
                 return new
                 {
@@ -187,7 +187,7 @@ namespace McpCodeEditor.Tools.Advanced
         {
             return await ExecuteWithErrorHandlingAsync(async () =>
             {
-                FileReadResult result = await fileReader.ReadMethodSignaturesAsync(filePath);
+                var result = await fileReader.ReadMethodSignaturesAsync(filePath);
                 
                 return new
                 {
@@ -207,7 +207,7 @@ namespace McpCodeEditor.Tools.Advanced
         {
             return await ExecuteWithErrorHandlingAsync(async () =>
             {
-                FileReadResult result = await fileReader.ReadImportsAndHeaderAsync(filePath);
+                var result = await fileReader.ReadImportsAndHeaderAsync(filePath);
                 
                 return new
                 {
@@ -231,7 +231,7 @@ namespace McpCodeEditor.Tools.Advanced
         {
             return await ExecuteWithErrorHandlingAsync(async () =>
             {
-                FileReadResult result = await fileReader.ReadSearchAsync(filePath, pattern, contextLines, useRegex);
+                var result = await fileReader.ReadSearchAsync(filePath, pattern, contextLines, useRegex);
                 
                 return new
                 {

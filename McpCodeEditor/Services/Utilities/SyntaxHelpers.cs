@@ -17,7 +17,7 @@ public static class SyntaxHelpers
 
         for (var i = 0; i < lines.Length; i++)
         {
-            string line = lines[i].Trim();
+            var line = lines[i].Trim();
 
             // Skip empty lines and comments
             if (string.IsNullOrWhiteSpace(line) || line.StartsWith("//") || line.StartsWith("/*"))
@@ -45,14 +45,14 @@ public static class SyntaxHelpers
     public static TypeScriptImportType DetermineImportType(string importLine)
     {
         // Extract the module path from the import statement
-        Match match = Regex.Match(
+        var match = Regex.Match(
             importLine,
             @"from\s+['""]([^'""]+)['""]\s"
         );
 
         if (!match.Success) return TypeScriptImportType.Other;
 
-        string modulePath = match.Groups[1].Value;
+        var modulePath = match.Groups[1].Value;
 
         if (modulePath.StartsWith("./") || modulePath.StartsWith("../"))
             return TypeScriptImportType.Relative;
@@ -71,7 +71,7 @@ public static class SyntaxHelpers
     /// </summary>
     public static string ExtractModuleName(string importLine)
     {
-        Match match = Regex.Match(
+        var match = Regex.Match(
             importLine,
             @"from\s+['""]([^'""]+)['""]\s"
         );
@@ -93,14 +93,14 @@ public static class SyntaxHelpers
         if (groupByType)
         {
             // Group by import type
-            IOrderedEnumerable<IGrouping<TypeScriptImportType, TypeScriptImport>> grouped = imports
+            var grouped = imports
                 .GroupBy(i => i.ImportType)
                 .OrderBy(g => (int)g.Key); // Sort groups by type enum value
 
             var organized = new List<TypeScriptImport>();
-            foreach (IGrouping<TypeScriptImportType, TypeScriptImport> group in grouped)
+            foreach (var group in grouped)
             {
-                List<TypeScriptImport> groupImports = group.ToList();
+                var groupImports = group.ToList();
                 if (sortAlphabetically)
                 {
                     groupImports = groupImports.OrderBy(i => i.ModuleName).ToList();
@@ -122,7 +122,7 @@ public static class SyntaxHelpers
     /// </summary>
     public static bool IsImportOrEmpty(string line)
     {
-        string trimmed = line.Trim();
+        var trimmed = line.Trim();
         return string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("import ");
     }
 
@@ -132,7 +132,7 @@ public static class SyntaxHelpers
     public static string DetermineTypeScriptVariableDeclarationType(string expression)
     {
         // Simple heuristics for determining declaration type
-        string cleaned = expression.Trim();
+        var cleaned = expression.Trim();
 
         // Use const for literals and simple values
         if (cleaned.StartsWith('"') && cleaned.EndsWith('"') ||
@@ -155,7 +155,7 @@ public static class SyntaxHelpers
     {
         for (var i = 0; i < lines.Length; i++)
         {
-            string line = lines[i].Trim();
+            var line = lines[i].Trim();
 
             // Check for various function declaration patterns
             if (IsTypeScriptFunctionDeclaration(line, functionName))
@@ -178,9 +178,9 @@ public static class SyntaxHelpers
         var inBody = false;
         var braceCount = 0;
 
-        for (int i = functionInfo.StartLine; i <= functionInfo.EndLine && i < lines.Length; i++)
+        for (var i = functionInfo.StartLine; i <= functionInfo.EndLine && i < lines.Length; i++)
         {
-            string line = lines[i];
+            var line = lines[i];
 
             if (!inBody)
             {
@@ -191,8 +191,8 @@ public static class SyntaxHelpers
                     braceCount = 1;
                     
                     // Get content after opening brace
-                    int braceIndex = line.IndexOf('{');
-                    string contentAfterBrace = line[(braceIndex + 1)..].Trim();
+                    var braceIndex = line.IndexOf('{');
+                    var contentAfterBrace = line[(braceIndex + 1)..].Trim();
                     if (!string.IsNullOrWhiteSpace(contentAfterBrace))
                     {
                         bodyLines.Add(contentAfterBrace);
@@ -210,7 +210,7 @@ public static class SyntaxHelpers
                 if (braceCount == 0)
                 {
                     // End of function body - get content before closing brace
-                    string contentBeforeBrace = line[..j].Trim();
+                    var contentBeforeBrace = line[..j].Trim();
                     if (!string.IsNullOrWhiteSpace(contentBeforeBrace))
                     {
                         bodyLines.Add(contentBeforeBrace);
@@ -239,11 +239,11 @@ public static class SyntaxHelpers
 
         for (var i = 0; i < lines.Length; i++)
         {
-            string line = lines[i];
+            var line = lines[i];
 
             // Simple pattern matching for function calls
             var pattern = $@"\b{Regex.Escape(functionName)}\s*\(";
-            MatchCollection matches = Regex.Matches(line, pattern);
+            var matches = Regex.Matches(line, pattern);
 
             foreach (Match match in matches)
             {
@@ -267,7 +267,7 @@ public static class SyntaxHelpers
     {
         if (call.LineNumber >= lines.Count) return;
 
-        string originalLine = lines[call.LineNumber];
+        var originalLine = lines[call.LineNumber];
         
         // Get indentation from the original line
         var indentation = "";
@@ -277,16 +277,16 @@ public static class SyntaxHelpers
         }
 
         // Replace the function call with the function body
-        string[] bodyLines = functionBody.Split('\n');
+        var bodyLines = functionBody.Split('\n');
         
         // Remove the original line
         lines.RemoveAt(call.LineNumber);
 
         // Insert the function body lines with proper indentation
-        for (int i = bodyLines.Length - 1; i >= 0; i--)
+        for (var i = bodyLines.Length - 1; i >= 0; i--)
         {
-            string bodyLine = bodyLines[i];
-            string indentedLine = string.IsNullOrWhiteSpace(bodyLine) ? bodyLine : indentation + bodyLine.Trim();
+            var bodyLine = bodyLines[i];
+            var indentedLine = string.IsNullOrWhiteSpace(bodyLine) ? bodyLine : indentation + bodyLine.Trim();
             lines.Insert(call.LineNumber, indentedLine);
         }
     }
@@ -329,11 +329,11 @@ public static class SyntaxHelpers
         var braceCount = 0;
         var foundOpenBrace = false;
 
-        for (int i = startLine; i < lines.Length; i++)
+        for (var i = startLine; i < lines.Length; i++)
         {
-            string line = lines[i];
+            var line = lines[i];
 
-            foreach (char c in line)
+            foreach (var c in line)
             {
                 if (c == '{')
                 {

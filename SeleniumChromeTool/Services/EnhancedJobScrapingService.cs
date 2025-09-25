@@ -33,11 +33,11 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
         var allJobs = new List<EnhancedJobListing>();
         var tasks = new List<Task<List<EnhancedJobListing>>>();
 
-        foreach (JobSite site in request.Sites)
+        foreach (var site in request.Sites)
         {
             try
             {
-                List<JobSite> supportedSites = _scraperFactory.GetSupportedSites();
+                var supportedSites = _scraperFactory.GetSupportedSites();
                 if (!supportedSites.Contains(site))
                 {
                     _logger.LogWarning($"Scraper for {site} is not yet implemented");
@@ -52,9 +52,9 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
             }
         }
 
-        List<EnhancedJobListing>[] results = await Task.WhenAll(tasks);
+        var results = await Task.WhenAll(tasks);
         
-        foreach (List<EnhancedJobListing> siteJobs in results)
+        foreach (var siteJobs in results)
         {
             allJobs.AddRange(siteJobs);
         }
@@ -73,7 +73,7 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
         _logger.LogInformation($"Requesting scraping lock for {site}...");
         
         // Prevent concurrent scraping operations
-        TimeSpan timeout = TimeSpan.FromMinutes(3);
+        var timeout = TimeSpan.FromMinutes(3);
         if (!await ScrapingSemaphore.WaitAsync(timeout))
         {
             _logger.LogError($"Failed to acquire scraping lock for {site} within timeout");
@@ -84,12 +84,12 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
         {
             _logger.LogInformation($"Acquired scraping lock for {site}");
             
-            IJobSiteScraper scraper = _scraperFactory.CreateScraper(site);
-            SiteConfiguration config = await GetSiteConfigurationAsync(site);
+            var scraper = _scraperFactory.CreateScraper(site);
+            var config = await GetSiteConfigurationAsync(site);
             
             _logger.LogInformation($"Starting scrape of {site} with config last updated: {config.LastUpdated}");
             
-            List<EnhancedJobListing> jobs = await scraper.ScrapeJobsAsync(request, config);
+            var jobs = await scraper.ScrapeJobsAsync(request, config);
             
             _logger.LogInformation($"Successfully scraped {jobs.Count} jobs from {site}");
             return jobs;
@@ -108,13 +108,13 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
 
     public async Task<SiteConfiguration> GetSiteConfigurationAsync(JobSite site)
     {
-        FilterDefinition<SiteConfiguration>? filter = Builders<SiteConfiguration>.Filter.Eq(s => s.SiteName, site.ToString());
-        SiteConfiguration? config = await _siteConfigurations.Find(filter).FirstOrDefaultAsync();
+        var filter = Builders<SiteConfiguration>.Filter.Eq(s => s.SiteName, site.ToString());
+        var config = await _siteConfigurations.Find(filter).FirstOrDefaultAsync();
         
         if (config == null)
         {
             // Create default configuration using the scraper
-            IJobSiteScraper scraper = _scraperFactory.CreateScraper(site);
+            var scraper = _scraperFactory.CreateScraper(site);
             config = scraper.GetDefaultConfiguration();
             await _siteConfigurations.InsertOneAsync(config);
             _logger.LogInformation($"Created default configuration for {site}");
@@ -126,15 +126,15 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
     public async Task UpdateSiteConfigurationAsync(SiteConfiguration config)
     {
         config.LastUpdated = DateTime.UtcNow;
-        FilterDefinition<SiteConfiguration>? filter = Builders<SiteConfiguration>.Filter.Eq(s => s.SiteName, config.SiteName);
+        var filter = Builders<SiteConfiguration>.Filter.Eq(s => s.SiteName, config.SiteName);
         await _siteConfigurations.ReplaceOneAsync(filter, config, new ReplaceOptions { IsUpsert = true });
         _logger.LogInformation($"Updated configuration for {config.SiteName}");
     }
 
     public async Task<List<EnhancedJobListing>> GetStoredJobsAsync(string userId, JobSearchFilters filters)
     {
-        FilterDefinitionBuilder<EnhancedJobListing>? filterBuilder = Builders<EnhancedJobListing>.Filter;
-        FilterDefinition<EnhancedJobListing>? mongoFilter = filterBuilder.Empty;
+        var filterBuilder = Builders<EnhancedJobListing>.Filter;
+        var mongoFilter = filterBuilder.Empty;
 
         if (filters.Sites.Count != 0)
         {
@@ -186,9 +186,9 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
             _screenshotDriver!.Navigate().GoToUrl(url);
             await Task.Delay(2000);
 
-            Screenshot screenshot = ((ITakesScreenshot)_screenshotDriver).GetScreenshot();
+            var screenshot = ((ITakesScreenshot)_screenshotDriver).GetScreenshot();
             var fileName = $"screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png";
-            string filePath = Path.Combine("Screenshots", fileName);
+            var filePath = Path.Combine("Screenshots", fileName);
             
             Directory.CreateDirectory("Screenshots");
             screenshot.SaveAsFile(filePath);
@@ -224,7 +224,7 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
             @"C:\Users\" + Environment.UserName + @"\AppData\Local\Google\Chrome\Application\chrome.exe"
         ];
         
-        foreach (string path in chromePaths)
+        foreach (var path in chromePaths)
         {
             if (!File.Exists(path)) continue;
             options.BinaryLocation = path;
@@ -242,18 +242,18 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
         try
         {
             // Get user profile from MongoDB
-            IMongoCollection<BsonDocument>? profileCollection = _jobListings.Database.GetCollection<BsonDocument>("career_profile");
-            FilterDefinition<BsonDocument>? profileFilter = Builders<BsonDocument>.Filter.Eq("userId", userId);
-            BsonDocument? userProfile = await profileCollection.Find(profileFilter).FirstOrDefaultAsync();
+            var profileCollection = _jobListings.Database.GetCollection<BsonDocument>("career_profile");
+            var profileFilter = Builders<BsonDocument>.Filter.Eq("userId", userId);
+            var userProfile = await profileCollection.Find(profileFilter).FirstOrDefaultAsync();
             
             if (userProfile == null) return;
 
-            List<string> userSkills = userProfile["experience"]["primaryTechnologies"]
+            var userSkills = userProfile["experience"]["primaryTechnologies"]
                 .AsBsonArray.Select(x => x.AsString.ToLower()).ToList();
-            List<string> preferredSkills = userProfile["skills"]["preferred"]
+            var preferredSkills = userProfile["skills"]["preferred"]
                 .AsBsonArray.Select(x => x.AsString.ToLower()).ToList();
 
-            foreach (EnhancedJobListing job in jobs)
+            foreach (var job in jobs)
             {
                 job.MatchScore = CalculateJobMatchScore(job, userSkills, preferredSkills);
             }
@@ -267,10 +267,10 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
     private static double CalculateJobMatchScore(EnhancedJobListing job, List<string> userSkills, List<string> preferredSkills)
     {
         double score = 0;
-        string jobText = $"{job.Title} {job.Summary} {job.FullDescription} {string.Join(" ", job.RequiredSkills)}".ToLower();
+        var jobText = $"{job.Title} {job.Summary} {job.FullDescription} {string.Join(" ", job.RequiredSkills)}".ToLower();
 
         // Base score for skill matches
-        foreach (string skill in userSkills)
+        foreach (var skill in userSkills)
         {
             if (jobText.Contains(skill.ToLower()))
             {
@@ -278,7 +278,7 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
             }
         }
 
-        foreach (string skill in preferredSkills)
+        foreach (var skill in preferredSkills)
         {
             if (jobText.Contains(skill.ToLower()))
             {
@@ -313,10 +313,10 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
         {
             var uniqueJobs = new List<EnhancedJobListing>();
             
-            foreach (EnhancedJobListing job in jobs)
+            foreach (var job in jobs)
             {
                 // Check if the job already exists (by URL)
-                EnhancedJobListing? existingJob = await _jobListings
+                var existingJob = await _jobListings
                     .Find(j => j.Url == job.Url)
                     .FirstOrDefaultAsync();
                 
@@ -330,7 +330,7 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
                     existingJob.ScrapedAt = DateTime.UtcNow;
                     existingJob.MatchScore = job.MatchScore;
                     
-                    FilterDefinition<EnhancedJobListing>? filter = Builders<EnhancedJobListing>.Filter.Eq(j => j.Id, existingJob.Id);
+                    var filter = Builders<EnhancedJobListing>.Filter.Eq(j => j.Id, existingJob.Id);
                     await _jobListings.ReplaceOneAsync(filter, existingJob);
                 }
             }
@@ -358,7 +358,7 @@ public class EnhancedJobScrapingService : IEnhancedJobScrapingService
             }
 
             // Generate ObjectIds for jobs that don't have them
-            foreach (EnhancedJobListing job in request.Jobs.Where(j => string.IsNullOrEmpty(j.Id)))
+            foreach (var job in request.Jobs.Where(j => string.IsNullOrEmpty(j.Id)))
             {
                 job.Id = ObjectId.GenerateNewId().ToString();
                 job.ScrapedAt = DateTime.UtcNow;

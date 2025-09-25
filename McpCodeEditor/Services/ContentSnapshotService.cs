@@ -26,7 +26,7 @@ namespace McpCodeEditor.Services
         {
             get
             {
-                string directory = _appDataPathService.GetWorkspaceSnapshotsDirectory(_config.DefaultWorkspace);
+                var directory = _appDataPathService.GetWorkspaceSnapshotsDirectory(_config.DefaultWorkspace);
                 _appDataPathService.EnsureDirectoryExists(directory);
                 return directory;
             }
@@ -39,7 +39,7 @@ namespace McpCodeEditor.Services
         {
             try
             {
-                string snapshotDir = Path.Combine(SnapshotsDirectory, changeId);
+                var snapshotDir = Path.Combine(SnapshotsDirectory, changeId);
                 _appDataPathService.EnsureDirectoryExists(snapshotDir);
 
                 await File.WriteAllTextAsync(Path.Combine(snapshotDir, "original.txt"), originalContent);
@@ -59,8 +59,8 @@ namespace McpCodeEditor.Services
         {
             try
             {
-                string snapshotDir = Path.Combine(SnapshotsDirectory, changeId);
-                string originalFile = Path.Combine(snapshotDir, "original.txt");
+                var snapshotDir = Path.Combine(SnapshotsDirectory, changeId);
+                var originalFile = Path.Combine(snapshotDir, "original.txt");
 
                 if (File.Exists(originalFile))
                 {
@@ -82,8 +82,8 @@ namespace McpCodeEditor.Services
         {
             try
             {
-                string snapshotDir = Path.Combine(SnapshotsDirectory, changeId);
-                string modifiedFile = Path.Combine(snapshotDir, "modified.txt");
+                var snapshotDir = Path.Combine(SnapshotsDirectory, changeId);
+                var modifiedFile = Path.Combine(snapshotDir, "modified.txt");
 
                 if (File.Exists(modifiedFile))
                 {
@@ -105,7 +105,7 @@ namespace McpCodeEditor.Services
         {
             try
             {
-                string snapshotDir = Path.Combine(SnapshotsDirectory, changeId);
+                var snapshotDir = Path.Combine(SnapshotsDirectory, changeId);
                 if (Directory.Exists(snapshotDir))
                 {
                     Directory.Delete(snapshotDir, recursive: true);
@@ -124,9 +124,9 @@ namespace McpCodeEditor.Services
         {
             try
             {
-                string snapshotDir = Path.Combine(SnapshotsDirectory, changeId);
-                string originalFile = Path.Combine(snapshotDir, "original.txt");
-                string modifiedFile = Path.Combine(snapshotDir, "modified.txt");
+                var snapshotDir = Path.Combine(SnapshotsDirectory, changeId);
+                var originalFile = Path.Combine(snapshotDir, "original.txt");
+                var modifiedFile = Path.Combine(snapshotDir, "modified.txt");
 
                 return File.Exists(originalFile) && File.Exists(modifiedFile);
             }

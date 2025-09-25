@@ -1,5 +1,4 @@
 ﻿using McpCodeEditor.Models.Options;
-using McpCodeEditor.Models.Validation;
 using McpCodeEditor.Services.Validation;
 
 namespace McpCodeEditorTests.Services.Refactoring.CSharp
@@ -54,7 +53,7 @@ namespace Test
             };
 
             // Act
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             // Assert
             Assert.True(result.IsValid);
@@ -119,7 +118,7 @@ namespace Test
             };
 
             // Act
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             // Assert
             Assert.True(result.IsValid);
@@ -171,7 +170,7 @@ namespace Test
             };
 
             // Act
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             // Assert
             Assert.True(result.IsValid);
@@ -219,7 +218,7 @@ namespace Test
             };
 
             // Act
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             // Assert
             Assert.True(result.IsValid);
@@ -263,7 +262,7 @@ namespace Test
             };
 
             // Act
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             // Assert
             Assert.True(result.IsValid);
@@ -323,7 +322,7 @@ namespace Test
             };
 
             // Act
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             // Assert
             Assert.True(result.IsValid);
@@ -357,7 +356,7 @@ public class Test
             };
 
             // Act
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             // Assert
             Assert.False(result.IsValid);
@@ -386,7 +385,7 @@ public class Test
             };
 
             // Act
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             // Assert
             Assert.False(result.IsValid);
@@ -423,7 +422,7 @@ namespace Test
             };
 
             // Act
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             // Assert
             Assert.False(result.IsValid);
@@ -459,7 +458,7 @@ public class Test
             };
 
             // Act
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             // Assert
             Assert.False(result.IsValid);
@@ -492,7 +491,7 @@ public class Test
             };
 
             // Act
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             // Assert
             Assert.True(result.IsValid); // Should still be valid
@@ -534,7 +533,7 @@ public class Test
             };
 
             // Act
-            MethodExtractionValidationResult result = await _validator.ValidateExtractionAsync(sourceCode, options);
+            var result = await _validator.ValidateExtractionAsync(sourceCode, options);
 
             // Assert
             Assert.True(result.IsValid);

@@ -67,9 +67,9 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
     /// </summary>
     private static bool ShouldValidateAngularProject(string command)
     {
-        string[] args = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var args = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         // If command starts with "ng", look at the second argument, otherwise look at the first
-        string? angularCommand = args.Length > 1 && args[0].ToLower() == "ng" ? args[1].ToLower() : args.FirstOrDefault()?.ToLower();
+        var angularCommand = args.Length > 1 && args[0].ToLower() == "ng" ? args[1].ToLower() : args.FirstOrDefault()?.ToLower();
         return !GlobalCommands.Contains(angularCommand ?? string.Empty);
     }
 
@@ -84,7 +84,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
         try
         {
             // Validate session exists
-            PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
+            var session = _sessionManager.GetSession(sessionId);
             if (session == null)
             {
                 return JsonSerializer.Serialize(new CliCommandResult
@@ -105,7 +105,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                 ValidateAngularProject = ShouldValidateAngularProject(command) 
             };
 
-            CliCommandResult result = await ExecuteAngularCliCommand(command, config);
+            var result = await ExecuteAngularCliCommand(command, config);
             return JsonSerializer.Serialize(result, JsonOptions);
         }
         catch (Exception ex)
@@ -132,7 +132,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
         try
         {
             // Validate session exists
-            PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
+            var session = _sessionManager.GetSession(sessionId);
             if (session == null)
             {
                 return JsonSerializer.Serialize(new
@@ -150,8 +150,8 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                 ValidateAngularProject = false
             };
 
-            CliCommandResult versionResult = await ExecuteAngularCliCommand("ng version", config);
-            CliCommandResult helpResult = await ExecuteAngularCliCommand("ng help", config);
+            var versionResult = await ExecuteAngularCliCommand("ng version", config);
+            var helpResult = await ExecuteAngularCliCommand("ng help", config);
 
             var status = new
             {
@@ -197,7 +197,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
         try
         {
             // Validate session exists
-            PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
+            var session = _sessionManager.GetSession(sessionId);
             if (session == null)
             {
                 return JsonSerializer.Serialize(new CliCommandResult
@@ -231,7 +231,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
             }
 
             // Capture files before generation
-            List<string> filesBefore = await GetProjectFiles(config.WorkingDirectory);
+            var filesBefore = await GetProjectFiles(config.WorkingDirectory);
 
             // Build the command
             var command = $"ng generate {artifactType} {artifactName}";
@@ -240,12 +240,12 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                 command += $" {options}";
             }
 
-            CliCommandResult result = await ExecuteAngularCliCommand(command, config);
+            var result = await ExecuteAngularCliCommand(command, config);
 
             // Capture files after generation and determine what was generated/modified
             if (result.Success)
             {
-                List<string> filesAfter = await GetProjectFiles(config.WorkingDirectory);
+                var filesAfter = await GetProjectFiles(config.WorkingDirectory);
                 result.GeneratedFiles = filesAfter.Except(filesBefore).ToList();
                 result.ModifiedFiles = await GetModifiedFiles(filesBefore, filesAfter, config.WorkingDirectory);
             }
@@ -278,7 +278,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
         try
         {
             // Validate session exists
-            PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
+            var session = _sessionManager.GetSession(sessionId);
             if (session == null)
             {
                 return JsonSerializer.Serialize(new CliCommandResult
@@ -318,7 +318,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                 command += $" {options}";
             }
 
-            CliCommandResult result = await ExecuteAngularCliCommand(command, config);
+            var result = await ExecuteAngularCliCommand(command, config);
 
             // Add build-specific analysis
             if (result.Success)
@@ -326,7 +326,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                 result.GeneratedFiles = await GetBuildOutputFiles(config.WorkingDirectory, configuration);
                 
                 // Try to extract build statistics from output
-                Dictionary<string, object> buildStats = ExtractBuildStatistics(result.StandardOutput);
+                var buildStats = ExtractBuildStatistics(result.StandardOutput);
                 if (buildStats.Count > 0)
                 {
                     result.StandardOutput += $"\n\nExtracted Build Statistics:\n{JsonSerializer.Serialize(buildStats, JsonOptions)}";
@@ -394,7 +394,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
             };
 
             // Add environment variables
-            foreach (KeyValuePair<string, string> envVar in config.EnvironmentVariables)
+            foreach (var envVar in config.EnvironmentVariables)
             {
                 processStartInfo.EnvironmentVariables[envVar.Key] = envVar.Value;
             }
@@ -433,7 +433,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
             }
 
             // Wait for completion with timeout
-            bool completed = await Task.Run(() => process.WaitForExit(config.TimeoutSeconds * 1000));
+            var completed = await Task.Run(() => process.WaitForExit(config.TimeoutSeconds * 1000));
 
             stopwatch.Stop();
             result.ExecutionTime = stopwatch.Elapsed;
@@ -484,7 +484,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
     private static string GetNgExecutablePath()
     {
         // Try to find ng executable in various locations
-        string[] possiblePaths = new[]
+        var possiblePaths = new[]
         {
             "ng",
             "ng.cmd",
@@ -494,7 +494,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
             "/usr/bin/ng"
         };
 
-        foreach (string path in possiblePaths)
+        foreach (var path in possiblePaths)
         {
             if (File.Exists(path) || IsExecutableInPath(path))
             {
@@ -534,7 +534,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
 
     private static Task<bool> IsAngularProject(string directory)
     {
-        string angularJsonPath = Path.Combine(directory, "angular.json");
+        var angularJsonPath = Path.Combine(directory, "angular.json");
         return Task.FromResult(File.Exists(angularJsonPath));
     }
 
@@ -542,21 +542,21 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            string angularJsonPath = Path.Combine(directory, "angular.json");
+            var angularJsonPath = Path.Combine(directory, "angular.json");
             if (!File.Exists(angularJsonPath))
             {
                 return new { IsAngularProject = false };
             }
 
-            string angularJsonContent = await File.ReadAllTextAsync(angularJsonPath);
+            var angularJsonContent = await File.ReadAllTextAsync(angularJsonPath);
             var angularConfig = JsonSerializer.Deserialize<JsonElement>(angularJsonContent);
 
             return new
             {
                 IsAngularProject = true,
-                Version = angularConfig.TryGetProperty("version", out JsonElement version) ? version.GetInt32() : 0,
-                DefaultProject = angularConfig.TryGetProperty("defaultProject", out JsonElement defaultProject) ? defaultProject.GetString() : null,
-                ProjectCount = angularConfig.TryGetProperty("projects", out JsonElement projects) ? projects.EnumerateObject().Count() : 0,
+                Version = angularConfig.TryGetProperty("version", out var version) ? version.GetInt32() : 0,
+                DefaultProject = angularConfig.TryGetProperty("defaultProject", out var defaultProject) ? defaultProject.GetString() : null,
+                ProjectCount = angularConfig.TryGetProperty("projects", out var projects) ? projects.EnumerateObject().Count() : 0,
                 AngularJsonExists = true
             };
         }
@@ -583,7 +583,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
             };
 
             process.Start();
-            string output = await process.StandardOutput.ReadToEndAsync();
+            var output = await process.StandardOutput.ReadToEndAsync();
             process.WaitForExit();
             
             return process.ExitCode == 0 ? output.Trim() : "Not installed";
@@ -611,7 +611,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
             };
 
             process.Start();
-            string output = await process.StandardOutput.ReadToEndAsync();
+            var output = await process.StandardOutput.ReadToEndAsync();
             process.WaitForExit();
             
             return process.ExitCode == 0 ? output.Trim() : "Not installed";
@@ -625,13 +625,13 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
     private static string ExtractAngularCliVersion(string output)
     {
         // Look for Angular CLI version in output
-        string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        foreach (string line in lines)
+        var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var line in lines)
         {
             if (line.Contains("Angular CLI:") || line.Contains("@angular/cli"))
             {
-                string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                foreach (string part in parts)
+                var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var part in parts)
                 {
                     if (System.Text.RegularExpressions.Regex.IsMatch(part, @"\d+\.\d+\.\d+"))
                     {
@@ -646,10 +646,10 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
     private static List<string> ExtractAvailableCommands(string helpOutput)
     {
         var commands = new List<string>();
-        string[] lines = helpOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var lines = helpOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         
         var inCommandsSection = false;
-        foreach (string line in lines)
+        foreach (var line in lines)
         {
             if (line.Contains("Available Commands:") || line.Contains("Commands:"))
             {
@@ -659,7 +659,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
 
             if (inCommandsSection && line.Trim().StartsWith("ng "))
             {
-                string[] parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length >= 2)
                 {
                     commands.Add(parts[1]); // The command name after 'ng'
@@ -692,7 +692,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
             var modified = new List<string>();
             
             // Check for files that existed before and might have been modified
-            foreach (string file in filesBefore.Intersect(filesAfter))
+            foreach (var file in filesBefore.Intersect(filesAfter))
             {
                 // This is a simplified check - in a real implementation, you might want to check file timestamps or content hashes
                 try
@@ -719,7 +719,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
         {
             try
             {
-                string distPath = Path.Combine(workingDirectory, "dist");
+                var distPath = Path.Combine(workingDirectory, "dist");
                 if (Directory.Exists(distPath))
                 {
                     return Directory.GetFiles(distPath, "*", SearchOption.AllDirectories).ToList();
@@ -740,13 +740,13 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
         
         try
         {
-            string[] lines = buildOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            foreach (string line in lines)
+            var lines = buildOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var line in lines)
             {
                 // Look for bundle size information
                 if (line.Contains("main.") && (line.Contains("kB") || line.Contains("MB")))
                 {
-                    string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                     stats["mainBundleSize"] = string.Join(" ", parts.Where(p => p.Contains("kB") || p.Contains("MB")));
                 }
                 

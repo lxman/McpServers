@@ -38,7 +38,7 @@ public class CodeGenerationService(
         try
         {
             // FIXED: Resolve relative paths to absolute paths
-            string resolvedFilePath = ValidateAndResolvePath(filePath);
+            var resolvedFilePath = ValidateAndResolvePath(filePath);
 
             if (!File.Exists(resolvedFilePath))
             {
@@ -49,8 +49,8 @@ public class CodeGenerationService(
                 };
             }
 
-            string sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
-            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
+            var sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
+            var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
 
             if (await syntaxTree.GetRootAsync(cancellationToken) is not CompilationUnitSyntax root)
             {
@@ -62,7 +62,7 @@ public class CodeGenerationService(
             }
 
             // Find the target class
-            ClassDeclarationSyntax? targetClass = root.DescendantNodes()
+            var targetClass = root.DescendantNodes()
                 .OfType<ClassDeclarationSyntax>()
                 .FirstOrDefault(c => c.Identifier.ValueText == className);
 
@@ -76,7 +76,7 @@ public class CodeGenerationService(
             }
 
             // Get members to include in Equals
-            List<(string Name, string Type)> members = GetMembersForComparison(targetClass, options);
+            var members = GetMembersForComparison(targetClass, options);
 
             if (members.Count == 0)
             {
@@ -88,10 +88,10 @@ public class CodeGenerationService(
             }
 
             // Generate Equals method code
-            string equalsCode = GenerateEqualsMethodCode(className, members, options);
+            var equalsCode = GenerateEqualsMethodCode(className, members, options);
 
             // Check if Equals already exists
-            bool hasExistingEquals = targetClass.DescendantNodes()
+            var hasExistingEquals = targetClass.DescendantNodes()
                 .OfType<MethodDeclarationSyntax>()
                 .Any(m => m.Identifier.ValueText == "Equals" &&
                          m.ParameterList.Parameters.Count == 1 &&
@@ -107,7 +107,7 @@ public class CodeGenerationService(
             }
 
             // Insert method into class
-            string modifiedContent = InsertMethodIntoClass(sourceCode, targetClass, equalsCode);
+            var modifiedContent = InsertMethodIntoClass(sourceCode, targetClass, equalsCode);
 
             if (!previewOnly)
             {
@@ -154,7 +154,7 @@ public class CodeGenerationService(
         try
         {
             // FIXED: Resolve relative paths to absolute paths
-            string resolvedFilePath = ValidateAndResolvePath(filePath);
+            var resolvedFilePath = ValidateAndResolvePath(filePath);
 
             if (!File.Exists(resolvedFilePath))
             {
@@ -165,8 +165,8 @@ public class CodeGenerationService(
                 };
             }
 
-            string sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
-            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
+            var sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
+            var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
 
             if (await syntaxTree.GetRootAsync(cancellationToken) is not CompilationUnitSyntax root)
             {
@@ -178,7 +178,7 @@ public class CodeGenerationService(
             }
 
             // Find the target class
-            ClassDeclarationSyntax? targetClass = root.DescendantNodes()
+            var targetClass = root.DescendantNodes()
                 .OfType<ClassDeclarationSyntax>()
                 .FirstOrDefault(c => c.Identifier.ValueText == className);
 
@@ -192,7 +192,7 @@ public class CodeGenerationService(
             }
 
             // Get members to include in GetHashCode
-            List<(string Name, string Type)> members = GetMembersForComparison(targetClass, options);
+            var members = GetMembersForComparison(targetClass, options);
 
             if (members.Count == 0)
             {
@@ -204,10 +204,10 @@ public class CodeGenerationService(
             }
 
             // Generate GetHashCode method code
-            string hashCodeMethod = GenerateGetHashCodeMethodCode(members, options);
+            var hashCodeMethod = GenerateGetHashCodeMethodCode(members, options);
 
             // Check if GetHashCode already exists
-            bool hasExistingHashCode = targetClass.DescendantNodes()
+            var hasExistingHashCode = targetClass.DescendantNodes()
                 .OfType<MethodDeclarationSyntax>()
                 .Any(m => m.Identifier.ValueText == "GetHashCode" &&
                          m.ParameterList.Parameters.Count == 0);
@@ -222,7 +222,7 @@ public class CodeGenerationService(
             }
 
             // Insert method into class
-            string modifiedContent = InsertMethodIntoClass(sourceCode, targetClass, hashCodeMethod);
+            var modifiedContent = InsertMethodIntoClass(sourceCode, targetClass, hashCodeMethod);
 
             if (!previewOnly)
             {
@@ -266,7 +266,7 @@ public class CodeGenerationService(
 
         if (options.IncludeAllFields)
         {
-            IEnumerable<(string ValueText, string)> fields = targetClass.DescendantNodes()
+            var fields = targetClass.DescendantNodes()
                 .OfType<FieldDeclarationSyntax>()
                 .Where(f => !f.Modifiers.Any(SyntaxKind.StaticKeyword))
                 .SelectMany(f => f.Declaration.Variables)
@@ -277,7 +277,7 @@ public class CodeGenerationService(
 
         if (options.IncludeAllProperties)
         {
-            IEnumerable<(string ValueText, string)> properties = targetClass.DescendantNodes()
+            var properties = targetClass.DescendantNodes()
                 .OfType<PropertyDeclarationSyntax>()
                 .Where(p => !p.Modifiers.Any(SyntaxKind.StaticKeyword) &&
                            p.AccessorList?.Accessors.Any(a => a.Keyword.IsKind(SyntaxKind.GetKeyword)) == true)
@@ -300,7 +300,7 @@ public class CodeGenerationService(
         List<(string Name, string Type)> members,
         GenerateMethodOptions options)
     {
-        IEnumerable<string> comparisons = members.Select(m =>
+        var comparisons = members.Select(m =>
             IsReferenceType(m.Type)
                 ? $"Equals({m.Name}, other.{m.Name})"
                 : $"{m.Name} == other.{m.Name}"
@@ -329,7 +329,7 @@ public class CodeGenerationService(
     {
         if (members.Count == 1)
         {
-            (string Name, string Type) member = members.First();
+            var member = members.First();
             return $$"""
 
                          {{options.AccessModifier}} override int GetHashCode()
@@ -339,7 +339,7 @@ public class CodeGenerationService(
                      """;
         }
 
-        IEnumerable<string> hashItems = members.Select(m =>
+        var hashItems = members.Select(m =>
             IsReferenceType(m.Type) ? $"{m.Name}?.GetHashCode() ?? 0" : $"{m.Name}.GetHashCode()"
         );
 
@@ -358,10 +358,10 @@ public class CodeGenerationService(
         string methodCode)
     {
         // Find a good insertion point (at the end of the class, before closing brace)
-        string[] lines = sourceCode.Split('\n');
-        int insertionLine = FindInsertionPointForMethod(lines, targetClass);
+        var lines = sourceCode.Split('\n');
+        var insertionLine = FindInsertionPointForMethod(lines, targetClass);
 
-        List<string> modifiedLines = lines.ToList();
+        var modifiedLines = lines.ToList();
         modifiedLines.Insert(insertionLine, methodCode);
 
         return string.Join("\n", modifiedLines);
@@ -370,10 +370,10 @@ public class CodeGenerationService(
     private static int FindInsertionPointForMethod(string[] lines, ClassDeclarationSyntax targetClass)
     {
         // Simple heuristic: insert before closing brace of class
-        int classEndLine = targetClass.GetLocation().GetLineSpan().EndLinePosition.Line;
+        var classEndLine = targetClass.GetLocation().GetLineSpan().EndLinePosition.Line;
 
         // Look for closing brace from the end
-        for (int i = classEndLine; i >= 0; i--)
+        for (var i = classEndLine; i >= 0; i--)
         {
             if (lines[i].Trim() == "}")
             {
@@ -404,13 +404,13 @@ public class CodeGenerationService(
     private string ValidateAndResolvePath(string path)
     {
         // Convert to absolute path
-        string fullPath = Path.IsPathRooted(path) ? path : Path.Combine(config.DefaultWorkspace, path);
+        var fullPath = Path.IsPathRooted(path) ? path : Path.Combine(config.DefaultWorkspace, path);
         fullPath = Path.GetFullPath(fullPath);
 
         // Security check: ensure path is within workspace if restricted
         if (config.Security.RestrictToWorkspace)
         {
-            string workspaceFullPath = Path.GetFullPath(config.DefaultWorkspace);
+            var workspaceFullPath = Path.GetFullPath(config.DefaultWorkspace);
             if (!fullPath.StartsWith(workspaceFullPath, StringComparison.OrdinalIgnoreCase))
             {
                 throw new UnauthorizedAccessException($"Access denied: Path outside workspace: {path}");
@@ -418,9 +418,9 @@ public class CodeGenerationService(
         }
 
         // Check blocked paths
-        foreach (string blockedPath in config.Security.BlockedPaths)
+        foreach (var blockedPath in config.Security.BlockedPaths)
         {
-            string blockedFullPath = Path.GetFullPath(blockedPath);
+            var blockedFullPath = Path.GetFullPath(blockedPath);
             if (fullPath.StartsWith(blockedFullPath, StringComparison.OrdinalIgnoreCase))
             {
                 throw new UnauthorizedAccessException($"Access denied: Blocked path: {path}");

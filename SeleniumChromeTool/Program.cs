@@ -25,7 +25,7 @@ public class Program
         {
             Log.Information("Starting Job Scraping Service");
 
-            WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+            var builder = WebApplication.CreateBuilder(args);
 
             // Use Serilog for logging
             builder.Host.UseSerilog();
@@ -53,14 +53,14 @@ public class Program
         // Register MongoDB client and database
         builder.Services.AddSingleton<IMongoClient>(serviceProvider =>
         {
-            MongoDbSettings settings = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<MongoDbSettings>>().Value;
+            var settings = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<MongoDbSettings>>().Value;
             return new MongoClient(settings.ConnectionString);
         });
 
         builder.Services.AddSingleton<IMongoDatabase>(serviceProvider =>
         {
             var client = serviceProvider.GetRequiredService<IMongoClient>();
-            MongoDbSettings settings = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<MongoDbSettings>>().Value;
+            var settings = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<MongoDbSettings>>().Value;
             return client.GetDatabase(settings.DatabaseName);
         });
 
@@ -107,7 +107,7 @@ public class Program
             });
         });
 
-        WebApplication app = builder.Build();
+        var app = builder.Build();
 
         // Configure the HTTP request pipeline
         if (app.Environment.IsDevelopment())

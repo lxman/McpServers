@@ -1,20 +1,16 @@
-﻿// Suppress console output for clean MCP communication
-// TEMPORARILY DISABLED FOR DEBUGGING
-// Console.SetOut(TextWriter.Null);
-// Console.SetError(TextWriter.Null);
-
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PlaywrightTester.Services;
 using PlaywrightTester.Tools;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Host = Microsoft.Extensions.Hosting.Host;
 
 Console.SetOut(TextWriter.Null);
 Console.SetError(TextWriter.Null);
 
-HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+var builder = Host.CreateApplicationBuilder(args);
 
 // Configure JSON serialization options globally to handle deep object structures
 builder.Services.Configure<JsonSerializerOptions>(options =>

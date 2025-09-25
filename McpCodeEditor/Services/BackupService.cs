@@ -16,22 +16,22 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
         try
         {
             // Generate unique backup ID - Fixed GUID formatting bug
-            string guidPart = Guid.NewGuid().ToString("N")[..8];
+            var guidPart = Guid.NewGuid().ToString("N")[..8];
             var backupId = $"backup_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{guidPart}";
             
             // Get workspace-specific backup directory with date-based organization
-            string workspaceBackupDir = appDataPathService.GetWorkspaceBackupsDirectory(sourcePath);
-            string dateBasedSubDir = Path.Combine(workspaceBackupDir, 
+            var workspaceBackupDir = appDataPathService.GetWorkspaceBackupsDirectory(sourcePath);
+            var dateBasedSubDir = Path.Combine(workspaceBackupDir, 
                 DateTime.UtcNow.ToString("yyyy"), 
                 DateTime.UtcNow.ToString("MM"));
             
             // Ensure backup directory structure exists
             appDataPathService.EnsureDirectoryExists(dateBasedSubDir);
             
-            string backupPath = Path.Combine(dateBasedSubDir, $"{backupId}.zip");
+            var backupPath = Path.Combine(dateBasedSubDir, $"{backupId}.zip");
 
             // Get all files to backup (exclude certain directories and files)
-            List<string> filesToBackup = GetFilesToBackup(sourcePath);
+            var filesToBackup = GetFilesToBackup(sourcePath);
 
             if (filesToBackup.Count == 0)
             {
@@ -39,11 +39,11 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
             }
 
             // Create ZIP backup
-            using (ZipArchive archive = ZipFile.Open(backupPath, ZipArchiveMode.Create))
+            using (var archive = ZipFile.Open(backupPath, ZipArchiveMode.Create))
             {
-                foreach (string file in filesToBackup)
+                foreach (var file in filesToBackup)
                 {
-                    string relativePath = Path.GetRelativePath(sourcePath, file);
+                    var relativePath = Path.GetRelativePath(sourcePath, file);
                     archive.CreateEntryFromFile(file, relativePath, CompressionLevel.Optimal);
                 }
             }
@@ -65,8 +65,8 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
                 WorkspaceDisplayName = Path.GetFileName(sourcePath.TrimEnd('\\', '/'))
             };
 
-            string infoPath = Path.Combine(dateBasedSubDir, $"{backupId}.json");
-            string infoJson = System.Text.Json.JsonSerializer.Serialize(backupInfo, new System.Text.Json.JsonSerializerOptions
+            var infoPath = Path.Combine(dateBasedSubDir, $"{backupId}.json");
+            var infoJson = System.Text.Json.JsonSerializer.Serialize(backupInfo, new System.Text.Json.JsonSerializerOptions
             {
                 WriteIndented = true
             });
@@ -88,14 +88,14 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
         try
         {
             // Find backup in workspace-specific directory structure
-            BackupInfo? backupInfo = await FindBackupInWorkspaceAsync(backupId, workspacePath);
+            var backupInfo = await FindBackupInWorkspaceAsync(backupId, workspacePath);
             
             if (backupInfo == null)
             {
                 throw new FileNotFoundException($"Backup {backupId} not found in workspace");
             }
 
-            string restorePath = targetPath ?? backupInfo.SourcePath;
+            var restorePath = targetPath ?? backupInfo.SourcePath;
 
             // Create restore directory if it doesn't exist
             Directory.CreateDirectory(restorePath);
@@ -119,7 +119,7 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
         try
         {
             var backups = new List<BackupInfo>();
-            string workspaceBackupDir = appDataPathService.GetWorkspaceBackupsDirectory(workspacePath);
+            var workspaceBackupDir = appDataPathService.GetWorkspaceBackupsDirectory(workspacePath);
             
             if (!Directory.Exists(workspaceBackupDir))
             {
@@ -127,25 +127,25 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
             }
 
             // Scan through date-based directory structure (YYYY/MM/)
-            string[] yearDirs = Directory.GetDirectories(workspaceBackupDir)
+            var yearDirs = Directory.GetDirectories(workspaceBackupDir)
                 .Where(d => Directory.Exists(d))
                 .ToArray();
 
-            foreach (string yearDir in yearDirs)
+            foreach (var yearDir in yearDirs)
             {
-                string[] monthDirs = Directory.GetDirectories(yearDir)
+                var monthDirs = Directory.GetDirectories(yearDir)
                     .Where(d => Directory.Exists(d))
                     .ToArray();
 
-                foreach (string monthDir in monthDirs)
+                foreach (var monthDir in monthDirs)
                 {
-                    string[] infoFiles = Directory.GetFiles(monthDir, "*.json");
+                    var infoFiles = Directory.GetFiles(monthDir, "*.json");
 
-                    foreach (string infoFile in infoFiles)
+                    foreach (var infoFile in infoFiles)
                     {
                         try
                         {
-                            string infoJson = await File.ReadAllTextAsync(infoFile);
+                            var infoJson = await File.ReadAllTextAsync(infoFile);
                             var backupInfo = System.Text.Json.JsonSerializer.Deserialize<BackupInfo>(infoJson);
 
                             if (backupInfo != null)
@@ -178,40 +178,40 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
         try
         {
             var allBackups = new List<BackupInfo>();
-            string appDataRoot = appDataPathService.GetAppDataRoot();
+            var appDataRoot = appDataPathService.GetAppDataRoot();
             
             // Find all workspace directories
             var workspacePattern = "workspace_*";
-            string[] workspaceDirs = Directory.GetDirectories(appDataRoot, workspacePattern)
+            var workspaceDirs = Directory.GetDirectories(appDataRoot, workspacePattern)
                 .Where(d => Directory.Exists(d))
                 .ToArray();
 
-            foreach (string workspaceDir in workspaceDirs)
+            foreach (var workspaceDir in workspaceDirs)
             {
-                string backupDir = Path.Combine(workspaceDir, "backups");
+                var backupDir = Path.Combine(workspaceDir, "backups");
                 if (!Directory.Exists(backupDir))
                     continue;
 
                 // Scan through date-based directory structure
-                string[] yearDirs = Directory.GetDirectories(backupDir)
+                var yearDirs = Directory.GetDirectories(backupDir)
                     .Where(d => Directory.Exists(d))
                     .ToArray();
 
-                foreach (string yearDir in yearDirs)
+                foreach (var yearDir in yearDirs)
                 {
-                    string[] monthDirs = Directory.GetDirectories(yearDir)
+                    var monthDirs = Directory.GetDirectories(yearDir)
                         .Where(d => Directory.Exists(d))
                         .ToArray();
 
-                    foreach (string monthDir in monthDirs)
+                    foreach (var monthDir in monthDirs)
                     {
-                        string[] infoFiles = Directory.GetFiles(monthDir, "*.json");
+                        var infoFiles = Directory.GetFiles(monthDir, "*.json");
 
-                        foreach (string infoFile in infoFiles)
+                        foreach (var infoFile in infoFiles)
                         {
                             try
                             {
-                                string infoJson = await File.ReadAllTextAsync(infoFile);
+                                var infoJson = await File.ReadAllTextAsync(infoFile);
                                 var backupInfo = System.Text.Json.JsonSerializer.Deserialize<BackupInfo>(infoJson);
 
                                 if (backupInfo != null)
@@ -244,7 +244,7 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
     {
         try
         {
-            BackupInfo? backupInfo = await FindBackupInWorkspaceAsync(backupId, workspacePath);
+            var backupInfo = await FindBackupInWorkspaceAsync(backupId, workspacePath);
             
             if (backupInfo == null)
             {
@@ -260,7 +260,7 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
             }
 
             // Delete info file (same directory as backup zip)
-            string infoPath = Path.ChangeExtension(backupInfo.BackupPath, ".json");
+            var infoPath = Path.ChangeExtension(backupInfo.BackupPath, ".json");
             if (File.Exists(infoPath))
             {
                 File.Delete(infoPath);
@@ -290,11 +290,11 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
     {
         try
         {
-            List<BackupInfo> backups = await ListBackupsAsync(workspacePath);
-            List<BackupInfo> backupsToDelete = backups.Skip(keepCount).ToList();
+            var backups = await ListBackupsAsync(workspacePath);
+            var backupsToDelete = backups.Skip(keepCount).ToList();
 
             var deletedCount = 0;
-            foreach (BackupInfo backup in backupsToDelete)
+            foreach (var backup in backupsToDelete)
             {
                 if (await DeleteBackupAsync(backup.Id, workspacePath))
                 {
@@ -317,16 +317,16 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
     {
         try
         {
-            List<BackupInfo> allBackups = await ListAllBackupsAsync();
-            IEnumerable<IGrouping<string, BackupInfo>> backupsByWorkspace = allBackups.GroupBy(b => b.WorkspaceHash);
+            var allBackups = await ListAllBackupsAsync();
+            var backupsByWorkspace = allBackups.GroupBy(b => b.WorkspaceHash);
             
             var totalDeleted = 0;
-            foreach (IGrouping<string, BackupInfo> workspaceGroup in backupsByWorkspace)
+            foreach (var workspaceGroup in backupsByWorkspace)
             {
-                List<BackupInfo> orderedBackups = workspaceGroup.OrderByDescending(b => b.CreatedAt).ToList();
-                List<BackupInfo> backupsToDelete = orderedBackups.Skip(keepCount).ToList();
+                var orderedBackups = workspaceGroup.OrderByDescending(b => b.CreatedAt).ToList();
+                var backupsToDelete = orderedBackups.Skip(keepCount).ToList();
 
-                foreach (BackupInfo backup in backupsToDelete)
+                foreach (var backup in backupsToDelete)
                 {
                     if (await DeleteBackupAsync(backup.Id, backup.WorkspacePath))
                     {
@@ -347,7 +347,7 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
     {
         try
         {
-            string workspaceBackupDir = appDataPathService.GetWorkspaceBackupsDirectory(workspacePath);
+            var workspaceBackupDir = appDataPathService.GetWorkspaceBackupsDirectory(workspacePath);
             
             if (!Directory.Exists(workspaceBackupDir))
             {
@@ -355,23 +355,23 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
             }
 
             // Search through date-based directory structure
-            string[] yearDirs = Directory.GetDirectories(workspaceBackupDir)
+            var yearDirs = Directory.GetDirectories(workspaceBackupDir)
                 .Where(d => Directory.Exists(d))
                 .ToArray();
 
-            foreach (string yearDir in yearDirs)
+            foreach (var yearDir in yearDirs)
             {
-                string[] monthDirs = Directory.GetDirectories(yearDir)
+                var monthDirs = Directory.GetDirectories(yearDir)
                     .Where(d => Directory.Exists(d))
                     .ToArray();
 
-                foreach (string monthDir in monthDirs)
+                foreach (var monthDir in monthDirs)
                 {
-                    string infoPath = Path.Combine(monthDir, $"{backupId}.json");
+                    var infoPath = Path.Combine(monthDir, $"{backupId}.json");
                     
                     if (File.Exists(infoPath))
                     {
-                        string infoJson = await File.ReadAllTextAsync(infoPath);
+                        var infoJson = await File.ReadAllTextAsync(infoPath);
                         return System.Text.Json.JsonSerializer.Deserialize<BackupInfo>(infoJson);
                     }
                 }
@@ -409,16 +409,16 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
             try
             {
                 // Skip excluded directories
-                string dirName = Path.GetFileName(directory);
+                var dirName = Path.GetFileName(directory);
                 if (excludeDirectories.Contains(dirName))
                 {
                     return;
                 }
 
                 // Add files
-                foreach (string file in Directory.GetFiles(directory))
+                foreach (var file in Directory.GetFiles(directory))
                 {
-                    string extension = Path.GetExtension(file);
+                    var extension = Path.GetExtension(file);
                     if (!excludeExtensions.Contains(extension))
                     {
                         files.Add(file);
@@ -426,7 +426,7 @@ public class BackupService(CodeEditorConfigurationService config, IAppDataPathSe
                 }
 
                 // Recursively scan subdirectories
-                foreach (string subdirectory in Directory.GetDirectories(directory))
+                foreach (var subdirectory in Directory.GetDirectories(directory))
                 {
                     ScanDirectory(subdirectory);
                 }

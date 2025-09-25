@@ -31,4 +31,8 @@
       <PackageReference Include="TikaOnDotnet" Version="1.17.1" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Services\Doc\" />
+    </ItemGroup>
+
 </Project>

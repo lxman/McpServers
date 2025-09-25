@@ -22,12 +22,12 @@ public class ProjectReferenceAnalyzer(ProjectDetectionService projectDetection)
         try
         {
             // Step 1: Discover all project files
-            List<string> projectFiles = await DiscoverProjectFilesAsync(rootPath, cancellationToken);
+            var projectFiles = await DiscoverProjectFilesAsync(rootPath, cancellationToken);
 
             // Step 2: Create project nodes
-            foreach (string projectFile in projectFiles)
+            foreach (var projectFile in projectFiles)
             {
-                ProjectNode? projectNode = await CreateProjectNodeAsync(projectFile, cancellationToken);
+                var projectNode = await CreateProjectNodeAsync(projectFile, cancellationToken);
                 if (projectNode != null)
                 {
                     graph.Projects.Add(projectNode);
@@ -35,9 +35,9 @@ public class ProjectReferenceAnalyzer(ProjectDetectionService projectDetection)
             }
 
             // Step 3: Analyze references for each project
-            foreach (ProjectNode project in graph.Projects)
+            foreach (var project in graph.Projects)
             {
-                List<ProjectReference> references = await AnalyzeProjectReferencesAsync(project.ProjectPath, rootPath, cancellationToken);
+                var references = await AnalyzeProjectReferencesAsync(project.ProjectPath, rootPath, cancellationToken);
                 graph.References.AddRange(references);
             }
 
@@ -63,19 +63,19 @@ public class ProjectReferenceAnalyzer(ProjectDetectionService projectDetection)
         try
         {
             // Look for .csproj files (C# projects)
-            string[] csprojFiles = Directory.GetFiles(rootPath, "*.csproj", SearchOption.AllDirectories);
+            var csprojFiles = Directory.GetFiles(rootPath, "*.csproj", SearchOption.AllDirectories);
             projectFiles.AddRange(csprojFiles);
 
             // Look for .esproj files (JavaScript/Node.js projects in .NET solutions)
-            string[] esprojFiles = Directory.GetFiles(rootPath, "*.esproj", SearchOption.AllDirectories);
+            var esprojFiles = Directory.GetFiles(rootPath, "*.esproj", SearchOption.AllDirectories);
             projectFiles.AddRange(esprojFiles);
 
             // Look for .vbproj files (VB.NET projects)
-            string[] vbprojFiles = Directory.GetFiles(rootPath, "*.vbproj", SearchOption.AllDirectories);
+            var vbprojFiles = Directory.GetFiles(rootPath, "*.vbproj", SearchOption.AllDirectories);
             projectFiles.AddRange(vbprojFiles);
 
             // Look for .fsproj files (F# projects)
-            string[] fsprojFiles = Directory.GetFiles(rootPath, "*.fsproj", SearchOption.AllDirectories);
+            var fsprojFiles = Directory.GetFiles(rootPath, "*.fsproj", SearchOption.AllDirectories);
             projectFiles.AddRange(fsprojFiles);
 
             // Filter out excluded directories
@@ -96,14 +96,14 @@ public class ProjectReferenceAnalyzer(ProjectDetectionService projectDetection)
     {
         try
         {
-            string projectName = Path.GetFileNameWithoutExtension(projectPath);
-            string? projectDirectory = Path.GetDirectoryName(projectPath);
+            var projectName = Path.GetFileNameWithoutExtension(projectPath);
+            var projectDirectory = Path.GetDirectoryName(projectPath);
 
             if (string.IsNullOrEmpty(projectDirectory))
                 return null;
 
             // Use existing project detection to classify the project
-            ProjectInfo projectInfo = await projectDetection.AnalyzeDirectoryAsync(projectDirectory);
+            var projectInfo = await projectDetection.AnalyzeDirectoryAsync(projectDirectory);
 
             var node = new ProjectNode
             {
@@ -134,21 +134,21 @@ public class ProjectReferenceAnalyzer(ProjectDetectionService projectDetection)
 
         try
         {
-            string projectContent = await File.ReadAllTextAsync(projectPath, cancellationToken);
+            var projectContent = await File.ReadAllTextAsync(projectPath, cancellationToken);
 
             // Parse as XML to extract references
-            XDocument doc = XDocument.Parse(projectContent);
+            var doc = XDocument.Parse(projectContent);
 
             // Extract ProjectReferences
-            List<ProjectReference> projectRefs = ExtractProjectReferences(doc, projectPath, rootPath);
+            var projectRefs = ExtractProjectReferences(doc, projectPath, rootPath);
             references.AddRange(projectRefs);
 
             // Extract PackageReferences
-            List<ProjectReference> packageRefs = ExtractPackageReferences(doc, projectPath);
+            var packageRefs = ExtractPackageReferences(doc, projectPath);
             references.AddRange(packageRefs);
 
             // Extract legacy References (for older project formats)
-            List<ProjectReference> legacyRefs = ExtractLegacyReferences(doc, projectPath);
+            var legacyRefs = ExtractLegacyReferences(doc, projectPath);
             references.AddRange(legacyRefs);
         }
         catch (Exception)
@@ -168,17 +168,17 @@ public class ProjectReferenceAnalyzer(ProjectDetectionService projectDetection)
 
         try
         {
-            List<XElement> projectRefs = doc.Descendants("ProjectReference").ToList();
+            var projectRefs = doc.Descendants("ProjectReference").ToList();
 
-            foreach (XElement projectRef in projectRefs)
+            foreach (var projectRef in projectRefs)
             {
-                string? includeAttr = projectRef.Attribute("Include")?.Value;
+                var includeAttr = projectRef.Attribute("Include")?.Value;
                 if (string.IsNullOrEmpty(includeAttr))
                     continue;
 
                 // Resolve relative path to absolute path
-                string sourceDir = Path.GetDirectoryName(sourceProjectPath)!;
-                string targetPath = Path.GetFullPath(Path.Combine(sourceDir, includeAttr));
+                var sourceDir = Path.GetDirectoryName(sourceProjectPath)!;
+                var targetPath = Path.GetFullPath(Path.Combine(sourceDir, includeAttr));
 
                 var reference = new ProjectReference
                 {
@@ -209,12 +209,12 @@ public class ProjectReferenceAnalyzer(ProjectDetectionService projectDetection)
 
         try
         {
-            List<XElement> packageRefs = doc.Descendants("PackageReference").ToList();
+            var packageRefs = doc.Descendants("PackageReference").ToList();
 
-            foreach (XElement packageRef in packageRefs)
+            foreach (var packageRef in packageRefs)
             {
-                string? includeAttr = packageRef.Attribute("Include")?.Value;
-                string? versionAttr = packageRef.Attribute("Version")?.Value;
+                var includeAttr = packageRef.Attribute("Include")?.Value;
+                var versionAttr = packageRef.Attribute("Version")?.Value;
                 
                 if (string.IsNullOrEmpty(includeAttr))
                     continue;
@@ -230,7 +230,7 @@ public class ProjectReferenceAnalyzer(ProjectDetectionService projectDetection)
                 };
 
                 // Check for development dependencies
-                string? privateAssetsAttr = packageRef.Attribute("PrivateAssets")?.Value;
+                var privateAssetsAttr = packageRef.Attribute("PrivateAssets")?.Value;
                 if (privateAssetsAttr?.Contains("all", StringComparison.OrdinalIgnoreCase) == true)
                 {
                     reference.IsDevDependency = true;
@@ -256,16 +256,16 @@ public class ProjectReferenceAnalyzer(ProjectDetectionService projectDetection)
 
         try
         {
-            List<XElement> legacyRefs = doc.Descendants("Reference").ToList();
+            var legacyRefs = doc.Descendants("Reference").ToList();
 
-            foreach (XElement legacyRef in legacyRefs)
+            foreach (var legacyRef in legacyRefs)
             {
-                string? includeAttr = legacyRef.Attribute("Include")?.Value;
+                var includeAttr = legacyRef.Attribute("Include")?.Value;
                 if (string.IsNullOrEmpty(includeAttr))
                     continue;
 
                 // Determine if it's a framework or assembly reference
-                ProjectReferenceType referenceType = DetermineReferenceType(includeAttr);
+                var referenceType = DetermineReferenceType(includeAttr);
 
                 var reference = new ProjectReference
                 {
@@ -296,21 +296,21 @@ public class ProjectReferenceAnalyzer(ProjectDetectionService projectDetection)
 
         try
         {
-            string projectContent = await File.ReadAllTextAsync(projectPath, cancellationToken);
-            XDocument doc = XDocument.Parse(projectContent);
+            var projectContent = await File.ReadAllTextAsync(projectPath, cancellationToken);
+            var doc = XDocument.Parse(projectContent);
 
             // Look for TargetFramework (single)
-            string? targetFramework = doc.Descendants("TargetFramework").FirstOrDefault()?.Value;
+            var targetFramework = doc.Descendants("TargetFramework").FirstOrDefault()?.Value;
             if (!string.IsNullOrEmpty(targetFramework))
             {
                 frameworks.Add(targetFramework);
             }
 
             // Look for TargetFrameworks (multiple)
-            string? targetFrameworks = doc.Descendants("TargetFrameworks").FirstOrDefault()?.Value;
+            var targetFrameworks = doc.Descendants("TargetFrameworks").FirstOrDefault()?.Value;
             if (!string.IsNullOrEmpty(targetFrameworks))
             {
-                string[] multipleFrameworks = targetFrameworks.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                var multipleFrameworks = targetFrameworks.Split(';', StringSplitOptions.RemoveEmptyEntries);
                 frameworks.AddRange(multipleFrameworks.Select(f => f.Trim()));
             }
         }
@@ -345,7 +345,7 @@ public class ProjectReferenceAnalyzer(ProjectDetectionService projectDetection)
     private static bool IsInExcludedDirectory(string filePath)
     {
         var excludedDirs = new[] { "bin", "obj", "packages", "node_modules", ".git", ".vs", ".vscode" };
-        string[] pathSegments = filePath.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+        var pathSegments = filePath.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
         
         return excludedDirs.Any(excluded => 
             pathSegments.Any(segment => segment.Equals(excluded, StringComparison.OrdinalIgnoreCase)));
@@ -384,9 +384,9 @@ public class ProjectReferenceAnalyzer(ProjectDetectionService projectDetection)
     {
         var maxDepth = 0;
 
-        foreach (ProjectNode project in graph.Projects)
+        foreach (var project in graph.Projects)
         {
-            int depth = CalculateProjectDepth(graph, project.ProjectPath, []);
+            var depth = CalculateProjectDepth(graph, project.ProjectPath, []);
             maxDepth = Math.Max(maxDepth, depth);
         }
 
@@ -403,14 +403,14 @@ public class ProjectReferenceAnalyzer(ProjectDetectionService projectDetection)
 
         visited.Add(projectPath);
 
-        List<ProjectNode> dependencies = graph.GetDependencies(projectPath);
+        var dependencies = graph.GetDependencies(projectPath);
         if (dependencies.Count == 0)
             return 1; // Leaf node
 
         var maxChildDepth = 0;
-        foreach (ProjectNode dependency in dependencies)
+        foreach (var dependency in dependencies)
         {
-            int childDepth = CalculateProjectDepth(graph, dependency.ProjectPath, [..visited]);
+            var childDepth = CalculateProjectDepth(graph, dependency.ProjectPath, [..visited]);
             maxChildDepth = Math.Max(maxChildDepth, childDepth);
         }
 

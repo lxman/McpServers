@@ -115,7 +115,7 @@ public abstract class BaseToolClass
     {
         try
         {
-            T result = await operation();
+            var result = await operation();
             return SerializeResult(result);
         }
         catch (ArgumentException ex)
@@ -154,7 +154,7 @@ public abstract class BaseToolClass
     {
         try
         {
-            T result = operation();
+            var result = operation();
             return SerializeResult(result);
         }
         catch (ArgumentException ex)

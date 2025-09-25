@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
-using ModelContextProtocol.Server;
-using AwsMcp.ECS;
-using AwsMcp.Configuration;
 using Amazon.ECS.Model;
+using AwsMcp.Configuration;
+using AwsMcp.ECS;
+using ModelContextProtocol.Server;
 
 namespace AwsMcp.Tools;
 

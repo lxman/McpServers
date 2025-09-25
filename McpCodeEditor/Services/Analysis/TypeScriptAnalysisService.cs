@@ -35,7 +35,7 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
                 };
             }
 
-            string content = await File.ReadAllTextAsync(filePath, cancellationToken);
+            var content = await File.ReadAllTextAsync(filePath, cancellationToken);
             return await AnalyzeContentAsync(content, filePath, cancellationToken);
         }
         catch (Exception ex)
@@ -101,8 +101,8 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
     /// </summary>
     private static void ExtractFunctions(string content, TypeScriptAnalysisResult result)
     {
-        string[] lines = content.Split('\n');
-        MatchCollection matches = FunctionPattern.Matches(content);
+        var lines = content.Split('\n');
+        var matches = FunctionPattern.Matches(content);
 
         foreach (Match match in matches)
         {
@@ -116,7 +116,7 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
             };
 
             // Find line numbers
-            (int StartLine, int EndLine, int StartColumn, int EndColumn) lineInfo = FindLineNumbers(content, match.Index, match.Length);
+            var lineInfo = FindLineNumbers(content, match.Index, match.Length);
             function.StartLine = lineInfo.StartLine;
             function.EndLine = lineInfo.EndLine;
             function.StartColumn = lineInfo.StartColumn;
@@ -131,7 +131,7 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
     /// </summary>
     private static void ExtractClasses(string content, TypeScriptAnalysisResult result)
     {
-        MatchCollection matches = ClassPattern.Matches(content);
+        var matches = ClassPattern.Matches(content);
 
         foreach (Match match in matches)
         {
@@ -153,7 +153,7 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
             }
 
             // Find line numbers
-            (int StartLine, int EndLine, int StartColumn, int EndColumn) lineInfo = FindLineNumbers(content, match.Index, match.Length);
+            var lineInfo = FindLineNumbers(content, match.Index, match.Length);
             classInfo.StartLine = lineInfo.StartLine;
             classInfo.EndLine = lineInfo.EndLine;
             classInfo.StartColumn = lineInfo.StartColumn;
@@ -168,7 +168,7 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
     /// </summary>
     private static void ExtractInterfaces(string content, TypeScriptAnalysisResult result)
     {
-        MatchCollection matches = InterfacePattern.Matches(content);
+        var matches = InterfacePattern.Matches(content);
 
         foreach (Match match in matches)
         {
@@ -188,7 +188,7 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
             }
 
             // Find line numbers
-            (int StartLine, int EndLine, int StartColumn, int EndColumn) lineInfo = FindLineNumbers(content, match.Index, match.Length);
+            var lineInfo = FindLineNumbers(content, match.Index, match.Length);
             interfaceInfo.StartLine = lineInfo.StartLine;
             interfaceInfo.EndLine = lineInfo.EndLine;
             interfaceInfo.StartColumn = lineInfo.StartColumn;
@@ -203,7 +203,7 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
     /// </summary>
     private static void ExtractVariables(string content, TypeScriptAnalysisResult result)
     {
-        MatchCollection matches = VariablePattern.Matches(content);
+        var matches = VariablePattern.Matches(content);
 
         foreach (Match match in matches)
         {
@@ -217,7 +217,7 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
             };
 
             // Find line numbers
-            (int StartLine, int EndLine, int StartColumn, int EndColumn) lineInfo = FindLineNumbers(content, match.Index, match.Length);
+            var lineInfo = FindLineNumbers(content, match.Index, match.Length);
             variable.StartLine = lineInfo.StartLine;
             variable.EndLine = lineInfo.EndLine;
 
@@ -230,7 +230,7 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
     /// </summary>
     private static void ExtractTypeAliases(string content, TypeScriptAnalysisResult result)
     {
-        MatchCollection matches = TypeAliasPattern.Matches(content);
+        var matches = TypeAliasPattern.Matches(content);
 
         foreach (Match match in matches)
         {
@@ -242,7 +242,7 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
             };
 
             // Find line numbers
-            (int StartLine, int EndLine, int StartColumn, int EndColumn) lineInfo = FindLineNumbers(content, match.Index, match.Length);
+            var lineInfo = FindLineNumbers(content, match.Index, match.Length);
             typeAlias.StartLine = lineInfo.StartLine;
             typeAlias.EndLine = lineInfo.EndLine;
 
@@ -256,7 +256,7 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
     private static void ExtractImportsExports(string content, TypeScriptAnalysisResult result)
     {
         // Extract imports
-        MatchCollection importMatches = ImportPattern.Matches(content);
+        var importMatches = ImportPattern.Matches(content);
         foreach (Match match in importMatches)
         {
             var import = new TypeScriptImport
@@ -288,7 +288,7 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
         }
 
         // Extract exports
-        MatchCollection exportMatches = ExportPattern.Matches(content);
+        var exportMatches = ExportPattern.Matches(content);
         foreach (Match match in exportMatches)
         {
             var export = new TypeScriptExport
@@ -336,14 +336,14 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
     /// </summary>
     private static (int StartLine, int EndLine, int StartColumn, int EndColumn) FindLineNumbers(string content, int startIndex, int length)
     {
-        string[] lines = content[..startIndex].Split('\n');
-        int startLine = lines.Length;
-        int startColumn = lines.LastOrDefault()?.Length ?? 0;
+        var lines = content[..startIndex].Split('\n');
+        var startLine = lines.Length;
+        var startColumn = lines.LastOrDefault()?.Length ?? 0;
 
-        string endContent = content[..(startIndex + length)];
-        string[] endLines = endContent.Split('\n');
-        int endLine = endLines.Length;
-        int endColumn = endLines.LastOrDefault()?.Length ?? 0;
+        var endContent = content[..(startIndex + length)];
+        var endLines = endContent.Split('\n');
+        var endLine = endLines.Length;
+        var endColumn = endLines.LastOrDefault()?.Length ?? 0;
 
         return (startLine, endLine, startColumn, endColumn);
     }
@@ -362,9 +362,9 @@ public class TypeScriptAnalysisService(ILogger<TypeScriptAnalysisService> logger
     private static bool CheckBasicSyntaxErrors(string content)
     {
         // Basic checks for common syntax errors
-        int braceCount = content.Count(c => c == '{') - content.Count(c => c == '}');
-        int parenCount = content.Count(c => c == '(') - content.Count(c => c == ')');
-        int bracketCount = content.Count(c => c == '[') - content.Count(c => c == ']');
+        var braceCount = content.Count(c => c == '{') - content.Count(c => c == '}');
+        var parenCount = content.Count(c => c == '(') - content.Count(c => c == ')');
+        var bracketCount = content.Count(c => c == '[') - content.Count(c => c == ']');
 
         return braceCount != 0 || parenCount != 0 || bracketCount != 0;
     }

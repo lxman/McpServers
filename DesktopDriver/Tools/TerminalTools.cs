@@ -40,7 +40,7 @@ public class TerminalTools
             return error;
         }
 
-        ProcessResult result = await _processManager.StartProcessAsync(command, sessionId, timeoutMs, workingDirectory);
+        var result = await _processManager.StartProcessAsync(command, sessionId, timeoutMs, workingDirectory);
         
         if (result.IsTimeout)
         {
@@ -60,7 +60,7 @@ public class TerminalTools
     public string ReadProcessOutput(
         [Description("Session ID of the process")] string sessionId = "default")
     {
-        ProcessResult? result = _processManager.GetProcessOutput(sessionId);
+        var result = _processManager.GetProcessOutput(sessionId);
         if (result == null)
         {
             return $"No process found for session: {sessionId}";
@@ -79,7 +79,7 @@ public class TerminalTools
         [Description("Session ID of the process")] string sessionId,
         [Description("Input to send to the process")] string input)
     {
-        bool success = await _processManager.SendInputAsync(sessionId, input);
+        var success = await _processManager.SendInputAsync(sessionId, input);
         if (success)
         {
             _auditLogger.LogOperation("Send_Input", $"Session: {sessionId}, Input: {input}", true);
@@ -97,7 +97,7 @@ public class TerminalTools
     public string KillProcess(
         [Description("Session ID of the process to kill")] string sessionId)
     {
-        bool success = _processManager.KillProcess(sessionId);
+        var success = _processManager.KillProcess(sessionId);
         return success ? 
             $"Process in session {sessionId} has been terminated." : 
             $"Failed to kill process in session {sessionId}. Process may not exist or already be terminated.";
@@ -107,14 +107,14 @@ public class TerminalTools
     [Description("List all active terminal sessions")]
     public string ListSessions()
     {
-        List<ProcessInfo> sessions = _processManager.ListActiveSessions();
+        var sessions = _processManager.ListActiveSessions();
         if (!sessions.Any())
         {
             return "No active terminal sessions.";
         }
 
         var result = "Active Terminal Sessions:\n";
-        foreach (ProcessInfo session in sessions)
+        foreach (var session in sessions)
         {
             result += $"Session: {session.SessionId}\n" +
                      $"  PID: {session.ProcessId}\n" +

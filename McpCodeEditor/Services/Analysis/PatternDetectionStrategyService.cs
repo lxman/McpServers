@@ -23,11 +23,11 @@ public class PatternDetectionStrategyService : IPatternDetectionStrategyService
         try
         {
             // Find solution files
-            string[] solutionFiles = Directory.GetFiles(rootPath, "*.sln", SearchOption.TopDirectoryOnly);
+            var solutionFiles = Directory.GetFiles(rootPath, "*.sln", SearchOption.TopDirectoryOnly);
 
-            foreach (string solutionFile in solutionFiles)
+            foreach (var solutionFile in solutionFiles)
             {
-                ArchitecturePattern? solutionPattern = await AnalyzeSolutionFileAsync(solutionFile, projects, cancellationToken);
+                var solutionPattern = await AnalyzeSolutionFileAsync(solutionFile, projects, cancellationToken);
                 if (solutionPattern != null)
                 {
                     patterns.Add(solutionPattern);
@@ -82,8 +82,8 @@ public class PatternDetectionStrategyService : IPatternDetectionStrategyService
             }
 
             // Check for separated frontend/backend pattern
-            List<ProjectInfo> frontendProjects = projects.Where(p => p.Type is ProjectType.Angular or ProjectType.React).ToList();
-            List<ProjectInfo> backendProjects = projects.Where(p => p.Type is ProjectType.DotNet or ProjectType.NodeJs).ToList();
+            var frontendProjects = projects.Where(p => p.Type is ProjectType.Angular or ProjectType.React).ToList();
+            var backendProjects = projects.Where(p => p.Type is ProjectType.DotNet or ProjectType.NodeJs).ToList();
 
             if (frontendProjects.Count != 0 && backendProjects.Count != 0)
             {
@@ -122,11 +122,11 @@ public class PatternDetectionStrategyService : IPatternDetectionStrategyService
         try
         {
             // Look for common naming patterns
-            List<string> projectNames = projects.Select(p => Path.GetFileName(p.Path).ToLowerInvariant()).ToList();
+            var projectNames = projects.Select(p => Path.GetFileName(p.Path).ToLowerInvariant()).ToList();
             
             // Check for MCP server/client pattern
-            List<string> mcpServers = projectNames.Where(name => name.Contains("mcp") && name.Contains("server")).ToList();
-            List<string> mcpClients = projectNames.Where(name => name.Contains("mcp") && name.Contains("client")).ToList();
+            var mcpServers = projectNames.Where(name => name.Contains("mcp") && name.Contains("server")).ToList();
+            var mcpClients = projectNames.Where(name => name.Contains("mcp") && name.Contains("client")).ToList();
 
             if (mcpServers.Count != 0 || mcpClients.Count != 0)
             {
@@ -148,7 +148,7 @@ public class PatternDetectionStrategyService : IPatternDetectionStrategyService
             }
 
             // Check for shared library patterns
-            List<string> sharedLibs = projectNames.Where(name => 
+            var sharedLibs = projectNames.Where(name => 
                 name.Contains("shared") || name.Contains("common") || name.Contains("core")).ToList();
 
             if (sharedLibs.Count != 0 && projects.Count > sharedLibs.Count)
@@ -188,8 +188,8 @@ public class PatternDetectionStrategyService : IPatternDetectionStrategyService
         try
         {
             // Check for Angular + .NET combination
-            List<ProjectInfo> angularProjects = projects.Where(p => p.Type == ProjectType.Angular).ToList();
-            List<ProjectInfo> dotNetProjects = projects.Where(p => p.Type == ProjectType.DotNet).ToList();
+            var angularProjects = projects.Where(p => p.Type == ProjectType.Angular).ToList();
+            var dotNetProjects = projects.Where(p => p.Type == ProjectType.DotNet).ToList();
 
             if (angularProjects.Count != 0 && dotNetProjects.Count != 0)
             {
@@ -220,8 +220,8 @@ public class PatternDetectionStrategyService : IPatternDetectionStrategyService
             }
 
             // Check for React + Node.js combination
-            List<ProjectInfo> reactProjects = projects.Where(p => p.Type == ProjectType.React).ToList();
-            List<ProjectInfo> nodeProjects = projects.Where(p => p.Type == ProjectType.NodeJs).ToList();
+            var reactProjects = projects.Where(p => p.Type == ProjectType.React).ToList();
+            var nodeProjects = projects.Where(p => p.Type == ProjectType.NodeJs).ToList();
 
             if (reactProjects.Count != 0 && nodeProjects.Count != 0)
             {
@@ -245,7 +245,7 @@ public class PatternDetectionStrategyService : IPatternDetectionStrategyService
             // Check for multi-.NET project pattern
             if (dotNetProjects.Count >= 2)
             {
-                bool hasWpf = dotNetProjects.Any(p => 
+                var hasWpf = dotNetProjects.Any(p => 
                     p.Path.Contains("wpf", StringComparison.InvariantCultureIgnoreCase) || 
                     p.Indicators.Any(i => i.Contains("wpf", StringComparison.InvariantCultureIgnoreCase)));
 
@@ -284,11 +284,11 @@ public class PatternDetectionStrategyService : IPatternDetectionStrategyService
     {
         if (projects.Count == 0) return null;
 
-        List<ProjectType> projectTypes = projects.Select(p => p.Type).ToList();
+        var projectTypes = projects.Select(p => p.Type).ToList();
 
         // Angular + .NET API pattern (enhanced detection)
-        bool hasAngular = projectTypes.Contains(ProjectType.Angular);
-        bool hasDotNet = projectTypes.Contains(ProjectType.DotNet);
+        var hasAngular = projectTypes.Contains(ProjectType.Angular);
+        var hasDotNet = projectTypes.Contains(ProjectType.DotNet);
         
         if (hasAngular && hasDotNet)
         {
@@ -317,10 +317,10 @@ public class PatternDetectionStrategyService : IPatternDetectionStrategyService
         }
 
         // Check for WPF + other .NET projects
-        List<ProjectInfo> dotNetProjects = projects.Where(p => p.Type == ProjectType.DotNet).ToList();
+        var dotNetProjects = projects.Where(p => p.Type == ProjectType.DotNet).ToList();
         if (dotNetProjects.Count >= 2)
         {
-            bool hasWpfIndicators = dotNetProjects.Any(p => 
+            var hasWpfIndicators = dotNetProjects.Any(p => 
                 p.Path.Contains("wpf", StringComparison.InvariantCultureIgnoreCase) || 
                 p.Indicators.Any(i => i.Contains("wpf", StringComparison.InvariantCultureIgnoreCase)));
 
@@ -370,20 +370,20 @@ public class PatternDetectionStrategyService : IPatternDetectionStrategyService
     {
         try
         {
-            string solutionContent = await File.ReadAllTextAsync(solutionFile, cancellationToken);
+            var solutionContent = await File.ReadAllTextAsync(solutionFile, cancellationToken);
             var projectsInSolution = new List<ProjectInfo>();
 
             // Parse solution file to find project references
-            string[] lines = solutionContent.Split('\n');
-            foreach (string line in lines)
+            var lines = solutionContent.Split('\n');
+            foreach (var line in lines)
             {
                 if (line.StartsWith("Project(") && (line.Contains(".csproj") || line.Contains(".esproj")))
                 {
                     // Extract project path from solution line
-                    string projectPath = ExtractProjectPathFromSolutionLine(line, Path.GetDirectoryName(solutionFile)!);
+                    var projectPath = ExtractProjectPathFromSolutionLine(line, Path.GetDirectoryName(solutionFile)!);
                     if (!string.IsNullOrEmpty(projectPath))
                     {
-                        ProjectInfo? matchingProject = availableProjects.FirstOrDefault(p => 
+                        var matchingProject = availableProjects.FirstOrDefault(p => 
                             Path.GetDirectoryName(p.Path)?.Equals(Path.GetDirectoryName(projectPath), StringComparison.OrdinalIgnoreCase) == true);
                         
                         if (matchingProject != null)
@@ -421,14 +421,14 @@ public class PatternDetectionStrategyService : IPatternDetectionStrategyService
         try
         {
             // Parse line like: Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectName", "RelativePath\Project.csproj", "{ProjectGUID}"
-            string[] parts = line.Split(',');
+            var parts = line.Split(',');
             if (parts.Length >= 2)
             {
                 // Extract the relative path (second part, between quotes)
-                string pathPart = parts[1].Trim();
+                var pathPart = parts[1].Trim();
                 if (pathPart.StartsWith("\"") && pathPart.EndsWith("\""))
                 {
-                    string relativePath = pathPart.Substring(1, pathPart.Length - 2); // Remove quotes
+                    var relativePath = pathPart.Substring(1, pathPart.Length - 2); // Remove quotes
                     return Path.Combine(solutionDir, relativePath);
                 }
             }

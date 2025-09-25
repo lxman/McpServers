@@ -15,8 +15,8 @@ public class JsonConfigurationPersistence : IConfigurationPersistence
     public JsonConfigurationPersistence()
     {
         // Store in %APPDATA%/McpCodeEditor/config.json
-        string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        string mcpDirectory = Path.Combine(appDataPath, "McpCodeEditor");
+        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var mcpDirectory = Path.Combine(appDataPath, "McpCodeEditor");
         
         // Ensure directory exists
         Directory.CreateDirectory(mcpDirectory);
@@ -34,7 +34,7 @@ public class JsonConfigurationPersistence : IConfigurationPersistence
     {
         try
         {
-            string json = JsonSerializer.Serialize(configuration, _jsonOptions);
+            var json = JsonSerializer.Serialize(configuration, _jsonOptions);
             await File.WriteAllTextAsync(_configPath, json);
         }
         catch (Exception ex)
@@ -53,7 +53,7 @@ public class JsonConfigurationPersistence : IConfigurationPersistence
                 return null;
             }
 
-            string json = await File.ReadAllTextAsync(_configPath);
+            var json = await File.ReadAllTextAsync(_configPath);
             return JsonSerializer.Deserialize<CodeEditorConfiguration>(json, _jsonOptions);
         }
         catch (Exception ex)

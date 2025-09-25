@@ -57,16 +57,16 @@ public class MassRenameService(
             }
 
             // Find items to rename
-            List<string> items = await DiscoverItemsToRenameAsync(rootPath, options);
+            var items = await DiscoverItemsToRenameAsync(rootPath, options);
             result.TotalFiles = items.Count;
 
             logger.LogInformation($"Starting mass rename operation on {items.Count} items");
 
             // Prepare regex if needed
-            Regex? searchRegex = PrepareSearchRegex(options);
+            var searchRegex = PrepareSearchRegex(options);
 
             // Process items sequentially to avoid conflicts
-            List<BatchFileResult> fileResults = await ProcessItemsSequentiallyAsync(
+            var fileResults = await ProcessItemsSequentiallyAsync(
                 items, options, searchRegex, backupId, progressReporter, cancellationToken);
 
             // Aggregate results
@@ -127,12 +127,12 @@ public class MassRenameService(
         var fileResults = new List<BatchFileResult>();
         var processed = 0;
 
-        foreach (string item in items)
+        foreach (var item in items)
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
 
-            BatchFileResult fileResult = await ProcessSingleItemRenameAsync(item, options, searchRegex, cancellationToken);
+            var fileResult = await ProcessSingleItemRenameAsync(item, options, searchRegex, cancellationToken);
             fileResults.Add(fileResult);
 
             processed++;
@@ -157,8 +157,8 @@ public class MassRenameService(
     {
         try
         {
-            string itemName = Path.GetFileName(itemPath);
-            string newName = GenerateNewName(itemName, options, searchRegex);
+            var itemName = Path.GetFileName(itemPath);
+            var newName = GenerateNewName(itemName, options, searchRegex);
 
             // Only rename if name changed
             if (itemName != newName)
@@ -196,8 +196,8 @@ public class MassRenameService(
 
     private static async Task<BatchFileResult> PerformRenameAsync(string itemPath, string itemName, string newName)
     {
-        string directory = Path.GetDirectoryName(itemPath) ?? "";
-        string newPath = Path.Combine(directory, newName);
+        var directory = Path.GetDirectoryName(itemPath) ?? "";
+        var newPath = Path.Combine(directory, newName);
 
         if (File.Exists(itemPath))
         {

@@ -39,7 +39,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             // Actual (broken): Detects "max(10, 20)" (columns 17-27) - missing "Math."
 
             // Act & Assert - This test will FAIL until REF-001 is fixed
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             Assert.True(result.Success, $"Boundary detection failed: {result.ErrorMessage}");
             Assert.Equal("Math.max(10, 20)", result.Expression);
@@ -60,7 +60,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             // This is the exact scenario from the MongoDB document
 
             // Act
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             // Assert
             Assert.True(result.Success, $"Boundary detection failed: {result.ErrorMessage}");
@@ -79,7 +79,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int endColumn = 39;   // Points to ')' in getData()
 
             // Act
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             // Assert
             Assert.True(result.Success);
@@ -96,7 +96,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int endColumn = 47;   // Points to last ')'
 
             // Act
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             // Assert
             Assert.True(result.Success);
@@ -117,7 +117,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int endColumn = 42;   // Points to 'l' in baseUrl
 
             // Act
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             // Assert
             Assert.True(result.Success);
@@ -134,7 +134,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int endColumn = 20;   // Points to 'e' in name
 
             // Act
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             // Assert
             Assert.True(result.Success);
@@ -155,7 +155,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int endColumn = 26;   // Points to ')'
 
             // Act
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             // Assert
             Assert.True(result.Success);
@@ -172,7 +172,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int endColumn = 37;   // Points to last ')'
 
             // Act
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             // Assert
             Assert.True(result.Success);
@@ -193,7 +193,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int endColumn = 35;   // Points to last quote
 
             // Act
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             // Assert
             Assert.True(result.Success);
@@ -210,7 +210,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int endColumn = 36;   // Points to backtick
 
             // Act
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             // Assert
             Assert.True(result.Success);
@@ -231,7 +231,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int endColumn = 10; // Same as start - empty selection
 
             // Act
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             // Assert
             Assert.False(result.Success);
@@ -247,7 +247,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int endColumn = 100; // Beyond line length
 
             // Act
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             // Assert - Should either succeed with clamped boundaries or fail gracefully
             if (result.Success)
@@ -269,7 +269,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int endColumn = 19;   // Points to 'x' in max
 
             // Act
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             // Assert - This is the core REF-001 test case
             Assert.True(result.Success);
@@ -292,7 +292,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int endColumn = 30;   // Points within Math.max
 
             // Act
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             // Assert
             Assert.True(result.Success);
@@ -310,7 +310,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const int endColumn = 33;   // Points to ')' 
 
             // Act
-            ExpressionBoundaryResult result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            var result = InvokeDetectExpressionBoundaries(lineContent, startColumn, endColumn);
 
             // Assert - Should prefer FunctionCall over PropertyAccess
             Assert.True(result.Success);
@@ -328,7 +328,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
         /// </summary>
         private static ExpressionBoundaryResult InvokeDetectExpressionBoundaries(string lineContent, int startColumn, int endColumn)
         {
-            ExpressionBoundaryDetectionService service = CreateBoundaryDetectionService();
+            var service = CreateBoundaryDetectionService();
             return service.DetectExpressionBoundaries(lineContent, startColumn, endColumn);
         }
 

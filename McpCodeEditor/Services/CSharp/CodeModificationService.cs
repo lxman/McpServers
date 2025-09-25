@@ -34,13 +34,13 @@ public class CodeModificationService : ICodeModificationService
         modifiedLines.Add(methodCall);
 
         // Add lines after the extraction
-        for (int i = endLine; i < lines.Length; i++)
+        for (var i = endLine; i < lines.Length; i++)
         {
             modifiedLines.Add(lines[i]);
         }
 
         // Find the correct class closing brace by tracking depth
-        int insertionPoint = FindClassClosingBrace(modifiedLines);
+        var insertionPoint = FindClassClosingBrace(modifiedLines);
     
         // Insert the new method before the class closing brace
         modifiedLines.Insert(insertionPoint, extractedMethod);
@@ -52,8 +52,8 @@ public class CodeModificationService : ICodeModificationService
     /// <inheritdoc />
     public string[] ExtractSelectedLines(string[] lines, int startLine, int endLine)
     {
-        int startIndex = startLine - 1; // Convert to 0-based
-        int endIndex = endLine - 1;
+        var startIndex = startLine - 1; // Convert to 0-based
+        var endIndex = endLine - 1;
         var extractedLines = new string[endIndex - startIndex + 1];
         Array.Copy(lines, startIndex, extractedLines, 0, extractedLines.Length);
         return extractedLines;
@@ -62,7 +62,7 @@ public class CodeModificationService : ICodeModificationService
     /// <inheritdoc />
     public string GetBaseIndentation(string[] lines)
     {
-        foreach (string line in lines)
+        foreach (var line in lines)
         {
             if (!string.IsNullOrWhiteSpace(line))
             {
@@ -92,8 +92,8 @@ public class CodeModificationService : ICodeModificationService
     
         for (var i = 0; i < lines.Count; i++)
         {
-            string line = lines[i];
-            string trimmedLine = line.Trim();
+            var line = lines[i];
+            var trimmedLine = line.Trim();
         
             // Look for class or struct declaration
             if (!foundClass && (line.Contains("class ") || line.Contains("struct ") || line.Contains("interface ") || line.Contains("record ")))
@@ -104,7 +104,7 @@ public class CodeModificationService : ICodeModificationService
             // Once we've found a class, track its braces
             if (foundClass)
             {
-                foreach (char c in line)
+                foreach (var c in line)
                 {
                     if (c == '{')
                     {
@@ -129,10 +129,10 @@ public class CodeModificationService : ICodeModificationService
         }
     
         // Fallback: Find the second-to-last closing brace (assuming namespace wraps class)
-        int lastBrace = -1;
-        int secondToLastBrace = -1;
+        var lastBrace = -1;
+        var secondToLastBrace = -1;
     
-        for (int i = lines.Count - 1; i >= 0; i--)
+        for (var i = lines.Count - 1; i >= 0; i--)
         {
             if (lines[i].Trim() == "}")
             {

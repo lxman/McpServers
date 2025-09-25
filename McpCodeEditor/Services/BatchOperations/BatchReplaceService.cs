@@ -36,7 +36,7 @@ public class BatchReplaceService(
         try
         {
             // Validate inputs and resolve path
-            PathValidationResult pathValidationResult = ValidateInputs(rootPath, options);
+            var pathValidationResult = ValidateInputs(rootPath, options);
             if (!pathValidationResult.IsValid)
             {
                 return new BatchOperationResult
@@ -46,7 +46,7 @@ public class BatchReplaceService(
                 };
             }
 
-            string resolvedPath = pathValidationResult.ResolvedPath!;
+            var resolvedPath = pathValidationResult.ResolvedPath!;
 
             // Create backup if requested
             if (options.CreateBackup)
@@ -56,16 +56,16 @@ public class BatchReplaceService(
             }
 
             // Find files to process
-            List<string> files = FindFiles(resolvedPath, options.FilePattern, options.ExcludeDirectories);
+            var files = FindFiles(resolvedPath, options.FilePattern, options.ExcludeDirectories);
             result.TotalFiles = files.Count;
 
             logger.LogInformation($"Starting batch replace operation on {files.Count} files");
 
             // Prepare regex if needed
-            Regex? searchRegex = PrepareSearchRegex(options);
+            var searchRegex = PrepareSearchRegex(options);
 
             // Process files in parallel
-            List<BatchFileResult> fileResults = await ProcessFilesAsync(files, options, searchRegex, progressReporter, backupId, cancellationToken);
+            var fileResults = await ProcessFilesAsync(files, options, searchRegex, progressReporter, backupId, cancellationToken);
 
             // Aggregate results
             PopulateResult(result, fileResults, stopwatch.Elapsed, options);
@@ -93,7 +93,7 @@ public class BatchReplaceService(
             return PathValidationResult.Invalid("Search pattern cannot be empty");
         }
 
-        string? resolvedPath = ValidateAndResolvePath(rootPath);
+        var resolvedPath = ValidateAndResolvePath(rootPath);
         if (resolvedPath == null)
         {
             return PathValidationResult.Invalid($"Directory not found: {rootPath}");
@@ -116,9 +116,9 @@ public class BatchReplaceService(
             }
 
             // For relative paths, resolve relative to the current workspace
-            string basePath = config.DefaultWorkspace;
-            string fullPath = Path.Combine(basePath, path);
-            string resolvedPath = Path.GetFullPath(fullPath);
+            var basePath = config.DefaultWorkspace;
+            var fullPath = Path.Combine(basePath, path);
+            var resolvedPath = Path.GetFullPath(fullPath);
 
             return Directory.Exists(resolvedPath) ? resolvedPath : null;
         }
@@ -158,10 +158,10 @@ public class BatchReplaceService(
             },
             async (file, ct) =>
             {
-                BatchFileResult fileResult = await ProcessSingleFileAsync(file, options, searchRegex, ct);
+                var fileResult = await ProcessSingleFileAsync(file, options, searchRegex, ct);
                 fileResults.Add(fileResult);
 
-                int currentProcessed = Interlocked.Increment(ref processed);
+                var currentProcessed = Interlocked.Increment(ref processed);
                 progressReporter?.ReportProgress(currentProcessed, files.Count, file);
                 progressReporter?.ReportFileCompleted(file, fileResult.Success, fileResult.Error);
 
@@ -183,8 +183,8 @@ public class BatchReplaceService(
     {
         try
         {
-            string originalContent = await File.ReadAllTextAsync(filePath, cancellationToken);
-            string modifiedContent = ApplyReplacements(originalContent, options, searchRegex);
+            var originalContent = await File.ReadAllTextAsync(filePath, cancellationToken);
+            var modifiedContent = ApplyReplacements(originalContent, options, searchRegex);
 
             if (originalContent != modifiedContent)
             {
@@ -216,7 +216,7 @@ public class BatchReplaceService(
         }
         else
         {
-            StringComparison comparison = options.CaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+            var comparison = options.CaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
             return content.Replace(options.SearchPattern, options.ReplaceWith, comparison);
         }
     }
@@ -272,13 +272,13 @@ public class BatchReplaceService(
     private List<string> FindFiles(string rootPath, string filePattern, List<string> excludeDirectories)
     {
         var files = new List<string>();
-        string searchPattern = string.IsNullOrEmpty(filePattern) ? "*" : filePattern;
+        var searchPattern = string.IsNullOrEmpty(filePattern) ? "*" : filePattern;
 
         try
         {
-            string[] allFiles = Directory.GetFiles(rootPath, searchPattern, SearchOption.AllDirectories);
+            var allFiles = Directory.GetFiles(rootPath, searchPattern, SearchOption.AllDirectories);
 
-            foreach (string file in allFiles)
+            foreach (var file in allFiles)
             {
                 if (ShouldIncludeFile(file, excludeDirectories))
                 {
@@ -297,7 +297,7 @@ public class BatchReplaceService(
     private bool ShouldIncludeFile(string file, List<string> excludeDirectories)
     {
         // Check if file is in excluded directory
-        string? directory = Path.GetDirectoryName(file);
+        var directory = Path.GetDirectoryName(file);
         if (directory != null && excludeDirectories.Any(excluded =>
             directory.Contains(excluded, StringComparison.OrdinalIgnoreCase)))
         {
@@ -305,7 +305,7 @@ public class BatchReplaceService(
         }
 
         // Check if file extension is allowed
-        string extension = Path.GetExtension(file).ToLowerInvariant();
+        var extension = Path.GetExtension(file).ToLowerInvariant();
         return config.AllowedExtensions.Contains(extension);
     }
 
@@ -338,7 +338,7 @@ public class BatchReplaceService(
             }
             else
             {
-                StringComparison comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+                var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
                 var count = 0;
                 var index = 0;
                 while ((index = text.IndexOf(pattern, index, comparison)) != -1)

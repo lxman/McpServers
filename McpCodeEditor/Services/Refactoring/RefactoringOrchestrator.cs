@@ -54,10 +54,10 @@ public class RefactoringOrchestrator : IRefactoringOrchestrator
 
         try
         {
-            string validatedPath = _pathValidation.ValidateFileExists(filePath);
-            LanguageType language = LanguageDetectionService.DetectLanguage(validatedPath);
+            var validatedPath = _pathValidation.ValidateFileExists(filePath);
+            var language = LanguageDetectionService.DetectLanguage(validatedPath);
             
-            ILanguageRefactoringStrategy? strategy = _strategyFactory.GetStrategy(language);
+            var strategy = _strategyFactory.GetStrategy(language);
             if (strategy == null)
             {
                 return CreateErrorResult($"Method extraction not supported for {LanguageDetectionService.GetLanguageName(language)} files");
@@ -91,10 +91,10 @@ public class RefactoringOrchestrator : IRefactoringOrchestrator
 
         try
         {
-            string validatedPath = _pathValidation.ValidateFileExists(filePath);
-            LanguageType language = LanguageDetectionService.DetectLanguage(validatedPath);
+            var validatedPath = _pathValidation.ValidateFileExists(filePath);
+            var language = LanguageDetectionService.DetectLanguage(validatedPath);
             
-            ILanguageRefactoringStrategy? strategy = _strategyFactory.GetStrategy(language);
+            var strategy = _strategyFactory.GetStrategy(language);
             if (strategy == null)
             {
                 return CreateErrorResult($"Method extraction not supported for {LanguageDetectionService.GetLanguageName(language)} files");
@@ -127,10 +127,10 @@ public class RefactoringOrchestrator : IRefactoringOrchestrator
 
         try
         {
-            string validatedPath = _pathValidation.ValidateFileExists(filePath);
-            LanguageType language = LanguageDetectionService.DetectLanguage(validatedPath);
+            var validatedPath = _pathValidation.ValidateFileExists(filePath);
+            var language = LanguageDetectionService.DetectLanguage(validatedPath);
             
-            ILanguageRefactoringStrategy? strategy = _strategyFactory.GetStrategy(language);
+            var strategy = _strategyFactory.GetStrategy(language);
             if (strategy == null)
             {
                 return CreateErrorResult($"Method inlining not supported for {LanguageDetectionService.GetLanguageName(language)} files");
@@ -166,10 +166,10 @@ public class RefactoringOrchestrator : IRefactoringOrchestrator
 
         try
         {
-            string validatedPath = _pathValidation.ValidateFileExists(filePath);
-            LanguageType language = LanguageDetectionService.DetectLanguage(validatedPath);
+            var validatedPath = _pathValidation.ValidateFileExists(filePath);
+            var language = LanguageDetectionService.DetectLanguage(validatedPath);
             
-            ILanguageRefactoringStrategy? strategy = _strategyFactory.GetStrategy(language);
+            var strategy = _strategyFactory.GetStrategy(language);
             if (strategy == null)
             {
                 return CreateErrorResult($"Variable introduction not supported for {LanguageDetectionService.GetLanguageName(language)} files");
@@ -203,10 +203,10 @@ public class RefactoringOrchestrator : IRefactoringOrchestrator
 
         try
         {
-            string validatedPath = _pathValidation.ValidateFileExists(filePath);
-            LanguageType language = LanguageDetectionService.DetectLanguage(validatedPath);
+            var validatedPath = _pathValidation.ValidateFileExists(filePath);
+            var language = LanguageDetectionService.DetectLanguage(validatedPath);
             
-            ILanguageRefactoringStrategy? strategy = _strategyFactory.GetStrategy(language);
+            var strategy = _strategyFactory.GetStrategy(language);
             if (strategy == null)
             {
                 return CreateErrorResult($"Import organization not supported for {LanguageDetectionService.GetLanguageName(language)} files");
@@ -234,10 +234,10 @@ public class RefactoringOrchestrator : IRefactoringOrchestrator
 
         try
         {
-            string validatedPath = _pathValidation.ValidateFileExists(filePath);
-            LanguageType language = LanguageDetectionService.DetectLanguage(validatedPath);
+            var validatedPath = _pathValidation.ValidateFileExists(filePath);
+            var language = LanguageDetectionService.DetectLanguage(validatedPath);
             
-            ILanguageRefactoringStrategy? strategy = _strategyFactory.GetStrategy(language);
+            var strategy = _strategyFactory.GetStrategy(language);
             if (strategy == null)
             {
                 return CreateErrorResult($"Import addition not supported for {LanguageDetectionService.GetLanguageName(language)} files");
@@ -271,10 +271,10 @@ public class RefactoringOrchestrator : IRefactoringOrchestrator
 
         try
         {
-            string validatedPath = _pathValidation.ValidateFileExists(filePath);
-            LanguageType language = LanguageDetectionService.DetectLanguage(validatedPath);
+            var validatedPath = _pathValidation.ValidateFileExists(filePath);
+            var language = LanguageDetectionService.DetectLanguage(validatedPath);
             
-            ILanguageRefactoringStrategy? strategy = _strategyFactory.GetStrategy(language);
+            var strategy = _strategyFactory.GetStrategy(language);
             if (strategy == null || !strategy.IsOperationSupported("encapsulateField"))
             {
                 return CreateErrorResult($"Field encapsulation not supported for {LanguageDetectionService.GetLanguageName(language)} files");
@@ -309,10 +309,10 @@ public class RefactoringOrchestrator : IRefactoringOrchestrator
         {
             if (filePath != null)
             {
-                string validatedPath = _pathValidation.ValidateFileExists(filePath);
-                LanguageType language = LanguageDetectionService.DetectLanguage(validatedPath);
+                var validatedPath = _pathValidation.ValidateFileExists(filePath);
+                var language = LanguageDetectionService.DetectLanguage(validatedPath);
                 
-                ILanguageRefactoringStrategy? strategy = _strategyFactory.GetStrategy(language);
+                var strategy = _strategyFactory.GetStrategy(language);
                 if (strategy == null)
                 {
                     return CreateErrorResult($"Symbol renaming not supported for {LanguageDetectionService.GetLanguageName(language)} files");
@@ -326,7 +326,7 @@ public class RefactoringOrchestrator : IRefactoringOrchestrator
             else
             {
                 // Project-wide rename - default to C# strategy
-                ILanguageRefactoringStrategy? strategy = _strategyFactory.GetStrategy(LanguageType.CSharp);
+                var strategy = _strategyFactory.GetStrategy(LanguageType.CSharp);
                 if (strategy == null)
                 {
                     return CreateErrorResult("Project-wide symbol renaming not available");
@@ -356,8 +356,8 @@ public class RefactoringOrchestrator : IRefactoringOrchestrator
     {
         try
         {
-            LanguageType language = LanguageDetectionService.DetectLanguage(filePath);
-            ILanguageRefactoringStrategy? strategy = _strategyFactory.GetStrategy(language);
+            var language = LanguageDetectionService.DetectLanguage(filePath);
+            var strategy = _strategyFactory.GetStrategy(language);
             
             return strategy?.IsOperationSupported(operationType) == true;
         }

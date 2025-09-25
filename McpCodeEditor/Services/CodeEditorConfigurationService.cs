@@ -78,7 +78,7 @@ public class CodeEditorConfigurationService
     {
         try
         {
-            CodeEditorConfiguration? persistedConfig = await _persistence.LoadConfigurationAsync();
+            var persistedConfig = await _persistence.LoadConfigurationAsync();
             if (persistedConfig?.Workspace != null)
             {
                 // Merge workspace settings from persistent storage
@@ -116,7 +116,7 @@ public class CodeEditorConfigurationService
             if (_configuration.Workspace.AutoDetectWorkspace &&
                 string.IsNullOrEmpty(_configuration.Workspace.PreferredWorkspace))
             {
-                ProjectInfo? suggested = await _projectDetection.SuggestBestWorkspaceAsync();
+                var suggested = await _projectDetection.SuggestBestWorkspaceAsync();
                 if (suggested != null && !IsSystemDirectory(suggested.Path))
                 {
                     _smartWorkspace = suggested.Path;

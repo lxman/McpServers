@@ -1,11 +1,10 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
-using ModelContextProtocol.Server;
-using AwsMcp.CloudWatch;
-using AwsMcp.Configuration;
 using Amazon.CloudWatch.Model;
-using Amazon.CloudWatchLogs.Model;
+using AwsMcp.CloudWatch;
 using AwsMcp.CloudWatch.Models;
+using AwsMcp.Configuration;
+using ModelContextProtocol.Server;
 using InvalidOperationException = Amazon.CloudWatchLogs.Model.InvalidOperationException;
 
 namespace AwsMcp.Tools;

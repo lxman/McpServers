@@ -1,8 +1,6 @@
 ﻿using Amazon.ECR;
 using Amazon.ECR.Model;
-using Amazon.Runtime;
 using AwsMcp.Configuration;
-using AwsMcp.Configuration.Models;
 using Microsoft.Extensions.Logging;
 
 namespace AwsMcp.ECR;

@@ -1,5 +1,6 @@
 ﻿using McpCodeEditor.ServiceModules;
 using Microsoft.Build.Locator;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -44,11 +45,11 @@ public class Program
             Log.Information("Console output redirected");
 
             // Create the host builder with configuration
-            HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+            var builder = Host.CreateApplicationBuilder(args);
 
             // Add configuration sources
             // CRITICAL: Use an absolute path to appsettings.json since the working directory differs in MCP
-            string configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+            var configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
             Log.Information("Loading configuration from: {ConfigPath}", configPath);
 
             builder.Configuration
@@ -97,7 +98,7 @@ public class Program
 
             // Build and run the host
             Log.Information("Building host...");
-            IHost host = builder.Build();
+            var host = builder.Build();
             Log.Information("Host built successfully");
 
             // Start the MCP server

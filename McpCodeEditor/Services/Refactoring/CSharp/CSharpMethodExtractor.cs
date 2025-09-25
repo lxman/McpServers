@@ -67,7 +67,7 @@ public class CSharpMethodExtractor : ICSharpMethodExtractor
         try
         {
             // Validate context and options
-            CSharpValidationResult validationResult = await ValidateExtractionAsync(context, options, cancellationToken);
+            var validationResult = await ValidateExtractionAsync(context, options, cancellationToken);
             if (!validationResult.IsValid)
             {
                 return RefactoringResult.CreateFailure(
@@ -81,7 +81,7 @@ public class CSharpMethodExtractor : ICSharpMethodExtractor
                 return RefactoringResult.CreateFailure($"Source file not found: {context.FilePath}");
             }
 
-            string sourceCode = await File.ReadAllTextAsync(context.FilePath, cancellationToken);
+            var sourceCode = await File.ReadAllTextAsync(context.FilePath, cancellationToken);
             if (string.IsNullOrEmpty(sourceCode))
             {
                 return RefactoringResult.CreateFailure("Source file is empty or could not be read");
@@ -93,8 +93,8 @@ public class CSharpMethodExtractor : ICSharpMethodExtractor
             _logger.LogDebug("Phase 1 - Step 2: Analyzing code lines {StartLine}-{EndLine} using Enhanced Variable Analysis Service",
                 options.StartLine, options.EndLine);
             
-            string[] sourceLines = sourceCode.Split('\n');
-            string[] extractedLines = sourceLines
+            var sourceLines = sourceCode.Split('\n');
+            var extractedLines = sourceLines
                 .Skip(options.StartLine - 1)
                 .Take(options.EndLine - options.StartLine + 1)
                 .ToArray();
@@ -102,7 +102,7 @@ public class CSharpMethodExtractor : ICSharpMethodExtractor
             // Step 3: Basic validation using existing validation services  
             _logger.LogDebug("Phase 1 - Step 3: Enhanced validation with analysis results");
 
-            CSharpValidationResult enhancedValidationResult = await ValidateExtractionAsync(context, options, cancellationToken);
+            var enhancedValidationResult = await ValidateExtractionAsync(context, options, cancellationToken);
             if (!enhancedValidationResult.IsValid)
             {
                 return RefactoringResult.CreateFailure(
@@ -157,15 +157,15 @@ public class CSharpMethodExtractor : ICSharpMethodExtractor
                     AccessModifier = "private"
                 };
 
-                MethodExtractionValidationResult methodValidationResult = MethodExtractionValidationResult.Success(extractedMethodInfo, "Basic validation for Phase 2");
+                var methodValidationResult = MethodExtractionValidationResult.Success(extractedMethodInfo, "Basic validation for Phase 2");
                 methodValidationResult.Language = "C#";
                 methodValidationResult.SuggestedMethodName = options.NewMethodName;
 
                 // Get base indentation
-                string baseIndentation = _codeModification.GetBaseIndentation(extractedLines);
+                var baseIndentation = _codeModification.GetBaseIndentation(extractedLines);
                 
                 // Use the method signature generation service
-                string methodSignature = await _methodSignatureGeneration.CreateExtractedMethodWithParametersAsync(
+                var methodSignature = await _methodSignatureGeneration.CreateExtractedMethodWithParametersAsync(
                     extractedLines,
                     options,
                     extractedMethodInfo.ReturnType ?? "void",
@@ -183,9 +183,9 @@ public class CSharpMethodExtractor : ICSharpMethodExtractor
                 _logger.LogDebug("Phase 2 - Step 2: Generating method call using IMethodCallGenerationService");
 
                 // Get the indentation for the method call (from the first extracted line)
-                string callIndentation = extractedLines.Length > 0 ? _codeModification.GetLineIndentation(extractedLines[0]) : "";
+                var callIndentation = extractedLines.Length > 0 ? _codeModification.GetLineIndentation(extractedLines[0]) : "";
 
-                string methodCall = await _methodCallGeneration.CreateMethodCallAsync(
+                var methodCall = await _methodCallGeneration.CreateMethodCallAsync(
                     callIndentation,
                     options.NewMethodName,
                     methodValidationResult,
@@ -201,7 +201,7 @@ public class CSharpMethodExtractor : ICSharpMethodExtractor
                 // Step 3: Handle extracted code using ICodeModificationService
                 _logger.LogDebug("Phase 2 - Step 3: Handling extracted code using ICodeModificationService");
 
-                string modificationResult = _codeModification.BuildModifiedContent(
+                var modificationResult = _codeModification.BuildModifiedContent(
                     sourceLines,
                     options.StartLine,
                     options.EndLine,
@@ -255,7 +255,7 @@ public class CSharpMethodExtractor : ICSharpMethodExtractor
 
                 try
                 {
-                    string changeId = await _changeTracking.TrackChangeAsync(
+                    var changeId = await _changeTracking.TrackChangeAsync(
                         context.FilePath,
                         sourceCode,
                         modificationResult,
@@ -295,7 +295,7 @@ public class CSharpMethodExtractor : ICSharpMethodExtractor
                     return RefactoringResult.CreateFailure("File no longer exists after modification");
                 }
 
-                string modifiedFileContent = await File.ReadAllTextAsync(context.FilePath, cancellationToken);
+                var modifiedFileContent = await File.ReadAllTextAsync(context.FilePath, cancellationToken);
                 if (string.IsNullOrEmpty(modifiedFileContent))
                 {
                     return RefactoringResult.CreateFailure("Modified file is empty");
@@ -391,7 +391,7 @@ public class CSharpMethodExtractor : ICSharpMethodExtractor
         _logger.LogDebug("ExecuteAsync called for context: {FilePath}", context.FilePath);
 
         // CRITICAL FIX: Extract the actual options from context instead of using hardcoded defaults
-        if (context.AdditionalData.TryGetValue("extractionOptions", out object? extractionOptionsObj) &&
+        if (context.AdditionalData.TryGetValue("extractionOptions", out var extractionOptionsObj) &&
             extractionOptionsObj is CSharpExtractionOptions contextOptions)
         {
             _logger.LogInformation("Extracted options from context: StartLine={StartLine}, EndLine={EndLine}, MethodName={MethodName}",
@@ -399,7 +399,7 @@ public class CSharpMethodExtractor : ICSharpMethodExtractor
 
             // Get preview mode from context
             var previewOnly = false;
-            if (context.AdditionalData.TryGetValue("previewOnly", out object? previewOnlyObj) && previewOnlyObj is bool preview)
+            if (context.AdditionalData.TryGetValue("previewOnly", out var previewOnlyObj) && previewOnlyObj is bool preview)
             {
                 previewOnly = preview;
             }

@@ -1,5 +1,4 @@
 ﻿using McpCodeEditor.Interfaces;
-using McpCodeEditor.Models;
 using McpCodeEditor.Models.Options;
 using McpCodeEditor.Models.Refactoring;
 using McpCodeEditor.Models.Refactoring.CSharp;
@@ -133,7 +132,7 @@ namespace Accounting
                 MethodCall = "var (totalPending, totalCompleted, pendingCount, completedCount) = CalculateOrderStatistics();"
             };
             
-            MethodExtractionValidationResult validationResult = MethodExtractionValidationResult.Success(methodInfo);
+            var validationResult = MethodExtractionValidationResult.Success(methodInfo);
             validationResult.Analysis = new CSharpExtractionAnalysis
             {
                 ContainingMethodName = "ProcessOrders",
@@ -153,12 +152,12 @@ namespace Accounting
             )).ReturnsAsync(validationResult);
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, $"Extraction should succeed. Error: {result.Error}");
             
-            FileChange change = result.Changes.First();
+            var change = result.Changes.First();
             
             // Should create method with tuple return
             Assert.Contains("private (decimal, decimal, int, int) CalculateOrderStatistics()", change.ModifiedContent);
@@ -221,7 +220,7 @@ namespace TestApp
                 MethodCall = "CalculateValues(ref sum, ref product, ref count);"
             };
             
-            MethodExtractionValidationResult validationResult = MethodExtractionValidationResult.Success(methodInfo);
+            var validationResult = MethodExtractionValidationResult.Success(methodInfo);
             validationResult.Analysis = new CSharpExtractionAnalysis
             {
                 ContainingMethodName = "PerformCalculations",
@@ -241,12 +240,12 @@ namespace TestApp
             )).ReturnsAsync(validationResult);
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, $"Extraction should succeed. Error: {result.Error}");
             
-            FileChange change = result.Changes.First();
+            var change = result.Changes.First();
             
             // Should create method with ref parameters
             Assert.Contains("private void CalculateValues(ref int sum, ref int product, ref int count)", change.ModifiedContent);
@@ -321,7 +320,7 @@ namespace TestApp
                 MethodCall = "var (sum, max, min, elementCount) = CalculateMatrixStatistics(matrix);"
             };
             
-            MethodExtractionValidationResult validationResult = MethodExtractionValidationResult.Success(methodInfo);
+            var validationResult = MethodExtractionValidationResult.Success(methodInfo);
             validationResult.Analysis = new CSharpExtractionAnalysis
             {
                 ContainingMethodName = "ProcessMatrix",
@@ -341,12 +340,12 @@ namespace TestApp
             )).ReturnsAsync(validationResult);
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, $"Extraction should succeed. Error: {result.Error}");
             
-            FileChange change = result.Changes.First();
+            var change = result.Changes.First();
             
             // Should handle nested loops properly
             Assert.Contains("private (int sum, int max, int min, int elementCount) CalculateMatrixStatistics(int[,] matrix)", change.ModifiedContent);
@@ -421,7 +420,7 @@ namespace Analysis
                 MethodCall = "var (aboveCount, average, belowCount) = AnalyzeThreshold(data, threshold, belowCount);"
             };
             
-            MethodExtractionValidationResult validationResult = MethodExtractionValidationResult.Success(methodInfo);
+            var validationResult = MethodExtractionValidationResult.Success(methodInfo);
             validationResult.Analysis = new CSharpExtractionAnalysis
             {
                 ContainingMethodName = "AnalyzeData",
@@ -441,12 +440,12 @@ namespace Analysis
             )).ReturnsAsync(validationResult);
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, $"Extraction should succeed. Error: {result.Error}");
             
-            FileChange change = result.Changes.First();
+            var change = result.Changes.First();
             
             // Should handle mixed variable scopes
             Assert.Contains("private (int aboveCount, decimal average, int belowCount) AnalyzeThreshold", change.ModifiedContent);
@@ -511,7 +510,7 @@ namespace DataProcessing
                 MethodCall = "var (evenNumbers, oddNumbers, evenSum, oddSum, evenAverage, oddAverage) = CalculateStatsByParity(numbers);"
             };
             
-            MethodExtractionValidationResult validationResult = MethodExtractionValidationResult.Success(methodInfo);
+            var validationResult = MethodExtractionValidationResult.Success(methodInfo);
             validationResult.Analysis = new CSharpExtractionAnalysis
             {
                 ContainingMethodName = "ProcessData",
@@ -533,13 +532,13 @@ namespace DataProcessing
             )).ReturnsAsync(validationResult);
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, $"Extraction should succeed. Error: {result.Error}");
             Assert.Contains("warning", result.Message.ToLower());
             
-            FileChange change = result.Changes.First();
+            var change = result.Changes.First();
             
             // Should handle complex LINQ result extraction
             Assert.Contains("CalculateStatsByParity", change.ModifiedContent);
@@ -622,7 +621,7 @@ namespace ErrorHandling
                 MethodCall = "var (content, success, errorMessage) = TryReadFile(filePath);"
             };
             
-            MethodExtractionValidationResult validationResult = MethodExtractionValidationResult.Success(methodInfo);
+            var validationResult = MethodExtractionValidationResult.Success(methodInfo);
             validationResult.Analysis = new CSharpExtractionAnalysis
             {
                 ContainingMethodName = "ProcessFile",
@@ -642,12 +641,12 @@ namespace ErrorHandling
             )).ReturnsAsync(validationResult);
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, $"Extraction should succeed. Error: {result.Error}");
             
-            FileChange change = result.Changes.First();
+            var change = result.Changes.First();
             
             // Should handle try-catch extraction
             Assert.Contains("private (string content, bool success, string errorMessage) TryReadFile(string filePath)", change.ModifiedContent);
@@ -728,7 +727,7 @@ namespace AsyncProcessing
                 MethodCall = "var (response1, response2, totalLength, allSuccessful) = await FetchResponsesAsync(urls);"
             };
             
-            MethodExtractionValidationResult validationResult = MethodExtractionValidationResult.Success(methodInfo);
+            var validationResult = MethodExtractionValidationResult.Success(methodInfo);
             validationResult.Analysis = new CSharpExtractionAnalysis
             {
                 ContainingMethodName = "ProcessMultipleUrlsAsync",
@@ -748,12 +747,12 @@ namespace AsyncProcessing
             )).ReturnsAsync(validationResult);
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, $"Extraction should succeed. Error: {result.Error}");
             
-            FileChange change = result.Changes.First();
+            var change = result.Changes.First();
             
             // Should handle async method extraction
             Assert.Contains("private async Task<(string, string, int, bool)> FetchResponsesAsync(string[] urls)", change.ModifiedContent);
@@ -829,7 +828,7 @@ namespace Validation
                 new ValidationError("COMPLEX_CONTROL_FLOW", "Complex control flow makes extraction unsafe")
             };
             
-            MethodExtractionValidationResult validationResult = MethodExtractionValidationResult.Failure(errors, "Multiple validation errors detected");
+            var validationResult = MethodExtractionValidationResult.Failure(errors, "Multiple validation errors detected");
             validationResult.AddWarning("HIGH_COMPLEXITY", "Code has high cyclomatic complexity (5)");
             validationResult.AddWarning("MULTIPLE_MODIFIED_VARIABLES", "Multiple variables are modified and used after extraction");
             
@@ -848,7 +847,7 @@ namespace Validation
             )).ReturnsAsync(validationResult);
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.False(result.Success, "Extraction should fail due to validation errors");
@@ -928,7 +927,7 @@ namespace Reporting
                 MethodCall = "var stats = CalculateReportStatistics(sales);"
             };
             
-            MethodExtractionValidationResult validationResult = MethodExtractionValidationResult.Success(methodInfo);
+            var validationResult = MethodExtractionValidationResult.Success(methodInfo);
             validationResult.Analysis = new CSharpExtractionAnalysis
             {
                 ContainingMethodName = "GenerateReport",
@@ -961,7 +960,7 @@ namespace Reporting
             )).ReturnsAsync(validationResult);
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, $"Extraction should succeed with warnings. Error: {result.Error}");

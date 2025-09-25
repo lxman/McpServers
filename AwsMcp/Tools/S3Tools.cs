@@ -2,9 +2,9 @@
 using System.Text.Json;
 using Amazon.S3;
 using Amazon.S3.Model;
-using ModelContextProtocol.Server;
-using AwsMcp.S3;
 using AwsMcp.Configuration;
+using AwsMcp.S3;
+using ModelContextProtocol.Server;
 
 namespace AwsMcp.Tools;
 

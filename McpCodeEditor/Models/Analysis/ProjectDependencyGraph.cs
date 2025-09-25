@@ -36,14 +36,14 @@ public class ProjectDependencyGraph
     public List<ProjectNode> GetDependencies(string projectPath)
     {
         var dependencies = new List<ProjectNode>();
-        List<ProjectReference> projectReferences = References
+        var projectReferences = References
             .Where(r => r.SourceProjectPath.Equals(projectPath, StringComparison.OrdinalIgnoreCase))
             .Where(r => r.Type == ProjectReferenceType.Project)
             .ToList();
 
-        foreach (ProjectReference reference in projectReferences)
+        foreach (var reference in projectReferences)
         {
-            ProjectNode? dependentProject = Projects.FirstOrDefault(p =>
+            var dependentProject = Projects.FirstOrDefault(p =>
                 p.ProjectPath.Equals(reference.TargetPath, StringComparison.OrdinalIgnoreCase));
 
             if (dependentProject != null)
@@ -61,14 +61,14 @@ public class ProjectDependencyGraph
     public List<ProjectNode> GetDependents(string projectPath)
     {
         var dependents = new List<ProjectNode>();
-        List<ProjectReference> projectReferences = References
+        var projectReferences = References
             .Where(r => r.TargetPath.Equals(projectPath, StringComparison.OrdinalIgnoreCase))
             .Where(r => r.Type == ProjectReferenceType.Project)
             .ToList();
 
-        foreach (ProjectReference reference in projectReferences)
+        foreach (var reference in projectReferences)
         {
-            ProjectNode? dependentProject = Projects.FirstOrDefault(p =>
+            var dependentProject = Projects.FirstOrDefault(p =>
                 p.ProjectPath.Equals(reference.SourceProjectPath, StringComparison.OrdinalIgnoreCase));
 
             if (dependentProject != null)
@@ -99,8 +99,8 @@ public class ProjectDependencyGraph
 
         visited.Add(current);
 
-        List<ProjectNode> dependencies = GetDependencies(current);
-        foreach (ProjectNode dependency in dependencies)
+        var dependencies = GetDependencies(current);
+        foreach (var dependency in dependencies)
         {
             if (HasDependencyPathRecursive(dependency.ProjectPath, target, visited))
                 return true;
@@ -118,7 +118,7 @@ public class ProjectDependencyGraph
         var visited = new HashSet<string>();
         var recursionStack = new HashSet<string>();
 
-        foreach (ProjectNode project in Projects)
+        foreach (var project in Projects)
         {
             if (!visited.Contains(project.ProjectPath))
             {
@@ -137,8 +137,8 @@ public class ProjectDependencyGraph
         recursionStack.Add(projectPath);
         currentPath.Add(projectPath);
 
-        List<ProjectNode> dependencies = GetDependencies(projectPath);
-        foreach (ProjectNode dependency in dependencies)
+        var dependencies = GetDependencies(projectPath);
+        foreach (var dependency in dependencies)
         {
             if (!visited.Contains(dependency.ProjectPath))
             {
@@ -147,10 +147,10 @@ public class ProjectDependencyGraph
             else if (recursionStack.Contains(dependency.ProjectPath))
             {
                 // Found a cycle
-                int cycleStart = currentPath.IndexOf(dependency.ProjectPath);
+                var cycleStart = currentPath.IndexOf(dependency.ProjectPath);
                 if (cycleStart >= 0)
                 {
-                    List<string> cycle = currentPath.Skip(cycleStart).ToList();
+                    var cycle = currentPath.Skip(cycleStart).ToList();
                     cycle.Add(dependency.ProjectPath); // Complete the cycle
                     cycles.Add(cycle);
                 }

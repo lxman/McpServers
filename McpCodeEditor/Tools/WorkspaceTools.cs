@@ -3,7 +3,6 @@ using ModelContextProtocol.Server;
 using McpCodeEditor.Services;
 using McpCodeEditor.Interfaces;
 using McpCodeEditor.Tools.Common;
-using ProjectInfo = McpCodeEditor.Services.ProjectInfo;
 
 namespace McpCodeEditor.Tools;
 
@@ -36,7 +35,7 @@ public class WorkspaceTools(
                 throw new ArgumentException("Max results must be positive.", nameof(maxResults));
             }
 
-            List<ProjectInfo> projects = await projectDetection.DetectWorkspacesAsync();
+            var projects = await projectDetection.DetectWorkspacesAsync();
             var result = new
             {
                 success = true,
@@ -96,8 +95,8 @@ public class WorkspaceTools(
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
-            ProjectInfo? suggested = await projectDetection.SuggestBestWorkspaceAsync();
-            List<ProjectInfo> allProjects = await projectDetection.DetectWorkspacesAsync();
+            var suggested = await projectDetection.SuggestBestWorkspaceAsync();
+            var allProjects = await projectDetection.DetectWorkspacesAsync();
 
             var result = new
             {

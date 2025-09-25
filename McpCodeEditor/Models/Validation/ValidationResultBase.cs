@@ -116,7 +116,7 @@
         {
             var result = new TResult();
             result.SetInvalid(message);
-            foreach (ValidationError error in errors)
+            foreach (var error in errors)
             {
                 result.AddError(error);
             }

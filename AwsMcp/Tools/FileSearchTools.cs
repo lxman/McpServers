@@ -39,7 +39,7 @@ public class FileSearchTools
             string? line;
             
             // Skip initial lines if requested
-            for (int i = 0; i < skipLines && !reader.EndOfStream; i++)
+            for (var i = 0; i < skipLines && !reader.EndOfStream; i++)
             {
                 reader.ReadLine();
                 lineNumber++;
@@ -108,7 +108,7 @@ public class FileSearchTools
     {
         var extractedValues = new List<string>();
         
-        for (int i = 1; i < match.Groups.Count; i++)
+        for (var i = 1; i < match.Groups.Count; i++)
         {
             if (match.Groups[i].Success)
             {

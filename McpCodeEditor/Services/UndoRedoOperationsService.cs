@@ -18,7 +18,7 @@ public class UndoRedoOperationsService(
         try
         {
             // Get the change record
-            ChangeRecord? changeRecord = await changeRecordPersistenceService.GetChangeDetailsAsync(changeId);
+            var changeRecord = await changeRecordPersistenceService.GetChangeDetailsAsync(changeId);
             if (changeRecord == null)
             {
                 return new UndoRedoResult
@@ -48,7 +48,7 @@ public class UndoRedoOperationsService(
             }
 
             // Get the original content from the snapshot using the injected service
-            string? originalContent = await contentSnapshotService.GetOriginalContentFromSnapshotAsync(changeId);
+            var originalContent = await contentSnapshotService.GetOriginalContentFromSnapshotAsync(changeId);
             if (originalContent == null)
             {
                 return new UndoRedoResult
@@ -59,7 +59,7 @@ public class UndoRedoOperationsService(
             }
 
             // Read current content for the undo operation tracking
-            string currentContent = await File.ReadAllTextAsync(changeRecord.FilePath);
+            var currentContent = await File.ReadAllTextAsync(changeRecord.FilePath);
 
             // Restore the original content
             await File.WriteAllTextAsync(changeRecord.FilePath, originalContent);
@@ -106,7 +106,7 @@ public class UndoRedoOperationsService(
         try
         {
             // Get the change record
-            ChangeRecord? changeRecord = await changeRecordPersistenceService.GetChangeDetailsAsync(changeId);
+            var changeRecord = await changeRecordPersistenceService.GetChangeDetailsAsync(changeId);
             if (changeRecord == null)
             {
                 return new UndoRedoResult
@@ -136,7 +136,7 @@ public class UndoRedoOperationsService(
             }
 
             // Get the modified content from the snapshot using the injected service
-            string? modifiedContent = await contentSnapshotService.GetModifiedContentFromSnapshotAsync(changeId);
+            var modifiedContent = await contentSnapshotService.GetModifiedContentFromSnapshotAsync(changeId);
             if (modifiedContent == null)
             {
                 return new UndoRedoResult
@@ -147,7 +147,7 @@ public class UndoRedoOperationsService(
             }
 
             // Read current content for the redo operation tracking
-            string currentContent = await File.ReadAllTextAsync(changeRecord.FilePath);
+            var currentContent = await File.ReadAllTextAsync(changeRecord.FilePath);
 
             // Restore the modified content
             await File.WriteAllTextAsync(changeRecord.FilePath, modifiedContent);
@@ -192,7 +192,7 @@ public class UndoRedoOperationsService(
     {
         try
         {
-            List<ChangeRecord> allChanges = await changeRecordPersistenceService.LoadChangeRecordsAsync();
+            var allChanges = await changeRecordPersistenceService.LoadChangeRecordsAsync();
             return allChanges
                 .Where(c => !c.IsUndone && 
                            !c.Operation.StartsWith("undo_") && 
@@ -214,7 +214,7 @@ public class UndoRedoOperationsService(
     {
         try
         {
-            List<ChangeRecord> allChanges = await changeRecordPersistenceService.LoadChangeRecordsAsync();
+            var allChanges = await changeRecordPersistenceService.LoadChangeRecordsAsync();
             return allChanges
                 .Where(c => c.IsUndone && 
                            !c.Operation.StartsWith("undo_") && 

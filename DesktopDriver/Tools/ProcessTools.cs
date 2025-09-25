@@ -24,8 +24,8 @@ public class ProcessTools
     {
         try
         {
-            Process[] processes = Process.GetProcesses();
-            IEnumerable<Process> filteredProcesses = processes.AsEnumerable();
+            var processes = Process.GetProcesses();
+            var filteredProcesses = processes.AsEnumerable();
 
             if (!string.IsNullOrEmpty(filter))
             {
@@ -33,7 +33,7 @@ public class ProcessTools
                     p.ProcessName.Contains(filter, StringComparison.OrdinalIgnoreCase));
             }
 
-            List<Process> sortedProcesses = filteredProcesses
+            var sortedProcesses = filteredProcesses
                 .OrderByDescending(p => GetSafeWorkingSet(p))
                 .Take(limit)
                 .ToList();
@@ -43,13 +43,13 @@ public class ProcessTools
             result.AppendLine($"{"PID",-8} {"Name",-25} {"Memory (MB)",-12} {"CPU Time",-15} {"Threads",-8}");
             result.AppendLine(new string('-', 75));
 
-            foreach (Process process in sortedProcesses)
+            foreach (var process in sortedProcesses)
             {
                 try
                 {
-                    long memoryMB = GetSafeWorkingSet(process) / (1024 * 1024);
-                    string cpuTime = GetSafeTotalProcessorTime(process);
-                    int threadCount = GetSafeThreadCount(process);
+                    var memoryMB = GetSafeWorkingSet(process) / (1024 * 1024);
+                    var cpuTime = GetSafeTotalProcessorTime(process);
+                    var threadCount = GetSafeThreadCount(process);
 
                     result.AppendLine($"{process.Id,-8} {process.ProcessName,-25} {memoryMB,-12:F1} {cpuTime,-15} {threadCount,-8}");
                 }
@@ -139,7 +139,7 @@ public class ProcessTools
         try
         {
             var process = Process.GetProcessById(processId);
-            string processName = process.ProcessName;
+            var processName = process.ProcessName;
 
             // Basic safety check - don't kill critical system processes
             var criticalProcesses = new[] { "explorer", "winlogon", "csrss", "wininit", "services", "lsass", "System" };
@@ -201,7 +201,7 @@ public class ProcessTools
                 return error;
             }
 
-            Process[] processes = Process.GetProcessesByName(processName);
+            var processes = Process.GetProcessesByName(processName);
             if (!processes.Any())
             {
                 _auditLogger.LogOperation("Kill_By_Name", processName, false, "No processes found");
@@ -211,7 +211,7 @@ public class ProcessTools
             var killedCount = 0;
             var errors = new List<string>();
 
-            foreach (Process process in processes)
+            foreach (var process in processes)
             {
                 try
                 {
@@ -264,7 +264,7 @@ public class ProcessTools
             result.AppendLine($"System Uptime: {TimeSpan.FromMilliseconds(Environment.TickCount64)}");
 
             // Get process counts
-            int totalProcesses = Process.GetProcesses().Length;
+            var totalProcesses = Process.GetProcesses().Length;
             result.AppendLine($"Total Processes: {totalProcesses}");
 
             _auditLogger.LogOperation("Get_System_Info", "System information retrieved", true);

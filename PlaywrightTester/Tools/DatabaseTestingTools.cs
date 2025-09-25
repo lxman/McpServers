@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Text.Json;
-using Microsoft.Playwright;
 using ModelContextProtocol.Server;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -23,12 +22,12 @@ public class DatabaseTestingTools(ToolService toolService)
         {
             // Connect to MongoDB
             var client = new MongoClient(connectionString);
-            IMongoDatabase? database = client.GetDatabase(databaseName);
-            IMongoCollection<BsonDocument>? testCollection = database.GetCollection<BsonDocument>("testing");
+            var database = client.GetDatabase(databaseName);
+            var testCollection = database.GetCollection<BsonDocument>("testing");
             
             // Find the test case
-            FilterDefinition<BsonDocument>? filter = Builders<BsonDocument>.Filter.Eq("_id", testCaseId);
-            BsonDocument? testCase = await testCollection.Find(filter).FirstOrDefaultAsync();
+            var filter = Builders<BsonDocument>.Filter.Eq("_id", testCaseId);
+            var testCase = await testCollection.Find(filter).FirstOrDefaultAsync();
             
             if (testCase == null)
             {
@@ -36,20 +35,20 @@ public class DatabaseTestingTools(ToolService toolService)
             }
             
             // Extract test steps
-            BsonArray? testSteps = testCase.GetValue("testSteps", new BsonArray()).AsBsonArray;
-            IPage? page = toolService.GetPage(sessionId);
+            var testSteps = testCase.GetValue("testSteps", new BsonArray()).AsBsonArray;
+            var page = toolService.GetPage(sessionId);
             if (page == null) return $"Session {sessionId} not found.";
 
             var results = new List<string>();
-            string? testTitle = testCase.GetValue("title", "Unknown Test").AsString;
+            var testTitle = testCase.GetValue("title", "Unknown Test").AsString;
             
             results.Add($"Executing test case: {testTitle}");
             
-            foreach (BsonValue? stepElement in testSteps)
+            foreach (var stepElement in testSteps)
             {
                 if (stepElement.IsBsonDocument)
                 {
-                    BsonDocument? step = stepElement.AsBsonDocument;
+                    var step = stepElement.AsBsonDocument;
                     var stepObj = new
                     {
                         step = step.GetValue("step", 0).ToInt32(),
@@ -59,7 +58,7 @@ public class DatabaseTestingTools(ToolService toolService)
                         message = step.GetValue("message", "").AsString
                     };
                     
-                    object result = await ToolService.ExecuteTestStep(page, stepObj);
+                    var result = await ToolService.ExecuteTestStep(page, stepObj);
                     results.Add($"Step {stepObj.step}: {JsonSerializer.Serialize(result)}");
                 }
             }
@@ -88,18 +87,18 @@ public class DatabaseTestingTools(ToolService toolService)
         try
         {
             var client = new MongoClient(connectionString);
-            IMongoDatabase? database = client.GetDatabase(databaseName);
-            IMongoCollection<BsonDocument>? collection = database.GetCollection<BsonDocument>(collectionName);
+            var database = client.GetDatabase(databaseName);
+            var collection = database.GetCollection<BsonDocument>(collectionName);
             
-            BsonDocument? filter = BsonDocument.Parse(filterJson);
-            List<BsonDocument>? documents = await collection.Find(filter).Limit(limit).ToListAsync();
+            var filter = BsonDocument.Parse(filterJson);
+            var documents = await collection.Find(filter).Limit(limit).ToListAsync();
             
             if (!documents.Any())
             {
                 return $"No documents found in collection '{collectionName}' with filter: {filterJson}";
             }
             
-            string[] results = documents.Select(doc => doc.ToJson()).ToArray();
+            var results = documents.Select(doc => doc.ToJson()).ToArray();
             return $"Found {documents.Count} documents in '{collectionName}':\n{string.Join("\n---\n", results)}";
         }
         catch (MongoException ex)
@@ -123,10 +122,10 @@ public class DatabaseTestingTools(ToolService toolService)
         try
         {
             var client = new MongoClient(connectionString);
-            IMongoDatabase? database = client.GetDatabase(databaseName);
-            IMongoCollection<BsonDocument>? collection = database.GetCollection<BsonDocument>(collectionName);
+            var database = client.GetDatabase(databaseName);
+            var collection = database.GetCollection<BsonDocument>(collectionName);
             
-            BsonDocument? document = BsonDocument.Parse(testDataJson);
+            var document = BsonDocument.Parse(testDataJson);
             await collection.InsertOneAsync(document);
             
             var insertedId = document.GetValue("_id", ObjectId.GenerateNewId()).ToString();
@@ -153,11 +152,11 @@ public class DatabaseTestingTools(ToolService toolService)
         try
         {
             var client = new MongoClient(connectionString);
-            IMongoDatabase? database = client.GetDatabase(databaseName);
-            IMongoCollection<BsonDocument>? collection = database.GetCollection<BsonDocument>(collectionName);
+            var database = client.GetDatabase(databaseName);
+            var collection = database.GetCollection<BsonDocument>(collectionName);
             
-            BsonDocument? filter = BsonDocument.Parse(filterJson);
-            DeleteResult? result = await collection.DeleteManyAsync(filter);
+            var filter = BsonDocument.Parse(filterJson);
+            var result = await collection.DeleteManyAsync(filter);
             
             return $"Deleted {result.DeletedCount} documents from '{collectionName}' collection";
         }
@@ -181,13 +180,13 @@ public class DatabaseTestingTools(ToolService toolService)
         try
         {
             var client = new MongoClient(connectionString);
-            IMongoDatabase? database = client.GetDatabase(databaseName);
+            var database = client.GetDatabase(databaseName);
             
-            IMongoCollection<BsonDocument>? enrollments = database.GetCollection<BsonDocument>("enrollments");
+            var enrollments = database.GetCollection<BsonDocument>("enrollments");
             
             // Find enrollment by applicant ID
-            FilterDefinition<BsonDocument>? enrollmentFilter = Builders<BsonDocument>.Filter.Eq("Applicant.Identifier", applicantId);
-            BsonDocument? enrollment = await enrollments.Find(enrollmentFilter).FirstOrDefaultAsync();
+            var enrollmentFilter = Builders<BsonDocument>.Filter.Eq("Applicant.Identifier", applicantId);
+            var enrollment = await enrollments.Find(enrollmentFilter).FirstOrDefaultAsync();
             
             if (enrollment == null)
             {
@@ -197,10 +196,10 @@ public class DatabaseTestingTools(ToolService toolService)
             var validationResults = new List<string>();
             
             // Validate required fields
-            BsonDocument? applicant = enrollment.GetValue("Applicant", new BsonDocument()).AsBsonDocument;
+            var applicant = enrollment.GetValue("Applicant", new BsonDocument()).AsBsonDocument;
             
             // Check SSN format
-            string? ssn = applicant.GetValue("SsnIdentification", "").AsString;
+            var ssn = applicant.GetValue("SsnIdentification", "").AsString;
             if (!string.IsNullOrEmpty(ssn) && !System.Text.RegularExpressions.Regex.IsMatch(ssn, @"^\d{3}-\d{2}-\d{4}$"))
             {
                 validationResults.Add("❌ Invalid SSN format");
@@ -211,9 +210,9 @@ public class DatabaseTestingTools(ToolService toolService)
             }
             
             // Check required personal info
-            string? firstName = applicant.GetValue("PersonGivenName", "").AsString;
-            string? lastName = applicant.GetValue("PersonSurName", "").AsString;
-            string? birthDate = applicant.GetValue("BirthDate", "").AsString;
+            var firstName = applicant.GetValue("PersonGivenName", "").AsString;
+            var lastName = applicant.GetValue("PersonSurName", "").AsString;
+            var birthDate = applicant.GetValue("BirthDate", "").AsString;
             
             if (string.IsNullOrEmpty(firstName)) validationResults.Add("❌ Missing first name");
             else validationResults.Add("✅ First name provided");
@@ -225,8 +224,8 @@ public class DatabaseTestingTools(ToolService toolService)
             else validationResults.Add("✅ Birth date provided");
             
             // Check for required arrays
-            BsonArray? addresses = enrollment.GetValue("Addresses", new BsonArray()).AsBsonArray;
-            BsonArray? employers = enrollment.GetValue("ApplicantEmployers", new BsonArray()).AsBsonArray;
+            var addresses = enrollment.GetValue("Addresses", new BsonArray()).AsBsonArray;
+            var employers = enrollment.GetValue("ApplicantEmployers", new BsonArray()).AsBsonArray;
             
             if (addresses.Count == 0) validationResults.Add("❌ No addresses provided");
             else validationResults.Add($"✅ {addresses.Count} address(es) provided");
@@ -254,11 +253,11 @@ public class DatabaseTestingTools(ToolService toolService)
     {
         try
         {
-            IPage? page = toolService.GetPage(sessionId);
+            var page = toolService.GetPage(sessionId);
             if (page == null) return $"Session {sessionId} not found.";
 
             // Video recording is set up at context level
-            IBrowserContext context = page.Context;
+            var context = page.Context;
             
             // Note: Video recording should ideally be setup when creating the context
             // This is more of a status check
@@ -283,7 +282,7 @@ public class DatabaseTestingTools(ToolService toolService)
             var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
             var reportFile = $"{filename}_{timestamp}.{format}";
 
-            string reportContent = format.ToLower() switch
+            var reportContent = format.ToLower() switch
             {
                 "html" => GenerateHtmlReport(testSessionData),
                 "json" => GenerateJsonReport(testSessionData),
@@ -308,10 +307,10 @@ public class DatabaseTestingTools(ToolService toolService)
     {
         try
         {
-            IPage? page = toolService.GetPage(sessionId);
+            var page = toolService.GetPage(sessionId);
             if (page == null) return $"Session {sessionId} not found.";
 
-            DateTime startTime = DateTime.Now;
+            var startTime = DateTime.Now;
             var metrics = new List<object>();
 
             for (var i = 0; i < durationSeconds; i++)
@@ -355,7 +354,7 @@ public class DatabaseTestingTools(ToolService toolService)
             // TSA-specific business rule validations
             if (validationRules == "all" || validationRules.Contains("ssn"))
             {
-                if (formData.TryGetValue("ssn", out object? value))
+                if (formData.TryGetValue("ssn", out var value))
                 {
                     var ssn = value.ToString();
                     if (!ValidateSsnFormat(ssn))

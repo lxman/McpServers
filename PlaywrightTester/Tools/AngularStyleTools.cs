@@ -30,11 +30,11 @@ public class AngularStyleTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            string finalSelector = DetermineSelector(componentSelector);
+            var finalSelector = DetermineSelector(componentSelector);
             
             // Clean JavaScript for Angular component style analysis
             var jsCode = $$"""
@@ -174,7 +174,7 @@ public class AngularStyleTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
             
@@ -293,11 +293,11 @@ public class AngularStyleTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            string finalSelector = DetermineSelector(componentSelector);
+            var finalSelector = DetermineSelector(componentSelector);
             
             var jsCode = $$"""
                 (() => {
@@ -461,11 +461,11 @@ public class AngularStyleTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            string finalSelector = DetermineSelector(selector);
+            var finalSelector = DetermineSelector(selector);
             
             var jsCode = $$"""
                 (() => {

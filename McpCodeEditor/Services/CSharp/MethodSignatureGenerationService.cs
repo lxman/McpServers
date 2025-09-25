@@ -41,7 +41,7 @@ public class MethodSignatureGenerationService(
 
         // Calculate the base line indentation for maintaining relative spacing
         string? baseLineIndentation = null;
-        foreach (string line in extractedLines)
+        foreach (var line in extractedLines)
         {
             if (!string.IsNullOrWhiteSpace(line))
             {
@@ -56,23 +56,23 @@ public class MethodSignatureGenerationService(
             baseLineIndentation, baseLineIndentation.Length);
 
         // Determine return requirements using enhanced analysis
-        EnhancedReturnRequirements returnInfo = await DetermineReturnRequirementsUsingEnhancedAnalysisAsync(extractedLines, validationResult, returnType);
+        var returnInfo = await DetermineReturnRequirementsUsingEnhancedAnalysisAsync(extractedLines, validationResult, returnType);
 
         logger?.LogDebug("  Enhanced analysis complete: needsReturn={NeedsReturn}, finalType={FinalType}", 
             returnInfo.NeedsReturn, returnInfo.FinalReturnType);
 
         // Build method body with actual newlines
-        string methodBody = string.Join(Environment.NewLine, extractedLines.Select(line =>
+        var methodBody = string.Join(Environment.NewLine, extractedLines.Select(line =>
         {
             // Remove existing indentation and apply new base method indentation
-            string trimmedLine = line.TrimStart();
+            var trimmedLine = line.TrimStart();
             if (string.IsNullOrWhiteSpace(trimmedLine))
                 return "        " + trimmedLine; // Empty line gets base method indentation
 
             // Calculate original relative indentation
-            string originalIndentation = GetLineIndentation(line);
-            int relativeSpaces = Math.Max(0, originalIndentation.Length - baseLineIndentation.Length);
-            string newIndentation = "        " + new string(' ', relativeSpaces);
+            var originalIndentation = GetLineIndentation(line);
+            var relativeSpaces = Math.Max(0, originalIndentation.Length - baseLineIndentation.Length);
+            var newIndentation = "        " + new string(' ', relativeSpaces);
 
             return newIndentation + trimmedLine;
         }));
@@ -81,7 +81,7 @@ public class MethodSignatureGenerationService(
         if (returnInfo.NeedsReturn && !string.IsNullOrEmpty(returnInfo.VariablesToReturn))
         {
             // Ensure the return statement doesn't have double parentheses for tuples
-            string returnStatement = returnInfo.VariablesToReturn;
+            var returnStatement = returnInfo.VariablesToReturn;
             if (returnStatement.StartsWith("((") && returnStatement.EndsWith("))"))
             {
                 // Remove outer parentheses if double-wrapped
@@ -99,14 +99,14 @@ public class MethodSignatureGenerationService(
         }
 
         // Build method signature with parameters from enhanced analysis
-        string accessibility = options.AccessModifier ?? "private";
-        string staticModifier = options.IsStatic ? " static" : "";
+        var accessibility = options.AccessModifier ?? "private";
+        var staticModifier = options.IsStatic ? " static" : "";
         
         // Use the corrected return type from enhanced analysis
-        string finalReturnType = returnInfo.FinalReturnType;
+        var finalReturnType = returnInfo.FinalReturnType;
         
         // Build parameter list with proper type handling
-        string parameters = BuildParameterListFromEnhancedAnalysis(returnInfo.EnhancedAnalysis);
+        var parameters = BuildParameterListFromEnhancedAnalysis(returnInfo.EnhancedAnalysis);
 
         var method = $"\n    {accessibility}{staticModifier} {finalReturnType} {options.NewMethodName}({parameters})\n    {{\n{methodBody}\n    }}";
 
@@ -127,20 +127,20 @@ public class MethodSignatureGenerationService(
         try
         {
             // Use enhanced variable analysis to determine return variables
-            (SemanticModel? semanticModel, IEnumerable<SyntaxNode> syntaxNodes) = CreateSemanticModelForAnalysis(extractedLines);
+            (var semanticModel, var syntaxNodes) = CreateSemanticModelForAnalysis(extractedLines);
             
-            Task<EnhancedVariableAnalysisResult> enhancedAnalysisTask = _enhancedVariableAnalysisService.PerformCompleteAnalysisAsync(
+            var enhancedAnalysisTask = _enhancedVariableAnalysisService.PerformCompleteAnalysisAsync(
                 extractedLines, 
                 semanticModel,
                 syntaxNodes
             );
             
-            EnhancedVariableAnalysisResult enhancedAnalysis = await enhancedAnalysisTask;
+            var enhancedAnalysis = await enhancedAnalysisTask;
             
             if (enhancedAnalysis is { IsSuccessful: true, HandlingMapping.VariablesToReturn.Count: > 0 })
             {
-                IEnumerable<string> variableNames = enhancedAnalysis.HandlingMapping.VariablesToReturn.Select(v => v.Name);
-                string result = string.Join(", ", variableNames);
+                var variableNames = enhancedAnalysis.HandlingMapping.VariablesToReturn.Select(v => v.Name);
+                var result = string.Join(", ", variableNames);
                 
                 logger?.LogDebug("Enhanced analysis found tuple variables: {Variables}", result);
                 return result;
@@ -154,13 +154,13 @@ public class MethodSignatureGenerationService(
         // Fallback: Parse tuple type to extract variable names from extractedLines
         var variables = new List<string>();
         
-        foreach (string line in extractedLines)
+        foreach (var line in extractedLines)
         {
             // Simple pattern to find variable assignments
-            MatchCollection matches = Regex.Matches(line.Trim(), @"\b(\w+)\s*[+\-*/]?=");
+            var matches = Regex.Matches(line.Trim(), @"\b(\w+)\s*[+\-*/]?=");
             foreach (Match match in matches)
             {
-                string varName = match.Groups[1].Value;
+                var varName = match.Groups[1].Value;
                 if (!variables.Contains(varName) && !IsKeyword(varName))
                 {
                     variables.Add(varName);
@@ -168,7 +168,7 @@ public class MethodSignatureGenerationService(
             }
         }
         
-        string fallbackResult = string.Join(", ", variables.Take(4)); // Limit to reasonable number
+        var fallbackResult = string.Join(", ", variables.Take(4)); // Limit to reasonable number
         logger?.LogDebug("Fallback analysis found variables: {Variables}", fallbackResult);
         
         return fallbackResult;
@@ -195,7 +195,7 @@ public class MethodSignatureGenerationService(
         try
         {
             // Create a complete C# file context for proper semantic analysis
-            string extractedCode = string.Join(Environment.NewLine, extractedLines);
+            var extractedCode = string.Join(Environment.NewLine, extractedLines);
             var completeCode = $@"
 using System;
 using System.Collections.Generic;
@@ -215,20 +215,20 @@ namespace TempNamespace
             logger?.LogDebug("Creating SemanticModel for enhanced analysis with {LineCount} lines", extractedLines.Length);
 
             // Create syntax tree and semantic model
-            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(completeCode);
-            CSharpCompilation compilation = CSharpCompilation.Create("TempAssembly")
+            var syntaxTree = CSharpSyntaxTree.ParseText(completeCode);
+            var compilation = CSharpCompilation.Create("TempAssembly")
                 .AddReferences(MetadataReference.CreateFromFile(typeof(object).Assembly.Location))
                 .AddReferences(MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location))
                 .AddSyntaxTrees(syntaxTree);
 
-            SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
-            SyntaxNode root = syntaxTree.GetRoot();
+            var semanticModel = compilation.GetSemanticModel(syntaxTree);
+            var root = syntaxTree.GetRoot();
             
             // Find the method body that contains our extracted code
-            BlockSyntax? methodBody = root.DescendantNodes().OfType<BlockSyntax>().LastOrDefault();
-            IEnumerable<SyntaxNode> syntaxNodes = methodBody?.ChildNodes() ?? [];
+            var methodBody = root.DescendantNodes().OfType<BlockSyntax>().LastOrDefault();
+            var syntaxNodes = methodBody?.ChildNodes() ?? [];
 
-            List<SyntaxNode> nodes = syntaxNodes.ToList();
+            var nodes = syntaxNodes.ToList();
             logger?.LogDebug("SemanticModel created successfully with {NodeCount} syntax nodes", nodes.Count);
             
             return (semanticModel, nodes);
@@ -260,20 +260,20 @@ namespace TempNamespace
         try
         {
             // Create proper SemanticModel
-            (SemanticModel? semanticModel, IEnumerable<SyntaxNode> syntaxNodes) = CreateSemanticModelForAnalysis(extractedLines);
+            (var semanticModel, var syntaxNodes) = CreateSemanticModelForAnalysis(extractedLines);
 
-            List<SyntaxNode> nodes = syntaxNodes.ToList();
+            var nodes = syntaxNodes.ToList();
             logger?.LogDebug("Enhanced analysis using {SemanticModel} with {NodeCount} syntax nodes", 
                 semanticModel != null ? "proper SemanticModel" : "null fallback", 
                 nodes.Count);
 
-            Task<EnhancedVariableAnalysisResult> enhancedAnalysisTask = _enhancedVariableAnalysisService.PerformCompleteAnalysisAsync(
+            var enhancedAnalysisTask = _enhancedVariableAnalysisService.PerformCompleteAnalysisAsync(
                 extractedLines, 
                 semanticModel,
                 nodes
             );
             
-            EnhancedVariableAnalysisResult enhancedAnalysis = await enhancedAnalysisTask;
+            var enhancedAnalysis = await enhancedAnalysisTask;
             result.EnhancedAnalysis = enhancedAnalysis;
 
             if (!enhancedAnalysis.IsSuccessful)
@@ -284,7 +284,7 @@ namespace TempNamespace
                 return result;
             }
 
-            VariableHandlingMapping mapping = enhancedAnalysis.HandlingMapping;
+            var mapping = enhancedAnalysis.HandlingMapping;
             
             // Check if analysis indicates return is needed
             if (mapping.VariablesToReturn.Count > 0 && mapping.SuggestedReturnType != "void")
@@ -301,11 +301,11 @@ namespace TempNamespace
                 else if (mapping.VariablesToReturn.Count > 1)
                 {
                     // Multiple returns - generate proper tuple syntax
-                    IEnumerable<string> names = mapping.VariablesToReturn.Select(v => v.Name);
+                    var names = mapping.VariablesToReturn.Select(v => v.Name);
                     result.VariablesToReturn = $"({string.Join(", ", names)})";
                     
                     // SESSION 3: Build proper tuple return type
-                    List<string> types = mapping.VariablesToReturn
+                    var types = mapping.VariablesToReturn
                         .Select(v => CleanTypeForSignature(v.Type ?? "object"))
                         .ToList();
                     
@@ -343,17 +343,17 @@ namespace TempNamespace
         }
 
         var parameters = new List<string>();
-        VariableHandlingMapping mapping = enhancedAnalysis.HandlingMapping;
+        var mapping = enhancedAnalysis.HandlingMapping;
 
         // SESSION 3: Add parameters for external variables with proper type handling
-        foreach (VariableInfo param in mapping.ParametersToPass)
+        foreach (var param in mapping.ParametersToPass)
         {
             // SESSION 3 FIX: Use proper type inference and avoid "var" in parameters
-            string paramType = DetermineParameterType(param);
+            var paramType = DetermineParameterType(param);
             parameters.Add($"{paramType} {param.Name}");
         }
 
-        string parameterList = string.Join(", ", parameters);
+        var parameterList = string.Join(", ", parameters);
         logger?.LogDebug("Session 3 enhanced parameter list: {Parameters}", parameterList);
         
         return parameterList;
@@ -373,7 +373,7 @@ namespace TempNamespace
         }
 
         // SESSION 3: Try to infer type from variable name patterns
-        string inferredType = InferTypeFromName(param.Name);
+        var inferredType = InferTypeFromName(param.Name);
         if (inferredType != "object")
         {
             logger?.LogDebug("Inferred type {Type} for parameter {Name}", inferredType, param.Name);
@@ -388,7 +388,7 @@ namespace TempNamespace
 
     private string GenerateTupleReturnType(List<VariableInfo> modifiedVariables)
     {
-        List<string> types = modifiedVariables.Select(InferTypeFromVariable).ToList();
+        var types = modifiedVariables.Select(InferTypeFromVariable).ToList();
         return $"({string.Join(", ", types)})";
     }
 
@@ -412,7 +412,7 @@ namespace TempNamespace
     
     private static string GenerateTupleReturnStatement(List<VariableInfo> modifiedVariables)
     {
-        List<string> variableNames = modifiedVariables.Select(v => v.Name).ToList();
+        var variableNames = modifiedVariables.Select(v => v.Name).ToList();
         return $"({string.Join(", ", variableNames)})";
     }
 
@@ -474,7 +474,7 @@ namespace TempNamespace
             { @"(?i)(date|time|datetime|timestamp|created|updated|modified)$", "DateTime" }
         };
 
-        foreach (KeyValuePair<string, string> pattern in patterns)
+        foreach (var pattern in patterns)
         {
             if (Regex.IsMatch(name, pattern.Key))
             {

@@ -8,7 +8,6 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
 using FuzzySharp;
-using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.Caching.Memory;
 using McpCodeEditor.Models.Options;
 using LuceneDocument = Lucene.Net.Documents.Document;
@@ -70,7 +69,7 @@ public class SearchService : IDisposable
     {
         try
         {
-            string indexPath = Path.Combine(Path.GetTempPath(), "McpCodeEditor", "Index");
+            var indexPath = Path.Combine(Path.GetTempPath(), "McpCodeEditor", "Index");
             System.IO.Directory.CreateDirectory(indexPath);
 
             _indexDirectory = FSDirectory.Open(indexPath);
@@ -104,13 +103,13 @@ public class SearchService : IDisposable
             _indexWriter.DeleteAll();
             _indexWriter.Commit();
 
-            string workspacePath = _config.DefaultWorkspace;
-            IEnumerable<string> files = System.IO.Directory.GetFiles(workspacePath, "*", SearchOption.AllDirectories)
+            var workspacePath = _config.DefaultWorkspace;
+            var files = System.IO.Directory.GetFiles(workspacePath, "*", SearchOption.AllDirectories)
                 .Where(f => _config.AllowedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
                 .Where(f => !_config.ExcludedDirectories.Any(d => f.Contains(d)))
                 .Where(f => new FileInfo(f).Length <= _config.MaxFileSize);
 
-            foreach (string filePath in files)
+            foreach (var filePath in files)
             {
                 if (cancellationToken.IsCancellationRequested) break;
                 await IndexFileAsync(filePath, cancellationToken);
@@ -139,8 +138,8 @@ public class SearchService : IDisposable
         {
             if (!File.Exists(filePath) || _indexWriter == null) return;
 
-            string content = await File.ReadAllTextAsync(filePath, cancellationToken);
-            string extension = Path.GetExtension(filePath).ToLowerInvariant();
+            var content = await File.ReadAllTextAsync(filePath, cancellationToken);
+            var extension = Path.GetExtension(filePath).ToLowerInvariant();
 
             // Index file content
             var fileDoc = new LuceneDocument();
@@ -170,19 +169,19 @@ public class SearchService : IDisposable
         {
             if (_indexWriter == null) return;
 
-            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(content, path: filePath, cancellationToken: cancellationToken);
-            SyntaxNode root = await syntaxTree.GetRootAsync(cancellationToken);
+            var syntaxTree = CSharpSyntaxTree.ParseText(content, path: filePath, cancellationToken: cancellationToken);
+            var root = await syntaxTree.GetRootAsync(cancellationToken);
 
             // Create a minimal compilation for symbol analysis
-            CSharpCompilation compilation = CSharpCompilation.Create("temp")
+            var compilation = CSharpCompilation.Create("temp")
                 .AddReferences(MetadataReference.CreateFromFile(typeof(object).Assembly.Location))
                 .AddSyntaxTrees(syntaxTree);
 
-            SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
-            SourceText sourceText = await syntaxTree.GetTextAsync(cancellationToken);
+            var semanticModel = compilation.GetSemanticModel(syntaxTree);
+            var sourceText = await syntaxTree.GetTextAsync(cancellationToken);
 
             // Index all symbols
-            IEnumerable<SyntaxNode> symbols = root.DescendantNodes()
+            var symbols = root.DescendantNodes()
                 .Where(n => n.IsKind(SyntaxKind.ClassDeclaration) ||
                            n.IsKind(SyntaxKind.MethodDeclaration) ||
                            n.IsKind(SyntaxKind.PropertyDeclaration) ||
@@ -191,14 +190,14 @@ public class SearchService : IDisposable
                            n.IsKind(SyntaxKind.EnumDeclaration) ||
                            n.IsKind(SyntaxKind.StructDeclaration));
 
-            foreach (SyntaxNode symbolNode in symbols)
+            foreach (var symbolNode in symbols)
             {
-                ISymbol? symbolInfo = semanticModel.GetDeclaredSymbol(symbolNode, cancellationToken: cancellationToken);
+                var symbolInfo = semanticModel.GetDeclaredSymbol(symbolNode, cancellationToken: cancellationToken);
                 if (symbolInfo == null) continue;
 
-                Microsoft.CodeAnalysis.Location location = symbolNode.GetLocation();
-                LinePosition linePosition = location.GetLineSpan().StartLinePosition;
-                string lineText = sourceText.Lines[linePosition.Line].ToString().Trim();
+                var location = symbolNode.GetLocation();
+                var linePosition = location.GetLineSpan().StartLinePosition;
+                var lineText = sourceText.Lines[linePosition.Line].ToString().Trim();
 
                 var symbolDoc = new LuceneDocument();
                 symbolDoc.Add(new StringField("type", "symbol", Field.Store.YES));
@@ -260,13 +259,13 @@ public class SearchService : IDisposable
         try
         {
             // Lucene search for exact/partial matches
-            List<SearchResult> luceneResults = PerformLuceneSearch("symbol", query, options);
+            var luceneResults = PerformLuceneSearch("symbol", query, options);
             results.AddRange(luceneResults);
 
             // Fuzzy search if enabled
             if (options.UseFuzzyMatch)
             {
-                List<SearchResult> fuzzyResults = PerformFuzzySearch("symbol", query, options);
+                var fuzzyResults = PerformFuzzySearch("symbol", query, options);
                 results.AddRange(fuzzyResults);
             }
 
@@ -306,12 +305,12 @@ public class SearchService : IDisposable
 
         try
         {
-            List<SearchResult> luceneResults = PerformLuceneSearch("file", query, options);
+            var luceneResults = PerformLuceneSearch("file", query, options);
             results.AddRange(luceneResults);
 
             if (options.UseFuzzyMatch)
             {
-                List<SearchResult> fuzzyResults = PerformFuzzySearch("file", query, options);
+                var fuzzyResults = PerformFuzzySearch("file", query, options);
                 results.AddRange(fuzzyResults);
             }
 
@@ -342,7 +341,7 @@ public class SearchService : IDisposable
             var parser = new QueryParser(_luceneVersion,
                 type == "symbol" ? "searchable" : "content", analyzer);
 
-            Query? luceneQuery = parser.Parse(query);
+            var luceneQuery = parser.Parse(query);
             var filter = new BooleanQuery();
             filter.Add(new TermQuery(new Term("type", type)), Occur.MUST);
 
@@ -350,18 +349,18 @@ public class SearchService : IDisposable
             finalQuery.Add(luceneQuery, Occur.MUST);
             finalQuery.Add(filter, Occur.MUST);
 
-            TopDocs topDocs = _searcher.Search(finalQuery, options.MaxResults);
+            var topDocs = _searcher.Search(finalQuery, options.MaxResults);
 
-            foreach (ScoreDoc? scoreDoc in topDocs.ScoreDocs)
+            foreach (var scoreDoc in topDocs.ScoreDocs)
             {
-                LuceneDocument doc = _searcher.Doc(scoreDoc.Doc);
+                var doc = _searcher.Doc(scoreDoc.Doc);
 
                 var result = new SearchResult
                 {
                     FilePath = doc.Get("path") ?? "",
                     Score = scoreDoc.Score,
-                    LineNumber = int.TryParse(doc.Get("line"), out int line) ? line : 0,
-                    Column = int.TryParse(doc.Get("column"), out int col) ? col : 0,
+                    LineNumber = int.TryParse(doc.Get("line"), out var line) ? line : 0,
+                    Column = int.TryParse(doc.Get("column"), out var col) ? col : 0,
                     Preview = doc.Get("preview") ?? ""
                 };
 
@@ -394,16 +393,16 @@ public class SearchService : IDisposable
         {
             // Get all documents of the specified type for fuzzy matching
             var allDocsQuery = new TermQuery(new Term("type", type));
-            TopDocs topDocs = _searcher.Search(allDocsQuery, 10000); // Get more docs for fuzzy matching
+            var topDocs = _searcher.Search(allDocsQuery, 10000); // Get more docs for fuzzy matching
 
-            foreach (ScoreDoc? scoreDoc in topDocs.ScoreDocs)
+            foreach (var scoreDoc in topDocs.ScoreDocs)
             {
-                LuceneDocument doc = _searcher.Doc(scoreDoc.Doc);
-                string? targetText = type == "symbol" ? doc.Get("name") : doc.Get("content");
+                var doc = _searcher.Doc(scoreDoc.Doc);
+                var targetText = type == "symbol" ? doc.Get("name") : doc.Get("content");
 
                 if (string.IsNullOrEmpty(targetText)) continue;
 
-                int ratio = Fuzz.Ratio(query.ToLowerInvariant(), targetText.ToLowerInvariant());
+                var ratio = Fuzz.Ratio(query.ToLowerInvariant(), targetText.ToLowerInvariant());
 
                 if (ratio >= options.FuzzyThreshold)
                 {
@@ -411,8 +410,8 @@ public class SearchService : IDisposable
                     {
                         FilePath = doc.Get("path") ?? "",
                         Score = ratio / 100f,
-                        LineNumber = int.TryParse(doc.Get("line"), out int line) ? line : 0,
-                        Column = int.TryParse(doc.Get("column"), out int col) ? col : 0,
+                        LineNumber = int.TryParse(doc.Get("line"), out var line) ? line : 0,
+                        Column = int.TryParse(doc.Get("column"), out var col) ? col : 0,
                         Preview = doc.Get("preview") ?? ""
                     };
 

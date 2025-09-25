@@ -103,7 +103,7 @@ public class MarketIntelligenceService
 
     private async Task<RemoteWorkTrendAnalysis> AnalyzeRemoteWorkTrendsAsync(List<EnhancedJobListing> jobs, MarketAnalysisRequest request)
     {
-        int remoteCount = jobs.Count(j => j.IsRemote);
+        var remoteCount = jobs.Count(j => j.IsRemote);
         return new RemoteWorkTrendAnalysis
         {
             OverallDistribution = new WorkArrangementDistribution

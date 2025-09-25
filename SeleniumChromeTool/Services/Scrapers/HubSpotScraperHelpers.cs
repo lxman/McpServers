@@ -53,10 +53,10 @@ public partial class HubSpotScraper
                 ".position-summary"
             };
 
-            string? title = ExtractTextUsingSelectorArray(jobElement, titleSelectors);
-            string? location = ExtractTextUsingSelectorArray(jobElement, locationSelectors);
-            string? department = ExtractTextUsingSelectorArray(jobElement, departmentSelectors);
-            string? description = ExtractTextUsingSelectorArray(jobElement, descriptionSelectors);
+            var title = ExtractTextUsingSelectorArray(jobElement, titleSelectors);
+            var location = ExtractTextUsingSelectorArray(jobElement, locationSelectors);
+            var department = ExtractTextUsingSelectorArray(jobElement, departmentSelectors);
+            var description = ExtractTextUsingSelectorArray(jobElement, descriptionSelectors);
 
             // Get the job URL
             var jobUrl = "";
@@ -74,11 +74,11 @@ public partial class HubSpotScraper
                     "a[data-testid='job-link']"
                 };
 
-                foreach (string selector in linkSelectors)
+                foreach (var selector in linkSelectors)
                 {
                     try
                     {
-                        IWebElement? linkElement = jobElement.FindElement(By.CssSelector(selector));
+                        var linkElement = jobElement.FindElement(By.CssSelector(selector));
                         jobUrl = linkElement.GetAttribute("href") ?? "";
                         if (!string.IsNullOrWhiteSpace(jobUrl))
                             break;
@@ -108,8 +108,8 @@ public partial class HubSpotScraper
             }
 
             // Extract additional job metadata
-            string jobType = ExtractJobType(jobElement);
-            string experience = ExtractExperienceLevel(title, description);
+            var jobType = ExtractJobType(jobElement);
+            var experience = ExtractExperienceLevel(title, description);
 
             var job = new EnhancedJobListing
             {
@@ -140,12 +140,12 @@ public partial class HubSpotScraper
 
     private static string? ExtractTextUsingSelectorArray(IWebElement parent, string[] selectors)
     {
-        foreach (string selector in selectors)
+        foreach (var selector in selectors)
         {
             try
             {
-                IWebElement? element = parent.FindElement(By.CssSelector(selector));
-                string? text = element?.Text?.Trim();
+                var element = parent.FindElement(By.CssSelector(selector));
+                var text = element?.Text?.Trim();
                 if (!string.IsNullOrWhiteSpace(text))
                 {
                     return text;
@@ -170,11 +170,11 @@ public partial class HubSpotScraper
             ".position-type"
         };
 
-        string? jobTypeText = ExtractTextUsingSelectorArray(jobElement, jobTypeSelectors);
+        var jobTypeText = ExtractTextUsingSelectorArray(jobElement, jobTypeSelectors);
         
         if (!string.IsNullOrWhiteSpace(jobTypeText))
         {
-            string lowerType = jobTypeText.ToLowerInvariant();
+            var lowerType = jobTypeText.ToLowerInvariant();
             if (lowerType.Contains("full time") || lowerType.Contains("full-time"))
                 return "Full-time";
             if (lowerType.Contains("part time") || lowerType.Contains("part-time"))
@@ -190,7 +190,7 @@ public partial class HubSpotScraper
 
     private static string ExtractExperienceLevel(string? title, string? description)
     {
-        string text = (title + " " + description).ToLowerInvariant();
+        var text = (title + " " + description).ToLowerInvariant();
 
         if (text.Contains("senior") || text.Contains("sr.") || text.Contains("lead"))
             return "Senior";
@@ -212,17 +212,17 @@ public partial class HubSpotScraper
             "software engineer", "api", "microservices", "azure", "sql server" 
         };
         
-        string searchText = (job.Title + " " + job.Description + " " + job.Department).ToLowerInvariant();
+        var searchText = (job.Title + " " + job.Description + " " + job.Department).ToLowerInvariant();
         
         // High priority for .NET specific roles
-        bool hasNetKeywords = dotNetKeywords.Any(keyword => searchText.Contains(keyword));
+        var hasNetKeywords = dotNetKeywords.Any(keyword => searchText.Contains(keyword));
         
         // Also include general software engineering roles at HubSpot (they often use .NET)
-        bool isSoftwareRole = searchText.Contains("software") && 
-                              (searchText.Contains("engineer") || searchText.Contains("developer"));
+        var isSoftwareRole = searchText.Contains("software") && 
+                             (searchText.Contains("engineer") || searchText.Contains("developer"));
         
         // Include backend and API roles (often .NET at HubSpot)
-        bool isBackendRole = searchText.Contains("backend") || searchText.Contains("api");
+        var isBackendRole = searchText.Contains("backend") || searchText.Contains("api");
         
         return hasNetKeywords || isSoftwareRole || isBackendRole || job.MatchScore > 40;
     }
@@ -251,9 +251,9 @@ public partial class HubSpotScraper
             "HubL", "HubDB", "HubSpot CMS"
         };
 
-        string lowerText = text.ToLowerInvariant();
+        var lowerText = text.ToLowerInvariant();
         
-        foreach (string tech in techKeywords)
+        foreach (var tech in techKeywords)
         {
             if (lowerText.Contains(tech.ToLowerInvariant()))
             {
@@ -266,14 +266,14 @@ public partial class HubSpotScraper
 
     private static int CalculateMatchScore(string? title, string? description, string? department, string[] requiredKeywords)
     {
-        string text = (title + " " + description + " " + department).ToLowerInvariant();
+        var text = (title + " " + description + " " + department).ToLowerInvariant();
         var score = 0;
 
         // Base score for being at HubSpot (known to use .NET)
         score += 25;
 
         // Score for required keywords
-        foreach (string keyword in requiredKeywords)
+        foreach (var keyword in requiredKeywords)
         {
             if (text.Contains(keyword.ToLowerInvariant()))
             {
@@ -329,7 +329,7 @@ public partial class HubSpotScraper
 
     private static bool IsRemotePosition(string? location, string? description)
     {
-        string text = (location + " " + description).ToLowerInvariant();
+        var text = (location + " " + description).ToLowerInvariant();
         
         var remoteKeywords = new[] 
         { 

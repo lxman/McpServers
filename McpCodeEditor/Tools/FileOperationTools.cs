@@ -22,7 +22,7 @@ public class FileOperationTools(FileOperationsService fileService)
     {
         try
         {
-            object result = await fileService.ReadFileAsync(path, encoding);
+            var result = await fileService.ReadFileAsync(path, encoding);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -46,7 +46,7 @@ public class FileOperationTools(FileOperationsService fileService)
     {
         try
         {
-            object result = await fileService.WriteFileAsync(path, content, encoding, createDirectories);
+            var result = await fileService.WriteFileAsync(path, content, encoding, createDirectories);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -70,7 +70,7 @@ public class FileOperationTools(FileOperationsService fileService)
     {
         try
         {
-            object result = await fileService.ListFilesAsync(path, recursive, includeHidden, pattern);
+            var result = await fileService.ListFilesAsync(path, recursive, includeHidden, pattern);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -90,7 +90,7 @@ public class FileOperationTools(FileOperationsService fileService)
     {
         try
         {
-            object result = await fileService.DeleteAsync(path, recursive);
+            var result = await fileService.DeleteAsync(path, recursive);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -118,7 +118,7 @@ public class FileOperationTools(FileOperationsService fileService)
     {
         try
         {
-            object result = await fileService.SearchAsync(query, path, filePattern, caseSensitive, regex, maxResults);
+            var result = await fileService.SearchAsync(query, path, filePattern, caseSensitive, regex, maxResults);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)

@@ -47,7 +47,7 @@ public class TypeScriptMethodInliner(
             }
 
             // Validate TypeScript file
-            string extension = Path.GetExtension(filePath).ToLowerInvariant();
+            var extension = Path.GetExtension(filePath).ToLowerInvariant();
             if (!IsTypeScriptFile(extension))
             {
                 return new RefactoringResult
@@ -58,10 +58,10 @@ public class TypeScriptMethodInliner(
             }
 
             // Read file content
-            string[] lines = await File.ReadAllLinesAsync(resolvedPath, cancellationToken);
+            var lines = await File.ReadAllLinesAsync(resolvedPath, cancellationToken);
 
             // Find the function to inline
-            TypeScriptFunctionInfo? functionInfo = FindTypeScriptFunction(lines, functionName);
+            var functionInfo = FindTypeScriptFunction(lines, functionName);
             if (functionInfo == null)
             {
                 return new RefactoringResult
@@ -72,7 +72,7 @@ public class TypeScriptMethodInliner(
             }
 
             // Validate function can be inlined
-            FunctionInlineValidation validationResult = ValidateFunctionForInlining(functionInfo, lines);
+            var validationResult = ValidateFunctionForInlining(functionInfo, lines);
             if (!validationResult.CanInline)
             {
                 return new RefactoringResult
@@ -83,7 +83,7 @@ public class TypeScriptMethodInliner(
             }
 
             // Extract function body
-            string functionBody = ExtractFunctionBody(lines, functionInfo);
+            var functionBody = ExtractFunctionBody(lines, functionInfo);
             if (string.IsNullOrWhiteSpace(functionBody))
             {
                 return new RefactoringResult
@@ -94,7 +94,7 @@ public class TypeScriptMethodInliner(
             }
 
             // Find all function calls
-            List<TypeScriptFunctionCall> functionCalls = FindFunctionCalls(lines, functionName, functionInfo);
+            var functionCalls = FindFunctionCalls(lines, functionName, functionInfo);
             if (functionCalls.Count == 0)
             {
                 return new RefactoringResult
@@ -108,17 +108,17 @@ public class TypeScriptMethodInliner(
             var modifiedLines = new List<string>(lines);
 
             // Replace function calls with inlined body (process in reverse order to maintain line numbers)
-            foreach (TypeScriptFunctionCall call in functionCalls.OrderByDescending(c => c.LineNumber))
+            foreach (var call in functionCalls.OrderByDescending(c => c.LineNumber))
             {
-                string inlinedCode = CreateInlinedCode(functionBody, call, functionInfo);
-                string originalLine = modifiedLines[call.LineNumber - 1];
-                string modifiedLine = ReplaceFunctionCall(originalLine, call, inlinedCode);
+                var inlinedCode = CreateInlinedCode(functionBody, call, functionInfo);
+                var originalLine = modifiedLines[call.LineNumber - 1];
+                var modifiedLine = ReplaceFunctionCall(originalLine, call, inlinedCode);
                 
                 modifiedLines[call.LineNumber - 1] = modifiedLine;
             }
 
             // Remove function definition
-            for (int i = functionInfo.EndLine - 1; i >= functionInfo.StartLine - 1; i--)
+            for (var i = functionInfo.EndLine - 1; i >= functionInfo.StartLine - 1; i--)
             {
                 modifiedLines.RemoveAt(i);
             }
@@ -193,7 +193,7 @@ public class TypeScriptMethodInliner(
 
         for (var i = 0; i < lines.Length; i++)
         {
-            foreach (string pattern in patterns)
+            foreach (var pattern in patterns)
             {
                 if (Regex.IsMatch(lines[i], pattern))
                 {
@@ -250,9 +250,9 @@ public class TypeScriptMethodInliner(
         var braceCount = 0;
         var foundOpenBrace = false;
 
-        for (int i = startLine; i < lines.Length; i++)
+        for (var i = startLine; i < lines.Length; i++)
         {
-            foreach (char c in lines[i])
+            foreach (var c in lines[i])
             {
                 if (c == '{')
                 {
@@ -277,10 +277,10 @@ public class TypeScriptMethodInliner(
     {
         var parameters = new List<string>();
         
-        Match match = Regex.Match(functionLine, @"\(([^)]*)\)");
+        var match = Regex.Match(functionLine, @"\(([^)]*)\)");
         if (match.Success)
         {
-            string paramStr = match.Groups[1].Value.Trim();
+            var paramStr = match.Groups[1].Value.Trim();
             if (!string.IsNullOrEmpty(paramStr))
             {
                 parameters.AddRange(paramStr.Split(',').Select(p => p.Trim().Split(':')[0].Trim()));
@@ -295,7 +295,7 @@ public class TypeScriptMethodInliner(
         var validation = new FunctionInlineValidation { CanInline = true };
 
         // Check for recursive calls
-        for (int i = functionInfo.StartLine - 1; i < functionInfo.EndLine; i++)
+        for (var i = functionInfo.StartLine - 1; i < functionInfo.EndLine; i++)
         {
             if (lines[i].Contains(functionInfo.Name + "("))
             {
@@ -309,9 +309,9 @@ public class TypeScriptMethodInliner(
         var complexPatterns = new[] { "return", "throw", "yield", "await" };
         var complexityCount = 0;
         
-        for (int i = functionInfo.StartLine - 1; i < functionInfo.EndLine; i++)
+        for (var i = functionInfo.StartLine - 1; i < functionInfo.EndLine; i++)
         {
-            foreach (string pattern in complexPatterns)
+            foreach (var pattern in complexPatterns)
             {
                 if (lines[i].Contains(pattern))
                     complexityCount++;
@@ -334,26 +334,26 @@ public class TypeScriptMethodInliner(
         // Handle different function types
         if (functionInfo.FunctionType is TypeScriptFunctionType.ArrowFunction or TypeScriptFunctionType.AsyncArrowFunction)
         {
-            string firstLine = lines[functionInfo.StartLine - 1];
+            var firstLine = lines[functionInfo.StartLine - 1];
             if (firstLine.Contains("=>") && !firstLine.Contains("{"))
             {
                 // Single expression arrow function
-                int arrowIndex = firstLine.IndexOf("=>", StringComparison.Ordinal);
+                var arrowIndex = firstLine.IndexOf("=>", StringComparison.Ordinal);
                 return firstLine[(arrowIndex + 2)..].Trim().TrimEnd(';');
             }
         }
 
         // Extract body between braces
         var inBody = false;
-        for (int i = functionInfo.StartLine - 1; i < functionInfo.EndLine; i++)
+        for (var i = functionInfo.StartLine - 1; i < functionInfo.EndLine; i++)
         {
-            string line = lines[i];
+            var line = lines[i];
             
             if (!inBody && line.Contains("{"))
             {
                 inBody = true;
-                int braceIndex = line.IndexOf("{", StringComparison.Ordinal);
-                string afterBrace = line[(braceIndex + 1)..].Trim();
+                var braceIndex = line.IndexOf("{", StringComparison.Ordinal);
+                var afterBrace = line[(braceIndex + 1)..].Trim();
                 if (!string.IsNullOrEmpty(afterBrace))
                     bodyLines.Add(afterBrace);
                 continue;
@@ -363,8 +363,8 @@ public class TypeScriptMethodInliner(
             {
                 if (line.Contains("}"))
                 {
-                    int braceIndex = line.IndexOf("}", StringComparison.Ordinal);
-                    string beforeBrace = line[..braceIndex].Trim();
+                    var braceIndex = line.IndexOf("}", StringComparison.Ordinal);
+                    var beforeBrace = line[..braceIndex].Trim();
                     if (!string.IsNullOrEmpty(beforeBrace))
                         bodyLines.Add(beforeBrace);
                     break;
@@ -390,7 +390,7 @@ public class TypeScriptMethodInliner(
             if (i >= functionInfo.StartLine - 1 && i < functionInfo.EndLine)
                 continue;
 
-            MatchCollection matches = Regex.Matches(lines[i], pattern);
+            var matches = Regex.Matches(lines[i], pattern);
             foreach (Match match in matches)
             {
                 calls.Add(new TypeScriptFunctionCall
@@ -408,13 +408,13 @@ public class TypeScriptMethodInliner(
 
     private static string CreateInlinedCode(string functionBody, TypeScriptFunctionCall call, TypeScriptFunctionInfo functionInfo)
     {
-        string inlinedCode = functionBody;
+        var inlinedCode = functionBody;
 
         // Replace parameters with arguments
         for (var i = 0; i < Math.Min(functionInfo.Parameters.Count, call.Arguments.Count); i++)
         {
-            string parameter = functionInfo.Parameters[i];
-            string argument = call.Arguments[i];
+            var parameter = functionInfo.Parameters[i];
+            var argument = call.Arguments[i];
             
             // Replace parameter with argument in the body
             inlinedCode = Regex.Replace(inlinedCode, $@"\b{Regex.Escape(parameter)}\b", argument);

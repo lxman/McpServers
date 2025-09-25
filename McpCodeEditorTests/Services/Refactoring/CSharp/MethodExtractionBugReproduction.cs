@@ -2,7 +2,6 @@
 using McpCodeEditor.Models.Options;
 using McpCodeEditor.Models.Refactoring.CSharp;
 using McpCodeEditor.Models.Refactoring;
-using McpCodeEditor.Models.Validation;
 
 
 namespace McpCodeEditorTests.Services.Refactoring.CSharp;
@@ -151,14 +150,14 @@ public class Order
 
             // Perform validation
             Console.WriteLine("Running validation...");
-            MethodExtractionValidationResult validationResult = await validator.ValidateExtractionAsync(context.FileContent, legacyOptions);
+            var validationResult = await validator.ValidateExtractionAsync(context.FileContent, legacyOptions);
             
             Console.WriteLine($"Validation Result: {(validationResult.IsValid ? "VALID" : "INVALID")}");
             
             if (validationResult.Errors.Count > 0)
             {
                 Console.WriteLine("Errors:");
-                foreach (ValidationError error in validationResult.Errors)
+                foreach (var error in validationResult.Errors)
                 {
                     Console.WriteLine($"  ❌ {error.Description}");
                 }
@@ -167,7 +166,7 @@ public class Order
             if (validationResult.Warnings.Count > 0)
             {
                 Console.WriteLine("Warnings:");
-                foreach (ValidationWarning warning in validationResult.Warnings)
+                foreach (var warning in validationResult.Warnings)
                 {
                     Console.WriteLine($"  ⚠️  {warning.Description}");
                 }
@@ -176,7 +175,7 @@ public class Order
             // Show analysis results
             if (validationResult.Analysis != null)
             {
-                CSharpExtractionAnalysis? analysis = validationResult.Analysis;
+                var analysis = validationResult.Analysis;
                 Console.WriteLine();
                 Console.WriteLine("Analysis Results:");
                 Console.WriteLine($"  Suggested Return Type: {analysis.SuggestedReturnType}");

@@ -76,7 +76,7 @@ public class CommandFactory : ICommandFactory
 
     public IRefactoringCommand? CreateCommand(string commandId)
     {
-        if (string.IsNullOrEmpty(commandId) || !_commandTypes.TryGetValue(commandId, out Type? commandType))
+        if (string.IsNullOrEmpty(commandId) || !_commandTypes.TryGetValue(commandId, out var commandType))
         {
             return null;
         }

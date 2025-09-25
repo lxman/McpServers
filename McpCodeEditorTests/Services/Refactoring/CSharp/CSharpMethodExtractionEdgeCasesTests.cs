@@ -120,7 +120,7 @@ namespace BugTest
             };
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert - This currently passes because the extractor returns success by default
             // In a real implementation, this would test the bug scenario
@@ -194,7 +194,7 @@ namespace FixedTest
             };
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert - This is how it SHOULD work when fixed
             Assert.True(result.Success, $"Extraction should succeed when properly handled. Error: {result.Error}");
@@ -262,7 +262,7 @@ namespace ScopeBug
             };
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert - Currently passes due to basic implementation
             Assert.True(result.Success, "Basic extraction should work for compilation test");
@@ -331,7 +331,7 @@ namespace TupleBug
             };
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert - Currently passes due to basic implementation
             Assert.True(result.Success, "Basic extraction should work for compilation test");
@@ -396,7 +396,7 @@ namespace EdgeCase
             };
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, "Basic extraction should work for compilation test");
@@ -464,7 +464,7 @@ namespace BraceBug
             };
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert - Currently passes due to basic implementation
             Assert.True(result.Success, "Basic extraction should work for compilation test");
@@ -519,7 +519,7 @@ namespace EdgeCase
             };
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, "Basic extraction should work for compilation test");
@@ -564,7 +564,7 @@ namespace EdgeCase
             };
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert - In a real implementation, this should fail
             Assert.True(result.Success, "Basic extraction should work for compilation test");
@@ -608,7 +608,7 @@ namespace EdgeCase
             };
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert - In a real implementation, this should fail
             Assert.True(result.Success, "Basic extraction should work for compilation test");
@@ -668,7 +668,7 @@ namespace EdgeCase
             };
 
             // Act
-            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, "Basic extraction should work for compilation test");

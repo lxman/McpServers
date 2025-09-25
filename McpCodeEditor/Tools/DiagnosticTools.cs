@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using System.Text;
 using McpCodeEditor.Interfaces;
-using McpCodeEditor.Models;
 using ModelContextProtocol.Server;
 using McpCodeEditor.Services;
 using McpCodeEditor.Services.TypeScript;
@@ -54,8 +53,8 @@ public class DiagnosticTools : BaseToolClass
             {
                 status.AppendLine($"  Environment Initialized: {(_devEnvironmentService.IsInitialized ? "✓ Yes" : "✗ No")}");
                 
-                Dictionary<string, string> envInfo = _devEnvironmentService.GetEnvironmentInfo();
-                foreach (KeyValuePair<string, string> kvp in envInfo)
+                var envInfo = _devEnvironmentService.GetEnvironmentInfo();
+                foreach (var kvp in envInfo)
                 {
                     status.AppendLine($"  {kvp.Key}: {kvp.Value}");
                 }
@@ -78,12 +77,12 @@ public class DiagnosticTools : BaseToolClass
                 try
                 {
                     // Try to refresh the workspace to see if it works
-                    bool refreshed = await _symbolNavigationService.RefreshWorkspaceAsync();
+                    var refreshed = await _symbolNavigationService.RefreshWorkspaceAsync();
                     status.AppendLine($"  Workspace Refresh: {(refreshed ? "✓ Success" : "✗ Failed")}");
                     
                     // Get environment status from the service
-                    Dictionary<string, string> envStatus = _symbolNavigationService.GetEnvironmentStatus();
-                    foreach (KeyValuePair<string, string> kvp in envStatus)
+                    var envStatus = _symbolNavigationService.GetEnvironmentStatus();
+                    foreach (var kvp in envStatus)
                     {
                         status.AppendLine($"  {kvp.Key}: {kvp.Value}");
                     }
@@ -102,7 +101,7 @@ public class DiagnosticTools : BaseToolClass
                 {
                     // Try a simple parse to see if Node.js integration works
                     var testCode = "const x = 1;";
-                    TypeScriptAst? ast = await _typeScriptAstParser.ParseAsync(testCode, "test.ts");
+                    var ast = await _typeScriptAstParser.ParseAsync(testCode, "test.ts");
                     status.AppendLine($"  Node.js Integration: {(ast != null ? "✓ Working" : "✗ Not working")}");
                 }
                 catch (Exception ex)
@@ -116,21 +115,21 @@ public class DiagnosticTools : BaseToolClass
             status.AppendLine("=== Environment Checks ===");
             try
             {
-                string nodeModulesPath = Path.Combine(AppContext.BaseDirectory, "node_modules");
+                var nodeModulesPath = Path.Combine(AppContext.BaseDirectory, "node_modules");
                 status.AppendLine($"Node Modules Directory: {(Directory.Exists(nodeModulesPath) ? "✓ Exists" : "✗ Not found")}");
                 
                 if (Directory.Exists(nodeModulesPath))
                 {
-                    string typescriptPath = Path.Combine(nodeModulesPath, "typescript");
+                    var typescriptPath = Path.Combine(nodeModulesPath, "typescript");
                     status.AppendLine($"  TypeScript Package: {(Directory.Exists(typescriptPath) ? "✓ Installed" : "✗ Not installed")}");
                 }
                 
-                string scriptsPath = Path.Combine(AppContext.BaseDirectory, "Scripts");
+                var scriptsPath = Path.Combine(AppContext.BaseDirectory, "Scripts");
                 status.AppendLine($"Scripts Directory: {(Directory.Exists(scriptsPath) ? "✓ Exists" : "✗ Not found")}");
                 
                 if (Directory.Exists(scriptsPath))
                 {
-                    string parserScript = Path.Combine(scriptsPath, "typescript-parser.js");
+                    var parserScript = Path.Combine(scriptsPath, "typescript-parser.js");
                     status.AppendLine($"  TypeScript Parser Script: {(File.Exists(parserScript) ? "✓ Found" : "✗ Not found")}");
                 }
             }
@@ -157,9 +156,9 @@ public class DiagnosticTools : BaseToolClass
                 ("ChangeTrackingService", typeof(ChangeTrackingService))
             ];
             
-            foreach ((string name, Type type) in servicesToCheck)
+            foreach ((var name, var type) in servicesToCheck)
             {
-                object? service = _serviceProvider.GetService(type);
+                var service = _serviceProvider.GetService(type);
                 status.AppendLine($"{name}: {(service != null ? "✓ Registered" : "✗ Not registered")}");
             }
             
@@ -188,7 +187,7 @@ public class DiagnosticTools : BaseToolClass
             else
             {
                 result.AppendLine("Attempting to initialize developer environment...");
-                bool success = _devEnvironmentService.Initialize();
+                var success = _devEnvironmentService.Initialize();
                 
                 if (success)
                 {
@@ -202,8 +201,8 @@ public class DiagnosticTools : BaseToolClass
             
             result.AppendLine();
             result.AppendLine("Current Environment Status:");
-            Dictionary<string, string> envInfo = _devEnvironmentService.GetEnvironmentInfo();
-            foreach (KeyValuePair<string, string> kvp in envInfo)
+            var envInfo = _devEnvironmentService.GetEnvironmentInfo();
+            foreach (var kvp in envInfo)
             {
                 result.AppendLine($"  {kvp.Key}: {kvp.Value}");
             }
@@ -215,13 +214,13 @@ public class DiagnosticTools : BaseToolClass
                 result.AppendLine("Attempting to refresh Symbol Navigation workspace...");
                 try
                 {
-                    bool refreshed = await _symbolNavigationService.RefreshWorkspaceAsync();
+                    var refreshed = await _symbolNavigationService.RefreshWorkspaceAsync();
                     result.AppendLine(refreshed ? "✓ Workspace refreshed successfully!" : "✗ Failed to refresh workspace.");
                     
-                    Dictionary<string, string> navStatus = _symbolNavigationService.GetEnvironmentStatus();
+                    var navStatus = _symbolNavigationService.GetEnvironmentStatus();
                     result.AppendLine();
                     result.AppendLine("Symbol Navigation Status:");
-                    foreach (KeyValuePair<string, string> kvp in navStatus)
+                    foreach (var kvp in navStatus)
                     {
                         result.AppendLine($"  {kvp.Key}: {kvp.Value}");
                     }
@@ -254,7 +253,7 @@ public class DiagnosticTools : BaseToolClass
             // If no file path provided, create a test file
             if (string.IsNullOrEmpty(filePath))
             {
-                string tempDir = Path.GetTempPath();
+                var tempDir = Path.GetTempPath();
                 filePath = Path.Combine(tempDir, "test_symbol_nav.cs");
                 
                 // Create a simple test C# file
@@ -288,7 +287,7 @@ namespace TestNamespace
             result.AppendLine("\n1. Testing workspace refresh...");
             try
             {
-                bool refreshed = await _symbolNavigationService.RefreshWorkspaceAsync();
+                var refreshed = await _symbolNavigationService.RefreshWorkspaceAsync();
                 result.AppendLine($"   Result: {(refreshed ? "✓ Success" : "✗ Failed")}");
             }
             catch (Exception ex)
@@ -300,7 +299,7 @@ namespace TestNamespace
             result.AppendLine("\n2. Testing Go to Definition (line 14, column 31 - 'localVar')...");
             try
             {
-                SymbolNavigationResult goToDefResult = await _symbolNavigationService.GoToDefinitionAsync(filePath, 14, 31);
+                var goToDefResult = await _symbolNavigationService.GoToDefinitionAsync(filePath, 14, 31);
                 result.AppendLine($"   Success: {goToDefResult.Success}");
                 if (goToDefResult.Success)
                 {
@@ -321,7 +320,7 @@ namespace TestNamespace
             result.AppendLine("\n3. Testing Find References (line 9, column 20 - 'Property')...");
             try
             {
-                SymbolNavigationResult findRefsResult = await _symbolNavigationService.FindReferencesAsync(filePath, 9, 20);
+                var findRefsResult = await _symbolNavigationService.FindReferencesAsync(filePath, 9, 20);
                 result.AppendLine($"   Success: {findRefsResult.Success}");
                 if (findRefsResult.Success)
                 {
@@ -342,7 +341,7 @@ namespace TestNamespace
             result.AppendLine("\n4. Testing Find Symbols by Name ('TestMethod')...");
             try
             {
-                SymbolNavigationResult findSymbolsResult = await _symbolNavigationService.FindSymbolsByNameAsync("TestMethod");
+                var findSymbolsResult = await _symbolNavigationService.FindSymbolsByNameAsync("TestMethod");
                 result.AppendLine($"   Success: {findSymbolsResult.Success}");
                 if (findSymbolsResult.Success)
                 {
@@ -408,14 +407,14 @@ export class TestClass {
             
             try
             {
-                TypeScriptAst ast = await _typeScriptAstParser.ParseAsync(code, "test.ts");
+                var ast = await _typeScriptAstParser.ParseAsync(code, "test.ts");
                 
                 result.AppendLine($"✓ Parse successful!");
                 result.AppendLine($"  Nodes: {ast.Nodes?.Count ?? 0}");
                 result.AppendLine($"  Imports: {ast.Imports?.Count ?? 0}");
                 if (ast.Imports?.Count > 0)
                 {
-                    foreach (ImportInfo import in ast.Imports)
+                    foreach (var import in ast.Imports)
                     {
                         result.AppendLine($"    - from '{import.Module}'");
                     }
@@ -424,7 +423,7 @@ export class TestClass {
                 result.AppendLine($"  Classes: {ast.Classes?.Count ?? 0}");
                 if (ast.Classes?.Count > 0)
                 {
-                    foreach (ClassInfo cls in ast.Classes)
+                    foreach (var cls in ast.Classes)
                     {
                         result.AppendLine($"    - {cls.Name} ({cls.Members?.Count ?? 0} members)");
                     }
@@ -433,7 +432,7 @@ export class TestClass {
                 result.AppendLine($"  Functions: {ast.Functions?.Count ?? 0}");
                 if (ast.Functions?.Count > 0)
                 {
-                    foreach (FunctionInfo func in ast.Functions)
+                    foreach (var func in ast.Functions)
                     {
                         result.AppendLine($"    - {func.Name}{(func.IsAsync ? " (async)" : "")}");
                     }
@@ -445,7 +444,7 @@ export class TestClass {
                 if (ast.Diagnostics?.Count > 0)
                 {
                     result.AppendLine("\nDiagnostics:");
-                    foreach (DiagnosticInfo diag in ast.Diagnostics.Take(5))
+                    foreach (var diag in ast.Diagnostics.Take(5))
                     {
                         result.AppendLine($"  - Line {diag.Start.Line + 1}: {diag.Message}");
                     }
@@ -483,7 +482,7 @@ export class TestClass {
             result.AppendLine("=== Application Logs ===");
             
             // Look for log files with date stamp pattern
-            string logDir = Path.Combine(
+            var logDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "Claude", "logs");
             
@@ -492,13 +491,13 @@ export class TestClass {
                 result.AppendLine($"Log directory: {logDir}");
                 
                 // Find log files matching the pattern: mcp-code-editor-debug*.log
-                string[] logFiles = Directory.GetFiles(logDir, "mcp-code-editor-debug*.log")
+                var logFiles = Directory.GetFiles(logDir, "mcp-code-editor-debug*.log")
                     .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                     .ToArray();
                 
                 if (logFiles.Length > 0)
                 {
-                    string mostRecentLog = logFiles[0];
+                    var mostRecentLog = logFiles[0];
                     result.AppendLine($"Most recent log file: {Path.GetFileName(mostRecentLog)}");
                     result.AppendLine($"Last modified: {new FileInfo(mostRecentLog).LastWriteTime}");
                     result.AppendLine();
@@ -517,12 +516,12 @@ export class TestClass {
                             }
                         }
                         
-                        string[] recentLines = lines.TakeLast(count).ToArray();
+                        var recentLines = lines.TakeLast(count).ToArray();
                         
                         result.AppendLine($"Last {recentLines.Length} log entries:");
                         result.AppendLine(new string('-', 80));
                         
-                        foreach (string line in recentLines)
+                        foreach (var line in recentLines)
                         {
                             result.AppendLine(line);
                         }
@@ -537,11 +536,11 @@ export class TestClass {
                     result.AppendLine("No log files found matching pattern: mcp-code-editor-debug*.log");
                     
                     // List all files in the directory for debugging
-                    string[] allFiles = Directory.GetFiles(logDir);
+                    var allFiles = Directory.GetFiles(logDir);
                     if (allFiles.Length > 0)
                     {
                         result.AppendLine("\nFiles in log directory:");
-                        foreach (string file in allFiles)
+                        foreach (var file in allFiles)
                         {
                             result.AppendLine($"  - {Path.GetFileName(file)}");
                         }

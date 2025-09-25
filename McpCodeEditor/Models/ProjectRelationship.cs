@@ -147,7 +147,7 @@ public class ProjectRelationshipMap
     {
         var related = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         
-        foreach (ProjectRelationship relationship in GetRelationshipsFor(projectPath))
+        foreach (var relationship in GetRelationshipsFor(projectPath))
         {
             if (!relationship.SourceProjectPath.Equals(projectPath, StringComparison.OrdinalIgnoreCase))
                 related.Add(relationship.SourceProjectPath);

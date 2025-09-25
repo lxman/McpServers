@@ -26,12 +26,12 @@ public class RelationshipScoringService(CodeEditorConfigurationService config)
         var score = 0.0;
 
         // Score based on shared technologies
-        HashSet<string> currentTech = currentPatterns.SelectMany(p => p.Technologies ?? []).ToHashSet();
-        HashSet<string> siblingTech = siblingPatterns.SelectMany(p => p.Technologies ?? [])
+        var currentTech = currentPatterns.SelectMany(p => p.Technologies ?? []).ToHashSet();
+        var siblingTech = siblingPatterns.SelectMany(p => p.Technologies ?? [])
             .Concat(siblingProject.Indicators).ToHashSet();
 
-        int sharedTech = currentTech.Intersect(siblingTech).Count();
-        int totalTech = currentTech.Union(siblingTech).Count();
+        var sharedTech = currentTech.Intersect(siblingTech).Count();
+        var totalTech = currentTech.Union(siblingTech).Count();
 
         if (totalTech > 0)
         {
@@ -39,8 +39,8 @@ public class RelationshipScoringService(CodeEditorConfigurationService config)
         }
 
         // Score based on complementary patterns (e.g., frontend + backend)
-        HashSet<ArchitectureType> currentTypes = currentPatterns.Select(p => p.Type).ToHashSet();
-        HashSet<ArchitectureType> siblingTypes = siblingPatterns.Select(p => p.Type).ToHashSet();
+        var currentTypes = currentPatterns.Select(p => p.Type).ToHashSet();
+        var siblingTypes = siblingPatterns.Select(p => p.Type).ToHashSet();
 
         if (IsComplementaryArchitecture(currentTypes, siblingTypes, siblingProject.Type))
         {
@@ -48,8 +48,8 @@ public class RelationshipScoringService(CodeEditorConfigurationService config)
         }
 
         // Score based on naming similarity
-        string currentName = Path.GetFileName(config.DefaultWorkspace).ToLowerInvariant();
-        string siblingName = siblingProject.Name.ToLowerInvariant();
+        var currentName = Path.GetFileName(config.DefaultWorkspace).ToLowerInvariant();
+        var siblingName = siblingProject.Name.ToLowerInvariant();
 
         if (siblingName.Contains(currentName) || currentName.Contains(siblingName))
         {
@@ -101,19 +101,19 @@ public class RelationshipScoringService(CodeEditorConfigurationService config)
     {
         var reasons = new List<string>();
 
-        HashSet<string> currentTech = currentPatterns.SelectMany(p => p.Technologies ?? []).ToHashSet();
-        HashSet<string> siblingTech = siblingPatterns.SelectMany(p => p.Technologies ?? [])
+        var currentTech = currentPatterns.SelectMany(p => p.Technologies ?? []).ToHashSet();
+        var siblingTech = siblingPatterns.SelectMany(p => p.Technologies ?? [])
             .Concat(siblingProject.Indicators).ToHashSet();
-        IEnumerable<string> sharedTech = currentTech.Intersect(siblingTech);
+        var sharedTech = currentTech.Intersect(siblingTech);
 
-        List<string> sharedTechList = sharedTech.ToList();
+        var sharedTechList = sharedTech.ToList();
         if (sharedTechList.Count != 0)
         {
             reasons.Add($"Shares technologies: {string.Join(", ", sharedTechList)}");
         }
 
-        HashSet<ArchitectureType> currentTypes = currentPatterns.Select(p => p.Type).ToHashSet();
-        HashSet<ArchitectureType> siblingTypes = siblingPatterns.Select(p => p.Type).ToHashSet();
+        var currentTypes = currentPatterns.Select(p => p.Type).ToHashSet();
+        var siblingTypes = siblingPatterns.Select(p => p.Type).ToHashSet();
 
         if (IsComplementaryArchitecture(currentTypes, siblingTypes, siblingProject.Type))
         {
@@ -142,8 +142,8 @@ public class RelationshipScoringService(CodeEditorConfigurationService config)
         List<ArchitecturePattern> patterns1, 
         List<ArchitecturePattern> patterns2)
     {
-        HashSet<string> tech1 = patterns1.SelectMany(p => p.Technologies ?? []).ToHashSet();
-        HashSet<string> tech2 = patterns2.SelectMany(p => p.Technologies ?? []).ToHashSet();
+        var tech1 = patterns1.SelectMany(p => p.Technologies ?? []).ToHashSet();
+        var tech2 = patterns2.SelectMany(p => p.Technologies ?? []).ToHashSet();
 
         return tech1.Intersect(tech2).ToHashSet();
     }
@@ -158,11 +158,11 @@ public class RelationshipScoringService(CodeEditorConfigurationService config)
         List<ArchitecturePattern> patterns1, 
         List<ArchitecturePattern> patterns2)
     {
-        HashSet<string> tech1 = patterns1.SelectMany(p => p.Technologies ?? []).ToHashSet();
-        HashSet<string> tech2 = patterns2.SelectMany(p => p.Technologies ?? []).ToHashSet();
+        var tech1 = patterns1.SelectMany(p => p.Technologies ?? []).ToHashSet();
+        var tech2 = patterns2.SelectMany(p => p.Technologies ?? []).ToHashSet();
 
-        int sharedCount = tech1.Intersect(tech2).Count();
-        int totalCount = tech1.Union(tech2).Count();
+        var sharedCount = tech1.Intersect(tech2).Count();
+        var totalCount = tech1.Union(tech2).Count();
 
         return totalCount > 0 ? (double)sharedCount / totalCount : 0.0;
     }
