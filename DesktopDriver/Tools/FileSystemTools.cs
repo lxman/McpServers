@@ -80,12 +80,10 @@ public class FileSystemTools
                 _auditLogger.LogFileOperation("Append", fullPath, true);
                 return $"Content appended to file: {fullPath}";
             }
-            else
-            {
-                await File.WriteAllTextAsync(fullPath, content);
-                _auditLogger.LogFileOperation("Write", fullPath, true);
-                return $"Content written to file: {fullPath}";
-            }
+
+            await File.WriteAllTextAsync(fullPath, content);
+            _auditLogger.LogFileOperation("Write", fullPath, true);
+            return $"Content written to file: {fullPath}";
         }
         catch (Exception ex)
         {
@@ -197,13 +195,14 @@ public class FileSystemTools
                 _auditLogger.LogFileOperation("Move", $"{fullSourcePath} -> {fullDestPath}", true);
                 return $"File moved: {fullSourcePath} -> {fullDestPath}";
             }
-            else if (Directory.Exists(fullSourcePath))
+
+            if (Directory.Exists(fullSourcePath))
             {
                 Directory.Move(fullSourcePath, fullDestPath);
                 _auditLogger.LogFileOperation("Move", $"{fullSourcePath} -> {fullDestPath}", true);
                 return $"Directory moved: {fullSourcePath} -> {fullDestPath}";
             }
-            else
+
             {
                 var error = $"Source not found: {fullSourcePath}";
                 _auditLogger.LogFileOperation("Move", $"{fullSourcePath} -> {fullDestPath}", false, error);
@@ -239,13 +238,14 @@ public class FileSystemTools
                 _auditLogger.LogFileOperation("Delete", fullPath, true);
                 return $"File deleted: {fullPath}";
             }
-            else if (Directory.Exists(fullPath))
+
+            if (Directory.Exists(fullPath))
             {
                 Directory.Delete(fullPath, force);
                 _auditLogger.LogFileOperation("Delete", fullPath, true);
                 return $"Directory deleted: {fullPath}";
             }
-            else
+
             {
                 var error = $"Path not found: {fullPath}";
                 _auditLogger.LogFileOperation("Delete", fullPath, false, error);
@@ -333,7 +333,8 @@ public class FileSystemTools
                        $"Accessed: {fileInfo.LastAccessTime:yyyy-MM-dd HH:mm:ss}\n" +
                        $"Attributes: {fileInfo.Attributes}";
             }
-            else if (Directory.Exists(fullPath))
+
+            if (Directory.Exists(fullPath))
             {
                 var dirInfo = new DirectoryInfo(fullPath);
                 var fileCount = dirInfo.GetFiles().Length;
@@ -349,7 +350,7 @@ public class FileSystemTools
                        $"Accessed: {dirInfo.LastAccessTime:yyyy-MM-dd HH:mm:ss}\n" +
                        $"Attributes: {dirInfo.Attributes}";
             }
-            else
+
             {
                 var error = $"Path not found: {fullPath}";
                 _auditLogger.LogFileOperation("Info", fullPath, false, error);
@@ -371,10 +372,8 @@ public class FileSystemTools
             var start = Math.Max(0, lines.Length + offset);
             return lines.Skip(start).ToArray();
         }
-        else
-        {
-            // Positive offset means read from start
-            return lines.Skip(offset).Take(length).ToArray();
-        }
+
+        // Positive offset means read from start
+        return lines.Skip(offset).Take(length).ToArray();
     }
 }

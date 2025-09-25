@@ -1,16 +1,17 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using DesktopDriver.Services;
+using DesktopDriver.Services.Doc;
+using DesktopDriver.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using DesktopDriver.Services;
-using DesktopDriver.Tools;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 // Suppress console output for clean MCP communication
 Console.SetOut(TextWriter.Null);
 Console.SetError(TextWriter.Null);
 
-HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+var builder = Host.CreateApplicationBuilder(args);
 
 // Configure JSON serialization options globally
 builder.Services.Configure<JsonSerializerOptions>(options =>
@@ -22,13 +23,23 @@ builder.Services.Configure<JsonSerializerOptions>(options =>
 });
 
 builder.Services
+    // Existing services
     .AddSingleton<SecurityManager>()
     .AddSingleton<AuditLogger>()
     .AddSingleton<ProcessManager>()
+    
+    // Document processing services
+    .AddSingleton<PasswordManager>()
+    .AddSingleton<DocumentProcessor>()
+    .AddSingleton<DocumentIndexer>()
+    
+    // Tools
     .AddSingleton<TerminalTools>()
     .AddSingleton<FileSystemTools>()
     .AddSingleton<ProcessTools>()
     .AddSingleton<ConfigurationTools>()
+    .AddSingleton<DocTools>()
+    
     .AddLogging(logging =>
     {
         logging.ClearProviders();
@@ -43,7 +54,8 @@ builder.Services
     .WithTools<TerminalTools>()
     .WithTools<FileSystemTools>()
     .WithTools<ProcessTools>()
-    .WithTools<ConfigurationTools>();
+    .WithTools<ConfigurationTools>()
+    .WithTools<DocTools>();
 
-IHost host = builder.Build();
+var host = builder.Build();
 await host.RunAsync();

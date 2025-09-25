@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace DesktopDriver.Services;
 
@@ -7,7 +7,7 @@ public class AuditLogger
 {
     private readonly ILogger<AuditLogger> _logger;
     private readonly string _auditLogPath;
-    private readonly object _lockObject = new();
+    private readonly Lock _lockObject = new();
 
     public AuditLogger(ILogger<AuditLogger> logger)
     {
@@ -58,6 +58,21 @@ public class AuditLogger
     public void LogProcessOperation(string operation, int? processId, bool success, string? error = null)
     {
         LogOperation($"Process_{operation}", $"PID: {processId}", success, error);
+    }
+
+    public void LogPasswordOperation(string operation, string resource, bool success, string? error = null)
+    {
+        LogOperation($"Password_{operation}", $"Resource: {resource}", success, error);
+    }
+
+    public void LogIndexOperation(string operation, string indexName, bool success, string? error = null)
+    {
+        LogOperation($"Index_{operation}", $"Index: {indexName}", success, error);
+    }
+
+    public void LogSearchOperation(string operation, string indexName, string query, bool success, int resultCount = 0)
+    {
+        LogOperation($"Search_{operation}", $"Index: {indexName}, Query: {query}, Results: {resultCount}", success);
     }
 
     private class AuditLogEntry

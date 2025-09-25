@@ -85,11 +85,9 @@ public class TerminalTools
             _auditLogger.LogOperation("Send_Input", $"Session: {sessionId}, Input: {input}", true);
             return $"Input sent successfully to session {sessionId}";
         }
-        else
-        {
-            _auditLogger.LogOperation("Send_Input", $"Session: {sessionId}, Input: {input}", false);
-            return $"Failed to send input to session {sessionId}. Process may not be running or may not accept input.";
-        }
+
+        _auditLogger.LogOperation("Send_Input", $"Session: {sessionId}, Input: {input}", false);
+        return $"Failed to send input to session {sessionId}. Process may not be running or may not accept input.";
     }
 
     [McpServerTool]

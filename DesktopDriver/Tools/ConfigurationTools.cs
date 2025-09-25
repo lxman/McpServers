@@ -53,7 +53,7 @@ public class ConfigurationTools
                 }
             }
 
-            result.AppendLine($"\nSystem Information:");
+            result.AppendLine("\nSystem Information:");
             result.AppendLine($"  User: {Environment.UserName}");
             result.AppendLine($"  Machine: {Environment.MachineName}");
             result.AppendLine($"  OS: {Environment.OSVersion}");

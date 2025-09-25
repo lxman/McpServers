@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace DesktopDriver.Services;
 
@@ -124,7 +124,7 @@ public class SecurityManager
 
     private class SecurityConfig
     {
-        public string[]? AllowedDirectories { get; set; }
-        public string[]? BlockedCommands { get; set; }
+        public string[]? AllowedDirectories { get; init; }
+        public string[]? BlockedCommands { get; init; }
     }
 }

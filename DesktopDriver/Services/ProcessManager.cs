@@ -1,7 +1,7 @@
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace DesktopDriver.Services;
 
@@ -206,12 +206,12 @@ public class ProcessManager
 
     private class ManagedProcess
     {
-        public Process Process { get; set; } = null!;
-        public string SessionId { get; set; } = string.Empty;
-        public string Command { get; set; } = string.Empty;
-        public DateTime StartTime { get; set; }
-        public StringBuilder OutputBuilder { get; set; } = null!;
-        public StringBuilder ErrorBuilder { get; set; } = null!;
+        public Process Process { get; init; } = null!;
+        public string SessionId { get; init; } = string.Empty;
+        public string Command { get; init; } = string.Empty;
+        public DateTime StartTime { get; init; }
+        public StringBuilder OutputBuilder { get; init; } = null!;
+        public StringBuilder ErrorBuilder { get; init; } = null!;
     }
 }
 
