@@ -1,8 +1,8 @@
 using System.ComponentModel;
 using System.Text.Json;
 using DesktopDriver.Services;
-using DesktopDriver.Services.Doc;
-using DesktopDriver.Services.Doc.Models;
+using DesktopDriver.Services.DocumentSearching;
+using DesktopDriver.Services.DocumentSearching.Models;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 

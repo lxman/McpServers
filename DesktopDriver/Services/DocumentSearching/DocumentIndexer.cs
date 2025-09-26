@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
-using DesktopDriver.Services.Doc.Models;
+using DesktopDriver.Services.DocumentSearching.Models;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Documents;
@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 using SystemDirectory = System.IO.Directory;
 // ReSharper disable InconsistentNaming
 
-namespace DesktopDriver.Services.Doc;
+namespace DesktopDriver.Services.DocumentSearching;
 
 public class DocumentIndexer : IDisposable
 {

@@ -1,4 +1,4 @@
-namespace DesktopDriver.Services.Doc.Models;
+namespace DesktopDriver.Services.DocumentSearching.Models;
 
 public class DocumentMetadata
 {

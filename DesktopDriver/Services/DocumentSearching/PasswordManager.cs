@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 
-namespace DesktopDriver.Services.Doc;
+namespace DesktopDriver.Services.DocumentSearching;
 
 public class PasswordManager(ILogger<PasswordManager> logger)
 {

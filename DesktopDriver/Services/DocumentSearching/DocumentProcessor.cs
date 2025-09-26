@@ -1,5 +1,5 @@
 using System.Text;
-using DesktopDriver.Services.Doc.Models;
+using DesktopDriver.Services.DocumentSearching.Models;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Presentation;
@@ -8,9 +8,9 @@ using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas.Parser;
 using Microsoft.Extensions.Logging;
 using NPOI.SS.UserModel;
-using DocType = DesktopDriver.Services.Doc.Models.DocumentType;
+using DocType = DesktopDriver.Services.DocumentSearching.Models.DocumentType;
 
-namespace DesktopDriver.Services.Doc;
+namespace DesktopDriver.Services.DocumentSearching;
 
 public class DocumentProcessor(ILogger<DocumentProcessor> logger, PasswordManager passwordManager)
 {

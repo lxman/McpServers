@@ -1,7 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DesktopDriver.Services;
-using DesktopDriver.Services.Doc;
+using DesktopDriver.Services.AdvancedFileEditing;
+using DesktopDriver.Services.DocumentSearching;
 using DesktopDriver.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -23,15 +24,17 @@ builder.Services.Configure<JsonSerializerOptions>(options =>
 });
 
 builder.Services
-    // Existing services
+    // Services
     .AddSingleton<SecurityManager>()
     .AddSingleton<AuditLogger>()
     .AddSingleton<ProcessManager>()
-    
-    // Document processing services
     .AddSingleton<PasswordManager>()
     .AddSingleton<DocumentProcessor>()
     .AddSingleton<DocumentIndexer>()
+    .AddSingleton<DiffPatchService>()
+    .AddSingleton<IndentationManager>()
+    .AddSingleton<LineBasedEditor>()
+    .AddSingleton<FileEditor>()
     
     // Tools
     .AddSingleton<TerminalTools>()
@@ -51,6 +54,7 @@ builder.Services
     })
     .AddMcpServer()
     .WithStdioServerTransport()
+    .WithTools<AdvancedFileEditingTools>()
     .WithTools<TerminalTools>()
     .WithTools<FileSystemTools>()
     .WithTools<ProcessTools>()
