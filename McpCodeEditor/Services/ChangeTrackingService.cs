@@ -32,7 +32,7 @@ public class ChangeTrackingService(
         try
         {
             // Fixed GUID formatting bug
-            var guidPart = Guid.NewGuid().ToString("N")[..8];
+            string guidPart = Guid.NewGuid().ToString("N")[..8];
             var changeId = $"change_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{guidPart}";
 
             var changeRecord = new ChangeRecord
@@ -70,17 +70,17 @@ public class ChangeTrackingService(
     {
         try
         {
-            var result = await undoRedoOperationsService.UndoChangeAsync(changeId);
+            UndoRedoResult result = await undoRedoOperationsService.UndoChangeAsync(changeId);
             
             // If the undo operation requires change tracking, track it
             if (result is { Success: true, RequiresChangeTracking: true, UndoContent: not null })
             {
-                var currentContent = result.UndoContent["current_content"].ToString() ?? "";
-                var restoredContent = result.UndoContent["restored_content"].ToString() ?? "";
-                var originalChangeId = result.UndoContent["original_change_id"].ToString() ?? "";
+                string currentContent = result.UndoContent["current_content"].ToString() ?? "";
+                string restoredContent = result.UndoContent["restored_content"].ToString() ?? "";
+                string originalChangeId = result.UndoContent["original_change_id"].ToString() ?? "";
                 
                 // Track the undo operation
-                var undoChangeId = await TrackChangeAsync(
+                string undoChangeId = await TrackChangeAsync(
                     result.FilePath!,
                     currentContent,
                     restoredContent,
@@ -114,17 +114,17 @@ public class ChangeTrackingService(
     {
         try
         {
-            var result = await undoRedoOperationsService.RedoChangeAsync(changeId);
+            UndoRedoResult result = await undoRedoOperationsService.RedoChangeAsync(changeId);
             
             // If the redo operation requires change tracking, track it
             if (result is { Success: true, RequiresChangeTracking: true, UndoContent: not null })
             {
-                var currentContent = result.UndoContent["current_content"].ToString() ?? "";
-                var restoredContent = result.UndoContent["restored_content"].ToString() ?? "";
-                var originalChangeId = result.UndoContent["original_change_id"].ToString() ?? "";
+                string currentContent = result.UndoContent["current_content"].ToString() ?? "";
+                string restoredContent = result.UndoContent["restored_content"].ToString() ?? "";
+                string originalChangeId = result.UndoContent["original_change_id"].ToString() ?? "";
                 
                 // Track the redo operation
-                var redoChangeId = await TrackChangeAsync(
+                string redoChangeId = await TrackChangeAsync(
                     result.FilePath!,
                     currentContent,
                     restoredContent,
@@ -174,8 +174,8 @@ public class ChangeTrackingService(
     {
         try
         {
-            var fullPath = Path.GetFullPath(filePath);
-            var allChanges = await changeRecordPersistenceService.LoadChangeRecordsAsync();
+            string fullPath = Path.GetFullPath(filePath);
+            List<ChangeRecord> allChanges = await changeRecordPersistenceService.LoadChangeRecordsAsync();
 
             return allChanges
                 .Where(c => c.FilePath.Equals(fullPath, StringComparison.OrdinalIgnoreCase))
@@ -196,12 +196,12 @@ public class ChangeTrackingService(
     {
         try
         {
-            var allChanges = await changeRecordPersistenceService.LoadChangeRecordsAsync();
-            var query = allChanges.OrderByDescending(c => c.Timestamp);
+            List<ChangeRecord> allChanges = await changeRecordPersistenceService.LoadChangeRecordsAsync();
+            IOrderedEnumerable<ChangeRecord> query = allChanges.OrderByDescending(c => c.Timestamp);
 
             if (timeRange.HasValue)
             {
-                var cutoffTime = DateTime.UtcNow - timeRange.Value;
+                DateTime cutoffTime = DateTime.UtcNow - timeRange.Value;
                 query = query.Where(c => c.Timestamp >= cutoffTime).OrderByDescending(c => c.Timestamp);
             }
 
@@ -236,8 +236,8 @@ public class ChangeTrackingService(
     {
         try
         {
-            var allChanges = await changeRecordPersistenceService.LoadChangeRecordsAsync();
-            var changesToKeep = allChanges
+            List<ChangeRecord> allChanges = await changeRecordPersistenceService.LoadChangeRecordsAsync();
+            List<ChangeRecord> changesToKeep = allChanges
                 .OrderByDescending(c => c.Timestamp)
                 .Take(keepCount)
                 .ToList();
@@ -246,8 +246,8 @@ public class ChangeTrackingService(
             await changeRecordPersistenceService.RewriteChangeLogAsync(changesToKeep);
 
             // Cleanup content snapshots for deleted changes using the injected service
-            var deletedChanges = allChanges.Except(changesToKeep).ToList();
-            foreach (var change in deletedChanges)
+            List<ChangeRecord> deletedChanges = allChanges.Except(changesToKeep).ToList();
+            foreach (ChangeRecord change in deletedChanges)
             {
                 await contentSnapshotService.DeleteContentSnapshotAsync(change.Id);
             }
@@ -267,7 +267,7 @@ public class ChangeTrackingService(
     {
         try
         {
-            var changes = await GetRecentChangesAsync(10000, timeRange);
+            List<ChangeRecord> changes = await GetRecentChangesAsync(10000, timeRange);
 
             var exportData = new
             {
@@ -280,7 +280,7 @@ public class ChangeTrackingService(
                 changes = changes
             };
 
-            var exportJson = JsonSerializer.Serialize(exportData, new JsonSerializerOptions
+            string exportJson = JsonSerializer.Serialize(exportData, new JsonSerializerOptions
             {
                 WriteIndented = true
             });
@@ -296,8 +296,8 @@ public class ChangeTrackingService(
 
     private static ChangeDetails CalculateChangeDetails(string originalContent, string modifiedContent, Dictionary<string, object>? metadata)
     {
-        var originalLines = originalContent.Split('\n');
-        var modifiedLines = modifiedContent.Split('\n');
+        string[] originalLines = originalContent.Split('\n');
+        string[] modifiedLines = modifiedContent.Split('\n');
 
         // Simple line-based diff calculation
         var details = new ChangeDetails
@@ -319,7 +319,7 @@ public class ChangeTrackingService(
         }
 
         // Count modified lines (simplified - just check if content is different)
-        var minLines = Math.Min(originalLines.Length, modifiedLines.Length);
+        int minLines = Math.Min(originalLines.Length, modifiedLines.Length);
         details.LinesModified = 0;
         for (var i = 0; i < minLines; i++)
         {
@@ -335,7 +335,7 @@ public class ChangeTrackingService(
     private static string ComputeHash(string content)
     {
         using var sha256 = System.Security.Cryptography.SHA256.Create();
-        var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(content));
+        byte[] hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(hash)[..16]; // First 16 characters
     }
 }

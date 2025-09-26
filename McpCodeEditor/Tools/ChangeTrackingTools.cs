@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using McpCodeEditor.Models;
 using ModelContextProtocol.Server;
 using McpCodeEditor.Services;
 
@@ -18,7 +19,7 @@ public class ChangeTrackingTools(ChangeTrackingService changeTrackingService)
     {
         try
         {
-            var changes = await changeTrackingService.GetFileHistoryAsync(filePath, maxRecords);
+            List<ChangeRecord> changes = await changeTrackingService.GetFileHistoryAsync(filePath, maxRecords);
             var result = new
             {
                 success = true,
@@ -64,7 +65,7 @@ public class ChangeTrackingTools(ChangeTrackingService changeTrackingService)
         try
         {
             TimeSpan? timeRange = hoursBack.HasValue ? TimeSpan.FromHours(hoursBack.Value) : null;
-            var changes = await changeTrackingService.GetRecentChangesAsync(maxRecords, timeRange);
+            List<ChangeRecord> changes = await changeTrackingService.GetRecentChangesAsync(maxRecords, timeRange);
 
             var result = new
             {
@@ -103,7 +104,7 @@ public class ChangeTrackingTools(ChangeTrackingService changeTrackingService)
         try
         {
             TimeSpan? timeRange = hoursBack.HasValue ? TimeSpan.FromHours(hoursBack.Value) : null;
-            var stats = await changeTrackingService.GetChangeStatsAsync(timeRange);
+            object stats = await changeTrackingService.GetChangeStatsAsync(timeRange);
 
             var result = new
             {
@@ -129,7 +130,7 @@ public class ChangeTrackingTools(ChangeTrackingService changeTrackingService)
     {
         try
         {
-            var result = await changeTrackingService.UndoChangeAsync(changeId);
+            UndoRedoResult result = await changeTrackingService.UndoChangeAsync(changeId);
 
             var response = new
             {
@@ -158,7 +159,7 @@ public class ChangeTrackingTools(ChangeTrackingService changeTrackingService)
     {
         try
         {
-            var result = await changeTrackingService.RedoChangeAsync(changeId);
+            UndoRedoResult result = await changeTrackingService.RedoChangeAsync(changeId);
 
             var response = new
             {
@@ -187,7 +188,7 @@ public class ChangeTrackingTools(ChangeTrackingService changeTrackingService)
     {
         try
         {
-            var changes = await changeTrackingService.GetUndoableChangesAsync(maxRecords);
+            List<ChangeRecord> changes = await changeTrackingService.GetUndoableChangesAsync(maxRecords);
 
             var result = new
             {
@@ -227,7 +228,7 @@ public class ChangeTrackingTools(ChangeTrackingService changeTrackingService)
     {
         try
         {
-            var changes = await changeTrackingService.GetRedoableChangesAsync(maxRecords);
+            List<ChangeRecord> changes = await changeTrackingService.GetRedoableChangesAsync(maxRecords);
 
             var result = new
             {

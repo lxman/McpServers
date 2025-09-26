@@ -43,9 +43,9 @@ public class LanguageDetectionService
             return LanguageType.Unknown;
         }
 
-        var extension = Path.GetExtension(filePath).ToLowerInvariant();
+        string extension = Path.GetExtension(filePath).ToLowerInvariant();
         
-        return ExtensionToLanguage.TryGetValue(extension, out var languageType) 
+        return ExtensionToLanguage.TryGetValue(extension, out LanguageType languageType) 
             ? languageType 
             : LanguageType.Unknown;
     }
@@ -59,7 +59,7 @@ public class LanguageDetectionService
     {
         var result = new Dictionary<string, LanguageType>();
         
-        foreach (var filePath in filePaths)
+        foreach (string filePath in filePaths)
         {
             result[filePath] = DetectLanguage(filePath);
         }
@@ -74,7 +74,7 @@ public class LanguageDetectionService
     /// <returns>Array of file extensions for the language</returns>
     public static string[] GetSupportedExtensions(LanguageType languageType)
     {
-        return LanguageToExtensions.TryGetValue(languageType, out var extensions) 
+        return LanguageToExtensions.TryGetValue(languageType, out string[]? extensions) 
             ? extensions 
             : [];
     }
@@ -128,14 +128,14 @@ public class LanguageDetectionService
             return LanguageType.Unknown;
         }
 
-        var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        var files = Directory.GetFiles(directoryPath, "*", searchOption);
+        SearchOption searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        string[] files = Directory.GetFiles(directoryPath, "*", searchOption);
         
         var languageCounts = new Dictionary<LanguageType, int>();
         
-        foreach (var file in files)
+        foreach (string file in files)
         {
-            var language = DetectLanguage(file);
+            LanguageType language = DetectLanguage(file);
             if (language != LanguageType.Unknown)
             {
                 languageCounts[language] = languageCounts.GetValueOrDefault(language, 0) + 1;
@@ -162,12 +162,12 @@ public class LanguageDetectionService
             return result;
         }
 
-        var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        var files = Directory.GetFiles(directoryPath, "*", searchOption);
+        SearchOption searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        string[] files = Directory.GetFiles(directoryPath, "*", searchOption);
         
-        foreach (var file in files)
+        foreach (string file in files)
         {
-            var language = DetectLanguage(file);
+            LanguageType language = DetectLanguage(file);
             result[language] = result.GetValueOrDefault(language, 0) + 1;
         }
 

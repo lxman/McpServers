@@ -77,7 +77,7 @@ public abstract class BaseJobScraper : IJobSiteScraper, IDisposable
             @"C:\Users\" + Environment.UserName + @"\AppData\Local\Google\Chrome\Application\chrome.exe"
         ];
         
-        foreach (var path in chromePaths.Where(p => !string.IsNullOrEmpty(p)))
+        foreach (string path in chromePaths.Where(p => !string.IsNullOrEmpty(p)))
         {
             if (!File.Exists(path)) continue;
             options.BinaryLocation = path;
@@ -88,7 +88,7 @@ public abstract class BaseJobScraper : IJobSiteScraper, IDisposable
         // Enhanced user agent rotation for LinkedIn
         if (antiDetection.UserAgents.Count != 0)
         {
-            var userAgent = antiDetection.UserAgents[Random.Next(antiDetection.UserAgents.Count)];
+            string userAgent = antiDetection.UserAgents[Random.Next(antiDetection.UserAgents.Count)];
             options.AddArgument($"--user-agent={userAgent}");
             Logger.LogInformation("Using User-Agent: {UserAgent}", userAgent.Substring(0, Math.Min(50, userAgent.Length)) + "...");
         }
@@ -161,7 +161,7 @@ public abstract class BaseJobScraper : IJobSiteScraper, IDisposable
 
     protected async Task RespectRateLimit(RateLimitConfig rateLimit)
     {
-        var delay = Random.Next(rateLimit.DelayBetweenRequests, rateLimit.DelayBetweenRequests + 2000);
+        int delay = Random.Next(rateLimit.DelayBetweenRequests, rateLimit.DelayBetweenRequests + 2000);
         await Task.Delay(delay);
     }
 

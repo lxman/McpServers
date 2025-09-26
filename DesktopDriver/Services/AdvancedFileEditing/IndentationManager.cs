@@ -53,7 +53,7 @@ public class IndentationManager
     /// <summary>
     /// Fixes the indentation of content to match the target level and style
     /// </summary>
-    public string FixIndentation(string content, IndentationInfo targetStyle, int targetLevel)
+    public static string FixIndentation(string content, IndentationInfo targetStyle, int targetLevel)
     {
         if (string.IsNullOrEmpty(content))
             return content;

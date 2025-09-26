@@ -35,7 +35,7 @@ public class WorkspaceTools(
                 throw new ArgumentException("Max results must be positive.", nameof(maxResults));
             }
 
-            var projects = await projectDetection.DetectWorkspacesAsync();
+            List<ProjectInfo> projects = await projectDetection.DetectWorkspacesAsync();
             var result = new
             {
                 success = true,
@@ -60,7 +60,7 @@ public class WorkspaceTools(
     [McpServerTool]
     [Description("Switch to a different workspace directory")]
     public async Task<string> WorkspaceSwitchAsync(
-        [Description("Path to the new workspace directory")]
+        [Description("Path to the new workspace directory - must be canonical")]
         string workspacePath)
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
@@ -95,8 +95,8 @@ public class WorkspaceTools(
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
-            var suggested = await projectDetection.SuggestBestWorkspaceAsync();
-            var allProjects = await projectDetection.DetectWorkspacesAsync();
+            ProjectInfo? suggested = await projectDetection.SuggestBestWorkspaceAsync();
+            List<ProjectInfo> allProjects = await projectDetection.DetectWorkspacesAsync();
 
             var result = new
             {

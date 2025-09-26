@@ -26,7 +26,7 @@ public partial class CodeAnalysisTools(CodeAnalysisService codeService)
     {
         try
         {
-            var result = await codeService.AnalyzeAsync(path, content, language, includeDiagnostics, includeSymbols, includeMetrics);
+            object result = await codeService.AnalyzeAsync(path, content, language, includeDiagnostics, includeSymbols, includeMetrics);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -50,7 +50,7 @@ public partial class CodeAnalysisTools(CodeAnalysisService codeService)
     {
         try
         {
-            var result = await CodeAnalysisService.FormatAsync(path, content, language, writeToFile);
+            object result = await CodeAnalysisService.FormatAsync(path, content, language, writeToFile);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)

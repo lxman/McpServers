@@ -10,7 +10,7 @@ using Host = Microsoft.Extensions.Hosting.Host;
 Console.SetOut(TextWriter.Null);
 Console.SetError(TextWriter.Null);
 
-var builder = Host.CreateApplicationBuilder(args);
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
 // Configure JSON serialization options globally to handle deep object structures
 builder.Services.Configure<JsonSerializerOptions>(options =>

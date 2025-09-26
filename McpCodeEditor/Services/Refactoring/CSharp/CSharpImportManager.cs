@@ -35,7 +35,7 @@ public class CSharpImportManager(
             var result = new RefactoringResult();
 
             // Resolve and validate file path
-            var resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
+            string resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
             if (!File.Exists(resolvedFilePath))
             {
                 return new RefactoringResult
@@ -55,8 +55,8 @@ public class CSharpImportManager(
                 };
             }
 
-            var sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
-            var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
+            string sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
 
             if (await syntaxTree.GetRootAsync(cancellationToken) is not CompilationUnitSyntax root)
             {
@@ -68,7 +68,7 @@ public class CSharpImportManager(
             }
 
             // Get current using directives
-            var currentUsings = root.Usings;
+            SyntaxList<UsingDirectiveSyntax> currentUsings = root.Usings;
             if (!currentUsings.Any())
             {
                 return new RefactoringResult
@@ -80,16 +80,16 @@ public class CSharpImportManager(
             }
 
             // Analyze and organize using statements
-            var usingAnalysis = AnalyzeUsingStatements(currentUsings);
-            var organizedUsings = OrganizeUsingStatements(currentUsings, options);
+            CSharpImportAnalysis usingAnalysis = AnalyzeUsingStatements(currentUsings);
+            IEnumerable<UsingDirectiveSyntax> organizedUsings = OrganizeUsingStatements(currentUsings, options);
 
             // Create new root with organized usings
-            var newRoot = root.WithUsings(SyntaxFactory.List(organizedUsings));
+            CompilationUnitSyntax newRoot = root.WithUsings(SyntaxFactory.List(organizedUsings));
 
             // Format the result
             var workspace = new AdhocWorkspace();
-            var formattedRoot = Formatter.Format(newRoot, workspace, cancellationToken: cancellationToken);
-            var modifiedContent = formattedRoot.ToFullString();
+            SyntaxNode formattedRoot = Formatter.Format(newRoot, workspace, cancellationToken: cancellationToken);
+            string modifiedContent = formattedRoot.ToFullString();
 
             // Check if there are actual changes
             if (sourceCode == modifiedContent)
@@ -187,7 +187,7 @@ public class CSharpImportManager(
             }
 
             // Resolve and validate file path
-            var resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
+            string resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
             if (!File.Exists(resolvedFilePath))
             {
                 return new RefactoringResult
@@ -207,8 +207,8 @@ public class CSharpImportManager(
                 };
             }
 
-            var sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
-            var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
+            string sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
 
             if (await syntaxTree.GetRootAsync(cancellationToken) is not CompilationUnitSyntax root)
             {
@@ -220,7 +220,7 @@ public class CSharpImportManager(
             }
 
             // Check if using already exists
-            var existingUsing = root.Usings.FirstOrDefault(u =>
+            UsingDirectiveSyntax? existingUsing = root.Usings.FirstOrDefault(u =>
                 u.Name?.ToString() == usingNamespace);
 
             if (existingUsing != null)
@@ -244,18 +244,18 @@ public class CSharpImportManager(
             }
 
             // Create new using directive
-            var newUsing = SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(usingNamespace));
+            UsingDirectiveSyntax newUsing = SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(usingNamespace));
 
             // Add to existing usings and sort
-            var newUsings = root.Usings.Add(newUsing);
-            var organizedUsings = OrganizeUsingStatements(newUsings, new CSharpImportOperation());
+            SyntaxList<UsingDirectiveSyntax> newUsings = root.Usings.Add(newUsing);
+            IEnumerable<UsingDirectiveSyntax> organizedUsings = OrganizeUsingStatements(newUsings, new CSharpImportOperation());
             
-            var newRoot = root.WithUsings(SyntaxFactory.List(organizedUsings));
+            CompilationUnitSyntax newRoot = root.WithUsings(SyntaxFactory.List(organizedUsings));
 
             // Format the result
             var workspace = new AdhocWorkspace();
-            var formattedRoot = Formatter.Format(newRoot, workspace, cancellationToken: cancellationToken);
-            var modifiedContent = formattedRoot.ToFullString();
+            SyntaxNode formattedRoot = Formatter.Format(newRoot, workspace, cancellationToken: cancellationToken);
+            string modifiedContent = formattedRoot.ToFullString();
 
             // Create backup if not preview
             string? backupId = null;
@@ -336,7 +336,7 @@ public class CSharpImportManager(
         try
         {
             // Resolve and validate file path
-            var resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
+            string resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
             if (!File.Exists(resolvedFilePath))
             {
                 throw new FileNotFoundException($"File not found: {filePath}");
@@ -348,8 +348,8 @@ public class CSharpImportManager(
                 throw new ArgumentException($"File is not a C# file: {filePath}");
             }
 
-            var sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
-            var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
+            string sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
 
             if (await syntaxTree.GetRootAsync(cancellationToken) is not CompilationUnitSyntax root)
             {
@@ -375,9 +375,9 @@ public class CSharpImportManager(
         var analysis = new CSharpImportAnalysis();
         var seenNamespaces = new HashSet<string>();
 
-        foreach ((var usingDirective, var index) in usings.Select((u, i) => (u, i)))
+        foreach ((UsingDirectiveSyntax usingDirective, int index) in usings.Select((u, i) => (u, i)))
         {
-            var namespaceName = usingDirective.Name?.ToString() ?? "";
+            string namespaceName = usingDirective.Name?.ToString() ?? "";
             
             var usingStatement = new CSharpUsingStatement
             {
@@ -444,7 +444,7 @@ public class CSharpImportManager(
         SyntaxList<UsingDirectiveSyntax> usings,
         CSharpImportOperation options)
     {
-        var usingsList = usings.ToList();
+        List<UsingDirectiveSyntax> usingsList = usings.ToList();
 
         // Remove duplicates if requested
         if (options.RemoveDuplicates)
@@ -452,7 +452,7 @@ public class CSharpImportManager(
             var seen = new HashSet<string>();
             usingsList = usingsList.Where(u =>
             {
-                var namespaceName = u.Name?.ToString() ?? "";
+                string namespaceName = u.Name?.ToString() ?? "";
                 return seen.Add(namespaceName);
             }).ToList();
         }
@@ -460,8 +460,8 @@ public class CSharpImportManager(
         // Group by type if requested
         if (options.GroupByType || options.SeparateSystemNamespaces)
         {
-            var systemUsings = usingsList.Where(u => IsSystemNamespace(u.Name?.ToString() ?? "")).ToList();
-            var userUsings = usingsList.Where(u => !IsSystemNamespace(u.Name?.ToString() ?? "")).ToList();
+            List<UsingDirectiveSyntax> systemUsings = usingsList.Where(u => IsSystemNamespace(u.Name?.ToString() ?? "")).ToList();
+            List<UsingDirectiveSyntax> userUsings = usingsList.Where(u => !IsSystemNamespace(u.Name?.ToString() ?? "")).ToList();
 
             if (options.SortAlphabetically)
             {
@@ -496,8 +496,8 @@ public class CSharpImportManager(
 
         for (var i = 1; i < usings.Count; i++)
         {
-            var current = usings[i].Name?.ToString() ?? "";
-            var previous = usings[i - 1].Name?.ToString() ?? "";
+            string current = usings[i].Name?.ToString() ?? "";
+            string previous = usings[i - 1].Name?.ToString() ?? "";
             
             if (string.Compare(current, previous, StringComparison.Ordinal) < 0)
             {
@@ -515,10 +515,10 @@ public class CSharpImportManager(
     {
         var foundUserUsing = false;
         
-        foreach (var usingDirective in usings)
+        foreach (UsingDirectiveSyntax usingDirective in usings)
         {
-            var namespaceName = usingDirective.Name?.ToString() ?? "";
-            var isSystemNamespace = IsSystemNamespace(namespaceName);
+            string namespaceName = usingDirective.Name?.ToString() ?? "";
+            bool isSystemNamespace = IsSystemNamespace(namespaceName);
             
             if (!isSystemNamespace)
             {

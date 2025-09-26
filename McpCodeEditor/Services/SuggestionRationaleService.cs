@@ -19,8 +19,8 @@ public class SuggestionRationaleService
             return "Files selected based on general relevance criteria.";
 
         var projectType = analysis.ProjectInfo.Type.ToString();
-        var sourceFiles = CountSourceFiles(suggestions);
-        var recentFiles = CountRecentFiles(suggestions);
+        int sourceFiles = CountSourceFiles(suggestions);
+        int recentFiles = CountRecentFiles(suggestions);
 
         var rationale = $"Suggestions optimized for {projectType} project. ";
         
@@ -47,7 +47,7 @@ public class SuggestionRationaleService
         if (analysis.ProjectInfo == null)
             return "Files selected based on general relevance criteria without project context.";
 
-        var metrics = AnalyzeSuggestionMetrics(suggestions);
+        SuggestionMetrics metrics = AnalyzeSuggestionMetrics(suggestions);
         var projectType = analysis.ProjectInfo.Type.ToString();
 
         var rationale = $"File suggestions for {projectType} project:\n\n";

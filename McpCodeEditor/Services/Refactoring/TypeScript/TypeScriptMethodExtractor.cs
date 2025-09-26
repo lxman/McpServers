@@ -60,7 +60,7 @@ public class TypeScriptMethodExtractor
                 options.NewMethodName, options.StartLine, options.EndLine);
 
             // Step 1: Parse the TypeScript file to get full AST
-            var ast = await _astParser.ParseAsync(sourceCode, filePath);
+            TypeScriptAst ast = await _astParser.ParseAsync(sourceCode, filePath);
             if (ast.Diagnostics?.Count > 0)
             {
                 var errors = new List<DiagnosticInfo>(ast.Diagnostics.Where(d => d.Code >= 1000).ToList()); // TypeScript errors start at 1000
@@ -71,7 +71,7 @@ public class TypeScriptMethodExtractor
             }
 
             // Step 2: Preserve context and analyze scope
-            var contextResult = await _contextPreserver.PreserveContextAsync(
+            ContextPreservationResult contextResult = await _contextPreserver.PreserveContextAsync(
                 sourceCode, 
                 options.StartLine, 
                 options.EndLine, 
@@ -88,7 +88,7 @@ public class TypeScriptMethodExtractor
             }
 
             // Step 3: Validate extraction with enhanced context awareness
-            var validationResult = await ValidateWithContextAsync(
+            TypeScriptValidationResult validationResult = await ValidateWithContextAsync(
                 sourceCode, 
                 options, 
                 contextResult, 
@@ -115,10 +115,10 @@ public class TypeScriptMethodExtractor
             }
 
             // Step 5: Extract the selected code
-            var extractedCode = ExtractCodeLines(sourceCode, options.StartLine, options.EndLine);
+            string extractedCode = ExtractCodeLines(sourceCode, options.StartLine, options.EndLine);
             
             // Step 6: Generate the new method with proper context preservation
-            var generatedMethod = TypeScriptContextPreserver.GenerateContextPreservingMethod(
+            string generatedMethod = TypeScriptContextPreserver.GenerateContextPreservingMethod(
                 contextResult,
                 options.NewMethodName,
                 extractedCode,
@@ -126,13 +126,13 @@ public class TypeScriptMethodExtractor
                 options.IsAsync);
 
             // Step 7: Generate the method call that preserves context
-            var methodCall = TypeScriptContextPreserver.GenerateContextPreservingCall(
+            string methodCall = TypeScriptContextPreserver.GenerateContextPreservingCall(
                 contextResult,
                 options.NewMethodName,
                 options.IsAsync);
 
             // Step 8: Apply the refactoring to the source code using AST information
-            var refactoredCode = await ApplyRefactoringWithAstAsync(
+            string refactoredCode = await ApplyRefactoringWithAstAsync(
                 sourceCode,
                 options,
                 generatedMethod,
@@ -141,7 +141,7 @@ public class TypeScriptMethodExtractor
                 ast);
 
             // Step 9: Validate the refactored code
-            var postValidation = await ValidateRefactoredCodeAsync(refactoredCode, filePath);
+            TypeScriptValidationResult postValidation = await ValidateRefactoredCodeAsync(refactoredCode, filePath);
             if (!postValidation.IsValid)
             {
                 _logger.LogError("Post-refactoring validation failed: {Error}", postValidation.ErrorMessage);
@@ -218,7 +218,7 @@ public class TypeScriptMethodExtractor
         CancellationToken cancellationToken)
     {
         // Use existing validator but enhance with context information
-        var baseValidation = await _validator.ValidateExtractionAsync(sourceCode, options, cancellationToken);
+        TypeScriptValidationResult baseValidation = await _validator.ValidateExtractionAsync(sourceCode, options, cancellationToken);
         
         // Add context-specific validation
         var errors = new List<string>(baseValidation.Errors);
@@ -240,7 +240,7 @@ public class TypeScriptMethodExtractor
         }
         
         // Check for complex return scenarios
-        var modifiedParams = context.RequiredParameters.Where(p => p.IsModified).ToList();
+        List<RequiredParameter> modifiedParams = context.RequiredParameters.Where(p => p.IsModified).ToList();
         if (modifiedParams.Count > 3)
         {
             warnings.Add($"Method modifies {modifiedParams.Count} external variables - complex return handling required");
@@ -263,11 +263,11 @@ public class TypeScriptMethodExtractor
         try
         {
             // Parse the refactored code to check for syntax errors
-            var ast = await _astParser.ParseAsync(refactoredCode, fileName);
+            TypeScriptAst ast = await _astParser.ParseAsync(refactoredCode, fileName);
             
             if (ast.Diagnostics?.Any(d => d.Code >= 1000) == true)
             {
-                var errors = ast.Diagnostics
+                List<string> errors = ast.Diagnostics
                     .Where(d => d.Code >= 1000)
                     .Select(d => $"Line {d.Start.Line + 1}: {d.Message}")
                     .ToList();
@@ -296,7 +296,7 @@ public class TypeScriptMethodExtractor
     /// </summary>
     private static string ExtractCodeLines(string sourceCode, int startLine, int endLine)
     {
-        var lines = sourceCode.Split('\n');
+        string[] lines = sourceCode.Split('\n');
         
         if (endLine > lines.Length)
         {
@@ -304,13 +304,13 @@ public class TypeScriptMethodExtractor
         }
         
         var extractedLines = new List<string>();
-        for (var i = startLine - 1; i < endLine; i++)
+        for (int i = startLine - 1; i < endLine; i++)
         {
             extractedLines.Add(lines[i]);
         }
         
         // Normalize indentation
-        var minIndent = extractedLines
+        int minIndent = extractedLines
             .Where(l => !string.IsNullOrWhiteSpace(l))
             .Select(l => l.Length - l.TrimStart().Length)
             .DefaultIfEmpty(0)
@@ -337,18 +337,18 @@ public class TypeScriptMethodExtractor
         ContextPreservationResult context,
         TypeScriptAst ast)
     {
-        var lines = sourceCode.Split('\n').ToList();
+        List<string> lines = sourceCode.Split('\n').ToList();
         
         // Replace the extracted lines with the method call
-        var callIndentation = GetLineIndentation(lines[options.StartLine - 1]);
-        var indentedCall = callIndentation + methodCall;
+        string callIndentation = GetLineIndentation(lines[options.StartLine - 1]);
+        string indentedCall = callIndentation + methodCall;
         
         // Remove the extracted lines and insert the method call
         lines.RemoveRange(options.StartLine - 1, options.EndLine - options.StartLine + 1);
         lines.Insert(options.StartLine - 1, indentedCall);
         
         // Find the best location to insert the new method using AST information
-        var insertLocation = await FindBestMethodInsertLocationWithAstAsync(
+        int insertLocation = await FindBestMethodInsertLocationWithAstAsync(
             lines, 
             options, 
             context, 
@@ -362,8 +362,8 @@ public class TypeScriptMethodExtractor
         }
         
         // Insert the generated method
-        var methodLines = generatedMethod.Split('\n');
-        for (var i = methodLines.Length - 1; i >= 0; i--)
+        string[] methodLines = generatedMethod.Split('\n');
+        for (int i = methodLines.Length - 1; i >= 0; i--)
         {
             lines.Insert(insertLocation, methodLines[i]);
         }
@@ -394,20 +394,20 @@ public class TypeScriptMethodExtractor
             if (context is { ThisContextType: "method", ScopeAnalysis.ParentClass: not null })
             {
                 // Find the class node that contains our extraction range
-                var classNode = ast.Classes.FirstOrDefault(c => c.Name == context.ScopeAnalysis.ParentClass.Name);
+                ClassInfo? classNode = ast.Classes.FirstOrDefault(c => c.Name == context.ScopeAnalysis.ParentClass.Name);
                 if (classNode != null)
                 {
                     // For class methods, we should insert the new method inside the class
                     // Find the method that contains our extraction range
-                    var containingMethod = ast.Functions
+                    FunctionInfo? containingMethod = ast.Functions
                         .FirstOrDefault(f => f.Name == context.ScopeAnalysis?.ParentFunction?.Name);
                     
                     if (containingMethod != null)
                     {
                         // We need to find where this method ends in the modified source
                         // Since we've already removed lines, we need to adjust the line number
-                        var linesRemoved = options.EndLine - options.StartLine + 1;
-                        var adjustedLine = options.StartLine - 1; // Where we inserted the method call
+                        int linesRemoved = options.EndLine - options.StartLine + 1;
+                        int adjustedLine = options.StartLine - 1; // Where we inserted the method call
                         
                         // Look for the next method or end of class after our insertion point
                         // This is still better than naive brace counting but not perfect
@@ -418,12 +418,12 @@ public class TypeScriptMethodExtractor
             }
             
             // If extracting from top-level code, insert after the last import
-            var lastImport = ast.Imports.LastOrDefault();
+            ImportInfo? lastImport = ast.Imports.LastOrDefault();
             if (lastImport != null)
             {
                 // Find the line number of the last import
                 // Note: AST line numbers are 0-based
-                var lastImportLine = FindLineContaining(lines, $"from '{lastImport.Module}'") 
+                int lastImportLine = FindLineContaining(lines, $"from '{lastImport.Module}'") 
                                      ?? FindLineContaining(lines, $"from \"{lastImport.Module}\"") 
                                      ?? 0;
                 
@@ -434,16 +434,16 @@ public class TypeScriptMethodExtractor
             }
             
             // If no imports, look for the first function or class
-            var firstFunction = ast.Functions.FirstOrDefault();
-            var firstClass = ast.Classes.FirstOrDefault();
+            FunctionInfo? firstFunction = ast.Functions.FirstOrDefault();
+            ClassInfo? firstClass = ast.Classes.FirstOrDefault();
             
             if (firstFunction != null || firstClass != null)
             {
                 // Insert before the first function or class
-                var searchTerm = firstFunction?.Name ?? firstClass?.Name ?? "";
+                string searchTerm = firstFunction?.Name ?? firstClass?.Name ?? "";
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
-                    var foundLine = FindLineContaining(lines, searchTerm) ?? lines.Count;
+                    int foundLine = FindLineContaining(lines, searchTerm) ?? lines.Count;
                     return Math.Max(0, foundLine - 1);
                 }
             }
@@ -480,7 +480,7 @@ public class TypeScriptMethodExtractor
     /// </summary>
     private static string GetLineIndentation(string line)
     {
-        var match = Regex.Match(line, @"^(\s*)");
+        Match match = Regex.Match(line, @"^(\s*)");
         return match.Success ? match.Groups[1].Value : "";
     }
 

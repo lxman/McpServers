@@ -16,7 +16,7 @@ public class WorkspaceInfoService(GitService gitService)
         try
         {
             // Use the GitService for enhanced Git information
-            var gitStatus = await gitService.GetStatusAsync();
+            object gitStatus = await gitService.GetStatusAsync();
             return gitStatus;
         }
         catch

@@ -19,7 +19,7 @@ public abstract class ArchitectureToolsBase(CodeEditorConfigurationService confi
     /// </summary>
     protected static bool IsExcludedDirectory(string directory)
     {
-        var dirName = Path.GetFileName(directory).ToLowerInvariant();
+        string dirName = Path.GetFileName(directory).ToLowerInvariant();
         var excludedDirs = new[] 
         { 
             ".git", ".vs", ".vscode", "bin", "obj", "node_modules", 
@@ -131,8 +131,8 @@ public abstract class ArchitectureToolsBase(CodeEditorConfigurationService confi
     /// </summary>
     protected static double CalculateTechnologyOverlap(HashSet<string> tech1, HashSet<string> tech2)
     {
-        var sharedTech = tech1.Intersect(tech2).Count();
-        var totalTech = tech1.Union(tech2).Count();
+        int sharedTech = tech1.Intersect(tech2).Count();
+        int totalTech = tech1.Union(tech2).Count();
         
         return totalTech > 0 ? (double)sharedTech / totalTech : 0.0;
     }
@@ -146,8 +146,8 @@ public abstract class ArchitectureToolsBase(CodeEditorConfigurationService confi
     /// </summary>
     protected static double CalculateNamingSimilarity(string name1, string name2)
     {
-        var normalized1 = name1.ToLowerInvariant();
-        var normalized2 = name2.ToLowerInvariant();
+        string normalized1 = name1.ToLowerInvariant();
+        string normalized2 = name2.ToLowerInvariant();
 
         if (normalized1.Contains(normalized2) || normalized2.Contains(normalized1))
             return 0.3; // 30% bonus for name similarity

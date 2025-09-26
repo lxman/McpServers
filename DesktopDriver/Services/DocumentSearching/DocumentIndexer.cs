@@ -441,17 +441,21 @@ public class DocumentIndexer : IDisposable
             DocumentContent content = await _documentProcessor.ExtractContent(fileInfo.FullName);
             
             // Create Lucene document
-            var doc = new Document();
+            Document doc =
+            [
+                new StringField("filepath", content.FilePath, Field.Store.YES),
+                new TextField("filename", content.Metadata.FileName, Field.Store.YES),
+                new TextField("title", content.Title, Field.Store.YES),
+                new TextField("content", content.PlainText, Field.Store.YES),
+                new StringField("doctype", content.DocumentType.ToString(), Field.Store.YES),
+                new StringField("modified", content.Metadata.ModifiedDate.ToString("O"), Field.Store.YES),
+                new StringField("filesize", content.Metadata.FileSizeBytes.ToString(), Field.Store.YES)
+
+                // Add author and other metadata if available
+            ];
             
             // Add fields
-            doc.Add(new StringField("filepath", content.FilePath, Field.Store.YES));
-            doc.Add(new TextField("filename", content.Metadata.FileName, Field.Store.YES));
-            doc.Add(new TextField("title", content.Title, Field.Store.YES));
-            doc.Add(new TextField("content", content.PlainText, Field.Store.YES));
-            doc.Add(new StringField("doctype", content.DocumentType.ToString(), Field.Store.YES));
-            doc.Add(new StringField("modified", content.Metadata.ModifiedDate.ToString("O"), Field.Store.YES));
-            doc.Add(new StringField("filesize", content.Metadata.FileSizeBytes.ToString(), Field.Store.YES));
-            
+
             // Add author and other metadata if available
             if (!string.IsNullOrWhiteSpace(content.Metadata.Author))
                 doc.Add(new TextField("author", content.Metadata.Author, Field.Store.YES));

@@ -1,4 +1,5 @@
 ﻿using McpCodeEditor.Interfaces;
+using McpCodeEditor.Models;
 using McpCodeEditor.Models.Options;
 using McpCodeEditor.Models.Refactoring;
 using McpCodeEditor.Models.Refactoring.CSharp;
@@ -102,7 +103,7 @@ namespace Test
             };
 
             // Setup validator to return success using factory method
-            var validationResult = MethodExtractionValidationResult.Success(extractedMethodInfo);
+            MethodExtractionValidationResult validationResult = MethodExtractionValidationResult.Success(extractedMethodInfo);
             validationResult.Analysis = new CSharpExtractionAnalysis
             {
                 ContainingMethodName = "Calculate",
@@ -120,7 +121,7 @@ namespace Test
             )).ReturnsAsync(validationResult);
 
             // Act
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success);
@@ -128,7 +129,7 @@ namespace Test
             Assert.NotNull(result.Changes);
             Assert.Single(result.Changes);
             
-            var change = result.Changes.First();
+            FileChange change = result.Changes.First();
             Assert.Contains("private int CalculateSum(int x, int y)", change.ModifiedContent);
             Assert.Contains("return result;", change.ModifiedContent);
         }
@@ -167,7 +168,7 @@ namespace Test
             )).ReturnsAsync(validationResult);
 
             // Act
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.False(result.Success);
@@ -224,7 +225,7 @@ public class Test
             };
 
             // Setup validator for single return value
-            var validationResult = MethodExtractionValidationResult.Success(extractedMethodInfo);
+            MethodExtractionValidationResult validationResult = MethodExtractionValidationResult.Success(extractedMethodInfo);
             validationResult.Analysis = new CSharpExtractionAnalysis
             {
                 ContainingMethodName = "Process",
@@ -242,11 +243,11 @@ public class Test
             )).ReturnsAsync(validationResult);
 
             // Act
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success);
-            var change = result.Changes.First();
+            FileChange change = result.Changes.First();
             Assert.Contains("private int CalculateSum(int x, int y)", change.ModifiedContent);
             Assert.Contains("return sum;", change.ModifiedContent);
             // Should create proper variable declaration in the call
@@ -313,7 +314,7 @@ namespace SimpleTest
             };
 
             // Setup proper validation result
-            var validationResult = MethodExtractionValidationResult.Success(extractedMethodInfo);
+            MethodExtractionValidationResult validationResult = MethodExtractionValidationResult.Success(extractedMethodInfo);
             validationResult.Analysis = new CSharpExtractionAnalysis
             {
                 ContainingMethodName = "Calculate",
@@ -331,11 +332,11 @@ namespace SimpleTest
             )).ReturnsAsync(validationResult);
 
             // Act
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success);
-            var change = result.Changes.First();
+            FileChange change = result.Changes.First();
             
             // The critical assertion - should include type declaration
             // because 'result' is declared within the extracted code
@@ -343,7 +344,7 @@ namespace SimpleTest
             
             // Check that it's not just an assignment without type (need to be more specific)
             // Split by lines and check that no line starts with just "result = " (without leading type)
-            var lines = change.ModifiedContent.Split('\n');
+            string[] lines = change.ModifiedContent.Split('\n');
             Assert.DoesNotContain(lines, line => line.Trim() == "result = CalculateDoubledSum(x, y);");
         }
 
@@ -419,7 +420,7 @@ namespace Test
             };
 
             // Setup validation with multiple modified variables
-            var validationResult = MethodExtractionValidationResult.Success(extractedMethodInfo);
+            MethodExtractionValidationResult validationResult = MethodExtractionValidationResult.Success(extractedMethodInfo);
             validationResult.Analysis = new CSharpExtractionAnalysis
             {
                 ContainingMethodName = "ProcessData",
@@ -438,14 +439,14 @@ namespace Test
             )).ReturnsAsync(validationResult);
 
             // Act
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success);
             Assert.Contains("warning", result.Message.ToLower());
             
             // Check metadata
-            var metadata = result.Metadata;
+            Dictionary<string, object> metadata = result.Metadata;
             Assert.NotNull(metadata);
             Assert.Contains("validationWarnings", metadata.Keys);
             Assert.Contains("variable", metadata["validationWarnings"].ToString()!.ToLower());

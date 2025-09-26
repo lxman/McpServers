@@ -64,7 +64,7 @@ public class DiffService
                 return new { success = false, error = "Either modified_path or modified_content must be provided" };
             }
 
-            var result = format.ToLowerInvariant() switch
+            object result = format.ToLowerInvariant() switch
             {
                 "side-by-side" or "sidebyside" => GenerateSideBySideDiff(original, modified, originalPath, modifiedPath),
                 "inline" => GenerateInlineDiff(original, modified, originalPath, modifiedPath),
@@ -81,10 +81,10 @@ public class DiffService
 
     private object GenerateUnifiedDiff(string original, string modified, string? originalPath, string? modifiedPath, int contextLines)
     {
-        var diff = _differ.CreateDiffs(original, modified, true, false, new LineChunker());
-        var unifiedDiff = BuildUnifiedDiff(diff, originalPath ?? "original", modifiedPath ?? "modified", contextLines);
+        DiffResult? diff = _differ.CreateDiffs(original, modified, true, false, new LineChunker());
+        string unifiedDiff = BuildUnifiedDiff(diff, originalPath ?? "original", modifiedPath ?? "modified", contextLines);
 
-        var stats = CalculateStats(diff);
+        object stats = CalculateStats(diff);
 
         return new
         {
@@ -100,7 +100,7 @@ public class DiffService
 
     private object GenerateSideBySideDiff(string original, string modified, string? originalPath, string? modifiedPath)
     {
-        var diffResult = _sideBySideDiffBuilder.BuildDiffModel(original, modified);
+        SideBySideDiffModel? diffResult = _sideBySideDiffBuilder.BuildDiffModel(original, modified);
 
         var leftLines = diffResult.OldText.Lines.Select(line => new
         {
@@ -146,7 +146,7 @@ public class DiffService
 
     private object GenerateInlineDiff(string original, string modified, string? originalPath, string? modifiedPath)
     {
-        var diffResult = _inlineDiffBuilder.BuildDiffModel(original, modified);
+        DiffPaneModel? diffResult = _inlineDiffBuilder.BuildDiffModel(original, modified);
 
         var lines = diffResult.Lines.Select((line, index) => new
         {
@@ -190,24 +190,24 @@ public class DiffService
 
         while (pieceIndex < diff.DiffBlocks.Count)
         {
-            var block = diff.DiffBlocks[pieceIndex];
+            DiffBlock? block = diff.DiffBlocks[pieceIndex];
 
             // Calculate hunk header
-            var originalStart = Math.Max(1, originalLineNumber - contextLines);
-            var modifiedStart = Math.Max(1, modifiedLineNumber - contextLines);
+            int originalStart = Math.Max(1, originalLineNumber - contextLines);
+            int modifiedStart = Math.Max(1, modifiedLineNumber - contextLines);
 
             // Calculate hunk size
-            var originalEnd = originalLineNumber + block.DeleteCountA + contextLines;
-            var modifiedEnd = modifiedLineNumber + block.InsertCountB + contextLines;
+            int originalEnd = originalLineNumber + block.DeleteCountA + contextLines;
+            int modifiedEnd = modifiedLineNumber + block.InsertCountB + contextLines;
 
-            var originalCount = originalEnd - originalStart + 1;
-            var modifiedCount = modifiedEnd - modifiedStart + 1;
+            int originalCount = originalEnd - originalStart + 1;
+            int modifiedCount = modifiedEnd - modifiedStart + 1;
 
             result.AppendLine($"@@ -{originalStart},{originalCount} +{modifiedStart},{modifiedCount} @@");
 
             // Add context lines before
-            var contextStart = Math.Max(0, originalLineNumber - contextLines - 1);
-            for (var i = contextStart; i < originalLineNumber - 1; i++)
+            int contextStart = Math.Max(0, originalLineNumber - contextLines - 1);
+            for (int i = contextStart; i < originalLineNumber - 1; i++)
             {
                 if (i < diff.PiecesOld.Count)
                 {
@@ -234,8 +234,8 @@ public class DiffService
             }
 
             // Add context lines after
-            var contextEnd = Math.Min(diff.PiecesOld.Count, originalLineNumber + block.DeleteCountA + contextLines);
-            for (var i = originalLineNumber + block.DeleteCountA; i < contextEnd; i++)
+            int contextEnd = Math.Min(diff.PiecesOld.Count, originalLineNumber + block.DeleteCountA + contextLines);
+            for (int i = originalLineNumber + block.DeleteCountA; i < contextEnd; i++)
             {
                 result.AppendLine($" {diff.PiecesOld[i]}");
             }
@@ -253,7 +253,7 @@ public class DiffService
         var linesAdded = 0;
         var linesDeleted = 0;
 
-        foreach (var block in diff.DiffBlocks)
+        foreach (DiffBlock? block in diff.DiffBlocks)
         {
             linesDeleted += block.DeleteCountA;
             linesAdded += block.InsertCountB;

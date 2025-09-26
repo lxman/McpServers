@@ -80,20 +80,20 @@ public static class IdentifierValidation
     public static string GenerateVariableName(string expression)
     {
         // Simple heuristics for generating variable names
-        var cleaned = expression.Trim();
+        string cleaned = expression.Trim();
 
         // Handle method calls
         if (cleaned.Contains('(') && cleaned.Contains(')'))
         {
-            var methodPart = cleaned[..cleaned.IndexOf('(')];
-            var lastMethod = methodPart.Split('.').Last();
+            string methodPart = cleaned[..cleaned.IndexOf('(')];
+            string lastMethod = methodPart.Split('.').Last();
             return ToCamelCase($"{lastMethod}Result");
         }
 
         // Handle property access
         if (cleaned.Contains('.'))
         {
-            var parts = cleaned.Split('.');
+            string[] parts = cleaned.Split('.');
             if (parts.Length >= 2)
             {
                 return ToCamelCase($"{parts[^2]}{parts[^1]}");
@@ -136,7 +136,7 @@ public static class IdentifierValidation
     /// </summary>
     public static string GeneratePropertyName(string fieldName)
     {
-        var trimmed = fieldName.TrimStart('_');
+        string trimmed = fieldName.TrimStart('_');
         if (string.IsNullOrEmpty(trimmed))
             return "Property";
 
@@ -151,7 +151,7 @@ public static class IdentifierValidation
         if (string.IsNullOrWhiteSpace(input))
             return "temp";
 
-        var result = input.Trim();
+        string result = input.Trim();
         if (result.Length == 0)
             return "temp";
 
@@ -161,7 +161,7 @@ public static class IdentifierValidation
 
         for (var i = 0; i < result.Length; i++)
         {
-            var c = result[i];
+            char c = result[i];
             if (char.IsLetterOrDigit(c))
             {
                 if (capitalizeNext && char.IsLetter(c))

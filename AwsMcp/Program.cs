@@ -22,9 +22,9 @@ public class Program
         Console.SetOut(TextWriter.Null);
         Console.SetError(TextWriter.Null);
         
-        var builder = Host.CreateApplicationBuilder(args);
+        HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
         
-        var configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        string configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
         builder.Configuration
             .AddJsonFile(configPath, optional: true, reloadOnChange: true)
             .AddEnvironmentVariables()
@@ -57,7 +57,7 @@ public class Program
             .WithResources<EmptyResourceProvider>()
             .WithPrompts<EmptyPromptProvider>();
 
-        var host = builder.Build();
+        IHost host = builder.Build();
         
         await host.RunAsync();
     }
@@ -74,7 +74,7 @@ public class Program
         }
         
         // Ensure the PATH includes a .NET directory
-        var path = Environment.GetEnvironmentVariable("PATH") ?? "";
+        string path = Environment.GetEnvironmentVariable("PATH") ?? "";
         const string dotnetPath = @"C:\Program Files\dotnet";
         if (!path.Contains(dotnetPath, StringComparison.OrdinalIgnoreCase))
         {

@@ -10,7 +10,7 @@ public class FileOperationsService(CodeEditorConfigurationService config)
     {
         try
         {
-            var fullPath = ValidateAndResolvePath(path);
+            string fullPath = ValidateAndResolvePath(path);
 
             if (!File.Exists(fullPath))
             {
@@ -28,8 +28,8 @@ public class FileOperationsService(CodeEditorConfigurationService config)
                 return new { success = false, error = $"File extension not allowed: {Path.GetExtension(fullPath)}" };
             }
 
-            var encodingObj = GetEncoding(encoding);
-            var content = await File.ReadAllTextAsync(fullPath, encodingObj);
+            Encoding encodingObj = GetEncoding(encoding);
+            string content = await File.ReadAllTextAsync(fullPath, encodingObj);
 
             return new
             {
@@ -51,11 +51,11 @@ public class FileOperationsService(CodeEditorConfigurationService config)
     {
         try
         {
-            var fullPath = ValidateAndResolvePath(path);
+            string fullPath = ValidateAndResolvePath(path);
 
             if (createDirectories)
             {
-                var directory = Path.GetDirectoryName(fullPath);
+                string? directory = Path.GetDirectoryName(fullPath);
                 if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 {
                     Directory.CreateDirectory(directory);
@@ -67,7 +67,7 @@ public class FileOperationsService(CodeEditorConfigurationService config)
                 return new { success = false, error = $"File extension not allowed: {Path.GetExtension(fullPath)}" };
             }
 
-            var encodingObj = GetEncoding(encoding);
+            Encoding encodingObj = GetEncoding(encoding);
             await File.WriteAllTextAsync(fullPath, content, encodingObj);
 
             var fileInfo = new FileInfo(fullPath);
@@ -91,22 +91,22 @@ public class FileOperationsService(CodeEditorConfigurationService config)
     {
         try
         {
-            var fullPath = ValidateAndResolvePath(path);
+            string fullPath = ValidateAndResolvePath(path);
 
             if (!Directory.Exists(fullPath))
             {
                 return new { success = false, error = $"Directory not found: {path}" };
             }
 
-            var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+            SearchOption searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
             var allEntries = new List<object>();
 
             // Get directories
-            var directories = Directory.GetDirectories(fullPath, "*", searchOption)
+            IEnumerable<string> directories = Directory.GetDirectories(fullPath, "*", searchOption)
                 .Where(dir => includeHidden || !IsHidden(dir))
                 .Where(dir => !IsExcludedDirectory(dir));
 
-            foreach (var dir in directories)
+            foreach (string dir in directories)
             {
                 var dirInfo = new DirectoryInfo(dir);
                 allEntries.Add(new
@@ -121,7 +121,7 @@ public class FileOperationsService(CodeEditorConfigurationService config)
             }
 
             // Get files
-            var files = Directory.GetFiles(fullPath, "*", searchOption)
+            IEnumerable<string> files = Directory.GetFiles(fullPath, "*", searchOption)
                 .Where(file => includeHidden || !IsHidden(file))
                 .Where(file => IsAllowedExtension(file));
 
@@ -133,7 +133,7 @@ public class FileOperationsService(CodeEditorConfigurationService config)
                 files = files.Where(file => matcher.Match(Path.GetFileName(file)).HasMatches);
             }
 
-            foreach (var file in files)
+            foreach (string file in files)
             {
                 var fileInfo = new FileInfo(file);
                 allEntries.Add(new
@@ -168,7 +168,7 @@ public class FileOperationsService(CodeEditorConfigurationService config)
     {
         try
         {
-            var fullPath = ValidateAndResolvePath(path);
+            string fullPath = ValidateAndResolvePath(path);
 
             if (!File.Exists(fullPath) && !Directory.Exists(fullPath))
             {
@@ -199,7 +199,7 @@ public class FileOperationsService(CodeEditorConfigurationService config)
     {
         try
         {
-            var fullPath = ValidateAndResolvePath(path);
+            string fullPath = ValidateAndResolvePath(path);
 
             if (!Directory.Exists(fullPath))
             {
@@ -207,7 +207,7 @@ public class FileOperationsService(CodeEditorConfigurationService config)
             }
 
             var results = new List<object>();
-            var searchOptions = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
+            RegexOptions searchOptions = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
             Regex? searchRegex = null;
 
             if (regex)
@@ -225,12 +225,12 @@ public class FileOperationsService(CodeEditorConfigurationService config)
             var matcher = new Matcher();
             matcher.AddInclude(filePattern);
 
-            var files = Directory.GetFiles(fullPath, "*", SearchOption.AllDirectories)
+            IEnumerable<string> files = Directory.GetFiles(fullPath, "*", SearchOption.AllDirectories)
                 .Where(file => matcher.Match(Path.GetFileName(file)).HasMatches)
                 .Where(file => IsAllowedExtension(file))
                 .Where(file => !IsExcludedDirectory(Path.GetDirectoryName(file) ?? ""));
 
-            foreach (var file in files)
+            foreach (string file in files)
             {
                 if (results.Count >= maxResults) break;
 
@@ -239,17 +239,17 @@ public class FileOperationsService(CodeEditorConfigurationService config)
                     var fileInfo = new FileInfo(file);
                     if (fileInfo.Length > config.MaxFileSize) continue;
 
-                    var content = await File.ReadAllTextAsync(file);
-                    var lines = content.Split('\n');
+                    string content = await File.ReadAllTextAsync(file);
+                    string[] lines = content.Split('\n');
                     var fileMatches = new List<object>();
 
                     for (var lineNumber = 0; lineNumber < lines.Length; lineNumber++)
                     {
-                        var line = lines[lineNumber];
+                        string line = lines[lineNumber];
 
                         if (regex && searchRegex != null)
                         {
-                            var matches = searchRegex.Matches(line);
+                            MatchCollection matches = searchRegex.Matches(line);
                             foreach (Match match in matches)
                             {
                                 fileMatches.Add(new
@@ -264,8 +264,8 @@ public class FileOperationsService(CodeEditorConfigurationService config)
                         }
                         else
                         {
-                            var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-                            var startIndex = line.IndexOf(query, comparison);
+                            StringComparison comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+                            int startIndex = line.IndexOf(query, comparison);
                             if (startIndex >= 0)
                             {
                                 fileMatches.Add(new
@@ -317,13 +317,13 @@ public class FileOperationsService(CodeEditorConfigurationService config)
     private string ValidateAndResolvePath(string path)
     {
         // Convert to absolute path
-        var fullPath = Path.IsPathRooted(path) ? path : Path.Combine(config.DefaultWorkspace, path);
+        string fullPath = Path.IsPathRooted(path) ? path : Path.Combine(config.DefaultWorkspace, path);
         fullPath = Path.GetFullPath(fullPath);
 
         // Security check: ensure path is within workspace if restricted
         if (config.Security.RestrictToWorkspace)
         {
-            var workspaceFullPath = Path.GetFullPath(config.DefaultWorkspace);
+            string workspaceFullPath = Path.GetFullPath(config.DefaultWorkspace);
             if (!fullPath.StartsWith(workspaceFullPath, StringComparison.OrdinalIgnoreCase))
             {
                 throw new UnauthorizedAccessException($"Access denied: Path outside workspace: {path}");
@@ -331,9 +331,9 @@ public class FileOperationsService(CodeEditorConfigurationService config)
         }
 
         // Check blocked paths
-        foreach (var blockedPath in config.Security.BlockedPaths)
+        foreach (string blockedPath in config.Security.BlockedPaths)
         {
-            var blockedFullPath = Path.GetFullPath(blockedPath);
+            string blockedFullPath = Path.GetFullPath(blockedPath);
             if (fullPath.StartsWith(blockedFullPath, StringComparison.OrdinalIgnoreCase))
             {
                 throw new UnauthorizedAccessException($"Access denied: Blocked path: {path}");
@@ -345,13 +345,13 @@ public class FileOperationsService(CodeEditorConfigurationService config)
 
     private bool IsAllowedExtension(string path)
     {
-        var extension = Path.GetExtension(path).ToLowerInvariant();
+        string extension = Path.GetExtension(path).ToLowerInvariant();
         return config.AllowedExtensions.Contains(extension) || string.IsNullOrEmpty(extension);
     }
 
     private bool IsExcludedDirectory(string path)
     {
-        var dirName = Path.GetFileName(path);
+        string dirName = Path.GetFileName(path);
         return config.ExcludedDirectories.Contains(dirName);
     }
 
@@ -359,7 +359,7 @@ public class FileOperationsService(CodeEditorConfigurationService config)
     {
         try
         {
-            var attributes = File.GetAttributes(path);
+            FileAttributes attributes = File.GetAttributes(path);
             return (attributes & FileAttributes.Hidden) == FileAttributes.Hidden;
         }
         catch
@@ -370,7 +370,7 @@ public class FileOperationsService(CodeEditorConfigurationService config)
 
     private string GetRelativePath(string fullPath)
     {
-        var workspaceFullPath = Path.GetFullPath(config.DefaultWorkspace);
+        string workspaceFullPath = Path.GetFullPath(config.DefaultWorkspace);
         if (fullPath.StartsWith(workspaceFullPath, StringComparison.OrdinalIgnoreCase))
         {
             return Path.GetRelativePath(workspaceFullPath, fullPath);

@@ -57,8 +57,8 @@ public class WorkspaceManagementService : IWorkspaceManagementService
                 if (_environmentInitialized)
                 {
                     _logger?.LogInformation("Developer environment initialized successfully");
-                    var envInfo = _devEnvironment.GetEnvironmentInfo();
-                    foreach (var kvp in envInfo)
+                    Dictionary<string, string> envInfo = _devEnvironment.GetEnvironmentInfo();
+                    foreach (KeyValuePair<string, string> kvp in envInfo)
                     {
                         _logger?.LogInformation($"  {kvp.Key}: {kvp.Value}");
                     }
@@ -127,7 +127,7 @@ public class WorkspaceManagementService : IWorkspaceManagementService
                     LanguageNames.CSharp);
                 
                 // Add project to the solution
-                var solution = adhocWorkspace.CurrentSolution;
+                Solution solution = adhocWorkspace.CurrentSolution;
                 solution = solution.AddProject(projectInfo);
                 
                 // Apply changes to workspace
@@ -137,7 +137,7 @@ public class WorkspaceManagementService : IWorkspaceManagementService
                 }
                 
                 _currentSolution = adhocWorkspace.CurrentSolution;
-                var project = _currentSolution.GetProject(projectId);
+                Project? project = _currentSolution.GetProject(projectId);
                 if (project != null)
                 {
                     _projectCache["MinimalProject"] = project;
@@ -159,7 +159,7 @@ public class WorkspaceManagementService : IWorkspaceManagementService
     {
         try
         {
-            var workspaceRoot = _config.DefaultWorkspace;
+            string workspaceRoot = _config.DefaultWorkspace;
             
             // Validate workspace root exists
             if (!Directory.Exists(workspaceRoot))
@@ -171,18 +171,18 @@ public class WorkspaceManagementService : IWorkspaceManagementService
             var msbuildWorkspace = (MSBuildWorkspace)_workspace!;
 
             // Find solution or project files
-            var solutionFiles = Directory.GetFiles(workspaceRoot, "*.sln", SearchOption.AllDirectories);
-            var projectFiles = Directory.GetFiles(workspaceRoot, "*.csproj", SearchOption.AllDirectories);
+            string[] solutionFiles = Directory.GetFiles(workspaceRoot, "*.sln", SearchOption.AllDirectories);
+            string[] projectFiles = Directory.GetFiles(workspaceRoot, "*.csproj", SearchOption.AllDirectories);
 
             _logger?.LogInformation($"Found {solutionFiles.Length} solution files and {projectFiles.Length} project files");
 
             if (solutionFiles.Any())
             {
-                var solutionPath = solutionFiles.First();
+                string solutionPath = solutionFiles.First();
                 _logger?.LogInformation($"Loading solution: {solutionPath}");
                 _currentSolution = await msbuildWorkspace.OpenSolutionAsync(solutionPath, cancellationToken: cancellationToken);
 
-                foreach (var project in _currentSolution.Projects)
+                foreach (Project project in _currentSolution.Projects)
                 {
                     _projectCache[project.FilePath ?? project.Name] = project;
                 }
@@ -190,18 +190,18 @@ public class WorkspaceManagementService : IWorkspaceManagementService
             else if (projectFiles.Any())
             {
                 // Load the first project and use its solution
-                var firstProjectPath = projectFiles.First();
+                string firstProjectPath = projectFiles.First();
                 _logger?.LogInformation($"Loading project: {firstProjectPath}");
-                var firstProject = await msbuildWorkspace.OpenProjectAsync(firstProjectPath, cancellationToken: cancellationToken);
+                Project firstProject = await msbuildWorkspace.OpenProjectAsync(firstProjectPath, cancellationToken: cancellationToken);
                 _currentSolution = firstProject.Solution;
                 _projectCache[firstProjectPath] = firstProject;
 
                 // Add other projects to the solution
-                foreach (var projectPath in projectFiles.Skip(1).Take(9)) // Limit to avoid performance issues
+                foreach (string projectPath in projectFiles.Skip(1).Take(9)) // Limit to avoid performance issues
                 {
                     try
                     {
-                        var project = await msbuildWorkspace.OpenProjectAsync(projectPath, cancellationToken: cancellationToken);
+                        Project project = await msbuildWorkspace.OpenProjectAsync(projectPath, cancellationToken: cancellationToken);
                         _projectCache[projectPath] = project;
                     }
                     catch (Exception ex)
@@ -231,7 +231,7 @@ public class WorkspaceManagementService : IWorkspaceManagementService
     {
         try
         {
-            var workspaceRoot = _config.DefaultWorkspace;
+            string workspaceRoot = _config.DefaultWorkspace;
             
             // Validate workspace root exists
             if (!Directory.Exists(workspaceRoot))
@@ -254,13 +254,13 @@ public class WorkspaceManagementService : IWorkspaceManagementService
                 parseOptions: new CSharpParseOptions(LanguageVersion.Latest));
 
             // Add project to the solution
-            var solution = adhocWorkspace.CurrentSolution;
+            Solution solution = adhocWorkspace.CurrentSolution;
             solution = solution.AddProject(projectInfo);
             
             // Add default references
-            var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
-            var systemCore = MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location);
-            var systemRuntime = MetadataReference.CreateFromFile(Assembly.Load("System.Runtime").Location);
+            PortableExecutableReference mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
+            PortableExecutableReference systemCore = MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location);
+            PortableExecutableReference systemRuntime = MetadataReference.CreateFromFile(Assembly.Load("System.Runtime").Location);
             
             solution = solution
                 .AddMetadataReference(projectId, mscorlib)
@@ -268,18 +268,18 @@ public class WorkspaceManagementService : IWorkspaceManagementService
                 .AddMetadataReference(projectId, systemRuntime);
 
             // Add C# files to the project
-            var csFiles = Directory.GetFiles(workspaceRoot, "*.cs", SearchOption.AllDirectories)
+            List<string> csFiles = Directory.GetFiles(workspaceRoot, "*.cs", SearchOption.AllDirectories)
                 .Where(f => !f.Contains("\\bin\\") && !f.Contains("\\obj\\"))
                 .Take(100).ToList(); // Limit for performance
 
             _logger?.LogInformation($"Found {csFiles.Count} C# files to add to fallback workspace");
 
             var filesAdded = 0;
-            foreach (var filePath in csFiles)
+            foreach (string filePath in csFiles)
             {
                 try
                 {
-                    var fileContent = await File.ReadAllTextAsync(filePath, cancellationToken);
+                    string fileContent = await File.ReadAllTextAsync(filePath, cancellationToken);
                     var documentInfo = DocumentInfo.Create(
                         DocumentId.CreateNewId(projectId),
                         Path.GetFileName(filePath),
@@ -305,7 +305,7 @@ public class WorkspaceManagementService : IWorkspaceManagementService
 
             // Update our references
             _currentSolution = adhocWorkspace.CurrentSolution;
-            var project = _currentSolution.GetProject(projectId);
+            Project? project = _currentSolution.GetProject(projectId);
             if (project != null)
             {
                 _projectCache[project.Name] = project;
@@ -335,8 +335,8 @@ public class WorkspaceManagementService : IWorkspaceManagementService
         
         if (_environmentInitialized)
         {
-            var envInfo = _devEnvironment.GetEnvironmentInfo();
-            foreach (var kvp in envInfo)
+            Dictionary<string, string> envInfo = _devEnvironment.GetEnvironmentInfo();
+            foreach (KeyValuePair<string, string> kvp in envInfo)
             {
                 status[$"Env_{kvp.Key}"] = kvp.Value;
             }

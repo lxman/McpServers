@@ -47,7 +47,7 @@ public class TypeScriptImportManager(
             }
 
             // Validate TypeScript file
-            var extension = Path.GetExtension(filePath).ToLowerInvariant();
+            string extension = Path.GetExtension(filePath).ToLowerInvariant();
             if (!IsTypeScriptFile(extension))
             {
                 return new RefactoringResult
@@ -58,10 +58,10 @@ public class TypeScriptImportManager(
             }
 
             // Read file content
-            var lines = await File.ReadAllLinesAsync(resolvedPath, cancellationToken);
+            string[] lines = await File.ReadAllLinesAsync(resolvedPath, cancellationToken);
 
             // Parse existing imports
-            var imports = ParseImports(lines);
+            List<TypeScriptImport> imports = ParseImports(lines);
             if (imports.Count == 0)
             {
                 return new RefactoringResult
@@ -72,7 +72,7 @@ public class TypeScriptImportManager(
             }
 
             // Detect if this is an Angular project
-            var isAngularProject = DetectAngularProject(imports, resolvedPath);
+            bool isAngularProject = DetectAngularProject(imports, resolvedPath);
 
             // Remove unused imports if requested
             if (removeUnused)
@@ -81,13 +81,13 @@ public class TypeScriptImportManager(
             }
 
             // Organize imports with Angular-specific logic
-            var organizedImports = OrganizeImportStatements(imports, sortAlphabetically, groupByType, isAngularProject);
+            List<TypeScriptImport> organizedImports = OrganizeImportStatements(imports, sortAlphabetically, groupByType, isAngularProject);
 
             // Generate new import section
-            var newImportLines = GenerateImportLines(organizedImports, isAngularProject);
+            List<string> newImportLines = GenerateImportLines(organizedImports, isAngularProject);
 
             // Find import section boundaries
-            var importBounds = FindImportBounds(lines);
+            ImportBounds importBounds = FindImportBounds(lines);
             if (!importBounds.HasImports)
             {
                 return new RefactoringResult
@@ -123,7 +123,7 @@ public class TypeScriptImportManager(
 
             if (previewOnly)
             {
-                var projectType = isAngularProject ? "Angular" : "TypeScript";
+                string projectType = isAngularProject ? "Angular" : "TypeScript";
                 return new RefactoringResult
                 {
                     Success = true,
@@ -135,7 +135,7 @@ public class TypeScriptImportManager(
             // Write modified content
             await File.WriteAllLinesAsync(resolvedPath, modifiedLines, cancellationToken);
 
-            var projectTypeMsg = isAngularProject ? "Angular" : "TypeScript";
+            string projectTypeMsg = isAngularProject ? "Angular" : "TypeScript";
             return new RefactoringResult
             {
                 Success = true,
@@ -185,7 +185,7 @@ public class TypeScriptImportManager(
             }
 
             // Validate TypeScript file
-            var extension = Path.GetExtension(filePath).ToLowerInvariant();
+            string extension = Path.GetExtension(filePath).ToLowerInvariant();
             if (!IsTypeScriptFile(extension))
             {
                 return new RefactoringResult
@@ -206,10 +206,10 @@ public class TypeScriptImportManager(
             }
 
             // Read file content
-            var lines = await File.ReadAllLinesAsync(resolvedPath, cancellationToken);
+            string[] lines = await File.ReadAllLinesAsync(resolvedPath, cancellationToken);
 
             // Parse existing imports
-            var existingImports = ParseImports(lines);
+            List<TypeScriptImport> existingImports = ParseImports(lines);
 
             // Check if import already exists
             if (ImportAlreadyExists(existingImports, importStatement))
@@ -222,10 +222,10 @@ public class TypeScriptImportManager(
             }
 
             // Detect if this is an Angular project for better placement
-            var isAngularProject = DetectAngularProject(existingImports, resolvedPath);
+            bool isAngularProject = DetectAngularProject(existingImports, resolvedPath);
 
             // Find insertion point with Angular-aware logic
-            var insertionPoint = FindImportInsertionPoint(lines, importStatement, isAngularProject);
+            int insertionPoint = FindImportInsertionPoint(lines, importStatement, isAngularProject);
 
             // Create modified content
             var modifiedLines = new List<string>(lines);
@@ -291,22 +291,22 @@ public class TypeScriptImportManager(
     private static bool DetectAngularProject(List<TypeScriptImport> imports, string filePath)
     {
         // Check for Angular imports
-        var hasAngularImports = imports.Any(i => 
+        bool hasAngularImports = imports.Any(i => 
             i.ModulePath.StartsWith("@angular/") ||
             i.ModulePath.StartsWith("@angular-") ||
             i.ModulePath.Contains("rxjs"));
 
         // Check for Angular file patterns
-        var hasAngularFilePattern = filePath.Contains(".component.") ||
-                                    filePath.Contains(".service.") ||
-                                    filePath.Contains(".module.") ||
-                                    filePath.Contains(".directive.") ||
-                                    filePath.Contains(".pipe.");
+        bool hasAngularFilePattern = filePath.Contains(".component.") ||
+                                     filePath.Contains(".service.") ||
+                                     filePath.Contains(".module.") ||
+                                     filePath.Contains(".directive.") ||
+                                     filePath.Contains(".pipe.");
 
         // Check for Angular project structure
-        var inAngularProject = filePath.Contains("src/app/") ||
-                               filePath.Contains("\\src\\app\\") ||
-                               Directory.Exists(Path.Combine(Path.GetDirectoryName(filePath) ?? "", "../../node_modules/@angular"));
+        bool inAngularProject = filePath.Contains("src/app/") ||
+                                filePath.Contains("\\src\\app\\") ||
+                                Directory.Exists(Path.Combine(Path.GetDirectoryName(filePath) ?? "", "../../node_modules/@angular"));
 
         return hasAngularImports || hasAngularFilePattern || inAngularProject;
     }
@@ -318,12 +318,12 @@ public class TypeScriptImportManager(
 
         for (var i = 0; i < lines.Length; i++)
         {
-            var line = lines[i].Trim();
-            var match = Regex.Match(line, importPattern);
+            string line = lines[i].Trim();
+            Match match = Regex.Match(line, importPattern);
             
             if (match.Success)
             {
-                var modulePath = match.Groups[2].Value.Trim();
+                string modulePath = match.Groups[2].Value.Trim();
                 imports.Add(new TypeScriptImport
                 {
                     LineNumber = i + 1,
@@ -375,7 +375,7 @@ public class TypeScriptImportManager(
     {
         var usedImports = new List<TypeScriptImport>();
 
-        foreach (var import in imports)
+        foreach (TypeScriptImport import in imports)
         {
             if (IsImportUsed(import, lines))
             {
@@ -389,10 +389,10 @@ public class TypeScriptImportManager(
     private static bool IsImportUsed(TypeScriptImport import, string[] lines)
     {
         // Extract imported symbols
-        var symbols = ExtractImportedSymbols(import.ImportClause);
+        List<string> symbols = ExtractImportedSymbols(import.ImportClause);
         
         // Check if any symbol is used in the code
-        foreach (var symbol in symbols)
+        foreach (string symbol in symbols)
         {
             for (var i = 0; i < lines.Length; i++)
             {
@@ -420,7 +420,7 @@ public class TypeScriptImportManager(
 
         if (importClause.Contains("* as "))
         {
-            var match = Regex.Match(importClause, @"\*\s+as\s+(\w+)");
+            Match match = Regex.Match(importClause, @"\*\s+as\s+(\w+)");
             if (match.Success)
             {
                 symbols.Add(match.Groups[1].Value);
@@ -428,10 +428,10 @@ public class TypeScriptImportManager(
         }
         else if (importClause.Contains("{"))
         {
-            var braceMatch = Regex.Match(importClause, @"\{([^}]+)\}");
+            Match braceMatch = Regex.Match(importClause, @"\{([^}]+)\}");
             if (braceMatch.Success)
             {
-                var namedImports = braceMatch.Groups[1].Value
+                IEnumerable<string> namedImports = braceMatch.Groups[1].Value
                     .Split(',')
                     .Select(s => s.Trim().Split(' ')[0]) // Handle 'as' aliases
                     .Where(s => !string.IsNullOrEmpty(s));
@@ -440,7 +440,7 @@ public class TypeScriptImportManager(
             }
 
             // Handle default import before braces
-            var defaultMatch = Regex.Match(importClause, @"^(\w+),");
+            Match defaultMatch = Regex.Match(importClause, @"^(\w+),");
             if (defaultMatch.Success)
             {
                 symbols.Add(defaultMatch.Groups[1].Value);
@@ -449,7 +449,7 @@ public class TypeScriptImportManager(
         else
         {
             // Default import
-            var defaultMatch = Regex.Match(importClause, @"^(\w+)");
+            Match defaultMatch = Regex.Match(importClause, @"^(\w+)");
             if (defaultMatch.Success)
             {
                 symbols.Add(defaultMatch.Groups[1].Value);
@@ -503,7 +503,7 @@ public class TypeScriptImportManager(
 
             for (var i = 0; i < groups.Length; i++)
             {
-                var group = groups[i];
+                List<TypeScriptImport> group = groups[i];
                 if (group.Count == 0) continue;
 
                 if (sortAlphabetically)
@@ -537,7 +537,7 @@ public class TypeScriptImportManager(
     {
         var lines = new List<string>();
         
-        foreach (var import in imports)
+        foreach (TypeScriptImport import in imports)
         {
             lines.Add(import.FullStatement);
             
@@ -553,12 +553,12 @@ public class TypeScriptImportManager(
 
     private static ImportBounds FindImportBounds(string[] lines)
     {
-        var startLine = -1;
-        var endLine = -1;
+        int startLine = -1;
+        int endLine = -1;
 
         for (var i = 0; i < lines.Length; i++)
         {
-            var line = lines[i].Trim();
+            string line = lines[i].Trim();
             
             if (line.StartsWith("import ") && startLine == -1)
             {
@@ -587,11 +587,11 @@ public class TypeScriptImportManager(
 
     private static bool ImportAlreadyExists(List<TypeScriptImport> existingImports, string newImportStatement)
     {
-        var normalizedNew = newImportStatement.Trim().TrimEnd(';');
+        string normalizedNew = newImportStatement.Trim().TrimEnd(';');
         
         return existingImports.Any(import => 
         {
-            var normalizedExisting = import.FullStatement.Trim().TrimEnd(';');
+            string normalizedExisting = import.FullStatement.Trim().TrimEnd(';');
             return string.Equals(normalizedExisting, normalizedNew, StringComparison.OrdinalIgnoreCase);
         });
     }
@@ -607,7 +607,7 @@ public class TypeScriptImportManager(
             ImportType = DetermineImportType(ExtractModulePath(importStatement))
         };
 
-        var existingImports = ParseImports(lines);
+        List<TypeScriptImport> existingImports = ParseImports(lines);
         
         if (existingImports.Count == 0)
         {
@@ -630,7 +630,7 @@ public class TypeScriptImportManager(
 
     private static string ExtractModulePath(string importStatement)
     {
-        var match = Regex.Match(importStatement, @"from\s+['""]([^'""]+)['""]");
+        Match match = Regex.Match(importStatement, @"from\s+['""]([^'""]+)['""]");
         return match.Success ? match.Groups[1].Value : string.Empty;
     }
 
@@ -640,8 +640,8 @@ public class TypeScriptImportManager(
     private static bool ShouldInsertBefore(TypeScriptImport newImport, TypeScriptImport existingImport, bool isAngularProject)
     {
         // Insert based on import type priority
-        var newPriority = GetImportTypePriority(newImport.ImportType, isAngularProject);
-        var existingPriority = GetImportTypePriority(existingImport.ImportType, isAngularProject);
+        int newPriority = GetImportTypePriority(newImport.ImportType, isAngularProject);
+        int existingPriority = GetImportTypePriority(existingImport.ImportType, isAngularProject);
 
         if (newPriority != existingPriority)
             return newPriority < existingPriority;

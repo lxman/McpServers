@@ -46,17 +46,17 @@ public class SemanticAnalysisService : ISemanticAnalysisService
     {
         try
         {
-            var semanticModel = await GetSemanticModelAsync(document, cancellationToken);
+            SemanticModel? semanticModel = await GetSemanticModelAsync(document, cancellationToken);
             if (semanticModel == null)
                 return null;
 
-            var root = await document.GetSyntaxRootAsync(cancellationToken);
-            var token = root?.FindToken(position);
+            SyntaxNode? root = await document.GetSyntaxRootAsync(cancellationToken);
+            SyntaxToken? token = root?.FindToken(position);
 
             if (token == null || token.Value.IsKind(SyntaxKind.None))
                 return null;
 
-            var symbolInfo = semanticModel.GetSymbolInfo(token.Value.Parent!, cancellationToken);
+            SymbolInfo symbolInfo = semanticModel.GetSymbolInfo(token.Value.Parent!, cancellationToken);
             return symbolInfo.Symbol ?? semanticModel.GetDeclaredSymbol(token.Value.Parent!, cancellationToken);
         }
         catch (Exception ex)
@@ -123,7 +123,7 @@ public class SemanticAnalysisService : ISemanticAnalysisService
         try
         {
             // Search for symbols by name - Using simpler overload without filter
-            var symbols = await SymbolFinder.FindSourceDeclarationsAsync(
+            IEnumerable<ISymbol> symbols = await SymbolFinder.FindSourceDeclarationsAsync(
                 solution,
                 symbolName,
                 !exactMatch,
@@ -155,18 +155,18 @@ public class SemanticAnalysisService : ISemanticAnalysisService
     {
         try
         {
-            var semanticModel = await GetSemanticModelAsync(document, cancellationToken);
+            SemanticModel? semanticModel = await GetSemanticModelAsync(document, cancellationToken);
             if (semanticModel == null)
                 return null;
 
-            var root = await document.GetSyntaxRootAsync(cancellationToken);
-            var token = root?.FindToken(position);
+            SyntaxNode? root = await document.GetSyntaxRootAsync(cancellationToken);
+            SyntaxToken? token = root?.FindToken(position);
 
             if (token == null || token.Value.IsKind(SyntaxKind.None))
                 return null;
 
-            var symbolInfo = semanticModel.GetSymbolInfo(token.Value.Parent!, cancellationToken);
-            var symbol = symbolInfo.Symbol ?? semanticModel.GetDeclaredSymbol(token.Value.Parent!, cancellationToken);
+            SymbolInfo symbolInfo = semanticModel.GetSymbolInfo(token.Value.Parent!, cancellationToken);
+            ISymbol? symbol = symbolInfo.Symbol ?? semanticModel.GetDeclaredSymbol(token.Value.Parent!, cancellationToken);
 
             if (symbol == null)
                 return null;

@@ -42,7 +42,7 @@ public class TypeScriptExtractMethodValidator(
                 return result;
             }
 
-            var lines = sourceCode.Split('\n');
+            string[] lines = sourceCode.Split('\n');
 
             // Validate line range
             if (!ValidateLineRange(options, lines, result))
@@ -53,7 +53,7 @@ public class TypeScriptExtractMethodValidator(
             // Extract the code to be analyzed
             var extractedLines = new string[options.EndLine - options.StartLine + 1];
             Array.Copy(lines, options.StartLine - 1, extractedLines, 0, extractedLines.Length);
-            var extractedCode = string.Join("\n", extractedLines);
+            string extractedCode = string.Join("\n", extractedLines);
 
             // Perform comprehensive analysis
             await AnalyzeCodeStructureAsync(extractedCode, sourceCode, options, analysis, cancellationToken);
@@ -131,9 +131,9 @@ public class TypeScriptExtractMethodValidator(
 
         // Check if selected lines contain meaningful code
         var hasNonEmptyLine = false;
-        for (var i = options.StartLine - 1; i < options.EndLine; i++)
+        for (int i = options.StartLine - 1; i < options.EndLine; i++)
         {
-            var line = lines[i].Trim();
+            string line = lines[i].Trim();
             if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith("//") && !line.StartsWith("/*"))
             {
                 hasNonEmptyLine = true;
@@ -197,7 +197,7 @@ public class TypeScriptExtractMethodValidator(
             @"\b&&\b", @"\b\|\|\b"
         ];
 
-        foreach (var pattern in patterns)
+        foreach (string pattern in patterns)
         {
             complexity += Regex.Matches(code, pattern, RegexOptions.IgnoreCase).Count;
         }
@@ -217,12 +217,12 @@ public class TypeScriptExtractMethodValidator(
         try
         {
             // Use the TypeScript analysis service to get structure
-            var analysisResult = await analysisService.AnalyzeContentAsync(fullCode, cancellationToken: cancellationToken);
+            TypeScriptAnalysisResult analysisResult = await analysisService.AnalyzeContentAsync(fullCode, cancellationToken: cancellationToken);
 
             if (analysisResult.Success)
             {
                 // Find containing function
-                var containingFunction = analysisResult.Functions.FirstOrDefault(f =>
+                TypeScriptFunction? containingFunction = analysisResult.Functions.FirstOrDefault(f =>
                     f.StartLine <= options.StartLine && f.EndLine >= options.EndLine);
 
                 if (containingFunction != null)
@@ -231,7 +231,7 @@ public class TypeScriptExtractMethodValidator(
                 }
 
                 // Find containing class
-                var containingClass = analysisResult.Classes.FirstOrDefault(c =>
+                TypeScriptClass? containingClass = analysisResult.Classes.FirstOrDefault(c =>
                     c.StartLine <= options.StartLine && c.EndLine >= options.EndLine);
 
                 if (containingClass != null)
@@ -253,7 +253,7 @@ public class TypeScriptExtractMethodValidator(
     {
         // Find variables declared in the extracted code
         var declaredVariables = new HashSet<string>();
-        var declarations = VariableDeclarationPattern.Matches(extractedCode);
+        MatchCollection declarations = VariableDeclarationPattern.Matches(extractedCode);
         foreach (Match match in declarations)
         {
             declaredVariables.Add(match.Groups[2].Value);
@@ -261,10 +261,10 @@ public class TypeScriptExtractMethodValidator(
 
         // Find variables used in the extracted code
         var usedVariables = new HashSet<string>();
-        var usages = VariableUsagePattern.Matches(extractedCode);
+        MatchCollection usages = VariableUsagePattern.Matches(extractedCode);
         foreach (Match match in usages)
         {
-            var varName = match.Groups[1].Value;
+            string varName = match.Groups[1].Value;
             if (!TypeScriptKeywords.IsMatch(varName) && !declaredVariables.Contains(varName))
             {
                 usedVariables.Add(varName);
@@ -277,12 +277,12 @@ public class TypeScriptExtractMethodValidator(
         var modifiedVariables = new HashSet<string>();
         string[] assignmentPatterns = [@"(\w+)\s*=", @"(\w+)\s*\+=", @"(\w+)\s*-=", @"(\w+)\+\+", @"(\w+)--"];
         
-        foreach (var pattern in assignmentPatterns)
+        foreach (string pattern in assignmentPatterns)
         {
-            var assignments = Regex.Matches(extractedCode, pattern);
+            MatchCollection assignments = Regex.Matches(extractedCode, pattern);
             foreach (Match match in assignments)
             {
-                var varName = match.Groups[1].Value;
+                string varName = match.Groups[1].Value;
                 if (usedVariables.Contains(varName))
                 {
                     modifiedVariables.Add(varName);

@@ -41,11 +41,11 @@ public class DevOpsCredentialManager
     public static async Task<DevOpsCredentialManager?> CreateFromDiscoveryAsync(
         ILogger<DevOpsCredentialManager> logger)
     {
-        var discoveryLogger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<AzureEnvironmentDiscovery>();
+        ILogger<AzureEnvironmentDiscovery> discoveryLogger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<AzureEnvironmentDiscovery>();
         var discovery = new AzureEnvironmentDiscovery(discoveryLogger);
-        var result = await discovery.DiscoverAzureEnvironmentsAsync();
+        AzureDiscoveryResult result = await discovery.DiscoverAzureEnvironmentsAsync();
         
-        var primaryEnvironment = result.DevOpsEnvironments.FirstOrDefault();
+        DevOpsEnvironmentInfo? primaryEnvironment = result.DevOpsEnvironments.FirstOrDefault();
         if (primaryEnvironment == null)
         {
             logger.LogWarning("No Azure DevOps environments discovered");
@@ -63,7 +63,7 @@ public class DevOpsCredentialManager
         ILogger<DevOpsCredentialManager> logger,
         string? credentialTarget = null)
     {
-        var pat = DiscoverPersonalAccessToken(credentialTarget, organizationUrl, logger);
+        string pat = DiscoverPersonalAccessToken(credentialTarget, organizationUrl, logger);
         
         var environmentInfo = new DevOpsEnvironmentInfo
         {
@@ -80,8 +80,8 @@ public class DevOpsCredentialManager
     private static string DiscoverPersonalAccessToken(string? credentialTarget, string organizationUrl, ILogger logger)
     {
         // Try credential manager first
-        var target = credentialTarget ?? "AzureDevOps";
-        var pat = TryGetFromCredentialManager(target);
+        string target = credentialTarget ?? "AzureDevOps";
+        string? pat = TryGetFromCredentialManager(target);
         if (!string.IsNullOrEmpty(pat))
         {
             logger.LogDebug("Retrieved PAT from Windows Credential Manager");

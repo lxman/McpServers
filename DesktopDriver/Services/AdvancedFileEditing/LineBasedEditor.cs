@@ -83,7 +83,7 @@ public class LineBasedEditor(DiffPatchService diffPatchService, IndentationManag
             int targetLevel = IndentationManager.DetermineInsertionIndentLevel(originalLines, afterLine);
             
             // Fix the indentation of the content to match
-            string indentedContent = indentationManager.FixIndentation(content, fileIndentation, targetLevel);
+            string indentedContent = IndentationManager.FixIndentation(content, fileIndentation, targetLevel);
             
             return InsertAfterLine(originalLines, afterLine, indentedContent);
         }
@@ -174,7 +174,7 @@ public class LineBasedEditor(DiffPatchService diffPatchService, IndentationManag
     {
         try
         {
-            var result = new List<string>(originalLines);
+            List<string> result = [..originalLines];
             var replacementCount = 0;
             StringComparison comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
             
@@ -221,9 +221,9 @@ public class LineBasedEditor(DiffPatchService diffPatchService, IndentationManag
         }
     }
     
-    private string[] ApplyOperation(string[] originalLines, EditOperation operation)
+    private static string[] ApplyOperation(string[] originalLines, EditOperation operation)
     {
-        var result = new List<string>(originalLines);
+        List<string> result = [..originalLines];
         
         switch (operation.Type)
         {

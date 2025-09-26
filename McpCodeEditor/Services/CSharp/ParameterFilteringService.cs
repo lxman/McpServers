@@ -40,7 +40,7 @@ public class ParameterFilteringService : IParameterFilteringService
 
         var parametersToPass = new List<VariableInfo>();
 
-        foreach (var variable in externalVariables)
+        foreach (VariableInfo variable in externalVariables)
         {
             if (ShouldPassAsParameter(variable, extractedLines, fullFileLines))
             {
@@ -62,7 +62,7 @@ public class ParameterFilteringService : IParameterFilteringService
     /// </summary>
     public bool ShouldPassAsParameter(VariableInfo variable, string[] extractedLines, string[]? fullFileLines)
     {
-        var varName = variable.Name;
+        string varName = variable.Name;
 
         // Check 1: Skip static types and members
         if (IsStaticMember(varName))
@@ -108,7 +108,7 @@ public class ParameterFilteringService : IParameterFilteringService
         // Check for static member access pattern (Type.Member)
         if (varName.Contains('.'))
         {
-            var typeName = varName.Split('.')[0];
+            string typeName = varName.Split('.')[0];
             if (_staticTypes.Contains(typeName))
                 return true;
 
@@ -125,7 +125,7 @@ public class ParameterFilteringService : IParameterFilteringService
     /// </summary>
     private static bool IsObviousFieldPattern(string varName, string[] extractedLines)
     {
-        var extractedCode = string.Join(" ", extractedLines);
+        string extractedCode = string.Join(" ", extractedLines);
 
         // Check for this.varName or base.varName
         if (extractedCode.Contains($"this.{varName}") || extractedCode.Contains($"base.{varName}"))
@@ -137,7 +137,7 @@ public class ParameterFilteringService : IParameterFilteringService
 
         // Check for common field name patterns
         var fieldPatterns = new[] { "field", "member", "instance" };
-        var lowerName = varName.ToLower();
+        string lowerName = varName.ToLower();
         if (fieldPatterns.Any(pattern => lowerName.Contains(pattern)))
             return true;
 
@@ -155,9 +155,9 @@ public class ParameterFilteringService : IParameterFilteringService
         var inClass = false;
         var braceDepth = 0;
         
-        foreach (var line in fullFileLines)
+        foreach (string line in fullFileLines)
         {
-            var trimmedLine = line.Trim();
+            string trimmedLine = line.Trim();
             
             // Track class entry
             if (trimmedLine.Contains("class ") && !trimmedLine.StartsWith("//"))
@@ -183,7 +183,7 @@ public class ParameterFilteringService : IParameterFilteringService
                         $@"\b\w+\s+{varName}\s*(=|;)" // Simple field declaration
                     };
                     
-                    foreach (var pattern in fieldPatterns)
+                    foreach (string pattern in fieldPatterns)
                     {
                         if (System.Text.RegularExpressions.Regex.IsMatch(trimmedLine, pattern))
                         {
@@ -205,12 +205,12 @@ public class ParameterFilteringService : IParameterFilteringService
     {
         // Common collection field names
         var collectionNames = new[] { "list", "items", "collection", "data", "cache", "store", "repository" };
-        var lowerName = varName.ToLower();
+        string lowerName = varName.ToLower();
         
         // Check if it ends with 's' (plural) and is used in foreach
         if (varName.EndsWith("s") && varName.Length > 2)
         {
-            var extractedCode = string.Join(" ", extractedLines);
+            string extractedCode = string.Join(" ", extractedLines);
             if (extractedCode.Contains($"foreach") && extractedCode.Contains($"in {varName}"))
             {
                 // Likely a collection field if not declared in the extraction
@@ -236,9 +236,9 @@ public class ParameterFilteringService : IParameterFilteringService
     {
         var suggestedTypes = new Dictionary<string, string>();
         
-        foreach (var param in parameters)
+        foreach (VariableInfo param in parameters)
         {
-            var suggestedType = InferParameterType(param.Name, extractedLines);
+            string suggestedType = InferParameterType(param.Name, extractedLines);
             suggestedTypes[param.Name] = suggestedType;
             _logger?.LogDebug("Suggested type for parameter {Name}: {Type}", param.Name, suggestedType);
         }
@@ -251,7 +251,7 @@ public class ParameterFilteringService : IParameterFilteringService
     /// </summary>
     private static string InferParameterType(string paramName, string[] extractedLines)
     {
-        var extractedCode = string.Join(" ", extractedLines);
+        string extractedCode = string.Join(" ", extractedLines);
         
         // Check for explicit type usage patterns
         var typePatterns = new Dictionary<string, string>
@@ -266,7 +266,7 @@ public class ParameterFilteringService : IParameterFilteringService
             [@$"{paramName}\.ToString\(\)"] = "object"
         };
         
-        foreach ((var pattern, var type) in typePatterns)
+        foreach ((string pattern, string type) in typePatterns)
         {
             if (System.Text.RegularExpressions.Regex.IsMatch(extractedCode, pattern))
             {

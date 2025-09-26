@@ -79,7 +79,7 @@ public class TypeScriptVariableOperations(
 
         try
         {
-            var lines = fileContent.Split('\n');
+            string[] lines = fileContent.Split('\n');
             
             if (lineNumber < 1 || lineNumber > lines.Length)
             {
@@ -94,7 +94,7 @@ public class TypeScriptVariableOperations(
             }
 
             // Use the scope analyzer to get detailed scope information
-            var analysis = scopeAnalyzer.AnalyzeScope(lines, lineNumber);
+            TypeScriptScopeAnalysisResult analysis = scopeAnalyzer.AnalyzeScope(lines, lineNumber);
             
             if (!analysis.Success)
             {
@@ -109,9 +109,9 @@ public class TypeScriptVariableOperations(
             }
 
             // Convert to the format expected by tests
-            var scopeType = ConvertScopeTypeForTests(analysis.PrimaryScopeType);
-            var className = GetClassNameFromScopes(analysis.ScopeHierarchy);
-            var methodName = GetMethodNameFromScopes(analysis.ScopeHierarchy);
+            string scopeType = ConvertScopeTypeForTests(analysis.PrimaryScopeType);
+            string? className = GetClassNameFromScopes(analysis.ScopeHierarchy);
+            string? methodName = GetMethodNameFromScopes(analysis.ScopeHierarchy);
 
             return new
             {
@@ -157,11 +157,11 @@ public class TypeScriptVariableOperations(
 
         try
         {
-            var lines = fileContent.Split('\n');
+            string[] lines = fileContent.Split('\n');
             
             // Detect scope first
-            var scopeResult = DetectScope(fileContent, line);
-            var scopeResultType = scopeResult.GetType();
+            object scopeResult = DetectScope(fileContent, line);
+            Type scopeResultType = scopeResult.GetType();
             var scopeSuccess = (bool)scopeResultType.GetProperty("Success")!.GetValue(scopeResult)!;
             
             if (!scopeSuccess)
@@ -188,7 +188,7 @@ public class TypeScriptVariableOperations(
                 };
             }
 
-            var lineContent = lines[line - 1];
+            string lineContent = lines[line - 1];
             if (startColumn < 1 || endColumn > lineContent.Length || startColumn > endColumn)
             {
                 return new
@@ -200,7 +200,7 @@ public class TypeScriptVariableOperations(
             }
 
             // Phase A2: Delegate boundary detection to injected service
-            var boundaryResult = _boundaryDetectionService.DetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            ExpressionBoundaryResult boundaryResult = _boundaryDetectionService.DetectExpressionBoundaries(lineContent, startColumn, endColumn);
             if (!boundaryResult.Success)
             {
                 return new
@@ -211,13 +211,13 @@ public class TypeScriptVariableOperations(
                 };
             }
 
-            var expression = boundaryResult.Expression;
-            var adjustedStart = boundaryResult.StartColumn;
-            var adjustedEnd = boundaryResult.EndColumn;
+            string expression = boundaryResult.Expression;
+            int adjustedStart = boundaryResult.StartColumn;
+            int adjustedEnd = boundaryResult.EndColumn;
 
             // Phase A2: Generate variable declaration using extracted service
-            var declResult = GenerateVariableDeclaration(variableName, expression, scopeType, line);
-            var declResultType = declResult.GetType();
+            object declResult = GenerateVariableDeclaration(variableName, expression, scopeType, line);
+            Type declResultType = declResult.GetType();
             var declSuccess = (bool)declResultType.GetProperty("Success")!.GetValue(declResult)!;
 
             if (!declSuccess)
@@ -237,20 +237,20 @@ public class TypeScriptVariableOperations(
             var modifiedLines = new List<string>(lines);
             
             // Insert variable declaration at appropriate location
-            var insertionLine = FindInsertionPoint(lines, line, scopeType);
-            var indentation = GetProperIndentation(lines, insertionLine, scopeType);
+            int insertionLine = FindInsertionPoint(lines, line, scopeType);
+            string indentation = GetProperIndentation(lines, insertionLine, scopeType);
             modifiedLines.Insert(insertionLine, indentation + declaration);
 
             // Replace original expression with variable reference
-            var originalLine = lines[line - 1];
-            var variableRef = scopeType == "class" ? $"this.{variableName}" : variableName;
+            string originalLine = lines[line - 1];
+            string variableRef = scopeType == "class" ? $"this.{variableName}" : variableName;
             
             // Adjust line index if insertion happened before target line
-            var targetLineIndex = insertionLine <= line - 1 ? line : line - 1;
+            int targetLineIndex = insertionLine <= line - 1 ? line : line - 1;
             
-            var replacedLine = originalLine[..(adjustedStart - 1)] + 
-                               variableRef + 
-                               originalLine[adjustedEnd..];
+            string replacedLine = originalLine[..(adjustedStart - 1)] + 
+                                  variableRef + 
+                                  originalLine[adjustedEnd..];
             
             modifiedLines[targetLineIndex] = replacedLine;
 
@@ -296,7 +296,7 @@ public class TypeScriptVariableOperations(
 
     private static string? GetMethodNameFromScopes(List<TypeScriptScopeInfo> scopes)
     {
-        var methodScope = scopes.LastOrDefault(s => 
+        TypeScriptScopeInfo? methodScope = scopes.LastOrDefault(s => 
             s.ScopeType is TypeScriptScopeType.Method or TypeScriptScopeType.Constructor or TypeScriptScopeType.Function);
         
         if (methodScope?.ScopeType == TypeScriptScopeType.Constructor)
@@ -311,9 +311,9 @@ public class TypeScriptVariableOperations(
         {
             case "class":
                 // Find a good spot in the class - after existing properties but before methods
-                for (var i = Math.Max(0, currentLine - 10); i < Math.Min(currentLine - 1, lines.Length); i++)
+                for (int i = Math.Max(0, currentLine - 10); i < Math.Min(currentLine - 1, lines.Length); i++)
                 {
-                    var line = lines[i].Trim();
+                    string line = lines[i].Trim();
                     if (line.Contains("constructor") || (line.Contains("(") && line.Contains("{")))
                     {
                         return i;
@@ -325,9 +325,9 @@ public class TypeScriptVariableOperations(
             case "constructor":
             case "function":
                 // Insert at beginning of method
-                for (var i = Math.Max(0, currentLine - 5); i < currentLine - 1; i++)
+                for (int i = Math.Max(0, currentLine - 5); i < currentLine - 1; i++)
                 {
-                    var line = lines[i].Trim();
+                    string line = lines[i].Trim();
                     if (line.Contains("{") && !line.Contains("="))
                     {
                         return i + 1;
@@ -343,11 +343,11 @@ public class TypeScriptVariableOperations(
     private static string GetProperIndentation(string[] lines, int lineIndex, string scopeType)
     {
         // Look at nearby lines to determine appropriate indentation
-        for (var i = Math.Max(0, lineIndex - 2); i <= Math.Min(lineIndex + 2, lines.Length - 1); i++)
+        for (int i = Math.Max(0, lineIndex - 2); i <= Math.Min(lineIndex + 2, lines.Length - 1); i++)
         {
             if (i < lines.Length && !string.IsNullOrWhiteSpace(lines[i]))
             {
-                var indentation = GetIndentation(lines[i]);
+                string indentation = GetIndentation(lines[i]);
                 // For class members, add extra indentation
                 if (scopeType == "class")
                 {
@@ -398,7 +398,7 @@ public class TypeScriptVariableOperations(
             }
 
             // Validate TypeScript file
-            var extension = Path.GetExtension(filePath).ToLowerInvariant();
+            string extension = Path.GetExtension(filePath).ToLowerInvariant();
             if (!IsTypeScriptFile(extension))
             {
                 return new RefactoringResult
@@ -409,7 +409,7 @@ public class TypeScriptVariableOperations(
             }
 
             // Read file content
-            var lines = await File.ReadAllLinesAsync(resolvedPath, cancellationToken);
+            string[] lines = await File.ReadAllLinesAsync(resolvedPath, cancellationToken);
 
             if (line < 1 || line > lines.Length)
             {
@@ -421,7 +421,7 @@ public class TypeScriptVariableOperations(
             }
 
             // REF-002 FIX: Analyze scope context BEFORE processing expression
-            var scopeAnalysis = scopeAnalyzer.AnalyzeScope(lines, line);
+            TypeScriptScopeAnalysisResult scopeAnalysis = scopeAnalyzer.AnalyzeScope(lines, line);
             if (!scopeAnalysis.Success)
             {
                 return new RefactoringResult
@@ -435,7 +435,7 @@ public class TypeScriptVariableOperations(
                 scopeAnalysis.PrimaryScopeType, scopeAnalysis.VariablePlacementStrategy.DeclarationType);
 
             // Extract the selected expression with smart boundary detection
-            var lineContent = lines[line - 1];
+            string lineContent = lines[line - 1];
             if (startColumn < 1 || endColumn > lineContent.Length || startColumn > endColumn)
             {
                 return new RefactoringResult
@@ -446,7 +446,7 @@ public class TypeScriptVariableOperations(
             }
 
             // Phase A2: Delegate boundary detection to injected service
-            var boundaryResult = _boundaryDetectionService.DetectExpressionBoundaries(lineContent, startColumn, endColumn);
+            ExpressionBoundaryResult boundaryResult = _boundaryDetectionService.DetectExpressionBoundaries(lineContent, startColumn, endColumn);
             if (!boundaryResult.Success)
             {
                 return new RefactoringResult
@@ -456,9 +456,9 @@ public class TypeScriptVariableOperations(
                 };
             }
 
-            var selectedExpression = boundaryResult.Expression;
-            var adjustedStartColumn = boundaryResult.StartColumn;
-            var adjustedEndColumn = boundaryResult.EndColumn;
+            string selectedExpression = boundaryResult.Expression;
+            int adjustedStartColumn = boundaryResult.StartColumn;
+            int adjustedEndColumn = boundaryResult.EndColumn;
 
             logger.LogInformation("TS-013 REF-002: Boundary detection - Original: {OriginalStart}-{OriginalEnd}, " +
                                  "Adjusted: {AdjustedStart}-{AdjustedEnd} '{AdjustedExpr}'",
@@ -500,7 +500,7 @@ public class TypeScriptVariableOperations(
             }
 
             // Phase A2: Use extracted service for variable declaration generation
-            var variableDeclarationResult = _variableDeclarationGeneratorService.GenerateScopeAwareVariableDeclaration(
+            VariableDeclarationResult variableDeclarationResult = _variableDeclarationGeneratorService.GenerateScopeAwareVariableDeclaration(
                 scopeAnalysis, variableName, selectedExpression, declarationType);
 
             if (!variableDeclarationResult.Success)
@@ -512,7 +512,7 @@ public class TypeScriptVariableOperations(
                 };
             }
             
-            var syntaxValidationResult = syntaxValidator.ValidateVariableDeclaration(
+            TypeScriptSyntaxValidationResult syntaxValidationResult = syntaxValidator.ValidateVariableDeclaration(
                 variableDeclarationResult.Declaration, scopeAnalysis.PrimaryScopeType);
             
             if (!syntaxValidationResult.IsValid)
@@ -525,7 +525,7 @@ public class TypeScriptVariableOperations(
             }
 
             // Phase A2-T6: Delegate code modification to extracted service
-            var modificationResult = _codeModificationService.ApplyScopeAwareVariableIntroduction(
+            VariableModificationResult modificationResult = _codeModificationService.ApplyScopeAwareVariableIntroduction(
                 lines, line, adjustedStartColumn, adjustedEndColumn, 
                 variableName, selectedExpression, variableDeclarationResult, 
                 scopeAnalysis);
@@ -613,8 +613,8 @@ public class TypeScriptVariableOperations(
                 };
             }
 
-            var content = await File.ReadAllTextAsync(resolvedPath, cancellationToken);
-            var lines = content.Split('\n');
+            string content = await File.ReadAllTextAsync(resolvedPath, cancellationToken);
+            string[] lines = content.Split('\n');
 
             var analysis = new TypeScriptVariableScopeAnalysis
             {
@@ -627,7 +627,7 @@ public class TypeScriptVariableOperations(
             for (var i = 0; i < lines.Length; i++)
             {
                 var pattern = $@"\b(var|let|const)\s+{Regex.Escape(variableName)}\b";
-                var declMatches = Regex.Matches(lines[i], pattern);
+                MatchCollection declMatches = Regex.Matches(lines[i], pattern);
                 foreach (Match match in declMatches)
                 {
                     analysis.Declarations.Add(new TypeScriptVariableDeclaration
@@ -644,7 +644,7 @@ public class TypeScriptVariableOperations(
             for (var i = 0; i < lines.Length; i++)
             {
                 var pattern = $@"\b{Regex.Escape(variableName)}\b";
-                var usageMatches = Regex.Matches(lines[i], pattern);
+                MatchCollection usageMatches = Regex.Matches(lines[i], pattern);
                 foreach (Match match in usageMatches)
                 {
                     // Skip if this is a declaration
@@ -687,13 +687,13 @@ public class TypeScriptVariableOperations(
     private static string GenerateTypeScriptVariableName(string expression)
     {
         // Clean the expression and create a meaningful variable name
-        var cleanExpression = Regex.Replace(expression, @"[^\w]", "");
+        string cleanExpression = Regex.Replace(expression, @"[^\w]", "");
         
         if (string.IsNullOrWhiteSpace(cleanExpression))
             return "value";
 
         // Convert to camelCase
-        var variableName = cleanExpression.Length == 1 
+        string variableName = cleanExpression.Length == 1 
             ? cleanExpression.ToLowerInvariant()
             : char.ToLowerInvariant(cleanExpression[0]) + cleanExpression[1..];
 
@@ -735,7 +735,7 @@ public class TypeScriptVariableOperations(
     private static string GetIndentation(string line)
     {
         var indentCount = 0;
-        foreach (var c in line)
+        foreach (char c in line)
         {
             if (c == ' ')
                 indentCount++;

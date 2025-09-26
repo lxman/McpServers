@@ -26,8 +26,8 @@ public static class CodeFormatting
     /// </summary>
     public static string GetStatementIndentation(StatementSyntax statement, string sourceCode)
     {
-        var lines = sourceCode.Split('\n');
-        var statementStart = statement.SpanStart;
+        string[] lines = sourceCode.Split('\n');
+        int statementStart = statement.SpanStart;
 
         // Find the line containing the statement
         var currentPosition = 0;

@@ -18,7 +18,7 @@ public class AngelListScraper : BaseJobScraper
         {
             InitializeDriver(config.AntiDetection);
             
-            var searchUrl = BuildSearchUrl(request, config);
+            string searchUrl = BuildSearchUrl(request, config);
             Logger.LogInformation($"Scraping AngelList: {searchUrl}");
             
             // Navigate to page with reduced delay
@@ -50,7 +50,7 @@ public class AngelListScraper : BaseJobScraper
             };
             
             // Try selectors in order of likelihood
-            foreach (var selector in jobSelectors)
+            foreach (string selector in jobSelectors)
             {
                 try
                 {
@@ -73,11 +73,11 @@ public class AngelListScraper : BaseJobScraper
             {
                 Logger.LogInformation($"Processing {jobElements.Count} AngelList job elements");
                 
-                foreach (var element in jobElements.Take(request.MaxResults))
+                foreach (IWebElement element in jobElements.Take(request.MaxResults))
                 {
                     try
                     {
-                        var job = ExtractJobFromElement(element);
+                        EnhancedJobListing? job = ExtractJobFromElement(element);
                         if (job != null)
                         {
                             job.SourceSite = SupportedSite;
@@ -137,7 +137,7 @@ public class AngelListScraper : BaseJobScraper
         try
         {
             // Smart wait for AngelList content to load
-            var timeout = DateTime.Now.AddSeconds(3); // Slightly longer for AngelList
+            DateTime timeout = DateTime.Now.AddSeconds(3); // Slightly longer for AngelList
             var contentFound = false;
             
             while (DateTime.Now < timeout && !contentFound)
@@ -145,7 +145,7 @@ public class AngelListScraper : BaseJobScraper
                 try
                 {
                     // Check for AngelList-specific job content
-                    var elements = Driver.FindElements(By.CssSelector("[data-test='startup-job'], .job-card, a[href*='/j/'], a[href*='/jobs/'][href*='-at-']"));
+                    ReadOnlyCollection<IWebElement> elements = Driver.FindElements(By.CssSelector("[data-test='startup-job'], .job-card, a[href*='/j/'], a[href*='/jobs/'][href*='-at-']"));
                     if (elements.Count > 0)
                     {
                         contentFound = true;
@@ -154,7 +154,7 @@ public class AngelListScraper : BaseJobScraper
                     }
                     
                     // Check for startup-related content in page source
-                    var pageSource = Driver.PageSource;
+                    string pageSource = Driver.PageSource;
                     if (pageSource.Contains("-at-") || pageSource.Contains("startup-job") || pageSource.Contains("job-posting"))
                     {
                         contentFound = true;
@@ -199,11 +199,11 @@ public class AngelListScraper : BaseJobScraper
                 "[data-dismiss='modal']"
             };
 
-            foreach (var selector in dismissSelectors)
+            foreach (string selector in dismissSelectors)
             {
                 try
                 {
-                    var closeButton = Driver.FindElement(By.CssSelector(selector));
+                    IWebElement closeButton = Driver.FindElement(By.CssSelector(selector));
                     if (closeButton is { Displayed: true, Enabled: true })
                     {
                         closeButton.Click();
@@ -229,7 +229,7 @@ public class AngelListScraper : BaseJobScraper
     private static string BuildSearchUrl(EnhancedScrapeRequest request, SiteConfiguration config)
     {
         // Try a more direct approach to actual job listings
-        var baseUrl = config.BaseUrl; // https://wellfound.com
+        string baseUrl = config.BaseUrl; // https://wellfound.com
         
         // Build more specific search for actual job postings
         var searchPath = "/role/r/software-engineer";
@@ -262,7 +262,7 @@ public class AngelListScraper : BaseJobScraper
     {
         try
         {
-            var elementText = element.Text?.Trim() ?? "";
+            string elementText = element.Text?.Trim() ?? "";
             if (string.IsNullOrEmpty(elementText)) return null;
             
             var title = "";
@@ -284,11 +284,11 @@ public class AngelListScraper : BaseJobScraper
                     "a[href*='/jobs/']"
                 };
                 
-                foreach (var selector in titleSelectors)
+                foreach (string selector in titleSelectors)
                 {
                     try
                     {
-                        var titleElement = element.FindElement(By.CssSelector(selector));
+                        IWebElement titleElement = element.FindElement(By.CssSelector(selector));
                         title = titleElement.Text?.Trim() ?? "";
                         if (!string.IsNullOrEmpty(title) && title.Length > 3)
                         {
@@ -311,11 +311,11 @@ public class AngelListScraper : BaseJobScraper
                     "a[href*='/company/']"
                 };
                 
-                foreach (var selector in companySelectors)
+                foreach (string selector in companySelectors)
                 {
                     try
                     {
-                        var companyElement = element.FindElement(By.CssSelector(selector));
+                        IWebElement companyElement = element.FindElement(By.CssSelector(selector));
                         company = companyElement.Text?.Trim() ?? "";
                         if (!string.IsNullOrEmpty(company) && company.Length > 1)
                         {
@@ -330,13 +330,13 @@ public class AngelListScraper : BaseJobScraper
             // Try to extract URL
             try
             {
-                var linkElement = element.FindElement(By.TagName("a"));
+                IWebElement linkElement = element.FindElement(By.TagName("a"));
                 jobUrl = linkElement.GetAttribute("href") ?? "";
                 
                 // Filter out non-job URLs
                 if (!string.IsNullOrEmpty(jobUrl))
                 {
-                    var lowerUrl = jobUrl.ToLower();
+                    string lowerUrl = jobUrl.ToLower();
                     var invalidUrlPatterns = new[]
                     {
                         "/login", "/signup", "/browse", "/search", "/companies",
@@ -358,7 +358,7 @@ public class AngelListScraper : BaseJobScraper
                     // Apply same filtering
                     if (!string.IsNullOrEmpty(jobUrl))
                     {
-                        var lowerUrl = jobUrl.ToLower();
+                        string lowerUrl = jobUrl.ToLower();
                         var invalidUrlPatterns = new[]
                         {
                             "/login", "/signup", "/browse", "/search", "/companies",
@@ -375,11 +375,11 @@ public class AngelListScraper : BaseJobScraper
             }
             
             // Extract location and summary from text content
-            var lines = elementText.Split('\n').Where(line => !string.IsNullOrWhiteSpace(line)).ToArray();
+            string[] lines = elementText.Split('\n').Where(line => !string.IsNullOrWhiteSpace(line)).ToArray();
             
-            foreach (var line in lines)
+            foreach (string line in lines)
             {
-                var trimmedLine = line.Trim();
+                string trimmedLine = line.Trim();
                 
                 // Look for location indicators
                 if (string.IsNullOrEmpty(location) && IsLocationText(trimmedLine))
@@ -403,7 +403,7 @@ public class AngelListScraper : BaseJobScraper
             // Check if this is actually a job vs navigation element
             if (!string.IsNullOrEmpty(title))
             {
-                var lowerTitle = title.ToLower();
+                string lowerTitle = title.ToLower();
                 var invalidTitlePatterns = new[]
                 {
                     "over 130k", "trending startups", "find what's next", "log in", "sign up",
@@ -460,7 +460,7 @@ public class AngelListScraper : BaseJobScraper
     {
         try
         {
-            var pageSource = Driver.PageSource;
+            string pageSource = Driver.PageSource;
             Logger.LogInformation($"AngelList page source length: {pageSource.Length}");
             
             if (pageSource.Contains("Software Engineer") || 
@@ -470,17 +470,17 @@ public class AngelListScraper : BaseJobScraper
             {
                 Logger.LogInformation("AngelList page contains job-related content");
                 
-                var bodyElement = Driver.FindElement(By.TagName("body"));
-                var bodyText = bodyElement.Text;
+                IWebElement bodyElement = Driver.FindElement(By.TagName("body"));
+                string bodyText = bodyElement.Text;
                 
-                var lines = bodyText.Split('\n')
+                string[] lines = bodyText.Split('\n')
                     .Where(line => !string.IsNullOrWhiteSpace(line))
                     .Select(line => line.Trim())
                     .ToArray();
                 
                 for (var i = 0; i < lines.Length && jobs.Count < maxResults; i++)
                 {
-                    var line = lines[i];
+                    string line = lines[i];
                     
                     if (IsJobTitle(line) && line.Length is > 10 and < 150)
                     {
@@ -517,7 +517,7 @@ public class AngelListScraper : BaseJobScraper
             "boston", "chicago", "los angeles", "atlanta", "denver", "portland"
         };
         
-        var lowerText = text.ToLower();
+        string lowerText = text.ToLower();
         return locationKeywords.Any(keyword => lowerText.Contains(keyword)) && text.Length < 50;
     }
 
@@ -525,7 +525,7 @@ public class AngelListScraper : BaseJobScraper
     {
         if (string.IsNullOrEmpty(text) || text.Length < 5) return false;
         
-        var lowerText = text.ToLower();
+        string lowerText = text.ToLower();
         
         // Exclude common navigation/marketing text
         var excludePatterns = new[]
@@ -557,20 +557,20 @@ public class AngelListScraper : BaseJobScraper
             ".net", "c#", "javascript", "python", "react", "angular"
         };
         
-        var hasJobKeyword = jobKeywords.Any(keyword => lowerText.Contains(keyword));
-        var hasStartupKeyword = startupKeywords.Any(keyword => lowerText.Contains(keyword));
-        var hasTechKeyword = techKeywords.Any(keyword => lowerText.Contains(keyword));
+        bool hasJobKeyword = jobKeywords.Any(keyword => lowerText.Contains(keyword));
+        bool hasStartupKeyword = startupKeywords.Any(keyword => lowerText.Contains(keyword));
+        bool hasTechKeyword = techKeywords.Any(keyword => lowerText.Contains(keyword));
         
         return (hasJobKeyword || hasStartupKeyword) && (hasTechKeyword || hasStartupKeyword);
     }
 
     private static string ExtractCompanyFromContext(string[] lines, int jobTitleIndex)
     {
-        for (var i = Math.Max(0, jobTitleIndex - 2); i < Math.Min(lines.Length, jobTitleIndex + 3); i++)
+        for (int i = Math.Max(0, jobTitleIndex - 2); i < Math.Min(lines.Length, jobTitleIndex + 3); i++)
         {
             if (i == jobTitleIndex) continue;
             
-            var line = lines[i].Trim();
+            string line = lines[i].Trim();
             if (line.Length is > 2 and < 50 && 
                 !IsJobTitle(line) && 
                 !IsLocationText(line) &&
@@ -585,9 +585,9 @@ public class AngelListScraper : BaseJobScraper
 
     private static string ExtractLocationFromContext(string[] lines, int jobTitleIndex)
     {
-        for (var i = Math.Max(0, jobTitleIndex - 2); i < Math.Min(lines.Length, jobTitleIndex + 3); i++)
+        for (int i = Math.Max(0, jobTitleIndex - 2); i < Math.Min(lines.Length, jobTitleIndex + 3); i++)
         {
-            var line = lines[i].Trim();
+            string line = lines[i].Trim();
             if (IsLocationText(line))
             {
                 return line;
@@ -598,9 +598,9 @@ public class AngelListScraper : BaseJobScraper
 
     private static string ExtractSummaryFromContext(string[] lines, int jobTitleIndex)
     {
-        for (var i = jobTitleIndex + 1; i < Math.Min(lines.Length, jobTitleIndex + 5); i++)
+        for (int i = jobTitleIndex + 1; i < Math.Min(lines.Length, jobTitleIndex + 5); i++)
         {
-            var line = lines[i].Trim();
+            string line = lines[i].Trim();
             if (line.Length is > 30 and < 300 && 
                 !IsJobTitle(line) && 
                 !IsLocationText(line) &&
@@ -614,7 +614,7 @@ public class AngelListScraper : BaseJobScraper
 
     private static bool IsRemoteJob(string location, string title, string summary)
     {
-        var text = $"{location} {title} {summary}".ToLower();
+        string text = $"{location} {title} {summary}".ToLower();
         return text.Contains("remote") || 
                text.Contains("work from home") || 
                text.Contains("telecommute") ||

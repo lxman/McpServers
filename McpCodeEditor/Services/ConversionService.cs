@@ -128,11 +128,11 @@ public class ConversionService
                     break;
                 case ".yaml":
                 case ".yml":
-                    var deserializer = new DeserializerBuilder().Build();
+                    IDeserializer deserializer = new DeserializerBuilder().Build();
                     data = deserializer.Deserialize<object>(content);
                     break;
                 case ".xml":
-                    var xDoc = XDocument.Parse(content);
+                    XDocument xDoc = XDocument.Parse(content);
                     data = XmlToObject(xDoc.Root);
                     break;
                 default:
@@ -146,7 +146,7 @@ public class ConversionService
                     return JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
                 case ".yaml":
                 case ".yml":
-                    var serializer = new SerializerBuilder().Build();
+                    ISerializer serializer = new SerializerBuilder().Build();
                     return serializer.Serialize(data);
                 case ".xml":
                     return ObjectToXml(data).ToString();
@@ -180,15 +180,15 @@ public class ConversionService
         var result = new Dictionary<string, object>();
 
         // Add attributes
-        foreach (var attr in element.Attributes())
+        foreach (XAttribute attr in element.Attributes())
         {
             result[$"@{attr.Name}"] = attr.Value;
         }
 
         // Add elements
-        foreach (var child in element.Elements())
+        foreach (XElement child in element.Elements())
         {
-            var childData = XmlToObject(child);
+            object childData = XmlToObject(child);
             if (result.ContainsKey(child.Name.LocalName))
             {
                 // Convert to array if multiple elements with same name
@@ -220,7 +220,7 @@ public class ConversionService
 
         if (obj is Dictionary<string, object> dict)
         {
-            foreach (var kvp in dict)
+            foreach (KeyValuePair<string, object> kvp in dict)
             {
                 if (kvp.Key.StartsWith("@"))
                 {
@@ -232,7 +232,7 @@ public class ConversionService
                     // Child element
                     if (kvp.Value is List<object> list)
                     {
-                        foreach (var item in list)
+                        foreach (object item in list)
                         {
                             element.Add(ObjectToXml(item, kvp.Key));
                         }

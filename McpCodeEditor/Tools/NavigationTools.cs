@@ -31,7 +31,7 @@ public class NavigationTools(SymbolNavigationService symbolNavigationService) : 
             if (column <= 0)
                 throw new ArgumentException("Column must be positive (1-based column numbers).", nameof(column));
 
-            var result = await symbolNavigationService.GoToDefinitionAsync(filePath, lineNumber, column);
+            SymbolNavigationResult result = await symbolNavigationService.GoToDefinitionAsync(filePath, lineNumber, column);
 
             return CreateSuccessResponse(new
             {
@@ -106,7 +106,7 @@ public class NavigationTools(SymbolNavigationService symbolNavigationService) : 
                 MaxResults = maxResults
             };
 
-            var result = await symbolNavigationService.FindReferencesAsync(filePath, lineNumber, column, options);
+            SymbolNavigationResult result = await symbolNavigationService.FindReferencesAsync(filePath, lineNumber, column, options);
 
             return CreateSuccessResponse(new
             {
@@ -170,12 +170,12 @@ public class NavigationTools(SymbolNavigationService symbolNavigationService) : 
 
             SymbolKind? kind = null;
             if (!string.IsNullOrEmpty(symbolKind) &&
-                Enum.TryParse<SymbolKind>(symbolKind, true, out var parsedKind))
+                Enum.TryParse<SymbolKind>(symbolKind, true, out SymbolKind parsedKind))
             {
                 kind = parsedKind;
             }
 
-            var result = await symbolNavigationService.FindSymbolsByNameAsync(
+            SymbolNavigationResult result = await symbolNavigationService.FindSymbolsByNameAsync(
                 symbolName, exactMatch, kind, maxResults);
 
             return CreateSuccessResponse(new
@@ -207,7 +207,7 @@ public class NavigationTools(SymbolNavigationService symbolNavigationService) : 
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
-            var success = await symbolNavigationService.RefreshWorkspaceAsync();
+            bool success = await symbolNavigationService.RefreshWorkspaceAsync();
             
             return CreateSuccessResponse(new
             {

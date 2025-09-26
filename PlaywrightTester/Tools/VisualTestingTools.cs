@@ -18,13 +18,13 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             var filename = $"screenshot_{timestamp}_{sessionId}.png";
-            var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "screenshots", filename);
+            string outputPath = Path.Combine(Directory.GetCurrentDirectory(), "screenshots", filename);
             
             // Ensure directory exists
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
@@ -34,8 +34,8 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
             if (!string.IsNullOrEmpty(selector))
             {
                 // Element screenshot
-                var finalSelector = DetermineSelector(selector);
-                var element = session.Page.Locator(finalSelector);
+                string finalSelector = DetermineSelector(selector);
+                ILocator element = session.Page.Locator(finalSelector);
                 screenshotBytes = await element.ScreenshotAsync();
             }
             else
@@ -80,15 +80,15 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var finalSelector = DetermineSelector(selector);
-            var element = session.Page.Locator(finalSelector);
+            string finalSelector = DetermineSelector(selector);
+            ILocator element = session.Page.Locator(finalSelector);
             
             // Check if element exists
-            var count = await element.CountAsync();
+            int count = await element.CountAsync();
             if (count == 0)
             {
                 return JsonSerializer.Serialize(new { 
@@ -100,7 +100,7 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
 
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             var filename = $"element_{timestamp}_{sessionId}.png";
-            var outputPath = Path.Combine(Directory.GetCurrentDirectory(), "screenshots", filename);
+            string outputPath = Path.Combine(Directory.GetCurrentDirectory(), "screenshots", filename);
             
             // Ensure directory exists
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
@@ -133,7 +133,7 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
             ");
 
             // Take screenshot
-            var screenshotBytes = await element.ScreenshotAsync();
+            byte[] screenshotBytes = await element.ScreenshotAsync();
             await File.WriteAllBytesAsync(outputPath, screenshotBytes);
             
             var result = new
@@ -159,26 +159,26 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
     [McpServerTool]
     [Description("Generate PDF of current page")]
     public async Task<string> GeneratePDF(
-        [Description("Optional output path (default: auto-generated)")] string? path = null,
+        [Description("Optional output path (default: auto-generated) - must be canonical")] string? path = null,
         [Description("Use landscape orientation")] bool landscape = false,
         [Description("Session ID")] string sessionId = "default")
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            var filename = path ?? $"page_{timestamp}_{sessionId}.pdf";
-            var outputPath = Path.IsPathRooted(filename) ? filename : 
+            string filename = path ?? $"page_{timestamp}_{sessionId}.pdf";
+            string outputPath = Path.IsPathRooted(filename) ? filename : 
                            Path.Combine(Directory.GetCurrentDirectory(), "pdfs", filename);
             
             // Ensure directory exists
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
             // Generate PDF
-            var pdfBytes = await session.Page.PdfAsync(new PagePdfOptions
+            byte[] pdfBytes = await session.Page.PdfAsync(new PagePdfOptions
             {
                 Path = outputPath,
                 Format = "A4",
@@ -230,15 +230,15 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var finalSelector = DetermineSelector(selector);
-            var element = session.Page.Locator(finalSelector);
+            string finalSelector = DetermineSelector(selector);
+            ILocator element = session.Page.Locator(finalSelector);
             
             // Check if element exists
-            var count = await element.CountAsync();
+            int count = await element.CountAsync();
             if (count == 0)
             {
                 return JsonSerializer.Serialize(new { 
@@ -320,15 +320,15 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var finalSelector = DetermineSelector(selector);
-            var element = session.Page.Locator(finalSelector);
+            string finalSelector = DetermineSelector(selector);
+            ILocator element = session.Page.Locator(finalSelector);
             
             // Check if element exists
-            var count = await element.CountAsync();
+            int count = await element.CountAsync();
             if (count == 0)
             {
                 return JsonSerializer.Serialize(new { 
@@ -464,13 +464,13 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
     [McpServerTool]
     [Description("Visual regression testing with pixel comparison")]
     public async Task<string> CompareScreenshots(
-        [Description("Path to baseline screenshot for comparison")] string baselinePath,
+        [Description("Path to baseline screenshot for comparison - must be canonical")] string baselinePath,
         [Description("Optional element selector to compare specific element")] string? selector = null,
         [Description("Session ID")] string sessionId = "default")
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
@@ -487,7 +487,7 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
             // Take current screenshot
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             var currentFilename = $"current_{timestamp}_{sessionId}.png";
-            var currentPath = Path.Combine(Directory.GetCurrentDirectory(), "screenshots", "comparison", currentFilename);
+            string currentPath = Path.Combine(Directory.GetCurrentDirectory(), "screenshots", "comparison", currentFilename);
             
             // Ensure directory exists
             Directory.CreateDirectory(Path.GetDirectoryName(currentPath)!);
@@ -495,8 +495,8 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
             byte[] currentBytes;
             if (!string.IsNullOrEmpty(selector))
             {
-                var finalSelector = DetermineSelector(selector);
-                var element = session.Page.Locator(finalSelector);
+                string finalSelector = DetermineSelector(selector);
+                ILocator element = session.Page.Locator(finalSelector);
                 currentBytes = await element.ScreenshotAsync();
             }
             else
@@ -510,9 +510,9 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
             await File.WriteAllBytesAsync(currentPath, currentBytes);
 
             // Perform basic comparison
-            var baselineBytes = await File.ReadAllBytesAsync(baselinePath);
-            var isIdentical = currentBytes.Length == baselineBytes.Length && 
-                              currentBytes.SequenceEqual(baselineBytes);
+            byte[] baselineBytes = await File.ReadAllBytesAsync(baselinePath);
+            bool isIdentical = currentBytes.Length == baselineBytes.Length && 
+                               currentBytes.SequenceEqual(baselineBytes);
 
             // Calculate basic metrics
             var comparison = new

@@ -58,19 +58,19 @@ public class RoslynParameterFilteringService : IParameterFilteringService
         var parametersToPass = new List<VariableInfo>();
 
         // Parse the full file to get semantic context
-        var fullFileContent = string.Join(Environment.NewLine, fullFileLines);
-        var syntaxTree = CSharpSyntaxTree.ParseText(fullFileContent);
+        string fullFileContent = string.Join(Environment.NewLine, fullFileLines);
+        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(fullFileContent);
         
         // Create a basic compilation to get semantic model
-        var compilation = CSharpCompilation.Create("AnalysisAssembly")
+        CSharpCompilation compilation = CSharpCompilation.Create("AnalysisAssembly")
             .AddReferences(MetadataReference.CreateFromFile(typeof(object).Assembly.Location))
             .AddSyntaxTrees(syntaxTree);
         
-        var semanticModel = compilation.GetSemanticModel(syntaxTree);
-        var root = syntaxTree.GetCompilationUnitRoot();
+        SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
+        CompilationUnitSyntax root = syntaxTree.GetCompilationUnitRoot();
 
         // Find the method containing the extraction
-        var containingMethod = FindContainingMethod(root, extractedLines);
+        MethodDeclarationSyntax? containingMethod = FindContainingMethod(root, extractedLines);
         if (containingMethod == null)
         {
             _logger?.LogWarning("Could not find containing method - using fallback filtering");
@@ -78,9 +78,9 @@ public class RoslynParameterFilteringService : IParameterFilteringService
         }
 
         // Analyze each variable using semantic information
-        foreach (var variable in externalVariables)
+        foreach (VariableInfo variable in externalVariables)
         {
-            var context = AnalyzeVariableDeclarationContext(
+            VariableDeclarationContext context = AnalyzeVariableDeclarationContext(
                 variable.Name, containingMethod, root, semanticModel);
 
             if (ShouldPassAsParameterSemantic(variable, context))
@@ -107,12 +107,12 @@ public class RoslynParameterFilteringService : IParameterFilteringService
         if (extractedLines.Length == 0) return null;
 
         // Look for a method that contains similar content to the extracted lines
-        var firstExtractedLine = extractedLines[0].Trim();
-        var lastExtractedLine = extractedLines[^1].Trim();
+        string firstExtractedLine = extractedLines[0].Trim();
+        string lastExtractedLine = extractedLines[^1].Trim();
 
-        foreach (var method in root.DescendantNodes().OfType<MethodDeclarationSyntax>())
+        foreach (MethodDeclarationSyntax method in root.DescendantNodes().OfType<MethodDeclarationSyntax>())
         {
-            var methodText = method.Body?.ToString() ?? "";
+            string methodText = method.Body?.ToString() ?? "";
             
             // Check if the method contains patterns from our extracted lines
             if (extractedLines.Any(line => 
@@ -150,14 +150,14 @@ public class RoslynParameterFilteringService : IParameterFilteringService
         }
 
         // 2. Check if it's a local variable in the method
-        var localVarContext = FindLocalVariableDeclaration(variableName, containingMethod, semanticModel);
+        VariableDeclarationContext? localVarContext = FindLocalVariableDeclaration(variableName, containingMethod, semanticModel);
         if (localVarContext != null)
         {
             return localVarContext;
         }
 
         // 3. Check if it's a class field or property
-        var fieldContext = FindFieldOrPropertyDeclaration(variableName, root, semanticModel);
+        VariableDeclarationContext? fieldContext = FindFieldOrPropertyDeclaration(variableName, root, semanticModel);
         if (fieldContext != null)
         {
             return fieldContext;
@@ -207,15 +207,15 @@ public class RoslynParameterFilteringService : IParameterFilteringService
         // Look for variable declarations in the method body
         if (method.Body == null) return null;
 
-        foreach (var varDecl in method.Body.DescendantNodes().OfType<VariableDeclarationSyntax>())
+        foreach (VariableDeclarationSyntax varDecl in method.Body.DescendantNodes().OfType<VariableDeclarationSyntax>())
         {
-            foreach (var variable in varDecl.Variables)
+            foreach (VariableDeclaratorSyntax variable in varDecl.Variables)
             {
                 if (variable.Identifier.ValueText == variableName)
                 {
                     // Found the declaration - get type information
-                    var symbolInfo = semanticModel.GetSymbolInfo(varDecl.Type);
-                    var variableType = symbolInfo.Symbol?.ToDisplayString() ?? varDecl.Type.ToString();
+                    SymbolInfo symbolInfo = semanticModel.GetSymbolInfo(varDecl.Type);
+                    string variableType = symbolInfo.Symbol?.ToDisplayString() ?? varDecl.Type.ToString();
 
                     return new VariableDeclarationContext
                     {
@@ -242,13 +242,13 @@ public class RoslynParameterFilteringService : IParameterFilteringService
         SemanticModel semanticModel)
     {
         // Look for field declarations
-        foreach (var field in root.DescendantNodes().OfType<FieldDeclarationSyntax>())
+        foreach (FieldDeclarationSyntax field in root.DescendantNodes().OfType<FieldDeclarationSyntax>())
         {
-            foreach (var variable in field.Declaration.Variables)
+            foreach (VariableDeclaratorSyntax variable in field.Declaration.Variables)
             {
                 if (variable.Identifier.ValueText == variableName)
                 {
-                    var isStatic = field.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword));
+                    bool isStatic = field.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword));
                     var variableType = field.Declaration.Type.ToString();
 
                     return new VariableDeclarationContext
@@ -265,11 +265,11 @@ public class RoslynParameterFilteringService : IParameterFilteringService
         }
 
         // Look for property declarations
-        foreach (var property in root.DescendantNodes().OfType<PropertyDeclarationSyntax>())
+        foreach (PropertyDeclarationSyntax property in root.DescendantNodes().OfType<PropertyDeclarationSyntax>())
         {
             if (property.Identifier.ValueText == variableName)
             {
-                var isStatic = property.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword));
+                bool isStatic = property.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword));
                 var variableType = property.Type.ToString();
 
                 return new VariableDeclarationContext
@@ -306,7 +306,7 @@ public class RoslynParameterFilteringService : IParameterFilteringService
         // Check for Type.Member pattern
         if (variableName.Contains('.'))
         {
-            var typeName = variableName.Split('.')[0];
+            string typeName = variableName.Split('.')[0];
             return commonStaticTypes.Contains(typeName) || char.IsUpper(typeName[0]);
         }
 
@@ -326,23 +326,23 @@ public class RoslynParameterFilteringService : IParameterFilteringService
         try
         {
             // Use the same semantic analysis as FilterParametersToPass
-            var fullFileContent = string.Join(Environment.NewLine, fullFileLines);
-            var syntaxTree = CSharpSyntaxTree.ParseText(fullFileContent);
+            string fullFileContent = string.Join(Environment.NewLine, fullFileLines);
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(fullFileContent);
             
-            var compilation = CSharpCompilation.Create("AnalysisAssembly")
+            CSharpCompilation compilation = CSharpCompilation.Create("AnalysisAssembly")
                 .AddReferences(MetadataReference.CreateFromFile(typeof(object).Assembly.Location))
                 .AddSyntaxTrees(syntaxTree);
             
-            var semanticModel = compilation.GetSemanticModel(syntaxTree);
-            var root = syntaxTree.GetCompilationUnitRoot();
+            SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
+            CompilationUnitSyntax root = syntaxTree.GetCompilationUnitRoot();
 
-            var containingMethod = FindContainingMethod(root, extractedLines);
+            MethodDeclarationSyntax? containingMethod = FindContainingMethod(root, extractedLines);
             if (containingMethod == null)
             {
                 return ShouldPassAsParameterFallback(variable);
             }
 
-            var context = AnalyzeVariableDeclarationContext(
+            VariableDeclarationContext context = AnalyzeVariableDeclarationContext(
                 variable.Name, containingMethod, root, semanticModel);
 
             return ShouldPassAsParameterSemantic(variable, context);
@@ -367,7 +367,7 @@ public class RoslynParameterFilteringService : IParameterFilteringService
     /// </summary>
     private bool ShouldPassAsParameterFallback(VariableInfo variable)
     {
-        var varName = variable.Name;
+        string varName = variable.Name;
 
         // Simple fallback rules
         if (varName.StartsWith("_")) return false; // Underscore fields
@@ -388,10 +388,10 @@ public class RoslynParameterFilteringService : IParameterFilteringService
     {
         var suggestedTypes = new Dictionary<string, string>();
         
-        foreach (var param in parameters)
+        foreach (VariableInfo param in parameters)
         {
             // Use the type from VariableInfo if available, otherwise infer
-            var suggestedType = !string.IsNullOrEmpty(param.Type) && param.Type != "object" 
+            string suggestedType = !string.IsNullOrEmpty(param.Type) && param.Type != "object" 
                 ? param.Type 
                 : InferParameterType(param.Name, extractedLines);
                 
@@ -407,7 +407,7 @@ public class RoslynParameterFilteringService : IParameterFilteringService
     /// </summary>
     private static string InferParameterType(string paramName, string[] extractedLines)
     {
-        var extractedCode = string.Join(" ", extractedLines);
+        string extractedCode = string.Join(" ", extractedLines);
         
         // Collection patterns (more accurate)
         if (extractedCode.Contains($"foreach") && extractedCode.Contains($"in {paramName}"))
@@ -436,7 +436,7 @@ public class RoslynParameterFilteringService : IParameterFilteringService
             return extractedCode.Contains($"{paramName}.Length") ? "string" : "ICollection";
 
         // Naming convention fallbacks
-        var lowerName = paramName.ToLower();
+        string lowerName = paramName.ToLower();
         if (lowerName.Contains("count") || lowerName.Contains("index") || lowerName.Contains("id")) return "int";
         if (lowerName.Contains("total") || lowerName.Contains("amount") || lowerName.Contains("price")) return "decimal";
         if (lowerName.Contains("name") || lowerName.Contains("text") || lowerName.Contains("message")) return "string";

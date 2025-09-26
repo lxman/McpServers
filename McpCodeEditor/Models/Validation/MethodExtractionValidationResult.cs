@@ -70,7 +70,7 @@ namespace McpCodeEditor.Models.Validation
         {
             var result = new MethodExtractionValidationResult();
             result.SetInvalid(message);
-            foreach (var error in errors)
+            foreach (ValidationError error in errors)
             {
                 result.AddError(error);
             }
@@ -121,8 +121,8 @@ namespace McpCodeEditor.Models.Validation
             if (IsRef) modifiers.Add("ref");
             if (IsOut) modifiers.Add("out");
             
-            var modifierStr = modifiers.Count > 0 ? string.Join(" ", modifiers) + " " : "";
-            var defaultStr = !string.IsNullOrEmpty(DefaultValue) ? $" = {DefaultValue}" : "";
+            string modifierStr = modifiers.Count > 0 ? string.Join(" ", modifiers) + " " : "";
+            string defaultStr = !string.IsNullOrEmpty(DefaultValue) ? $" = {DefaultValue}" : "";
             
             return $"{modifierStr}{Type} {Name}{defaultStr}";
         }

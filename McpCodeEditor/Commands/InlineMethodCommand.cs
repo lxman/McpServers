@@ -38,7 +38,7 @@ public class InlineMethodCommand : IRefactoringCommand
 
     public bool SupportsFile(string filePath)
     {
-        var language = LanguageDetectionService.DetectLanguage(filePath);
+        LanguageType language = LanguageDetectionService.DetectLanguage(filePath);
         return SupportedLanguages.Contains(language);
     }
 
@@ -68,12 +68,12 @@ public class InlineMethodCommand : IRefactoringCommand
         // Validate language support
         if (!SupportsFile(context.FilePath))
         {
-            var language = LanguageDetectionService.DetectLanguage(context.FilePath);
+            LanguageType language = LanguageDetectionService.DetectLanguage(context.FilePath);
             return CreateErrorResult($"Method inlining not supported for {LanguageDetectionService.GetLanguageName(language)} files");
         }
 
         // Validate method name
-        var methodName = context.AdditionalData["methodName"]?.ToString() ?? "";
+        string methodName = context.AdditionalData["methodName"]?.ToString() ?? "";
         if (string.IsNullOrWhiteSpace(methodName))
         {
             return CreateErrorResult("MethodName cannot be empty");
@@ -87,11 +87,11 @@ public class InlineMethodCommand : IRefactoringCommand
         _logger.LogInformation("InlineMethodCommand executing for file: {FilePath}", context.FilePath);
 
         // Extract parameters
-        var methodName = context.AdditionalData["methodName"]?.ToString() ?? throw new InvalidOperationException("MethodName is required");
-        var previewOnly = bool.Parse(context.AdditionalData["previewOnly"]?.ToString() ?? "false");
+        string methodName = context.AdditionalData["methodName"]?.ToString() ?? throw new InvalidOperationException("MethodName is required");
+        bool previewOnly = bool.Parse(context.AdditionalData["previewOnly"]?.ToString() ?? "false");
 
-        var validatedPath = _pathValidation.ValidateFileExists(context.FilePath);
-        var language = LanguageDetectionService.DetectLanguage(validatedPath);
+        string validatedPath = _pathValidation.ValidateFileExists(context.FilePath);
+        LanguageType language = LanguageDetectionService.DetectLanguage(validatedPath);
 
         _logger.LogInformation("Inlining method '{MethodName}' in {Language} file: {FilePath}", 
             methodName, language, validatedPath);

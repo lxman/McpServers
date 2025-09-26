@@ -33,7 +33,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             logger.LogDebug("Starting two-stage TypeScript validation for code snippet");
 
             // Stage 1: Fast structural validation using Zu.TypeScript
-            var stage1Result = ValidateWithZuTypeScript(code);
+            ValidationResult stage1Result = ValidateWithZuTypeScript(code);
             if (!stage1Result.IsValid)
             {
                 // Trust negative results from Zu.TypeScript - return immediately
@@ -44,7 +44,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             // Stage 2: Comprehensive semantic validation using tsc.exe
             // Don't trust positive results from Zu.TypeScript, proceed to authoritative validation
             logger.LogDebug("Stage 1 passed, proceeding to Stage 2 (tsc.exe) validation");
-            var stage2Result = ValidateWithTypeScriptCompiler(code);
+            ValidationResult stage2Result = ValidateWithTypeScriptCompiler(code);
 
             logger.LogDebug("Two-stage validation completed. Final result: {IsValid}", stage2Result.IsValid);
             return stage2Result;
@@ -87,10 +87,10 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             }
 
             // Check for obvious structural issues that Zu.TypeScript can catch reliably
-            var structuralIssues = FindStructuralIssues(ast, code);
+            List<TypeScriptSemanticDiagnostic> structuralIssues = FindStructuralIssues(ast, code);
             if (structuralIssues.Count != 0)
             {
-                var primaryIssue = structuralIssues.OrderByDescending(GetErrorPriority).First();
+                TypeScriptSemanticDiagnostic primaryIssue = structuralIssues.OrderByDescending(GetErrorPriority).First();
                 return new ValidationResult
                 {
                     IsValid = false,
@@ -153,7 +153,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             // Recursively check child nodes
             if (node.Children?.Any() == true)
             {
-                foreach (var child in node.Children)
+                foreach (Node? child in node.Children)
                 {
                     if (child != null)
                     {
@@ -183,7 +183,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
         {
             logger.LogDebug("Stage 2: Running tsc.exe semantic validation");
 
-            var tscPath = GetTypeScriptCompilerPath();
+            string? tscPath = GetTypeScriptCompilerPath();
             if (string.IsNullOrEmpty(tscPath))
             {
                 logger.LogWarning("TypeScript compiler (tsc.exe) not found, falling back to Stage 1 result");
@@ -217,7 +217,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
         {
             // Write code to a temporary file
             tempFile = Path.GetTempFileName();
-            var tsFile = Path.ChangeExtension(tempFile, ".ts");
+            string tsFile = Path.ChangeExtension(tempFile, ".ts");
             File.Move(tempFile, tsFile);
             tempFile = tsFile;
 
@@ -234,7 +234,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
                 CreateNoWindow = true
             };
 
-            using var process = Process.Start(processInfo);
+            using Process? process = Process.Start(processInfo);
             if (process == null)
             {
                 return new ValidationResult
@@ -245,7 +245,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             }
 
             // Wait for completion with timeout
-            var completed = process.WaitForExit(10000); // 10 second timeout
+            bool completed = process.WaitForExit(10000); // 10 second timeout
             if (!completed)
             {
                 process.Kill();
@@ -256,12 +256,12 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
                 };
             }
 
-            var output = process.StandardOutput.ReadToEnd();
-            var errors = process.StandardError.ReadToEnd();
-            var allOutput = output + errors;
+            string output = process.StandardOutput.ReadToEnd();
+            string errors = process.StandardError.ReadToEnd();
+            string allOutput = output + errors;
 
             // Parse compiler diagnostics
-            var diagnostics = ParseTypeScriptCompilerOutput(allOutput, tempFile);
+            List<TypeScriptSemanticDiagnostic> diagnostics = ParseTypeScriptCompilerOutput(allOutput, tempFile);
 
             if (diagnostics.Count == 0)
             {
@@ -270,8 +270,8 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             }
 
             // Process had errors
-            var primaryError = diagnostics.OrderByDescending(GetErrorPriority).FirstOrDefault();
-            var errorMessage = primaryError?.Message ?? "TypeScript compiler found syntax errors";
+            TypeScriptSemanticDiagnostic? primaryError = diagnostics.OrderByDescending(GetErrorPriority).FirstOrDefault();
+            string errorMessage = primaryError?.Message ?? "TypeScript compiler found syntax errors";
 
             logger.LogDebug("Stage 2 tsc.exe validation failed: {ErrorMessage}", errorMessage);
             return new ValidationResult
@@ -301,10 +301,10 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
     private static bool ShouldIncludeError(string errorMessage)
     {
         // Extract error code (e.g., "TS2304" from "error TS2304: Cannot find name...")
-        var match = Regex.Match(errorMessage, @"TS(\d{4})");
+        Match match = Regex.Match(errorMessage, @"TS(\d{4})");
         if (!match.Success) return true; // Include non-standard errors
     
-        var errorCode = int.Parse(match.Groups[1].Value);
+        int errorCode = int.Parse(match.Groups[1].Value);
 
         // TS1xxx = Syntax errors (always keep these)
         return errorCode < 2000;
@@ -322,9 +322,9 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             return diagnostics;
         }
 
-        var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
             if (line.Contains("error TS") || line.Contains("warning TS"))
             {
@@ -332,7 +332,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
                 {
                     continue;
                 }
-                var diagnostic = ParseCompilerDiagnosticLine(line, tempFileName);
+                TypeScriptSemanticDiagnostic? diagnostic = ParseCompilerDiagnosticLine(line, tempFileName);
                 if (diagnostic != null)
                 {
                     diagnostics.Add(diagnostic);
@@ -352,7 +352,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
         try
         {
             // Extract line and column if present
-            var match = Regex.Match(line, @"\((\d+),(\d+)\)");
+            Match match = Regex.Match(line, @"\((\d+),(\d+)\)");
             int lineNum = 1, colNum = 1;
 
             if (match.Success)
@@ -362,12 +362,12 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             }
 
             // Extract error code
-            var codeMatch = Regex.Match(line, @"TS(\d+)");
-            var errorCode = codeMatch.Success ? int.Parse(codeMatch.Groups[1].Value) : 0;
+            Match codeMatch = Regex.Match(line, @"TS(\d+)");
+            int errorCode = codeMatch.Success ? int.Parse(codeMatch.Groups[1].Value) : 0;
 
             // Extract message (everything after the error code)
-            var messageStart = line.IndexOf(": ", StringComparison.Ordinal) + 2;
-            var message = messageStart < line.Length ? line[messageStart..] : line;
+            int messageStart = line.IndexOf(": ", StringComparison.Ordinal) + 2;
+            string message = messageStart < line.Length ? line[messageStart..] : line;
 
             return new TypeScriptSemanticDiagnostic
             {
@@ -402,7 +402,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             logger.LogDebug("Detecting TypeScript compiler location");
 
             // Strategy 1: Check PATH environment
-            var pathTsc = FindTscInPath();
+            string? pathTsc = FindTscInPath();
             if (!string.IsNullOrEmpty(pathTsc))
             {
                 _tscPath = pathTsc;
@@ -411,7 +411,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             }
 
             // Strategy 2: Check common NuGet package locations
-            var nugetTsc = FindTscInNuGetPackages();
+            string? nugetTsc = FindTscInNuGetPackages();
             if (!string.IsNullOrEmpty(nugetTsc))
             {
                 _tscPath = nugetTsc;
@@ -420,7 +420,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             }
 
             // Strategy 3: Check npm global install
-            var npmTsc = FindTscInNpmGlobal();
+            string? npmTsc = FindTscInNpmGlobal();
             if (!string.IsNullOrEmpty(npmTsc))
             {
                 _tscPath = npmTsc;
@@ -437,22 +437,22 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
     {
         try
         {
-            var pathVar = Environment.GetEnvironmentVariable("PATH");
+            string? pathVar = Environment.GetEnvironmentVariable("PATH");
             if (string.IsNullOrEmpty(pathVar))
             {
                 return null;
             }
 
-            var paths = pathVar.Split(Path.PathSeparator);
-            foreach (var path in paths)
+            string[] paths = pathVar.Split(Path.PathSeparator);
+            foreach (string path in paths)
             {
-                var tscPath = Path.Combine(path, "tsc.exe");
+                string tscPath = Path.Combine(path, "tsc.exe");
                 if (File.Exists(tscPath))
                 {
                     return tscPath;
                 }
 
-                var tscCmd = Path.Combine(path, "tsc.cmd");
+                string tscCmd = Path.Combine(path, "tsc.cmd");
                 if (File.Exists(tscCmd))
                 {
                     return tscCmd;
@@ -471,8 +471,8 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
     {
         try
         {
-            var baseDir = AppContext.BaseDirectory;
-            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string baseDir = AppContext.BaseDirectory;
+            string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string[] possiblePaths =
             [
                 Path.Combine(baseDir, "tools", "tsc", "tsc.exe"),
@@ -482,7 +482,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
                 Path.Combine(userProfile, ".nuget", "packages", "microsoft.typescript.compiler", "3.1.5", "tools", "tsc.exe")
             ];
 
-            foreach (var path in possiblePaths)
+            foreach (string path in possiblePaths)
             {
                 if (File.Exists(path))
                 {
@@ -502,8 +502,8 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
     {
         try
         {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var npmPath = Path.Combine(appData, "npm", "tsc.cmd");
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string npmPath = Path.Combine(appData, "npm", "tsc.cmd");
             if (File.Exists(npmPath))
             {
                 return npmPath;
@@ -526,15 +526,15 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
     /// </summary>
     private void CheckForUnmatchedParentheses(Node callNode, string code, List<TypeScriptSemanticDiagnostic> issues)
     {
-        var nodeText = GetNodeText(callNode, code);
+        string nodeText = GetNodeText(callNode, code);
         if (!string.IsNullOrEmpty(nodeText))
         {
-            var openParens = nodeText.Count(c => c == '(');
-            var closeParens = nodeText.Count(c => c == ')');
+            int openParens = nodeText.Count(c => c == '(');
+            int closeParens = nodeText.Count(c => c == ')');
 
             if (openParens != closeParens)
             {
-                var position = GetNodePosition(callNode, code);
+                (int line, int column) position = GetNodePosition(callNode, code);
 
                 issues.Add(new TypeScriptSemanticDiagnostic
                 {
@@ -557,12 +557,12 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
     {
         if (classNode.Children == null) return;
 
-        foreach (var child in classNode.Children)
+        foreach (Node? child in classNode.Children)
         {
             if (child?.Kind == SyntaxKind.VariableStatement)
             {
-                var position = GetNodePosition(child, code);
-                var nodeText = GetNodeText(child, code);
+                (int line, int column) position = GetNodePosition(child, code);
+                string nodeText = GetNodeText(child, code);
 
                 // Check if this is a const/let/var declaration at class level
                 if (nodeText.TrimStart().StartsWith("const ") ||
@@ -608,9 +608,9 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
     /// </summary>
     private static (int line, int column) GetNodePosition(Node node, string code)
     {
-        var position = node.Pos ?? 0;
-        var line = GetLineFromPosition(code, position);
-        var column = GetColumnFromPosition(code, position);
+        int position = node.Pos ?? 0;
+        int line = GetLineFromPosition(code, position);
+        int column = GetColumnFromPosition(code, position);
         return (line, column);
     }
 
@@ -629,7 +629,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
     private static int GetColumnFromPosition(string code, int position)
     {
         if (position < 0 || position >= code.Length) return 1;
-        var lastNewlineIndex = code.LastIndexOf('\n', position);
+        int lastNewlineIndex = code.LastIndexOf('\n', position);
         return position - lastNewlineIndex;
     }
 
@@ -669,8 +669,8 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
     /// </summary>
     private static string FormatErrorMessage(TypeScriptSemanticDiagnostic diagnostic, string originalCode)
     {
-        var lines = originalCode.Split('\n');
-        var lineContent = diagnostic.Line <= lines.Length && diagnostic.Line > 0
+        string[] lines = originalCode.Split('\n');
+        string lineContent = diagnostic.Line <= lines.Length && diagnostic.Line > 0
             ? lines[diagnostic.Line - 1].Trim()
             : "";
 
@@ -726,7 +726,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             }
 
             // Use the two-stage validation approach
-            var validationResult = ValidateSyntax(codeSnippet);
+            ValidationResult validationResult = ValidateSyntax(codeSnippet);
             if (!validationResult.IsValid && !string.IsNullOrEmpty(validationResult.ErrorMessage))
             {
                 result.Errors.Add(new TypeScriptSyntaxError
@@ -741,7 +741,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             // Apply contextual validation if context is provided
             if (context != null)
             {
-                var contextualErrors = ValidateInContext(codeSnippet, context);
+                List<TypeScriptSyntaxError> contextualErrors = ValidateInContext(codeSnippet, context);
                 result.Errors.AddRange(contextualErrors);
             }
 
@@ -841,7 +841,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             // Use two-stage validation for identifier
             try
             {
-                var validationResult = ValidateSyntax($"var {identifier};");
+                ValidationResult validationResult = ValidateSyntax($"var {identifier};");
                 if (!validationResult.IsValid)
                 {
                     result.Errors.Add(new TypeScriptSyntaxError
@@ -904,7 +904,7 @@ public class TypeScriptSyntaxValidator(ILogger<TypeScriptSyntaxValidator> logger
             // Use two-stage validation to check for invalid class member syntax
             try
             {
-                var classCodeValidation = ValidateSyntax($"class TestClass {{ {code} }}");
+                ValidationResult classCodeValidation = ValidateSyntax($"class TestClass {{ {code} }}");
                 if (!classCodeValidation.IsValid)
                 {
                     errors.Add(new TypeScriptSyntaxError

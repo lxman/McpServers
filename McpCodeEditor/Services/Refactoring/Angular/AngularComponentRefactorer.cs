@@ -69,10 +69,10 @@ public class AngularComponentRefactorer(
             }
 
             // Read component file
-            var content = await File.ReadAllTextAsync(filePath, cancellationToken);
+            string content = await File.ReadAllTextAsync(filePath, cancellationToken);
             
             // First, perform TypeScript analysis for base structure
-            var tsAnalysisResult = await typeScriptAnalysis.AnalyzeContentAsync(content, filePath, cancellationToken);
+            TypeScriptAnalysisResult tsAnalysisResult = await typeScriptAnalysis.AnalyzeContentAsync(content, filePath, cancellationToken);
             if (!tsAnalysisResult.Success)
             {
                 return new AngularComponentAnalysisResult
@@ -83,11 +83,11 @@ public class AngularComponentRefactorer(
             }
 
             // Create Angular component analysis
-            var component = await AnalyzeAngularSpecificFeaturesAsync(content, filePath, tsAnalysisResult, cancellationToken);
+            AngularComponent component = await AnalyzeAngularSpecificFeaturesAsync(content, filePath, tsAnalysisResult, cancellationToken);
             
             // Generate recommendations and complexity analysis
-            var recommendations = GenerateComponentRecommendations(component);
-            var complexityScore = CalculateComponentComplexity(component);
+            List<string> recommendations = GenerateComponentRecommendations(component);
+            int complexityScore = CalculateComponentComplexity(component);
 
             logger.LogDebug("Angular component analysis completed: {ComponentName}, Complexity: {Complexity}", 
                 component.Name, complexityScore);
@@ -126,12 +126,12 @@ public class AngularComponentRefactorer(
             logger.LogDebug("Extracting lifecycle logic: {HookName} from {FilePath}", hookName, filePath);
 
             // Create backup
-            var backupId = await backupService.CreateBackupAsync(
+            string backupId = await backupService.CreateBackupAsync(
                 Path.GetDirectoryName(filePath) ?? ".",
                 $"Before Angular lifecycle extraction: {hookName}");
 
-            var content = await File.ReadAllTextAsync(filePath, cancellationToken);
-            var analysisResult = await AnalyzeComponentAsync(filePath, cancellationToken);
+            string content = await File.ReadAllTextAsync(filePath, cancellationToken);
+            AngularComponentAnalysisResult analysisResult = await AnalyzeComponentAsync(filePath, cancellationToken);
 
             if (!analysisResult.Success || analysisResult.Component == null)
             {
@@ -143,7 +143,7 @@ public class AngularComponentRefactorer(
             }
 
             // Find the specific lifecycle hook
-            var lifecycleHook = analysisResult.Component.LifecycleHooks
+            AngularLifecycleHook? lifecycleHook = analysisResult.Component.LifecycleHooks
                 .FirstOrDefault(h => h.Name.Equals(hookName, StringComparison.OrdinalIgnoreCase));
 
             if (lifecycleHook == null)
@@ -156,7 +156,7 @@ public class AngularComponentRefactorer(
             }
 
             // Extract and refactor lifecycle logic
-            var modifiedContent = await ExtractLifecycleMethodLogicAsync(content, lifecycleHook, options);
+            string modifiedContent = await ExtractLifecycleMethodLogicAsync(content, lifecycleHook, options);
 
             // Write changes
             await File.WriteAllTextAsync(filePath, modifiedContent, cancellationToken);
@@ -207,12 +207,12 @@ public class AngularComponentRefactorer(
             logger.LogDebug("Separating business logic from component: {FilePath}", filePath);
 
             // Create backup
-            var backupId = await backupService.CreateBackupAsync(
+            string backupId = await backupService.CreateBackupAsync(
                 Path.GetDirectoryName(filePath) ?? ".",
                 "Before Angular business logic separation");
 
-            var content = await File.ReadAllTextAsync(filePath, cancellationToken);
-            var analysisResult = await AnalyzeComponentAsync(filePath, cancellationToken);
+            string content = await File.ReadAllTextAsync(filePath, cancellationToken);
+            AngularComponentAnalysisResult analysisResult = await AnalyzeComponentAsync(filePath, cancellationToken);
 
             if (!analysisResult.Success || analysisResult.Component == null)
             {
@@ -224,7 +224,7 @@ public class AngularComponentRefactorer(
             }
 
             // Identify business logic methods (not lifecycle hooks, not template event handlers)
-            var businessLogicMethods = analysisResult.Component.Methods
+            List<AngularMethod> businessLogicMethods = analysisResult.Component.Methods
                 .Where(m => m is { IsLifecycleHook: false, UsedInTemplate: false } && !IsEventHandler(m.Name))
                 .ToList();
 
@@ -239,9 +239,9 @@ public class AngularComponentRefactorer(
 
             // Create the service file for business logic
             var serviceFileName = $"{analysisResult.Component.Name.Replace("Component", "")}Service.ts";
-            var servicePath = Path.Combine(Path.GetDirectoryName(filePath)!, serviceFileName);
+            string servicePath = Path.Combine(Path.GetDirectoryName(filePath)!, serviceFileName);
             
-            var separationResult = await CreateBusinessLogicServiceAsync(
+            AngularComponentRefactoringResult separationResult = await CreateBusinessLogicServiceAsync(
                 analysisResult.Component, 
                 businessLogicMethods, 
                 servicePath, 
@@ -253,7 +253,7 @@ public class AngularComponentRefactorer(
             }
 
             // Update component to use the new service
-            var modifiedComponentContent = UpdateComponentToUseService(
+            string modifiedComponentContent = UpdateComponentToUseService(
                 content, 
                 analysisResult.Component, 
                 businessLogicMethods, 
@@ -312,12 +312,12 @@ public class AngularComponentRefactorer(
         {
             logger.LogDebug("Optimizing change detection for component: {FilePath}", filePath);
 
-            var backupId = await backupService.CreateBackupAsync(
+            string backupId = await backupService.CreateBackupAsync(
                 Path.GetDirectoryName(filePath) ?? ".",
                 "Before Angular change detection optimization");
 
-            var content = await File.ReadAllTextAsync(filePath, cancellationToken);
-            var analysisResult = await AnalyzeComponentAsync(filePath, cancellationToken);
+            string content = await File.ReadAllTextAsync(filePath, cancellationToken);
+            AngularComponentAnalysisResult analysisResult = await AnalyzeComponentAsync(filePath, cancellationToken);
 
             if (!analysisResult.Success || analysisResult.Component == null)
             {
@@ -329,7 +329,7 @@ public class AngularComponentRefactorer(
             }
 
             var optimizations = new List<string>();
-            var modifiedContent = content;
+            string modifiedContent = content;
 
             // Add OnPush change detection strategy if not present
             if (!content.Contains("ChangeDetectionStrategy.OnPush"))
@@ -420,30 +420,30 @@ public class AngularComponentRefactorer(
     /// </summary>
     private static void ExtractComponentDecorator(string content, AngularComponent component)
     {
-        var decoratorMatch = ComponentDecoratorPattern.Match(content);
+        Match decoratorMatch = ComponentDecoratorPattern.Match(content);
         if (!decoratorMatch.Success) return;
 
-        var decoratorContent = decoratorMatch.Groups[1].Value;
+        string decoratorContent = decoratorMatch.Groups[1].Value;
 
         // Extract selector
-        var selectorMatch = SelectorPattern.Match(decoratorContent);
+        Match selectorMatch = SelectorPattern.Match(decoratorContent);
         if (selectorMatch.Success)
         {
             component.Selector = selectorMatch.Groups[1].Value;
         }
 
         // Extract templateUrl
-        var templateUrlMatch = TemplateUrlPattern.Match(decoratorContent);
+        Match templateUrlMatch = TemplateUrlPattern.Match(decoratorContent);
         if (templateUrlMatch.Success)
         {
             component.TemplateUrl = templateUrlMatch.Groups[1].Value;
         }
 
         // Extract styleUrls
-        var styleUrlsMatch = StyleUrlsPattern.Match(decoratorContent);
+        Match styleUrlsMatch = StyleUrlsPattern.Match(decoratorContent);
         if (styleUrlsMatch.Success)
         {
-            var styleUrlsContent = styleUrlsMatch.Groups[1].Value;
+            string styleUrlsContent = styleUrlsMatch.Groups[1].Value;
             component.StyleUrls = styleUrlsContent
                 .Split(',')
                 .Select(url => url.Trim().Trim('\'', '"'))
@@ -461,7 +461,7 @@ public class AngularComponentRefactorer(
     private static void ExtractComponentClass(TypeScriptAnalysisResult tsResult, AngularComponent component)
     {
         // Find the component class (typically the exported class)
-        var componentClass = tsResult.Classes.FirstOrDefault(c => c.IsExported);
+        TypeScriptClass? componentClass = tsResult.Classes.FirstOrDefault(c => c.IsExported);
         if (componentClass != null)
         {
             component.Name = componentClass.Name;
@@ -473,7 +473,7 @@ public class AngularComponentRefactorer(
         }
 
         // Extract methods from TypeScript analysis
-        foreach (var tsFunction in tsResult.Functions)
+        foreach (TypeScriptFunction tsFunction in tsResult.Functions)
         {
             component.Methods.Add(new AngularMethod
             {
@@ -494,7 +494,7 @@ public class AngularComponentRefactorer(
     private static void ExtractAngularProperties(string content, AngularComponent component)
     {
         // Extract @Input properties
-        var inputMatches = InputPropertyPattern.Matches(content);
+        MatchCollection inputMatches = InputPropertyPattern.Matches(content);
         foreach (Match match in inputMatches)
         {
             component.InputProperties.Add(new AngularProperty
@@ -507,7 +507,7 @@ public class AngularComponentRefactorer(
         }
 
         // Extract @Output properties
-        var outputMatches = OutputPropertyPattern.Matches(content);
+        MatchCollection outputMatches = OutputPropertyPattern.Matches(content);
         foreach (Match match in outputMatches)
         {
             component.OutputProperties.Add(new AngularProperty
@@ -525,11 +525,11 @@ public class AngularComponentRefactorer(
     /// </summary>
     private static void ExtractLifecycleHooks(string content, TypeScriptAnalysisResult tsResult, AngularComponent component)
     {
-        var hookMatches = LifecycleHookPattern.Matches(content);
+        MatchCollection hookMatches = LifecycleHookPattern.Matches(content);
         foreach (Match match in hookMatches)
         {
-            var hookName = match.Groups[1].Value;
-            var tsFunction = tsResult.Functions.FirstOrDefault(f => f.Name == $"ng{hookName}");
+            string hookName = match.Groups[1].Value;
+            TypeScriptFunction? tsFunction = tsResult.Functions.FirstOrDefault(f => f.Name == $"ng{hookName}");
             
             component.LifecycleHooks.Add(new AngularLifecycleHook
             {
@@ -548,11 +548,11 @@ public class AngularComponentRefactorer(
     private static void ExtractDependencyInjection(string content, AngularComponent component)
     {
         // Look for constructor injection pattern
-        var constructorMatch = Regex.Match(content, @"constructor\s*\(\s*([^)]+)\s*\)");
+        Match constructorMatch = Regex.Match(content, @"constructor\s*\(\s*([^)]+)\s*\)");
         if (constructorMatch.Success)
         {
-            var constructorParams = constructorMatch.Groups[1].Value;
-            var paramMatches = Regex.Matches(constructorParams, @"(?:private|public|protected)?\s*(\w+)\s*:\s*(\w+)");
+            string constructorParams = constructorMatch.Groups[1].Value;
+            MatchCollection paramMatches = Regex.Matches(constructorParams, @"(?:private|public|protected)?\s*(\w+)\s*:\s*(\w+)");
             
             foreach (Match paramMatch in paramMatches)
             {
@@ -575,13 +575,13 @@ public class AngularComponentRefactorer(
 
         try
         {
-            var templatePath = Path.Combine(Path.GetDirectoryName(component.FilePath)!, component.TemplateUrl);
+            string templatePath = Path.Combine(Path.GetDirectoryName(component.FilePath)!, component.TemplateUrl);
             if (File.Exists(templatePath))
             {
-                var templateContent = await File.ReadAllTextAsync(templatePath, cancellationToken);
+                string templateContent = await File.ReadAllTextAsync(templatePath, cancellationToken);
                 
                 // Basic template analysis - find property and method usages
-                foreach (var method in component.Methods)
+                foreach (AngularMethod method in component.Methods)
                 {
                     if (templateContent.Contains($"{method.Name}("))
                     {
@@ -617,7 +617,7 @@ public class AngularComponentRefactorer(
         }
 
         // Check for business logic in component
-        var businessLogicMethods = component.Methods.Count(m => m is { IsLifecycleHook: false, UsedInTemplate: false });
+        int businessLogicMethods = component.Methods.Count(m => m is { IsLifecycleHook: false, UsedInTemplate: false });
         if (businessLogicMethods > 5)
         {
             recommendations.Add($"Consider extracting {businessLogicMethods} business logic methods to a service");
@@ -689,7 +689,7 @@ public class AngularComponentRefactorer(
         try
         {
             var serviceBuilder = new StringBuilder();
-            var serviceName = Path.GetFileNameWithoutExtension(servicePath);
+            string serviceName = Path.GetFileNameWithoutExtension(servicePath);
 
             // Generate service file
             serviceBuilder.AppendLine("import { Injectable } from '@angular/core';");
@@ -701,7 +701,7 @@ public class AngularComponentRefactorer(
             serviceBuilder.AppendLine();
 
             // Add extracted methods (simplified - would need actual method extraction)
-            foreach (var method in businessLogicMethods)
+            foreach (AngularMethod method in businessLogicMethods)
             {
                 serviceBuilder.AppendLine($"  // TODO: Extract method {method.Name} from component");
                 serviceBuilder.AppendLine($"  {method.Name}() {{");
@@ -737,10 +737,10 @@ public class AngularComponentRefactorer(
     {
         // Simplified implementation - would need proper AST manipulation
         // For now, just add a comment about the service injection
-        var modifiedContent = content;
+        string modifiedContent = content;
         
         // Add service import (simplified)
-        var serviceName = Path.GetFileNameWithoutExtension(serviceFileName);
+        string serviceName = Path.GetFileNameWithoutExtension(serviceFileName);
         var importStatement = $"import {{ {serviceName} }} from './{serviceFileName.Replace(".ts", "")}';";
         
         // Insert import at the top (simplified approach)

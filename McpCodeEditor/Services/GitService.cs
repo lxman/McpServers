@@ -56,7 +56,7 @@ public class GitService(CodeEditorConfigurationService config)
     {
         try
         {
-            var repoPath = GetRepositoryPath(repositoryPath);
+            string repoPath = GetRepositoryPath(repositoryPath);
 
             if (!IsGitRepository(repoPath))
             {
@@ -64,7 +64,7 @@ public class GitService(CodeEditorConfigurationService config)
             }
 
             using var repo = new Repository(repoPath);
-            var status = repo.RetrieveStatus();
+            RepositoryStatus? status = repo.RetrieveStatus();
 
             var result = new
             {
@@ -113,7 +113,7 @@ public class GitService(CodeEditorConfigurationService config)
     {
         try
         {
-            var repoPath = GetRepositoryPath(repositoryPath);
+            string repoPath = GetRepositoryPath(repositoryPath);
 
             if (!IsGitRepository(repoPath))
             {
@@ -206,7 +206,7 @@ public class GitService(CodeEditorConfigurationService config)
     {
         try
         {
-            var repoPath = GetRepositoryPath(repositoryPath);
+            string repoPath = GetRepositoryPath(repositoryPath);
 
             if (!IsGitRepository(repoPath))
             {
@@ -220,7 +220,7 @@ public class GitService(CodeEditorConfigurationService config)
 
             if (!string.IsNullOrEmpty(branch))
             {
-                var targetBranch = repo.Branches[branch];
+                Branch? targetBranch = repo.Branches[branch];
                 if (targetBranch == null)
                 {
                     return new { success = false, error = $"Branch not found: {branch}" };
@@ -247,7 +247,7 @@ public class GitService(CodeEditorConfigurationService config)
                 {
                     if (commit.Parents.Count() == 0) return true; // Initial commit
 
-                    var parentCommit = commit.Parents.First();
+                    Commit? parentCommit = commit.Parents.First();
                     var patch = repo.Diff.Compare<Patch>(parentCommit.Tree, commit.Tree);
                     return patch.Any(entry => entry.Path.Contains(filePath, StringComparison.OrdinalIgnoreCase));
                 });
@@ -287,7 +287,7 @@ public class GitService(CodeEditorConfigurationService config)
     {
         try
         {
-            var repoPath = GetRepositoryPath(repositoryPath);
+            string repoPath = GetRepositoryPath(repositoryPath);
 
             if (!IsGitRepository(repoPath))
             {
@@ -295,7 +295,7 @@ public class GitService(CodeEditorConfigurationService config)
             }
 
             // Make file path relative to repository root
-            var relativePath = Path.GetRelativePath(repoPath, Path.GetFullPath(filePath));
+            string relativePath = Path.GetRelativePath(repoPath, Path.GetFullPath(filePath));
 
             using var repo = new Repository(repoPath);
 
@@ -304,8 +304,8 @@ public class GitService(CodeEditorConfigurationService config)
                 return new { success = false, error = $"File not found: {relativePath}" };
             }
 
-            var blame = repo.Blame(relativePath);
-            var fileLines = await File.ReadAllLinesAsync(Path.Combine(repoPath, relativePath));
+            BlameHunkCollection? blame = repo.Blame(relativePath);
+            string[] fileLines = await File.ReadAllLinesAsync(Path.Combine(repoPath, relativePath));
 
             var result = new
             {
@@ -340,7 +340,7 @@ public class GitService(CodeEditorConfigurationService config)
     {
         try
         {
-            var repoPath = GetRepositoryPath(repositoryPath);
+            string repoPath = GetRepositoryPath(repositoryPath);
 
             if (!IsGitRepository(repoPath))
             {
@@ -349,7 +349,7 @@ public class GitService(CodeEditorConfigurationService config)
 
             using var repo = new Repository(repoPath);
 
-            var branches = repo.Branches
+            GitBranchInfo[] branches = repo.Branches
                 .Where(branch => includeRemote || !branch.IsRemote)
                 .Select(branch => new GitBranchInfo
                 {

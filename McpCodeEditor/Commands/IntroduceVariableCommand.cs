@@ -38,7 +38,7 @@ public class IntroduceVariableCommand : IRefactoringCommand
 
     public bool SupportsFile(string filePath)
     {
-        var language = LanguageDetectionService.DetectLanguage(filePath);
+        LanguageType language = LanguageDetectionService.DetectLanguage(filePath);
         return SupportedLanguages.Contains(language);
     }
 
@@ -70,14 +70,14 @@ public class IntroduceVariableCommand : IRefactoringCommand
         // Validate language support
         if (!SupportsFile(context.FilePath))
         {
-            var language = LanguageDetectionService.DetectLanguage(context.FilePath);
+            LanguageType language = LanguageDetectionService.DetectLanguage(context.FilePath);
             return CreateErrorResult($"Variable introduction not supported for {LanguageDetectionService.GetLanguageName(language)} files");
         }
 
         // Validate line and column numbers
-        if (!int.TryParse(context.AdditionalData["line"]?.ToString(), out var line) ||
-            !int.TryParse(context.AdditionalData["startColumn"]?.ToString(), out var startColumn) ||
-            !int.TryParse(context.AdditionalData["endColumn"]?.ToString(), out var endColumn))
+        if (!int.TryParse(context.AdditionalData["line"]?.ToString(), out int line) ||
+            !int.TryParse(context.AdditionalData["startColumn"]?.ToString(), out int startColumn) ||
+            !int.TryParse(context.AdditionalData["endColumn"]?.ToString(), out int endColumn))
         {
             return CreateErrorResult("Line, StartColumn, and EndColumn must be valid integers");
         }
@@ -95,14 +95,14 @@ public class IntroduceVariableCommand : IRefactoringCommand
         _logger.LogInformation("IntroduceVariableCommand executing for file: {FilePath}", context.FilePath);
 
         // Extract parameters
-        var line = int.Parse(context.AdditionalData["line"]?.ToString() ?? "0");
-        var startColumn = int.Parse(context.AdditionalData["startColumn"]?.ToString() ?? "0");
-        var endColumn = int.Parse(context.AdditionalData["endColumn"]?.ToString() ?? "0");
+        int line = int.Parse(context.AdditionalData["line"]?.ToString() ?? "0");
+        int startColumn = int.Parse(context.AdditionalData["startColumn"]?.ToString() ?? "0");
+        int endColumn = int.Parse(context.AdditionalData["endColumn"]?.ToString() ?? "0");
         var variableName = context.AdditionalData["variableName"]?.ToString();
-        var previewOnly = bool.Parse(context.AdditionalData["previewOnly"]?.ToString() ?? "false");
+        bool previewOnly = bool.Parse(context.AdditionalData["previewOnly"]?.ToString() ?? "false");
 
-        var validatedPath = _pathValidation.ValidateFileExists(context.FilePath);
-        var language = LanguageDetectionService.DetectLanguage(validatedPath);
+        string validatedPath = _pathValidation.ValidateFileExists(context.FilePath);
+        LanguageType language = LanguageDetectionService.DetectLanguage(validatedPath);
 
         _logger.LogInformation("Introducing variable in {Language} file: {FilePath} at line {Line}, columns {StartColumn}-{EndColumn}", 
             language, validatedPath, line, startColumn, endColumn);

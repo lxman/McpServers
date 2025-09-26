@@ -29,7 +29,7 @@ public class DocumentManagementService : IDocumentManagementService
     {
         try
         {
-            var currentSolution = _workspaceManagement.CurrentSolution;
+            Solution? currentSolution = _workspaceManagement.CurrentSolution;
             if (currentSolution == null) 
                 return null;
 
@@ -59,7 +59,7 @@ public class DocumentManagementService : IDocumentManagementService
                 return null;
             }
 
-            var currentSolution = _workspaceManagement.CurrentSolution;
+            Solution? currentSolution = _workspaceManagement.CurrentSolution;
             if (currentSolution == null)
             {
                 _logger?.LogWarning("No current solution available for adding document");
@@ -67,7 +67,7 @@ public class DocumentManagementService : IDocumentManagementService
             }
 
             // Get the first project (fallback workspace typically has one project)
-            var project = currentSolution.Projects.FirstOrDefault();
+            Project? project = currentSolution.Projects.FirstOrDefault();
             if (project == null)
             {
                 _logger?.LogWarning("No project available in fallback workspace for adding document");
@@ -82,7 +82,7 @@ public class DocumentManagementService : IDocumentManagementService
             }
 
             // Read file content
-            var fileContent = await File.ReadAllTextAsync(filePath, cancellationToken);
+            string fileContent = await File.ReadAllTextAsync(filePath, cancellationToken);
             
             // Create document info
             var documentInfo = DocumentInfo.Create(
@@ -116,7 +116,7 @@ public class DocumentManagementService : IDocumentManagementService
         try
         {
             // First, try to get the document from the current workspace
-            var document = GetDocument(filePath);
+            Document? document = GetDocument(filePath);
             if (document != null)
             {
                 _logger?.LogDebug($"Document found in workspace: {filePath}");
@@ -161,7 +161,7 @@ public class DocumentManagementService : IDocumentManagementService
                 return false;
 
             // Check if it's a supported file type (primarily C# for now)
-            var extension = Path.GetExtension(filePath).ToLowerInvariant();
+            string extension = Path.GetExtension(filePath).ToLowerInvariant();
             var supportedExtensions = new[] { ".cs", ".csx", ".vb", ".fs", ".fsx" };
             
             if (!supportedExtensions.Contains(extension))
@@ -173,7 +173,7 @@ public class DocumentManagementService : IDocumentManagementService
             // Check if file is readable
             try
             {
-                using var stream = File.OpenRead(filePath);
+                using FileStream stream = File.OpenRead(filePath);
                 return true;
             }
             catch

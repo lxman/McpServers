@@ -4,6 +4,7 @@ using McpCodeEditor.Models.Refactoring;
 using McpCodeEditor.Models.Refactoring.CSharp;
 using McpCodeEditor.Models.TypeScript;
 using McpCodeEditor.Services.Refactoring;
+using McpCodeEditor.Services.Refactoring.TypeScript;
 using Microsoft.Extensions.Logging;
 
 namespace McpCodeEditor.Commands;
@@ -40,7 +41,7 @@ public class ExtractMethodCommand : IRefactoringCommand
 
     public bool SupportsFile(string filePath)
     {
-        var language = LanguageDetectionService.DetectLanguage(filePath);
+        LanguageType language = LanguageDetectionService.DetectLanguage(filePath);
         return SupportedLanguages.Contains(language);
     }
 
@@ -75,13 +76,13 @@ public class ExtractMethodCommand : IRefactoringCommand
         // Validate language support
         if (!SupportsFile(context.FilePath))
         {
-            var language = LanguageDetectionService.DetectLanguage(context.FilePath);
+            LanguageType language = LanguageDetectionService.DetectLanguage(context.FilePath);
             return CreateErrorResult($"Method extraction not supported for {LanguageDetectionService.GetLanguageName(language)} files");
         }
 
         // Validate line numbers
-        if (!int.TryParse(context.AdditionalData["startLine"]?.ToString(), out var startLine) ||
-            !int.TryParse(context.AdditionalData["endLine"]?.ToString(), out var endLine))
+        if (!int.TryParse(context.AdditionalData["startLine"]?.ToString(), out int startLine) ||
+            !int.TryParse(context.AdditionalData["endLine"]?.ToString(), out int endLine))
         {
             return CreateErrorResult("StartLine and EndLine must be valid integers");
         }
@@ -99,13 +100,13 @@ public class ExtractMethodCommand : IRefactoringCommand
         _logger.LogInformation("ExtractMethodCommand executing for file: {FilePath}", context.FilePath);
 
         // Extract parameters
-        var methodName = context.AdditionalData["methodName"]?.ToString() ?? throw new InvalidOperationException("MethodName is required");
-        var startLine = int.Parse(context.AdditionalData["startLine"]?.ToString() ?? "0");
-        var endLine = int.Parse(context.AdditionalData["endLine"]?.ToString() ?? "0");
-        var previewOnly = bool.Parse(context.AdditionalData["previewOnly"]?.ToString() ?? "false");
+        string methodName = context.AdditionalData["methodName"]?.ToString() ?? throw new InvalidOperationException("MethodName is required");
+        int startLine = int.Parse(context.AdditionalData["startLine"]?.ToString() ?? "0");
+        int endLine = int.Parse(context.AdditionalData["endLine"]?.ToString() ?? "0");
+        bool previewOnly = bool.Parse(context.AdditionalData["previewOnly"]?.ToString() ?? "false");
 
-        var validatedPath = _pathValidation.ValidateFileExists(context.FilePath);
-        var language = LanguageDetectionService.DetectLanguage(validatedPath);
+        string validatedPath = _pathValidation.ValidateFileExists(context.FilePath);
+        LanguageType language = LanguageDetectionService.DetectLanguage(validatedPath);
 
         _logger.LogInformation("Extracting method '{MethodName}' from {Language} file: {FilePath} (lines {StartLine}-{EndLine})", 
             methodName, language, validatedPath, startLine, endLine);
@@ -145,8 +146,8 @@ public class ExtractMethodCommand : IRefactoringCommand
         };
 
         // Check for advanced parameters
-        var accessModifier = context.AdditionalData.GetValueOrDefault("accessModifier")?.ToString() ?? "private";
-        var isStatic = bool.Parse(context.AdditionalData.GetValueOrDefault("isStatic")?.ToString() ?? "false");
+        string accessModifier = context.AdditionalData.GetValueOrDefault("accessModifier")?.ToString() ?? "private";
+        bool isStatic = bool.Parse(context.AdditionalData.GetValueOrDefault("isStatic")?.ToString() ?? "false");
         var returnType = context.AdditionalData.GetValueOrDefault("returnType")?.ToString();
 
         var options = new CSharpExtractionOptions
@@ -164,7 +165,7 @@ public class ExtractMethodCommand : IRefactoringCommand
 
         _logger.LogDebug("Calling CSharpMethodExtractor.ExecuteAsync");
         
-        var result = await _csharpMethodExtractor.ExecuteAsync(csharpContext);
+        RefactoringResult result = await _csharpMethodExtractor.ExecuteAsync(csharpContext);
         _logger.LogDebug("CSharpMethodExtractor returned: success={Success}, message={Message}", result.Success, result.Message);
         
         return result;
@@ -183,8 +184,8 @@ public class ExtractMethodCommand : IRefactoringCommand
             filePath, methodName, startLine, endLine, previewOnly);
 
         // Check for advanced parameters - Fixed CS8601 by ensuring accessModifier is never null
-        var accessModifier = context.AdditionalData.GetValueOrDefault("accessModifier")?.ToString() ?? string.Empty;
-        var isStatic = bool.Parse(context.AdditionalData.GetValueOrDefault("isStatic")?.ToString() ?? "false");
+        string accessModifier = context.AdditionalData.GetValueOrDefault("accessModifier")?.ToString() ?? string.Empty;
+        bool isStatic = bool.Parse(context.AdditionalData.GetValueOrDefault("isStatic")?.ToString() ?? "false");
         var returnType = context.AdditionalData.GetValueOrDefault("returnType")?.ToString();
 
         var options = new TypeScriptExtractionOptions
@@ -199,7 +200,7 @@ public class ExtractMethodCommand : IRefactoringCommand
             ExportMethod = !string.IsNullOrEmpty(accessModifier) && accessModifier.ToLower() == "export"  // Fixed null reference
         };
 
-        var result = await _typeScriptRefactoringService.ExtractMethodAsync(filePath, options, previewOnly, cancellationToken);
+        TypeScriptMethodExtractor.TypeScriptExtractionResult result = await _typeScriptRefactoringService.ExtractMethodAsync(filePath, options, previewOnly, cancellationToken);
         
         // Convert TypeScriptExtractionResult to RefactoringResult
         return new RefactoringResult

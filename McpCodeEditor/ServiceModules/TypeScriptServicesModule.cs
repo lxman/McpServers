@@ -31,7 +31,7 @@ public static class TypeScriptServicesModule
             options.ProjectPath = AppContext.BaseDirectory;
             
             // Add the node_modules path to NODE_PATH environment variable
-            var nodeModulesPath = Path.Combine(AppContext.BaseDirectory, "node_modules");
+            string nodeModulesPath = Path.Combine(AppContext.BaseDirectory, "node_modules");
             if (Directory.Exists(nodeModulesPath))
             {
                 options.EnvironmentVariables["NODE_PATH"] = nodeModulesPath;

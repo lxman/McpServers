@@ -34,7 +34,7 @@ public class AngularRoutingTesting(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
@@ -763,7 +763,7 @@ public class AngularRoutingTesting(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
@@ -1037,11 +1037,11 @@ public class AngularRoutingTesting(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var routes = string.IsNullOrWhiteSpace(routesToTest) 
+            string[] routes = string.IsNullOrWhiteSpace(routesToTest) 
                 ? []
                 : routesToTest.Split(',', StringSplitOptions.RemoveEmptyEntries)
                     .Select(r => r.Trim()).ToArray();

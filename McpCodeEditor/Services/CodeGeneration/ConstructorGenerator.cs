@@ -25,7 +25,7 @@ public class ConstructorGenerator(
         try
         {
             // FIXED: Resolve relative paths to absolute paths
-            var resolvedFilePath = ValidateAndResolvePath(filePath);
+            string resolvedFilePath = ValidateAndResolvePath(filePath);
 
             if (!File.Exists(resolvedFilePath))
             {
@@ -36,8 +36,8 @@ public class ConstructorGenerator(
                 };
             }
 
-            var sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
-            var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
+            string sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
 
             if (await syntaxTree.GetRootAsync(cancellationToken) is not CompilationUnitSyntax root)
             {
@@ -49,7 +49,7 @@ public class ConstructorGenerator(
             }
 
             // Find the target class
-            var targetClass = root.DescendantNodes()
+            ClassDeclarationSyntax? targetClass = root.DescendantNodes()
                 .OfType<ClassDeclarationSyntax>()
                 .FirstOrDefault(c => c.Identifier.ValueText == className);
 
@@ -104,10 +104,10 @@ public class ConstructorGenerator(
             }
 
             // Generate constructor code
-            var constructorCode = GenerateConstructorCode(className, membersToInclude, options);
+            string constructorCode = GenerateConstructorCode(className, membersToInclude, options);
 
             // Check if constructor already exists
-            var hasExistingConstructor = targetClass.DescendantNodes()
+            bool hasExistingConstructor = targetClass.DescendantNodes()
                 .OfType<ConstructorDeclarationSyntax>()
                 .Any(c => c.ParameterList.Parameters.Count == membersToInclude.Count);
 
@@ -121,7 +121,7 @@ public class ConstructorGenerator(
             }
 
             // Insert constructor into class
-            var modifiedContent = InsertConstructorIntoClass(sourceCode, targetClass, constructorCode);
+            string modifiedContent = InsertConstructorIntoClass(sourceCode, targetClass, constructorCode);
 
             // Create backup if not preview
             string? backupId = null;
@@ -192,12 +192,12 @@ public class ConstructorGenerator(
         List<(string Name, string Type)> members,
         GenerateConstructorOptions options)
     {
-        var parameters = members.Select(m => $"{m.Type} {ToCamelCase(m.Name)}").ToList();
+        List<string> parameters = members.Select(m => $"{m.Type} {ToCamelCase(m.Name)}").ToList();
         var assignments = new List<string>();
 
-        foreach (var member in members)
+        foreach ((string Name, string Type) member in members)
         {
-            var paramName = ToCamelCase(member.Name);
+            string paramName = ToCamelCase(member.Name);
 
             if (options.AddNullChecks && IsReferenceType(member.Type))
             {
@@ -224,10 +224,10 @@ public class ConstructorGenerator(
         string constructorCode)
     {
         // Find a good insertion point (after fields but before methods)
-        var lines = sourceCode.Split('\n');
-        var insertionLine = FindInsertionPointForConstructor(lines, targetClass);
+        string[] lines = sourceCode.Split('\n');
+        int insertionLine = FindInsertionPointForConstructor(lines, targetClass);
 
-        var modifiedLines = lines.ToList();
+        List<string> modifiedLines = lines.ToList();
         modifiedLines.Insert(insertionLine, constructorCode);
 
         return string.Join("\n", modifiedLines);
@@ -236,10 +236,10 @@ public class ConstructorGenerator(
     private static int FindInsertionPointForConstructor(string[] lines, ClassDeclarationSyntax targetClass)
     {
         // Simple heuristic: insert after last field or at beginning of class body
-        var classStartLine = targetClass.GetLocation().GetLineSpan().StartLinePosition.Line;
+        int classStartLine = targetClass.GetLocation().GetLineSpan().StartLinePosition.Line;
 
         // Look for opening brace
-        for (var i = classStartLine; i < lines.Length; i++)
+        for (int i = classStartLine; i < lines.Length; i++)
         {
             if (lines[i].Contains("{"))
             {
@@ -270,13 +270,13 @@ public class ConstructorGenerator(
     private string ValidateAndResolvePath(string path)
     {
         // Convert to absolute path
-        var fullPath = Path.IsPathRooted(path) ? path : Path.Combine(config.DefaultWorkspace, path);
+        string fullPath = Path.IsPathRooted(path) ? path : Path.Combine(config.DefaultWorkspace, path);
         fullPath = Path.GetFullPath(fullPath);
 
         // Security check: ensure path is within workspace if restricted
         if (config.Security.RestrictToWorkspace)
         {
-            var workspaceFullPath = Path.GetFullPath(config.DefaultWorkspace);
+            string workspaceFullPath = Path.GetFullPath(config.DefaultWorkspace);
             if (!fullPath.StartsWith(workspaceFullPath, StringComparison.OrdinalIgnoreCase))
             {
                 throw new UnauthorizedAccessException($"Access denied: Path outside workspace: {path}");
@@ -284,9 +284,9 @@ public class ConstructorGenerator(
         }
 
         // Check blocked paths
-        foreach (var blockedPath in config.Security.BlockedPaths)
+        foreach (string blockedPath in config.Security.BlockedPaths)
         {
-            var blockedFullPath = Path.GetFullPath(blockedPath);
+            string blockedFullPath = Path.GetFullPath(blockedPath);
             if (fullPath.StartsWith(blockedFullPath, StringComparison.OrdinalIgnoreCase))
             {
                 throw new UnauthorizedAccessException($"Access denied: Blocked path: {path}");

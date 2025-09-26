@@ -32,7 +32,7 @@ public class CSharpVariableOperations(
             var result = new RefactoringResult();
 
             // Resolve relative paths to absolute paths
-            var resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
+            string resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
 
             if (!File.Exists(resolvedFilePath))
             {
@@ -43,8 +43,8 @@ public class CSharpVariableOperations(
                 };
             }
 
-            var sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
-            var lines = sourceCode.Split('\n');
+            string sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
+            string[] lines = sourceCode.Split('\n');
 
             // Validate line number (1-based)
             if (options.Line < 1 || options.Line > lines.Length)
@@ -56,7 +56,7 @@ public class CSharpVariableOperations(
                 };
             }
 
-            var selectedLine = lines[options.Line - 1]; // Convert to 0-based
+            string selectedLine = lines[options.Line - 1]; // Convert to 0-based
 
             // Validate column range (1-based)
             if (options.StartColumn < 1 || options.EndColumn > selectedLine.Length || options.StartColumn > options.EndColumn)
@@ -69,7 +69,7 @@ public class CSharpVariableOperations(
             }
 
             // Extract the selected expression (convert to 0-based indexing)
-            var selectedExpression = selectedLine.Substring(options.StartColumn - 1, options.EndColumn - options.StartColumn + 1).Trim();
+            string selectedExpression = selectedLine.Substring(options.StartColumn - 1, options.EndColumn - options.StartColumn + 1).Trim();
 
             if (string.IsNullOrWhiteSpace(selectedExpression))
             {
@@ -113,7 +113,7 @@ public class CSharpVariableOperations(
             }
 
             // Generate variable name if not provided
-            var variableName = options.VariableName ?? GenerateVariableName(selectedExpression);
+            string variableName = options.VariableName ?? GenerateVariableName(selectedExpression);
 
             // Validate variable name
             if (!IsValidIdentifier(variableName))
@@ -126,10 +126,10 @@ public class CSharpVariableOperations(
             }
 
             // Get indentation from the current line or use custom
-            var indentation = options.CustomIndentation ?? GetLineIndentation(selectedLine);
+            string indentation = options.CustomIndentation ?? GetLineIndentation(selectedLine);
 
             // Determine variable type
-            var variableType = options.VariableType;
+            string variableType = options.VariableType;
             if (options.PreferConst && IsConstantExpression(selectedExpression))
             {
                 variableType = "const var";
@@ -146,9 +146,9 @@ public class CSharpVariableOperations(
             }
 
             // Replace the expression with the variable reference
-            var beforeExpression = selectedLine[..(options.StartColumn - 1)];
-            var afterExpression = selectedLine[options.EndColumn..];
-            var modifiedLine = beforeExpression + variableName + afterExpression;
+            string beforeExpression = selectedLine[..(options.StartColumn - 1)];
+            string afterExpression = selectedLine[options.EndColumn..];
+            string modifiedLine = beforeExpression + variableName + afterExpression;
 
             // Build the modified content
             var modifiedLines = new List<string>();
@@ -166,12 +166,12 @@ public class CSharpVariableOperations(
             modifiedLines.Add(modifiedLine);
 
             // Add lines after the target line
-            for (var i = options.Line; i < lines.Length; i++)
+            for (int i = options.Line; i < lines.Length; i++)
             {
                 modifiedLines.Add(lines[i]);
             }
 
-            var modifiedContent = string.Join("\n", modifiedLines);
+            string modifiedContent = string.Join("\n", modifiedLines);
 
             // Create backup if not preview
             string? backupId = null;
@@ -241,7 +241,7 @@ public class CSharpVariableOperations(
             var result = new RefactoringResult();
 
             // Resolve relative paths to absolute paths
-            var resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
+            string resolvedFilePath = pathValidationService.ValidateAndResolvePath(filePath);
 
             if (!File.Exists(resolvedFilePath))
             {
@@ -252,8 +252,8 @@ public class CSharpVariableOperations(
                 };
             }
 
-            var sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
-            var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
+            string sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
 
             if (await syntaxTree.GetRootAsync(cancellationToken) is not CompilationUnitSyntax root)
             {
@@ -268,9 +268,9 @@ public class CSharpVariableOperations(
             FieldDeclarationSyntax? fieldDeclaration = null;
             VariableDeclaratorSyntax? targetVariable = null;
 
-            foreach (var field in root.DescendantNodes().OfType<FieldDeclarationSyntax>())
+            foreach (FieldDeclarationSyntax field in root.DescendantNodes().OfType<FieldDeclarationSyntax>())
             {
-                var variable = field.Declaration.Variables.FirstOrDefault(v => v.Identifier.ValueText == options.FieldName);
+                VariableDeclaratorSyntax? variable = field.Declaration.Variables.FirstOrDefault(v => v.Identifier.ValueText == options.FieldName);
                 if (variable != null)
                 {
                     fieldDeclaration = field;
@@ -291,7 +291,7 @@ public class CSharpVariableOperations(
             // Validate field access if requested
             if (options.ValidateFieldAccess)
             {
-                var isPublic = fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword));
+                bool isPublic = fieldDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword));
                 if (!isPublic)
                 {
                     return new RefactoringResult
@@ -303,7 +303,7 @@ public class CSharpVariableOperations(
             }
 
             // Generate property name if not provided
-            var propertyName = options.PropertyName ?? GeneratePropertyName(options.FieldName);
+            string propertyName = options.PropertyName ?? GeneratePropertyName(options.FieldName);
 
             // Validate property name
             if (!IsValidIdentifier(propertyName))
@@ -316,7 +316,7 @@ public class CSharpVariableOperations(
             }
 
             // Get field type
-            var fieldType = fieldDeclaration.Declaration.Type.ToString().Trim();
+            string fieldType = fieldDeclaration.Declaration.Type.ToString().Trim();
 
             // Get field initializer if present
             var initializer = targetVariable.Initializer?.Value.ToString();
@@ -332,7 +332,7 @@ public class CSharpVariableOperations(
                 };
             }
 
-            var modifiedRoot = root;
+            CompilationUnitSyntax modifiedRoot = root;
 
             // Create private field name (with prefix)
             var privateFieldName = $"{options.BackingFieldPrefix}{options.FieldName.TrimStart('_')}";
@@ -347,7 +347,7 @@ public class CSharpVariableOperations(
                 
                 if (options.GenerateGetter)
                 {
-                    var getter = SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
+                    AccessorDeclarationSyntax getter = SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
                         .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
                     
                     if (!string.IsNullOrWhiteSpace(options.GetterAccessModifier))
@@ -360,7 +360,7 @@ public class CSharpVariableOperations(
 
                 if (options.GenerateSetter)
                 {
-                    var setter = SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
+                    AccessorDeclarationSyntax setter = SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
                         .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
                     
                     if (!string.IsNullOrWhiteSpace(options.SetterAccessModifier))
@@ -386,7 +386,7 @@ public class CSharpVariableOperations(
 
                 if (options.GenerateGetter)
                 {
-                    var getter = SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
+                    AccessorDeclarationSyntax getter = SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
                         .WithBody(SyntaxFactory.Block(
                             SyntaxFactory.ReturnStatement(
                                 SyntaxFactory.IdentifierName(privateFieldName))));
@@ -415,7 +415,7 @@ public class CSharpVariableOperations(
                             SyntaxFactory.IdentifierName(privateFieldName),
                             SyntaxFactory.IdentifierName("value"))));
 
-                    var setter = SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
+                    AccessorDeclarationSyntax setter = SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration)
                         .WithBody(SyntaxFactory.Block(setterBody));
                     
                     if (!string.IsNullOrWhiteSpace(options.SetterAccessModifier))
@@ -427,7 +427,7 @@ public class CSharpVariableOperations(
                 }
 
                 // Create property modifiers
-                var propertyModifiers = SyntaxFactory.TokenList(SyntaxFactory.ParseToken(options.PropertyAccessModifier));
+                SyntaxTokenList propertyModifiers = SyntaxFactory.TokenList(SyntaxFactory.ParseToken(options.PropertyAccessModifier));
                 if (options.MakeVirtual)
                 {
                     propertyModifiers = propertyModifiers.Add(SyntaxFactory.Token(SyntaxKind.VirtualKeyword));
@@ -441,12 +441,12 @@ public class CSharpVariableOperations(
                 // Add documentation if requested
                 if (options.AddDocumentation)
                 {
-                    var documentation = options.PropertyDocumentation ?? $"Gets or sets the {propertyName.ToLower()}.";
+                    string documentation = options.PropertyDocumentation ?? $"Gets or sets the {propertyName.ToLower()}.";
                     // TODO: Add XML documentation comments
                 }
 
                 // Create new private field
-                var newPrivateField = SyntaxFactory.FieldDeclaration(
+                FieldDeclarationSyntax newPrivateField = SyntaxFactory.FieldDeclaration(
                     SyntaxFactory.VariableDeclaration(SyntaxFactory.ParseTypeName(fieldType))
                         .WithVariables(SyntaxFactory.SingletonSeparatedList(
                             SyntaxFactory.VariableDeclarator(privateFieldName)
@@ -456,13 +456,13 @@ public class CSharpVariableOperations(
                     .WithTrailingTrivia(SyntaxFactory.CarriageReturnLineFeed);
 
                 // Get field index BEFORE replacing anything
-                var fieldIndex = containingClass.Members.IndexOf(fieldDeclaration);
+                int fieldIndex = containingClass.Members.IndexOf(fieldDeclaration);
 
                 // Replace the public field with private field
                 modifiedRoot = modifiedRoot.ReplaceNode(fieldDeclaration, newPrivateField);
 
                 // Now get the updated containing class from the modified root
-                var updatedContainingClass = modifiedRoot.DescendantNodes()
+                ClassDeclarationSyntax? updatedContainingClass = modifiedRoot.DescendantNodes()
                     .OfType<ClassDeclarationSyntax>()
                     .FirstOrDefault(c => c.Identifier.ValueText == containingClass.Identifier.ValueText);
 
@@ -476,30 +476,30 @@ public class CSharpVariableOperations(
                 }
 
                 // Add the property after the field using the original index
-                var newMembers = updatedContainingClass.Members.Insert(fieldIndex + 1, newProperty);
-                var newClass = updatedContainingClass.WithMembers(newMembers);
+                SyntaxList<MemberDeclarationSyntax> newMembers = updatedContainingClass.Members.Insert(fieldIndex + 1, newProperty);
+                ClassDeclarationSyntax newClass = updatedContainingClass.WithMembers(newMembers);
                 modifiedRoot = modifiedRoot.ReplaceNode(updatedContainingClass, newClass);
             }
 
             // Update references to the old field name with the property name if requested
             if (options.UpdateReferences)
             {
-                var fieldReferences = modifiedRoot.DescendantNodes()
+                List<IdentifierNameSyntax> fieldReferences = modifiedRoot.DescendantNodes()
                     .OfType<IdentifierNameSyntax>()
                     .Where(id => id.Identifier.ValueText == options.FieldName)
                     .ToList();
 
-                foreach (var reference in fieldReferences.Where(r => !IsInFieldDeclaration(r)))
+                foreach (IdentifierNameSyntax reference in fieldReferences.Where(r => !IsInFieldDeclaration(r)))
                 {
-                    var newReference = SyntaxFactory.IdentifierName(propertyName);
+                    IdentifierNameSyntax newReference = SyntaxFactory.IdentifierName(propertyName);
                     modifiedRoot = modifiedRoot.ReplaceNode(reference, newReference);
                 }
             }
 
             // Format the result
             var workspace = new AdhocWorkspace();
-            var formattedRoot = Formatter.Format(modifiedRoot, workspace, cancellationToken: cancellationToken);
-            var modifiedContent = formattedRoot.ToFullString();
+            SyntaxNode formattedRoot = Formatter.Format(modifiedRoot, workspace, cancellationToken: cancellationToken);
+            string modifiedContent = formattedRoot.ToFullString();
 
             // Create backup if not preview
             string? backupId = null;
@@ -523,7 +523,7 @@ public class CSharpVariableOperations(
             {
                 await File.WriteAllTextAsync(resolvedFilePath, modifiedContent, cancellationToken);
 
-                var changeDescription = options.UseAutoProperty && string.IsNullOrWhiteSpace(initializer)
+                string changeDescription = options.UseAutoProperty && string.IsNullOrWhiteSpace(initializer)
                     ? $"Encapsulate field '{options.FieldName}' as auto-property '{propertyName}'"
                     : $"Encapsulate field '{options.FieldName}' with property '{propertyName}' and private field '{privateFieldName}'";
 
@@ -535,7 +535,7 @@ public class CSharpVariableOperations(
                     backupId);
             }
 
-            var successMessage = options.UseAutoProperty && string.IsNullOrWhiteSpace(initializer)
+            string successMessage = options.UseAutoProperty && string.IsNullOrWhiteSpace(initializer)
                 ? $"Successfully encapsulated field '{options.FieldName}' as auto-property '{propertyName}'"
                 : $"Successfully encapsulated field '{options.FieldName}' with property '{propertyName}' and private field '{privateFieldName}'";
 
@@ -567,20 +567,20 @@ public class CSharpVariableOperations(
     public string GenerateVariableName(string expression)
     {
         // Simple heuristics for generating variable names
-        var cleaned = expression.Trim();
+        string cleaned = expression.Trim();
 
         // Handle method calls
         if (cleaned.Contains('(') && cleaned.Contains(')'))
         {
-            var methodPart = cleaned[..cleaned.IndexOf('(')];
-            var lastMethod = methodPart.Split('.').Last();
+            string methodPart = cleaned[..cleaned.IndexOf('(')];
+            string lastMethod = methodPart.Split('.').Last();
             return ToCamelCase($"{lastMethod}Result");
         }
 
         // Handle property access
         if (cleaned.Contains('.'))
         {
-            var parts = cleaned.Split('.');
+            string[] parts = cleaned.Split('.');
             if (parts.Length >= 2)
             {
                 return ToCamelCase($"{parts[^2]}{parts[^1]}");
@@ -614,7 +614,7 @@ public class CSharpVariableOperations(
     /// </summary>
     public string GeneratePropertyName(string fieldName)
     {
-        var trimmed = fieldName.TrimStart('_');
+        string trimmed = fieldName.TrimStart('_');
         if (string.IsNullOrEmpty(trimmed))
             return "Property";
 
@@ -680,7 +680,7 @@ public class CSharpVariableOperations(
         if (string.IsNullOrWhiteSpace(input))
             return "temp";
 
-        var result = input.Trim();
+        string result = input.Trim();
         if (result.Length == 0)
             return "temp";
 
@@ -690,7 +690,7 @@ public class CSharpVariableOperations(
 
         for (var i = 0; i < result.Length; i++)
         {
-            var c = result[i];
+            char c = result[i];
             if (char.IsLetterOrDigit(c))
             {
                 if (capitalizeNext && char.IsLetter(c))
@@ -722,7 +722,7 @@ public class CSharpVariableOperations(
     /// </summary>
     private static bool IsConstantExpression(string expression)
     {
-        var cleaned = expression.Trim();
+        string cleaned = expression.Trim();
         
         // Check for string literals
         if ((cleaned.StartsWith('"') && cleaned.EndsWith('"')) ||

@@ -52,7 +52,7 @@ public class TypeScriptRefactoringStrategy : ILanguageRefactoringStrategy
                 ExportMethod = false
             };
 
-            var result = await _typeScriptRefactoringService.ExtractMethodAsync(filePath, options, previewOnly, cancellationToken);
+            TypeScriptMethodExtractor.TypeScriptExtractionResult result = await _typeScriptRefactoringService.ExtractMethodAsync(filePath, options, previewOnly, cancellationToken);
             return ConvertToRefactoringResult(result, methodName, filePath);
         }
         catch (Exception ex)
@@ -90,7 +90,7 @@ public class TypeScriptRefactoringStrategy : ILanguageRefactoringStrategy
                 ExportMethod = accessModifier?.ToLower() == "export"
             };
 
-            var result = await _typeScriptRefactoringService.ExtractMethodAsync(filePath, options, previewOnly, cancellationToken);
+            TypeScriptMethodExtractor.TypeScriptExtractionResult result = await _typeScriptRefactoringService.ExtractMethodAsync(filePath, options, previewOnly, cancellationToken);
             return ConvertToRefactoringResult(result, methodName, filePath, accessModifier, isStatic, returnType);
         }
         catch (Exception ex)

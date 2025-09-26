@@ -30,12 +30,12 @@ namespace McpCodeEditor.Services.Advanced
                 if (!File.Exists(ValidateAndResolvePath(filePath)))
                     return FileReadResult.Error($"File not found: {filePath}");
 
-                var allLines = await File.ReadAllLinesAsync(ValidateAndResolvePath(filePath));
+                string[] allLines = await File.ReadAllLinesAsync(ValidateAndResolvePath(filePath));
                 
                 if (startLine < 1 || endLine > allLines.Length || startLine > endLine)
                     return FileReadResult.Error($"Invalid line range: {startLine}-{endLine} (file has {allLines.Length} lines)");
 
-                var selectedLines = allLines
+                string[] selectedLines = allLines
                     .Skip(startLine - 1)
                     .Take(endLine - startLine + 1)
                     .ToArray();
@@ -60,10 +60,10 @@ namespace McpCodeEditor.Services.Advanced
         
         public async Task<FileReadResult> ReadAroundLineAsync(string filePath, int lineNumber, int contextLines = 10)
         {
-            var startLine = Math.Max(1, lineNumber - contextLines);
-            var endLine = lineNumber + contextLines;
+            int startLine = Math.Max(1, lineNumber - contextLines);
+            int endLine = lineNumber + contextLines;
             
-            var result = await ReadRangeAsync(ValidateAndResolvePath(filePath), startLine, endLine);
+            FileReadResult result = await ReadRangeAsync(ValidateAndResolvePath(filePath), startLine, endLine);
             if (result.Success)
             {
                 result.ReadMethod = $"Around Line {lineNumber}";
@@ -78,23 +78,23 @@ namespace McpCodeEditor.Services.Advanced
         {
             try
             {
-                var syntaxTree = await GetSyntaxTreeAsync(ValidateAndResolvePath(filePath));
+                SyntaxTree? syntaxTree = await GetSyntaxTreeAsync(ValidateAndResolvePath(filePath));
                 if (syntaxTree == null)
                     return FileReadResult.Error($"Unable to parse {filePath} as C# code");
 
-                var root = syntaxTree.GetCompilationUnitRoot();
-                var method = root.DescendantNodes()
+                CompilationUnitSyntax root = syntaxTree.GetCompilationUnitRoot();
+                MethodDeclarationSyntax? method = root.DescendantNodes()
                     .OfType<MethodDeclarationSyntax>()
                     .FirstOrDefault(m => m.Identifier.ValueText == methodName);
 
                 if (method == null)
                     return FileReadResult.Error($"Method '{methodName}' not found in {filePath}");
 
-                var lineSpan = method.GetLocation().GetLineSpan();
-                var startLine = Math.Max(1, lineSpan.StartLinePosition.Line + 1 - contextLines);
-                var endLine = lineSpan.EndLinePosition.Line + 1 + contextLines;
+                FileLinePositionSpan lineSpan = method.GetLocation().GetLineSpan();
+                int startLine = Math.Max(1, lineSpan.StartLinePosition.Line + 1 - contextLines);
+                int endLine = lineSpan.EndLinePosition.Line + 1 + contextLines;
 
-                var result = await ReadRangeAsync(filePath, startLine, endLine);
+                FileReadResult result = await ReadRangeAsync(filePath, startLine, endLine);
                 if (result.Success)
                 {
                     result.ReadMethod = $"Method '{methodName}' with context";
@@ -116,23 +116,23 @@ namespace McpCodeEditor.Services.Advanced
         {
             try
             {
-                var syntaxTree = await GetSyntaxTreeAsync(ValidateAndResolvePath(filePath));
+                SyntaxTree? syntaxTree = await GetSyntaxTreeAsync(ValidateAndResolvePath(filePath));
                 if (syntaxTree == null)
                     return FileReadResult.Error($"Unable to parse {filePath} as C# code");
 
-                var root = syntaxTree.GetCompilationUnitRoot();
-                var classDeclaration = root.DescendantNodes()
+                CompilationUnitSyntax root = syntaxTree.GetCompilationUnitRoot();
+                ClassDeclarationSyntax? classDeclaration = root.DescendantNodes()
                     .OfType<ClassDeclarationSyntax>()
                     .FirstOrDefault(c => c.Identifier.ValueText == className);
 
                 if (classDeclaration == null)
                     return FileReadResult.Error($"Class '{className}' not found in {filePath}");
 
-                var lineSpan = classDeclaration.GetLocation().GetLineSpan();
-                var startLine = lineSpan.StartLinePosition.Line + 1;
-                var endLine = lineSpan.EndLinePosition.Line + 1;
+                FileLinePositionSpan lineSpan = classDeclaration.GetLocation().GetLineSpan();
+                int startLine = lineSpan.StartLinePosition.Line + 1;
+                int endLine = lineSpan.EndLinePosition.Line + 1;
 
-                var result = await ReadRangeAsync(filePath, startLine, endLine);
+                FileReadResult result = await ReadRangeAsync(filePath, startLine, endLine);
                 if (result.Success)
                 {
                     result.ReadMethod = $"Complete Class '{className}'";
@@ -153,22 +153,22 @@ namespace McpCodeEditor.Services.Advanced
         {
             try
             {
-                var syntaxTree = await GetSyntaxTreeAsync(ValidateAndResolvePath(filePath));
+                SyntaxTree? syntaxTree = await GetSyntaxTreeAsync(ValidateAndResolvePath(filePath));
                 if (syntaxTree == null)
                     return new FileStructureResult { Success = false, Warnings = { $"Unable to parse {filePath} as C# code" } };
 
-                var root = syntaxTree.GetCompilationUnitRoot();
+                CompilationUnitSyntax root = syntaxTree.GetCompilationUnitRoot();
                 
-                var usingStatements = root.Usings
+                List<string> usingStatements = root.Usings
                     .Select(u => u.ToString().Trim())
                     .ToList();
 
-                var classes = root.DescendantNodes()
+                List<ClassInfo> classes = root.DescendantNodes()
                     .OfType<ClassDeclarationSyntax>()
                     .Select(ExtractClassInfo)
                     .ToList();
 
-                var methods = root.DescendantNodes()
+                List<MethodInfo> methods = root.DescendantNodes()
                     .OfType<MethodDeclarationSyntax>()
                     .Select(ExtractMethodInfo)
                     .ToList();
@@ -191,11 +191,11 @@ namespace McpCodeEditor.Services.Advanced
         
         public async Task<FileReadResult> ReadMethodSignaturesAsync(string filePath)
         {
-            var structure = await GetFileOutlineAsync(ValidateAndResolvePath(filePath));
+            FileStructureResult structure = await GetFileOutlineAsync(ValidateAndResolvePath(filePath));
             if (!structure.Success)
                 return FileReadResult.Error("Unable to extract method signatures");
                 
-            var signatures = structure.Methods.Select(m => $"Line {m.StartLine}: {m.Signature}");
+            IEnumerable<string> signatures = structure.Methods.Select(m => $"Line {m.StartLine}: {m.Signature}");
             return new FileReadResult
             {
                 Success = true,
@@ -208,7 +208,7 @@ namespace McpCodeEditor.Services.Advanced
         
         public async Task<FileReadResult> ReadImportsAndHeaderAsync(string filePath)
         {
-            var structure = await GetFileOutlineAsync(ValidateAndResolvePath(filePath));
+            FileStructureResult structure = await GetFileOutlineAsync(ValidateAndResolvePath(filePath));
             if (!structure.Success)
                 return FileReadResult.Error("Unable to extract imports and header");
                 
@@ -231,12 +231,12 @@ namespace McpCodeEditor.Services.Advanced
         {
             try
             {
-                var allLines = await File.ReadAllLinesAsync(ValidateAndResolvePath(filePath));
+                string[] allLines = await File.ReadAllLinesAsync(ValidateAndResolvePath(filePath));
                 var matchingLines = new List<(int lineNumber, string line)>();
 
                 for (var i = 0; i < allLines.Length; i++)
                 {
-                    var matches = useRegex 
+                    bool matches = useRegex 
                         ? Regex.IsMatch(allLines[i], pattern, RegexOptions.IgnoreCase)
                         : allLines[i].Contains(pattern, StringComparison.OrdinalIgnoreCase);
 
@@ -250,16 +250,16 @@ namespace McpCodeEditor.Services.Advanced
                 var contentBuilder = new List<string>();
                 var processedLines = new HashSet<int>();
 
-                foreach ((var lineNumber, var line) in matchingLines)
+                foreach ((int lineNumber, string line) in matchingLines)
                 {
-                    var startLine = Math.Max(1, lineNumber - contextLines);
-                    var endLine = Math.Min(allLines.Length, lineNumber + contextLines);
+                    int startLine = Math.Max(1, lineNumber - contextLines);
+                    int endLine = Math.Min(allLines.Length, lineNumber + contextLines);
 
-                    for (var i = startLine; i <= endLine; i++)
+                    for (int i = startLine; i <= endLine; i++)
                     {
                         if (!processedLines.Contains(i))
                         {
-                            var prefix = i == lineNumber ? ">>> " : "    ";
+                            string prefix = i == lineNumber ? ">>> " : "    ";
                             contentBuilder.Add($"{prefix}{i,4}: {allLines[i - 1]}");
                             processedLines.Add(i);
                         }
@@ -292,8 +292,8 @@ namespace McpCodeEditor.Services.Advanced
 
         public async Task<FileReadResult> ReadNextChunkAsync(string filePath, int startLine, int maxLines = 100)
         {
-            var endLine = startLine + maxLines - 1;
-            var result = await ReadRangeAsync(filePath, startLine, endLine);
+            int endLine = startLine + maxLines - 1;
+            FileReadResult result = await ReadRangeAsync(filePath, startLine, endLine);
             
             if (result.Success)
             {
@@ -318,8 +318,8 @@ namespace McpCodeEditor.Services.Advanced
                 if (!filePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
                     return null;
 
-                var sourceCode = await File.ReadAllTextAsync(filePath);
-                var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, path: filePath);
+                string sourceCode = await File.ReadAllTextAsync(filePath);
+                SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, path: filePath);
                 
                 _cache.Set(cacheKey, syntaxTree, TimeSpan.FromMinutes(10));
                 return syntaxTree;
@@ -332,7 +332,7 @@ namespace McpCodeEditor.Services.Advanced
         
         private ClassInfo ExtractClassInfo(ClassDeclarationSyntax classDeclaration)
         {
-            var lineSpan = classDeclaration.GetLocation().GetLineSpan();
+            FileLinePositionSpan lineSpan = classDeclaration.GetLocation().GetLineSpan();
             return new ClassInfo
             {
                 Name = classDeclaration.Identifier.ValueText,
@@ -345,8 +345,8 @@ namespace McpCodeEditor.Services.Advanced
         
         private MethodInfo ExtractMethodInfo(MethodDeclarationSyntax method)
         {
-            var lineSpan = method.GetLocation().GetLineSpan();
-            var className = method.Ancestors().OfType<ClassDeclarationSyntax>().FirstOrDefault()?.Identifier.ValueText ?? "";
+            FileLinePositionSpan lineSpan = method.GetLocation().GetLineSpan();
+            string className = method.Ancestors().OfType<ClassDeclarationSyntax>().FirstOrDefault()?.Identifier.ValueText ?? "";
             
             return new MethodInfo
             {
@@ -374,7 +374,7 @@ namespace McpCodeEditor.Services.Advanced
         private static int CalculateComplexity(MethodDeclarationSyntax method)
         {
             var complexity = 1;
-            var descendants = method.DescendantNodes().ToList();
+            List<SyntaxNode> descendants = method.DescendantNodes().ToList();
             
             complexity += descendants.OfType<IfStatementSyntax>().Count();
             complexity += descendants.OfType<WhileStatementSyntax>().Count();
@@ -388,7 +388,7 @@ namespace McpCodeEditor.Services.Advanced
         private string ValidateAndResolvePath(string path)
         {
             // Convert to absolute path - THIS IS THE KEY LINE
-            var fullPath = Path.IsPathRooted(path) ? path : Path.Combine(_config.DefaultWorkspace, path);
+            string fullPath = Path.IsPathRooted(path) ? path : Path.Combine(_config.DefaultWorkspace, path);
             fullPath = Path.GetFullPath(fullPath);
 
             // Security checks can be added here if needed

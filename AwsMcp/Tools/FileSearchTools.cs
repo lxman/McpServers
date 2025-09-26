@@ -11,7 +11,7 @@ public class FileSearchTools
     [McpServerTool]
     [Description("Search large files using regex patterns without loading entire file into memory")]
     public async Task<string> SearchFileWithRegexAsync(
-        [Description("Path to the file to search")] string filePath,
+        [Description("Path to the file to search - must be canonical")] string filePath,
         [Description("Regex pattern to search for")] string regexPattern,
         [Description("Number of context lines around matches (default: 3)")] int contextLines = 3,
         [Description("Case sensitive search (default: false)")] bool caseSensitive = false,
@@ -59,9 +59,9 @@ public class FileSearchTools
                 
                 if (regex.IsMatch(line))
                 {
-                    var currentIndex = lines.Count - 1;
-                    var contextStart = Math.Max(0, currentIndex - contextLines);
-                    var contextEnd = Math.Min(lines.Count - 1, currentIndex + contextLines);
+                    int currentIndex = lines.Count - 1;
+                    int contextStart = Math.Max(0, currentIndex - contextLines);
+                    int contextEnd = Math.Min(lines.Count - 1, currentIndex + contextLines);
                     
                     matches.Add(new
                     {

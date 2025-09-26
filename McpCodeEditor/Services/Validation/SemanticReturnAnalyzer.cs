@@ -37,13 +37,13 @@ public class SemanticReturnAnalyzer
         try
         {
             // Create semantic model with metadata references
-            var compilation = await CreateSemanticCompilationAsync(sourceCode, cancellationToken);
-            var syntaxTree = compilation.SyntaxTrees.First();
-            var semanticModel = compilation.GetSemanticModel(syntaxTree);
-            var root = await syntaxTree.GetRootAsync(cancellationToken);
+            CSharpCompilation compilation = await CreateSemanticCompilationAsync(sourceCode, cancellationToken);
+            SyntaxTree syntaxTree = compilation.SyntaxTrees.First();
+            SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
+            SyntaxNode root = await syntaxTree.GetRootAsync(cancellationToken);
 
             // Find the containing method and the selection region
-            var containingMethod = FindContainingMethod(root, startLine);
+            MethodDeclarationSyntax? containingMethod = FindContainingMethod(root, startLine);
             if (containingMethod == null)
             {
                 result.Warnings.Add("Could not find containing method for semantic analysis");
@@ -51,7 +51,7 @@ public class SemanticReturnAnalyzer
             }
 
             // Get the statements in the selection region
-            var selectedStatements = GetSelectedStatements(containingMethod, startLine, endLine);
+            List<StatementSyntax> selectedStatements = GetSelectedStatements(containingMethod, startLine, endLine);
             if (selectedStatements.Count == 0)
             {
                 result.Warnings.Add("No statements found in selected region");
@@ -59,30 +59,30 @@ public class SemanticReturnAnalyzer
             }
 
             // Create a region for data flow analysis
-            var firstStatement = selectedStatements.First();
-            var lastStatement = selectedStatements.Last();
+            StatementSyntax firstStatement = selectedStatements.First();
+            StatementSyntax lastStatement = selectedStatements.Last();
 
             // Perform Roslyn data flow analysis
-            var dataFlowAnalysis = semanticModel.AnalyzeDataFlow(firstStatement, lastStatement);
+            DataFlowAnalysis? dataFlowAnalysis = semanticModel.AnalyzeDataFlow(firstStatement, lastStatement);
 
             if (dataFlowAnalysis.Succeeded)
             {
                 // Analyze variables flowing into the region (parameters needed)
-                foreach (var symbol in dataFlowAnalysis.DataFlowsIn)
+                foreach (ISymbol symbol in dataFlowAnalysis.DataFlowsIn)
                 {
-                    var symbolType = GetSymbolType(symbol);
+                    ITypeSymbol? symbolType = GetSymbolType(symbol);
                     if (symbolType != null)
                     {
                         if (symbol is ILocalSymbol)
                         {
-                            var typeName = symbolType.ToDisplayString();
+                            string typeName = symbolType.ToDisplayString();
                             var parameterSpec = $"{typeName} {symbol.Name}";
                             result.ParametersNeeded.Add(parameterSpec);
                             result.VariablesFlowingIn.Add(symbol.Name);
                         }
                         else if (symbol is IParameterSymbol)
                         {
-                            var typeName = symbolType.ToDisplayString();
+                            string typeName = symbolType.ToDisplayString();
                             var parameterSpec = $"{typeName} {symbol.Name}";
                             result.ParametersNeeded.Add(parameterSpec);
                             result.VariablesFlowingIn.Add(symbol.Name);
@@ -91,7 +91,7 @@ public class SemanticReturnAnalyzer
                 }
 
                 // Analyze variables flowing out of the region (return value needed)
-                foreach (var symbol in dataFlowAnalysis.DataFlowsOut)
+                foreach (ISymbol symbol in dataFlowAnalysis.DataFlowsOut)
                 {
                     if (symbol is ILocalSymbol localSymbol)
                     {
@@ -124,7 +124,7 @@ public class SemanticReturnAnalyzer
         string sourceCode, 
         CancellationToken cancellationToken)
     {
-        var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
+        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
 
         // Add essential metadata references for semantic analysis
         PortableExecutableReference[] references =
@@ -149,13 +149,13 @@ public class SemanticReturnAnalyzer
     /// </summary>
     private static MethodDeclarationSyntax? FindContainingMethod(SyntaxNode root, int startLine)
     {
-        var methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
+        IEnumerable<MethodDeclarationSyntax> methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
 
-        foreach (var method in methods)
+        foreach (MethodDeclarationSyntax method in methods)
         {
-            var span = method.GetLocation().GetLineSpan();
-            var methodStartLine = span.StartLinePosition.Line + 1; // Convert to 1-based
-            var methodEndLine = span.EndLinePosition.Line + 1;
+            FileLinePositionSpan span = method.GetLocation().GetLineSpan();
+            int methodStartLine = span.StartLinePosition.Line + 1; // Convert to 1-based
+            int methodEndLine = span.EndLinePosition.Line + 1;
 
             if (startLine >= methodStartLine && startLine <= methodEndLine)
             {
@@ -178,20 +178,20 @@ public class SemanticReturnAnalyzer
 
         if (method.Body != null)
         {
-            foreach (var statement in method.Body.Statements)
+            foreach (StatementSyntax statement in method.Body.Statements)
             {
-                var span = statement.GetLocation().GetLineSpan();
-                var statementStartLine = span.StartLinePosition.Line + 1; // Convert to 1-based
-                var statementEndLine = span.EndLinePosition.Line + 1; // Convert to 1-based
+                FileLinePositionSpan span = statement.GetLocation().GetLineSpan();
+                int statementStartLine = span.StartLinePosition.Line + 1; // Convert to 1-based
+                int statementEndLine = span.EndLinePosition.Line + 1; // Convert to 1-based
                 
                 // FIXED: Check if statement overlaps with the selection range
                 // Include if:
                 // - Statement starts within the range, OR
                 // - Statement ends within the range, OR  
                 // - Statement spans the entire range
-                var startsInRange = statementStartLine >= startLine && statementStartLine <= endLine;
-                var endsInRange = statementEndLine >= startLine && statementEndLine <= endLine;
-                var spansRange = statementStartLine <= startLine && statementEndLine >= endLine;
+                bool startsInRange = statementStartLine >= startLine && statementStartLine <= endLine;
+                bool endsInRange = statementEndLine >= startLine && statementEndLine <= endLine;
+                bool spansRange = statementStartLine <= startLine && statementEndLine >= endLine;
                 
                 if (startsInRange || endsInRange || spansRange)
                 {
@@ -213,7 +213,7 @@ public class SemanticReturnAnalyzer
         SemanticModel semanticModel)
     {
         // Check if there are explicit return statements
-        var hasReturnStatements = selectedStatements
+        bool hasReturnStatements = selectedStatements
             .SelectMany(s => s.DescendantNodes())
             .OfType<ReturnStatementSyntax>()
             .Any();
@@ -221,7 +221,7 @@ public class SemanticReturnAnalyzer
         if (hasReturnStatements)
         {
             // If there are return statements, analyze their types
-            var returnTypes = AnalyzeReturnStatementTypes(selectedStatements, semanticModel);
+            List<string> returnTypes = AnalyzeReturnStatementTypes(selectedStatements, semanticModel);
             if (returnTypes.Count == 1)
             {
                 result.SuggestedReturnType = returnTypes.First();
@@ -241,8 +241,8 @@ public class SemanticReturnAnalyzer
         if (dataFlowAnalysis.DataFlowsOut.Length == 1)
         {
             // Single variable flows out - perfect for return value
-            var symbol = dataFlowAnalysis.DataFlowsOut[0];
-            var symbolType = GetSymbolType(symbol);
+            ISymbol symbol = dataFlowAnalysis.DataFlowsOut[0];
+            ITypeSymbol? symbolType = GetSymbolType(symbol);
             if (symbolType != null)
             {
                 result.SuggestedReturnType = symbolType.ToDisplayString();
@@ -253,7 +253,7 @@ public class SemanticReturnAnalyzer
         else if (dataFlowAnalysis.DataFlowsOut.Length > 1)
         {
             // Multiple variables flow out - suggest tuple or keep void with ref parameters
-            var types = dataFlowAnalysis.DataFlowsOut
+            List<string> types = dataFlowAnalysis.DataFlowsOut
                 .Select(GetSymbolType)
                 .Where(t => t != null)
                 .Select(t => t!.ToDisplayString())
@@ -308,15 +308,15 @@ public class SemanticReturnAnalyzer
     {
         var returnTypes = new HashSet<string>();
 
-        var returnStatements = selectedStatements
+        IEnumerable<ReturnStatementSyntax> returnStatements = selectedStatements
             .SelectMany(s => s.DescendantNodes())
             .OfType<ReturnStatementSyntax>();
 
-        foreach (var returnStatement in returnStatements)
+        foreach (ReturnStatementSyntax returnStatement in returnStatements)
         {
             if (returnStatement.Expression != null)
             {
-                var typeInfo = semanticModel.GetTypeInfo(returnStatement.Expression);
+                TypeInfo typeInfo = semanticModel.GetTypeInfo(returnStatement.Expression);
                 if (typeInfo.Type != null)
                 {
                     returnTypes.Add(typeInfo.Type.ToDisplayString());
@@ -340,7 +340,7 @@ public class SemanticReturnAnalyzer
         ReturnAnalysisResult result)
     {
         // Check for return statements
-        var hasReturnStatements = selectedStatements
+        bool hasReturnStatements = selectedStatements
             .SelectMany(s => s.DescendantNodes())
             .OfType<ReturnStatementSyntax>()
             .Any();

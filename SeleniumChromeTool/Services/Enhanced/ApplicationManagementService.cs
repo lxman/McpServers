@@ -55,12 +55,12 @@ public class ApplicationManagementService
         };
 
         // Get existing applications to avoid duplicates
-        var existingApplications = await GetExistingApplicationsAsync(preferences.UserId);
-        var appliedJobUrls = existingApplications.Select(a => a.JobUrl).ToHashSet();
+        List<ApplicationRecord> existingApplications = await GetExistingApplicationsAsync(preferences.UserId);
+        HashSet<string> appliedJobUrls = existingApplications.Select(a => a.JobUrl).ToHashSet();
 
-        foreach (var job in jobs)
+        foreach (EnhancedJobListing job in jobs)
         {
-            var category = await CategorizeJobAsync(job, preferences, appliedJobUrls);
+            CategorizedJob category = await CategorizeJobAsync(job, preferences, appliedJobUrls);
             
             switch (category.Priority)
             {
@@ -119,7 +119,7 @@ public class ApplicationManagementService
         }
 
         // Calculate application readiness score
-        var score = CalculateApplicationReadinessScore(job, preferences);
+        int score = CalculateApplicationReadinessScore(job, preferences);
         categorized.ApplicationReadinessScore = score;
 
         // Determine priority based on score and additional factors
@@ -146,7 +146,7 @@ public class ApplicationManagementService
         // Salary alignment
         if (!string.IsNullOrEmpty(job.Salary))
         {
-            var salaryScore = CalculateSalaryAlignment(job.Salary, preferences);
+            int salaryScore = CalculateSalaryAlignment(job.Salary, preferences);
             score += salaryScore; // Max 15 points
         }
 
@@ -167,7 +167,7 @@ public class ApplicationManagementService
         }
 
         // Technology stack alignment
-        var techScore = CalculateTechnologyAlignment(job, preferences);
+        int techScore = CalculateTechnologyAlignment(job, preferences);
         score += techScore; // Max 10 points
 
         // Urgency factors
@@ -269,8 +269,8 @@ public class ApplicationManagementService
 
         try
         {
-            var filter = Builders<ApplicationRecord>.Filter.Eq(a => a.Id, applicationId);
-            var update = Builders<ApplicationRecord>.Update
+            FilterDefinition<ApplicationRecord>? filter = Builders<ApplicationRecord>.Filter.Eq(a => a.Id, applicationId);
+            UpdateDefinition<ApplicationRecord>? update = Builders<ApplicationRecord>.Update
                 .Set(a => a.Status, status)
                 .Set(a => a.LastUpdated, DateTime.UtcNow);
             
@@ -279,7 +279,7 @@ public class ApplicationManagementService
                 update = update.Set(a => a.Notes, notes);
             }
 
-            var result = await _applicationCollection.UpdateOneAsync(filter, update);
+            UpdateResult? result = await _applicationCollection.UpdateOneAsync(filter, update);
             return result.ModifiedCount > 0;
         }
         catch (Exception ex)

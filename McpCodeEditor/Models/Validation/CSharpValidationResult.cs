@@ -85,7 +85,7 @@
 
         public override string ToString()
         {
-            var location = Line.HasValue ? $" at line {Line}" : "";
+            string location = Line.HasValue ? $" at line {Line}" : "";
             if (Column.HasValue)
                 location += $", column {Column}";
             return $"{Severity} {Id}: {Message}{location}";

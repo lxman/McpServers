@@ -49,7 +49,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var projectClient = _credentialManager.GetClient<ProjectHttpClient>();
-            var project = await projectClient.GetProject(projectName);
+            TeamProject? project = await projectClient.GetProject(projectName);
 
             return project != null ? MapToProjectDto(project) : null;
         }
@@ -65,7 +65,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var workItemClient = _credentialManager.GetClient<WorkItemTrackingHttpClient>();
-            var workItem = await workItemClient.GetWorkItemAsync(id, expand: WorkItemExpand.All);
+            WorkItem? workItem = await workItemClient.GetWorkItemAsync(id, expand: WorkItemExpand.All);
 
             return workItem != null ? MapToWorkItemDto(workItem) : null;
         }
@@ -86,12 +86,12 @@ public class DevOpsService : IDevOpsService
             wiql ??= $"SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{projectName}' ORDER BY [System.Id] DESC";
             
             var query = new Wiql { Query = wiql };
-            var result = await workItemClient.QueryByWiqlAsync(query);
+            WorkItemQueryResult? result = await workItemClient.QueryByWiqlAsync(query);
 
             if (result?.WorkItems == null || !result.WorkItems.Any())
                 return [];
 
-            var ids = result.WorkItems.Select(wi => wi.Id).ToArray();
+            int[] ids = result.WorkItems.Select(wi => wi.Id).ToArray();
             List<WorkItem>? workItems = await workItemClient.GetWorkItemsAsync(ids, expand: WorkItemExpand.All);
 
             return workItems.Select(MapToWorkItemDto);
@@ -122,7 +122,7 @@ public class DevOpsService : IDevOpsService
             // Add additional fields if provided
             if (fields != null)
             {
-                foreach (var field in fields)
+                foreach (KeyValuePair<string, object> field in fields)
                 {
                     patchDocument.Add(new JsonPatchOperation
                     {
@@ -133,7 +133,7 @@ public class DevOpsService : IDevOpsService
                 }
             }
 
-            var workItem = await workItemClient.CreateWorkItemAsync(patchDocument, projectName, workItemType);
+            WorkItem? workItem = await workItemClient.CreateWorkItemAsync(patchDocument, projectName, workItemType);
             return MapToWorkItemDto(workItem);
         }
         catch (Exception ex)
@@ -164,7 +164,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var gitClient = _credentialManager.GetClient<GitHttpClient>();
-            var repository = await gitClient.GetRepositoryAsync(projectName, repositoryName);
+            GitRepository? repository = await gitClient.GetRepositoryAsync(projectName, repositoryName);
 
             return repository != null ? MapToRepositoryDto(repository) : null;
         }
@@ -230,16 +230,16 @@ public class DevOpsService : IDevOpsService
 
     private static string? GetFieldValue(IDictionary<string, object> fields, string fieldName)
     {
-        return fields.TryGetValue(fieldName, out var value) ? value?.ToString() : null;
+        return fields.TryGetValue(fieldName, out object? value) ? value?.ToString() : null;
     }
 
     private static DateTime? GetDateTimeValue(IDictionary<string, object> fields, string fieldName)
     {
-        if (fields.TryGetValue(fieldName, out var value))
+        if (fields.TryGetValue(fieldName, out object? value))
         {
             if (value is DateTime dateTime)
                 return dateTime;
-            if (DateTime.TryParse(value?.ToString(), out var parsed))
+            if (DateTime.TryParse(value?.ToString(), out DateTime parsed))
                 return parsed;
         }
         return null;
@@ -247,11 +247,11 @@ public class DevOpsService : IDevOpsService
 
     private static int? GetIntValue(IDictionary<string, object> fields, string fieldName)
     {
-        if (fields.TryGetValue(fieldName, out var value))
+        if (fields.TryGetValue(fieldName, out object? value))
         {
             if (value is int intValue)
                 return intValue;
-            if (int.TryParse(value?.ToString(), out var parsed))
+            if (int.TryParse(value?.ToString(), out int parsed))
                 return parsed;
         }
         return null;
@@ -263,7 +263,7 @@ public class DevOpsService : IDevOpsService
             return string.Empty;
 
         // Azure DevOps user fields often come in format "Display Name <email@domain.com>"
-        var match = Regex.Match(userField, @"^([^<]+)");
+        Match match = Regex.Match(userField, @"^([^<]+)");
         return match.Success ? match.Groups[1].Value.Trim() : userField;
     }
     
@@ -274,11 +274,11 @@ public class DevOpsService : IDevOpsService
         try
         {
             var buildClient = _credentialManager.GetClient<BuildHttpClient>();
-            var definitions = await buildClient.GetDefinitionsAsync(projectName);
+            List<BuildDefinitionReference>? definitions = await buildClient.GetDefinitionsAsync(projectName);
             var fullDefinitions = new List<BuildDefinition>();
-            foreach (var defRef in definitions)
+            foreach (BuildDefinitionReference defRef in definitions)
             {
-                var fullDef = await buildClient.GetDefinitionAsync(projectName, defRef.Id);
+                BuildDefinition? fullDef = await buildClient.GetDefinitionAsync(projectName, defRef.Id);
                 if (fullDef != null) fullDefinitions.Add(fullDef);
             }
             return fullDefinitions.Select(MapToBuildDefinitionDto);
@@ -295,7 +295,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var buildClient = _credentialManager.GetClient<BuildHttpClient>();
-            var definition = await buildClient.GetDefinitionAsync(projectName, definitionId);
+            BuildDefinition? definition = await buildClient.GetDefinitionAsync(projectName, definitionId);
             
             return definition != null ? MapToBuildDefinitionDto(definition) : null;
         }
@@ -311,7 +311,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var buildClient = _credentialManager.GetClient<BuildHttpClient>();
-            var builds = await buildClient.GetBuildsAsync(
+            List<Build>? builds = await buildClient.GetBuildsAsync(
                 projectName, 
                 definitions: definitionId.HasValue ? new[] { definitionId.Value } : null,
                 top: top);
@@ -330,7 +330,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var buildClient = _credentialManager.GetClient<BuildHttpClient>();
-            var build = await buildClient.GetBuildAsync(projectName, buildId);
+            Build? build = await buildClient.GetBuildAsync(projectName, buildId);
             
             return build != null ? MapToBuildDto(build) : null;
         }
@@ -358,7 +358,7 @@ public class DevOpsService : IDevOpsService
                 buildRequest.SourceBranch = branch;
             }
             
-            var queuedBuild = await buildClient.QueueBuildAsync(buildRequest, projectName);
+            Build? queuedBuild = await buildClient.QueueBuildAsync(buildRequest, projectName);
             return MapToBuildDto(queuedBuild);
         }
         catch (Exception ex)
@@ -373,7 +373,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var releaseClient = _credentialManager.GetClient<ReleaseHttpClient>();
-            var definitions = await releaseClient.GetReleaseDefinitionsAsync(projectName);
+            List<ReleaseDefinition>? definitions = await releaseClient.GetReleaseDefinitionsAsync(projectName);
             
             return definitions.Select(MapToReleaseDefinitionDto);
         }
@@ -389,7 +389,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var releaseClient = _credentialManager.GetClient<ReleaseHttpClient>();
-            var definition = await releaseClient.GetReleaseDefinitionAsync(projectName, definitionId);
+            ReleaseDefinition? definition = await releaseClient.GetReleaseDefinitionAsync(projectName, definitionId);
             
             return definition != null ? MapToReleaseDefinitionDto(definition) : null;
         }
@@ -405,7 +405,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var releaseClient = _credentialManager.GetClient<ReleaseHttpClient>();
-            var releases = await releaseClient.GetReleasesAsync(
+            List<Release>? releases = await releaseClient.GetReleasesAsync(
                 projectName, 
                 definitionId: definitionId);
             
@@ -428,7 +428,7 @@ public class DevOpsService : IDevOpsService
         {
             var gitClient = _credentialManager.GetClient<GitHttpClient>();
             
-            var item = await gitClient.GetItemAsync(
+            GitItem? item = await gitClient.GetItemAsync(
                 project: projectName,
                 repositoryId: repositoryName,
                 filePath,
@@ -476,8 +476,8 @@ public class DevOpsService : IDevOpsService
                 // File doesn't exist - will be created
             }
 
-            var targetBranch = branch ?? "refs/heads/main";
-            var changeType = currentItem != null ? VersionControlChangeType.Edit : VersionControlChangeType.Add;
+            string targetBranch = branch ?? "refs/heads/main";
+            VersionControlChangeType changeType = currentItem != null ? VersionControlChangeType.Edit : VersionControlChangeType.Add;
             
             var commit = new GitCommitRef
             {
@@ -530,17 +530,17 @@ public class DevOpsService : IDevOpsService
             var searchPaths = new[] { "/", "/.azure-pipelines", "/.github/workflows", "/pipelines", "/build" };
             var yamlFiles = new List<string>();
             
-            foreach (var searchPath in searchPaths)
+            foreach (string searchPath in searchPaths)
             {
                 try
                 {
-                    var items = await gitClient.GetItemsAsync(
+                    List<GitItem>? items = await gitClient.GetItemsAsync(
                         repositoryName,
                         projectName,
                         scopePath: searchPath,
                         recursionLevel: VersionControlRecursionType.Full);
                     
-                    var yamlItems = items.Where(item => 
+                    IEnumerable<string> yamlItems = items.Where(item => 
                         item.Path.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) ||
                         item.Path.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase))
                         .Select(item => item.Path);
@@ -567,12 +567,12 @@ public class DevOpsService : IDevOpsService
         try
         {
             var buildClient = _credentialManager.GetClient<BuildHttpClient>();
-            var definition = await buildClient.GetDefinitionAsync(projectName, definitionId);
+            BuildDefinition? definition = await buildClient.GetDefinitionAsync(projectName, definitionId);
             
             if (definition?.Process is YamlProcess yamlProcess)
             {
                 var gitClient = _credentialManager.GetClient<GitHttpClient>();
-                var yamlContent = await gitClient.GetItemAsync(
+                GitItem? yamlContent = await gitClient.GetItemAsync(
                     project: projectName,
                     definition.Repository.Id,
                     path: yamlProcess.YamlFilename,
@@ -595,7 +595,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var buildClient = _credentialManager.GetClient<BuildHttpClient>();
-            var definition = await buildClient.GetDefinitionAsync(projectName, definitionId);
+            BuildDefinition? definition = await buildClient.GetDefinitionAsync(projectName, definitionId);
             
             if (definition?.Process is YamlProcess yamlProcess && definition.Repository != null)
             {
@@ -719,7 +719,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var buildClient = _credentialManager.GetClient<BuildHttpClient>();
-            var logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
+            List<BuildLog>? logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
             
             return logs.Select(log => new BuildLogDto
             {
@@ -745,12 +745,12 @@ public class DevOpsService : IDevOpsService
             var buildClient = _credentialManager.GetClient<BuildHttpClient>();
             
             // Get the log content as a stream
-            await using var logStream = await buildClient.GetBuildLogAsync(projectName, buildId, logId);
+            await using Stream? logStream = await buildClient.GetBuildLogAsync(projectName, buildId, logId);
             using var reader = new StreamReader(logStream);
-            var content = await reader.ReadToEndAsync();
+            string content = await reader.ReadToEndAsync();
             
-            var logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
-            var logInfo = logs.FirstOrDefault(l => l.Id == logId);
+            List<BuildLog>? logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
+            BuildLog? logInfo = logs.FirstOrDefault(l => l.Id == logId);
             
             return new BuildLogContentDto
             {
@@ -772,14 +772,14 @@ public class DevOpsService : IDevOpsService
         try
         {
             var buildClient = _credentialManager.GetClient<BuildHttpClient>();
-            var timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
+            Timeline? timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
             
             if (timeline?.Records == null)
                 return null;
 
             // Build a hierarchical structure from timeline records
-            var recordDict = timeline.Records.ToDictionary(r => r.Id.ToString(), r => r);
-            var rootRecords = timeline.Records.Where(r => string.IsNullOrEmpty(r.ParentId.ToString())).ToList();
+            Dictionary<string, TimelineRecord> recordDict = timeline.Records.ToDictionary(r => r.Id.ToString(), r => r);
+            List<TimelineRecord> rootRecords = timeline.Records.Where(r => string.IsNullOrEmpty(r.ParentId.ToString())).ToList();
             
             var result = new BuildTimelineDto
             {
@@ -803,20 +803,20 @@ public class DevOpsService : IDevOpsService
         try
         {
             var buildClient = _credentialManager.GetClient<BuildHttpClient>();
-            var timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
+            Timeline? timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
             
             if (timeline?.Records == null)
                 return [];
 
             var stepLogs = new List<BuildStepLogDto>();
             
-            foreach (var record in timeline.Records.Where(r => r.Log != null))
+            foreach (TimelineRecord? record in timeline.Records.Where(r => r.Log != null))
             {
                 try
                 {
-                    await using var logStream = await buildClient.GetBuildLogAsync(projectName, buildId, record.Log.Id);
+                    await using Stream? logStream = await buildClient.GetBuildLogAsync(projectName, buildId, record.Log.Id);
                     using var reader = new StreamReader(logStream);
-                    var logContent = await reader.ReadToEndAsync();
+                    string logContent = await reader.ReadToEndAsync();
                     
                     var stepLog = new BuildStepLogDto
                     {
@@ -853,7 +853,7 @@ public class DevOpsService : IDevOpsService
         try
         {
             var buildClient = _credentialManager.GetClient<BuildHttpClient>();
-            var logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
+            List<BuildLog>? logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
             
             var combinedLog = new StringBuilder();
             combinedLog.AppendLine($"=== COMPLETE BUILD LOG FOR BUILD {buildId} ===");
@@ -861,15 +861,15 @@ public class DevOpsService : IDevOpsService
             combinedLog.AppendLine($"Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
             combinedLog.AppendLine();
             
-            foreach (var log in logs.OrderBy(l => l.Id))
+            foreach (BuildLog log in logs.OrderBy(l => l.Id))
             {
                 try
                 {
                     combinedLog.AppendLine($"=== LOG {log.Id}: {log.Type} ===");
 
-                    await using var logStream = await buildClient.GetBuildLogAsync(projectName, buildId, log.Id);
+                    await using Stream? logStream = await buildClient.GetBuildLogAsync(projectName, buildId, log.Id);
                     using var reader = new StreamReader(logStream);
-                    var content = await reader.ReadToEndAsync();
+                    string content = await reader.ReadToEndAsync();
                     
                     combinedLog.AppendLine(content);
                     combinedLog.AppendLine();
@@ -895,20 +895,20 @@ public class DevOpsService : IDevOpsService
         try
         {
             var buildClient = _credentialManager.GetClient<BuildHttpClient>();
-            var timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
+            Timeline? timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
         
-            var taskRecord = timeline?.Records?.FirstOrDefault(r => r.Id.ToString() == taskId);
+            TimelineRecord? taskRecord = timeline?.Records?.FirstOrDefault(r => r.Id.ToString() == taskId);
             if (taskRecord?.Log == null)
                 return null;
             
             // Get the actual content
-            await using var logStream = await buildClient.GetBuildLogAsync(projectName, buildId, taskRecord.Log.Id);
+            await using Stream? logStream = await buildClient.GetBuildLogAsync(projectName, buildId, taskRecord.Log.Id);
             using var reader = new StreamReader(logStream);
-            var content = await reader.ReadToEndAsync();
+            string content = await reader.ReadToEndAsync();
         
             // Get full log metadata (BuildLog has LineCount)
-            var logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
-            var fullLogInfo = logs.FirstOrDefault(l => l.Id == taskRecord.Log.Id);
+            List<BuildLog>? logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
+            BuildLog? fullLogInfo = logs.FirstOrDefault(l => l.Id == taskRecord.Log.Id);
         
             return new BuildLogContentDto
             {
@@ -932,26 +932,26 @@ public class DevOpsService : IDevOpsService
         try
         {
             var buildClient = _credentialManager.GetClient<BuildHttpClient>();
-            var logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
+            List<BuildLog>? logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
             var matches = new List<object>();
             
             var regex = new Regex(regexPattern, caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase);
             
-            foreach (var log in logs)
+            foreach (BuildLog log in logs)
             {
                 try
                 {
-                    await using var logStream = await buildClient.GetBuildLogAsync(projectName, buildId, log.Id);
+                    await using Stream? logStream = await buildClient.GetBuildLogAsync(projectName, buildId, log.Id);
                     using var reader = new StreamReader(logStream);
-                    var content = await reader.ReadToEndAsync();
-                    var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                    string content = await reader.ReadToEndAsync();
+                    string[] lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
                     
                     for (var i = 0; i < lines.Length; i++)
                     {
                         if (regex.IsMatch(lines[i]))
                         {
-                            var contextStart = Math.Max(0, i - contextLines);
-                            var contextEnd = Math.Min(lines.Length - 1, i + contextLines);
+                            int contextStart = Math.Max(0, i - contextLines);
+                            int contextEnd = Math.Min(lines.Length - 1, i + contextLines);
                             
                             matches.Add(new
                             {
@@ -1004,7 +1004,7 @@ public class DevOpsService : IDevOpsService
 
     private BuildTimelineDto MapTimelineRecord(TimelineRecord record, Dictionary<string, TimelineRecord> allRecords)
     {
-        var children = allRecords.Values
+        List<BuildTimelineDto> children = allRecords.Values
             .Where(r => r.ParentId == record.Id)
             .Select(r => MapTimelineRecord(r, allRecords))
             .ToList();
@@ -1039,9 +1039,9 @@ public class DevOpsService : IDevOpsService
     private static List<string> ExtractErrorMessages(string logContent)
     {
         var errors = new List<string>();
-        var lines = logContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        string[] lines = logContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
             if (line.Contains("ERROR", StringComparison.OrdinalIgnoreCase) ||
                 line.Contains("FAILED", StringComparison.OrdinalIgnoreCase) ||
@@ -1057,9 +1057,9 @@ public class DevOpsService : IDevOpsService
     private static List<string> ExtractWarningMessages(string logContent)
     {
         var warnings = new List<string>();
-        var lines = logContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        string[] lines = logContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
             if (line.Contains("WARNING", StringComparison.OrdinalIgnoreCase) ||
                 line.Contains("WARN", StringComparison.OrdinalIgnoreCase))
@@ -1074,7 +1074,7 @@ public class DevOpsService : IDevOpsService
     private static string? ExtractTimestamp(string logLine)
     {
         // Extract Azure DevOps timestamp format: 2025-09-22T18:55:05.6745795Z
-        var timestampMatch = Regex.Match(logLine, @"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)");
+        Match timestampMatch = Regex.Match(logLine, @"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)");
         return timestampMatch.Success ? timestampMatch.Groups[1].Value : null;
     }
 
@@ -1083,7 +1083,7 @@ public class DevOpsService : IDevOpsService
         if (!matches.Any()) return new { message = "No matches found" };
     
         // Analyze matches for common patterns
-        var matchStrings = matches.Select(m => 
+        List<dynamic> matchStrings = matches.Select(m => 
             ((dynamic)m).MatchedLine.ToString().ToLower()).ToList();
     
         var summary = new

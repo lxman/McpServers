@@ -50,7 +50,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             var mockTypeScriptCodeModificationService = new Mock<ITypeScriptCodeModificationService>();
 
             // Use actual syntax validator instead of mock for REF-003 testing
-            var syntaxValidator = CreateTestValidator();
+            ITypeScriptSyntaxValidator syntaxValidator = CreateTestValidator();
 
             return new TypeScriptVariableOperations(
                 mockLogger.Object,
@@ -74,7 +74,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const string validCode = "const injectedAccountsClient = inject(AccountsClient);";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(validCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(validCode);
 
             // Assert
             Assert.True(result.IsValid, $"Should accept valid TypeScript syntax: {result.ErrorMessage}");
@@ -88,7 +88,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const string invalidCode = "const injectedAccountsClient = inject(AccountsClient;";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(invalidCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(invalidCode);
 
             // Assert
             Assert.False(result.IsValid, "Should detect missing closing parenthesis");
@@ -103,7 +103,7 @@ namespace McpCodeEditorTests.Services.Refactoring.TypeScript
             const string invalidCode = "const injectedAccountsClient = injectAccountsClient);";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(invalidCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(invalidCode);
 
             // Assert
             Assert.False(result.IsValid, "Should detect missing opening parenthesis");
@@ -120,7 +120,7 @@ export class TestComponent {
 }";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(invalidCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(invalidCode);
 
             // Assert
             Assert.False(result.IsValid, "Should detect invalid const placement in class");
@@ -142,7 +142,7 @@ export class TestComponent {
 }";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(validCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(validCode);
 
             // Assert
             Assert.True(result.IsValid, $"Should accept valid class member syntax: {result.ErrorMessage}");
@@ -158,7 +158,7 @@ export class TestComponent {
 }";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(validCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(validCode);
 
             // Assert
             Assert.True(result.IsValid, $"Should accept valid class member with type annotation: {result.ErrorMessage}");
@@ -174,7 +174,7 @@ export class TestComponent {
 }";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(invalidCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(invalidCode);
 
             // Assert
             Assert.False(result.IsValid, "Should detect invalid const keyword in class");
@@ -199,7 +199,7 @@ export class TestComponent {
 }";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(validCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(validCode);
 
             // Assert
             Assert.True(result.IsValid, $"Should accept valid method-local const: {result.ErrorMessage}");
@@ -219,7 +219,7 @@ export class TestComponent {
 }";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(validCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(validCode);
 
             // Assert
             Assert.True(result.IsValid, $"Should accept valid method-local let: {result.ErrorMessage}");
@@ -238,7 +238,7 @@ export class TestComponent {
 }";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(invalidCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(invalidCode);
 
             // Assert
             Assert.False(result.IsValid, "Should detect invalid private keyword in method");
@@ -256,7 +256,7 @@ export class TestComponent {
             const string validCode = "const result = Math.max(10, 20);";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(validCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(validCode);
 
             // Assert
             Assert.True(result.IsValid, $"Should accept valid function call: {result.ErrorMessage}");
@@ -269,7 +269,7 @@ export class TestComponent {
             const string validCode = "const value = this.accountService.baseUrl;";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(validCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(validCode);
 
             // Assert
             Assert.True(result.IsValid, $"Should accept valid property access: {result.ErrorMessage}");
@@ -282,7 +282,7 @@ export class TestComponent {
             const string validCode = "const filterFn = (x: any) => x.active;";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(validCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(validCode);
 
             // Assert
             Assert.True(result.IsValid, $"Should accept valid arrow function: {result.ErrorMessage}");
@@ -295,7 +295,7 @@ export class TestComponent {
             const string invalidCode = "const filterFn = (x: any) x.active;";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(invalidCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(invalidCode);
 
             // Assert
             Assert.False(result.IsValid, "Should detect malformed arrow function");
@@ -321,7 +321,7 @@ export class TestComponent {
 }";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(invalidCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(invalidCode);
 
             // Assert
             Assert.False(result.IsValid, "Should detect multiple syntax errors");
@@ -345,7 +345,7 @@ export class TestComponent {
 }";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(validCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(validCode);
 
             // Assert
             Assert.True(result.IsValid, $"Should accept completely valid TypeScript code: {result.ErrorMessage}");
@@ -372,7 +372,7 @@ export class TestComponent implements OnInit {
 }";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(invalidCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(invalidCode);
 
             // Assert
             Assert.True(result.IsValid, $"Should not accept improper TypeScript code: {result.ErrorMessage}");
@@ -395,14 +395,14 @@ export class AccountListComponent {
             const string scopeContext = "class";
 
             // Act - Generate variable declaration and validate it
-            var service = CreateTestService();
-            var generatedDeclaration = InvokeGenerateVariableDeclaration(service, variableName, extractedExpression, scopeContext, 2);
-            var generatedDeclarationType = generatedDeclaration.GetType();
+            TypeScriptVariableOperations service = CreateTestService();
+            object generatedDeclaration = InvokeGenerateVariableDeclaration(service, variableName, extractedExpression, scopeContext, 2);
+            Type generatedDeclarationType = generatedDeclaration.GetType();
             var generatedDeclarationString = generatedDeclarationType.GetProperty("Declaration")?.GetValue(generatedDeclaration) as string;
-            var validationResult = InvokeValidateTypeScriptSyntax(generatedDeclarationString ?? string.Empty);
+            ValidationResult validationResult = InvokeValidateTypeScriptSyntax(generatedDeclarationString ?? string.Empty);
             
             bool? success = (bool?)generatedDeclarationType.GetProperty("Success")?.GetValue(generatedDeclaration) ?? false;
-            var declaration = generatedDeclarationString ?? string.Empty;
+            string declaration = generatedDeclarationString ?? string.Empty;
 
             // Assert
             Assert.True(success, "Variable declaration generation should succeed");
@@ -419,7 +419,7 @@ export class AccountListComponent {
             const string generatedDeclaration = $"const {variableName} = {brokenExpression};";
 
             // Act
-            var result = InvokeValidateTypeScriptSyntax(generatedDeclaration);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(generatedDeclaration);
 
             // Assert
             Assert.False(result.IsValid, "Should detect syntax errors from broken expression boundaries");
@@ -439,7 +439,7 @@ export class TestComponent {
 }";
 
             // Act
-            var result = InvokeValidateTypeScriptSyntax(invalidClassCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(invalidClassCode);
 
             // Assert
             Assert.False(result.IsValid, "Should detect invalid const usage in class body");
@@ -458,7 +458,7 @@ export class TestComponent {
             const string invalidCode = "const result = Math.max(10, 20;"; // Missing closing parenthesis
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(invalidCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(invalidCode);
 
             // Assert
             Assert.False(result.IsValid, "Should detect syntax error");
@@ -482,7 +482,7 @@ const final = result.filter(x => x.active;
 ";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(invalidCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(invalidCode);
 
             // Assert
             Assert.False(result.IsValid, "Should detect multiple syntax errors");
@@ -502,7 +502,7 @@ const final = result.filter(x => x.active;
             const string emptyCode = "";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(emptyCode);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(emptyCode);
 
             // Assert - Should either pass (empty is valid) or fail gracefully
             if (!result.IsValid)
@@ -535,9 +535,9 @@ const final = result.filter(x => x.active;
             var longValidCode = codeBuilder.ToString();
             
             // Act
-            var startTime = DateTime.UtcNow;
-            var result = InvokeValidateTypeScriptSyntax(longValidCode);
-            var duration = DateTime.UtcNow - startTime;
+            DateTime startTime = DateTime.UtcNow;
+            ValidationResult result = InvokeValidateTypeScriptSyntax(longValidCode);
+            TimeSpan duration = DateTime.UtcNow - startTime;
 
             // Assert
             Assert.True(result.IsValid, $"Should handle long valid code: {result.ErrorMessage}");
@@ -555,7 +555,7 @@ const template = `User: ${user.name}, Score: ${user.score * 100}%`;
 ";
             
             // Act
-            var result = InvokeValidateTypeScriptSyntax(codeWithSpecialChars);
+            ValidationResult result = InvokeValidateTypeScriptSyntax(codeWithSpecialChars);
 
             // Assert
             Assert.True(result.IsValid, $"Should handle special characters correctly: {result.ErrorMessage}");
@@ -570,15 +570,15 @@ const template = `User: ${user.name}, Score: ${user.score * 100}%`;
         /// </summary>
         private static ValidationResult InvokeValidateTypeScriptSyntax(string code)
         {
-            var validator = CreateTestValidator();
+            ITypeScriptSyntaxValidator validator = CreateTestValidator();
             
-            var method = typeof(TypeScriptSyntaxValidator)
+            MethodInfo? method = typeof(TypeScriptSyntaxValidator)
                 .GetMethod("ValidateSyntax", 
                     BindingFlags.Public | BindingFlags.Instance);
             
             Assert.NotNull(method);
             
-            var result = method.Invoke(validator, [code]);
+            object? result = method.Invoke(validator, [code]);
             
             return (ValidationResult)result!;
         }
@@ -593,13 +593,13 @@ const template = `User: ${user.name}, Score: ${user.score * 100}%`;
             string scopeContext, 
             int insertionLine)
         {
-            var method = typeof(TypeScriptVariableOperations)
+            MethodInfo? method = typeof(TypeScriptVariableOperations)
                 .GetMethod("GenerateVariableDeclaration", 
                     BindingFlags.NonPublic | BindingFlags.Instance);
             
             Assert.NotNull(method);
             
-            var result = method.Invoke(service, [variableName, expression, scopeContext, insertionLine, null]);
+            object? result = method.Invoke(service, [variableName, expression, scopeContext, insertionLine, null]);
             
             return result!;
         }

@@ -37,7 +37,7 @@ public class PathValidationService : IPathValidationService
         try
         {
             // Convert to an absolute path
-            var fullPath = Path.IsPathRooted(path) ? path : Path.Combine(_config.DefaultWorkspace, path);
+            string fullPath = Path.IsPathRooted(path) ? path : Path.Combine(_config.DefaultWorkspace, path);
             fullPath = Path.GetFullPath(fullPath);
 
             // Security check: ensure path is within workspace if restricted
@@ -76,8 +76,8 @@ public class PathValidationService : IPathValidationService
     {
         try
         {
-            var fullPath = Path.GetFullPath(path);
-            var workspaceFullPath = Path.GetFullPath(_config.DefaultWorkspace);
+            string fullPath = Path.GetFullPath(path);
+            string workspaceFullPath = Path.GetFullPath(_config.DefaultWorkspace);
             
             return fullPath.StartsWith(workspaceFullPath, StringComparison.OrdinalIgnoreCase);
         }
@@ -97,11 +97,11 @@ public class PathValidationService : IPathValidationService
     {
         try
         {
-            var fullPath = Path.GetFullPath(path);
+            string fullPath = Path.GetFullPath(path);
             
-            foreach (var blockedPath in _config.Security.BlockedPaths)
+            foreach (string blockedPath in _config.Security.BlockedPaths)
             {
-                var blockedFullPath = Path.GetFullPath(blockedPath);
+                string blockedFullPath = Path.GetFullPath(blockedPath);
                 if (fullPath.StartsWith(blockedFullPath, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
@@ -127,7 +127,7 @@ public class PathValidationService : IPathValidationService
     public string ValidateFileExists(string path)
     {
         // First validate and resolve the path
-        var validatedPath = ValidateAndResolvePath(path);
+        string validatedPath = ValidateAndResolvePath(path);
 
         // Check if file exists
         if (!File.Exists(validatedPath))

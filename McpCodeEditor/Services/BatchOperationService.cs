@@ -71,7 +71,7 @@ public class BatchOperationService(
             }
 
             // Validate and resolve path
-            var resolvedPath = ValidateAndResolvePath(rootPath);
+            string? resolvedPath = ValidateAndResolvePath(rootPath);
             if (resolvedPath == null)
             {
                 return new BatchOperationResult
@@ -113,12 +113,12 @@ public class BatchOperationService(
             var fileResults = new List<BatchFileResult>();
             var processed = 0;
 
-            foreach (var item in items)
+            foreach (string item in items)
             {
                 if (cancellationToken.IsCancellationRequested)
                     break;
 
-                var fileResult = await ProcessItemRenameAsync(item, options, searchRegex, cancellationToken);
+                BatchFileResult fileResult = await ProcessItemRenameAsync(item, options, searchRegex, cancellationToken);
                 fileResults.Add(fileResult);
 
                 processed++;
@@ -196,7 +196,7 @@ public class BatchOperationService(
             }
 
             // Validate and resolve path
-            var resolvedPath = ValidateAndResolvePath(rootPath);
+            string? resolvedPath = ValidateAndResolvePath(rootPath);
             if (resolvedPath == null)
             {
                 return new BatchOperationResult
@@ -230,7 +230,7 @@ public class BatchOperationService(
             }
 
             // Find files to convert
-            var files = Directory.GetFiles(resolvedPath, $"*{options.FromExtension}", SearchOption.AllDirectories)
+            List<string> files = Directory.GetFiles(resolvedPath, $"*{options.FromExtension}", SearchOption.AllDirectories)
                 .Where(f => config.AllowedExtensions.Contains(options.FromExtension.ToLowerInvariant()))
                 .ToList();
 
@@ -250,10 +250,10 @@ public class BatchOperationService(
                 },
                 async (file, ct) =>
                 {
-                    var fileResult = await ProcessFileConvertAsync(file, options, ct);
+                    BatchFileResult fileResult = await ProcessFileConvertAsync(file, options, ct);
                     fileResults.Add(fileResult);
 
-                    var currentProcessed = Interlocked.Increment(ref processed);
+                    int currentProcessed = Interlocked.Increment(ref processed);
                     progressReporter?.ReportProgress(currentProcessed, files.Count, file);
                     progressReporter?.ReportFileCompleted(file, fileResult.Success, fileResult.Error);
 
@@ -316,9 +316,9 @@ public class BatchOperationService(
             }
 
             // For relative paths, resolve relative to the current workspace
-            var basePath = config.DefaultWorkspace;
-            var fullPath = Path.Combine(basePath, path);
-            var resolvedPath = Path.GetFullPath(fullPath);
+            string basePath = config.DefaultWorkspace;
+            string fullPath = Path.Combine(basePath, path);
+            string resolvedPath = Path.GetFullPath(fullPath);
 
             return Directory.Exists(resolvedPath) ? resolvedPath : null;
         }
@@ -338,7 +338,7 @@ public class BatchOperationService(
     {
         try
         {
-            var itemName = Path.GetFileName(itemPath);
+            string itemName = Path.GetFileName(itemPath);
             string newName;
 
             if (options.UseRegex && searchRegex != null)
@@ -353,8 +353,8 @@ public class BatchOperationService(
             // Only rename if name changed
             if (itemName != newName)
             {
-                var directory = Path.GetDirectoryName(itemPath) ?? "";
-                var newPath = Path.Combine(directory, newName);
+                string directory = Path.GetDirectoryName(itemPath) ?? "";
+                string newPath = Path.Combine(directory, newName);
 
                 if (File.Exists(itemPath))
                 {
@@ -411,16 +411,16 @@ public class BatchOperationService(
     {
         try
         {
-            var originalContent = await File.ReadAllTextAsync(filePath, cancellationToken);
+            string originalContent = await File.ReadAllTextAsync(filePath, cancellationToken);
             string convertedContent;
 
             // Perform the conversion using ConversionService
             convertedContent = await ConversionService.ConvertContentAsync(originalContent, options.FromExtension, options.ToExtension, options.ConversionSettings);
 
             // Generate new file path
-            var directory = Path.GetDirectoryName(filePath) ?? "";
-            var fileName = Path.GetFileNameWithoutExtension(filePath);
-            var newFilePath = Path.Combine(directory, fileName + options.ToExtension);
+            string directory = Path.GetDirectoryName(filePath) ?? "";
+            string fileName = Path.GetFileNameWithoutExtension(filePath);
+            string newFilePath = Path.Combine(directory, fileName + options.ToExtension);
 
             // Write converted content to new file
             await File.WriteAllTextAsync(newFilePath, convertedContent, cancellationToken);

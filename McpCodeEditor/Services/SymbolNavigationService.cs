@@ -50,10 +50,10 @@ public class SymbolNavigationService : IDisposable
     {
         try
         {
-            var currentSolution = _workspaceManagement.CurrentSolution;
+            Solution? currentSolution = _workspaceManagement.CurrentSolution;
             if (currentSolution == null)
             {
-                var refreshed = await _workspaceManagement.RefreshWorkspaceAsync(cancellationToken);
+                bool refreshed = await _workspaceManagement.RefreshWorkspaceAsync(cancellationToken);
                 currentSolution = _workspaceManagement.CurrentSolution;
                 if (!refreshed || currentSolution == null)
                 {
@@ -65,7 +65,7 @@ public class SymbolNavigationService : IDisposable
                 }
             }
 
-            var document = await _documentManagement.ResolveDocumentAsync(filePath, cancellationToken);
+            Document? document = await _documentManagement.ResolveDocumentAsync(filePath, cancellationToken);
             if (document == null)
             {
                 return new SymbolNavigationResult
@@ -75,8 +75,8 @@ public class SymbolNavigationService : IDisposable
                 };
             }
 
-            var sourceText = await document.GetTextAsync(cancellationToken);
-            var position = GetPosition(sourceText, lineNumber, column);
+            SourceText sourceText = await document.GetTextAsync(cancellationToken);
+            int position = GetPosition(sourceText, lineNumber, column);
 
             if (position < 0 || position >= sourceText.Length)
             {
@@ -88,7 +88,7 @@ public class SymbolNavigationService : IDisposable
             }
 
             // Use semantic analysis service to find symbol at position
-            var symbolAnalysis = await _semanticAnalysis.AnalyzeSymbolAtPositionAsync(document, position, cancellationToken);
+            SymbolAnalysisResult? symbolAnalysis = await _semanticAnalysis.AnalyzeSymbolAtPositionAsync(document, position, cancellationToken);
             if (symbolAnalysis == null)
             {
                 return new SymbolNavigationResult
@@ -98,15 +98,15 @@ public class SymbolNavigationService : IDisposable
                 };
             }
 
-            var symbol = symbolAnalysis.Symbol;
+            ISymbol symbol = symbolAnalysis.Symbol;
             var locations = new List<SymbolLocation>();
 
             // Add definition locations
-            foreach (var location in symbol.Locations)
+            foreach (Microsoft.CodeAnalysis.Location location in symbol.Locations)
             {
                 if (location.IsInSource)
                 {
-                    var symbolLocation = await CreateSymbolLocationAsync(location, "Definition", cancellationToken);
+                    SymbolLocation? symbolLocation = await CreateSymbolLocationAsync(location, "Definition", cancellationToken);
                     if (symbolLocation != null)
                     {
                         locations.Add(symbolLocation);
@@ -117,11 +117,11 @@ public class SymbolNavigationService : IDisposable
             // If no source locations, try to find the original definition
             if (locations.Count == 0 && symbol.OriginalDefinition != null)
             {
-                foreach (var location in symbol.OriginalDefinition.Locations)
+                foreach (Microsoft.CodeAnalysis.Location location in symbol.OriginalDefinition.Locations)
                 {
                     if (location.IsInSource)
                     {
-                        var symbolLocation = await CreateSymbolLocationAsync(location, "Definition", cancellationToken);
+                        SymbolLocation? symbolLocation = await CreateSymbolLocationAsync(location, "Definition", cancellationToken);
                         if (symbolLocation != null)
                         {
                             locations.Add(symbolLocation);
@@ -173,10 +173,10 @@ public class SymbolNavigationService : IDisposable
 
         try
         {
-            var currentSolution = _workspaceManagement.CurrentSolution;
+            Solution? currentSolution = _workspaceManagement.CurrentSolution;
             if (currentSolution == null)
             {
-                var refreshed = await _workspaceManagement.RefreshWorkspaceAsync(cancellationToken);
+                bool refreshed = await _workspaceManagement.RefreshWorkspaceAsync(cancellationToken);
                 currentSolution = _workspaceManagement.CurrentSolution;
                 if (!refreshed || currentSolution == null)
                 {
@@ -188,7 +188,7 @@ public class SymbolNavigationService : IDisposable
                 }
             }
 
-            var document = await _documentManagement.ResolveDocumentAsync(filePath, cancellationToken);
+            Document? document = await _documentManagement.ResolveDocumentAsync(filePath, cancellationToken);
             if (document == null)
             {
                 return new SymbolNavigationResult
@@ -198,11 +198,11 @@ public class SymbolNavigationService : IDisposable
                 };
             }
 
-            var sourceText = await document.GetTextAsync(cancellationToken);
-            var position = GetPosition(sourceText, lineNumber, column);
+            SourceText sourceText = await document.GetTextAsync(cancellationToken);
+            int position = GetPosition(sourceText, lineNumber, column);
 
             // Use semantic analysis service to find symbol at position
-            var symbolAnalysis = await _semanticAnalysis.AnalyzeSymbolAtPositionAsync(document, position, cancellationToken);
+            SymbolAnalysisResult? symbolAnalysis = await _semanticAnalysis.AnalyzeSymbolAtPositionAsync(document, position, cancellationToken);
             if (symbolAnalysis == null)
             {
                 return new SymbolNavigationResult
@@ -212,22 +212,22 @@ public class SymbolNavigationService : IDisposable
                 };
             }
 
-            var symbol = symbolAnalysis.Symbol;
+            ISymbol symbol = symbolAnalysis.Symbol;
             var locations = new List<SymbolLocation>();
 
             // Find all references using Roslyn's FindSymbols API
-            var references = await SymbolFinder.FindReferencesAsync(symbol, currentSolution, cancellationToken);
+            IEnumerable<ReferencedSymbol> references = await SymbolFinder.FindReferencesAsync(symbol, currentSolution, cancellationToken);
 
-            foreach (var reference in references.Take(options.MaxResults))
+            foreach (ReferencedSymbol reference in references.Take(options.MaxResults))
             {
                 // Add definition locations if requested
                 if (options.IncludeDefinitions || options.IncludeDeclaration)
                 {
-                    foreach (var location in reference.Definition.Locations)
+                    foreach (Microsoft.CodeAnalysis.Location location in reference.Definition.Locations)
                     {
                         if (location.IsInSource)
                         {
-                            var symbolLocation = await CreateSymbolLocationAsync(location, "Definition", cancellationToken);
+                            SymbolLocation? symbolLocation = await CreateSymbolLocationAsync(location, "Definition", cancellationToken);
                             if (symbolLocation != null)
                             {
                                 locations.Add(symbolLocation);
@@ -239,11 +239,11 @@ public class SymbolNavigationService : IDisposable
                 // Add reference locations if requested
                 if (options.IncludeReferences)
                 {
-                    foreach (var referenceLocation in reference.Locations)
+                    foreach (ReferenceLocation referenceLocation in reference.Locations)
                     {
                         if (referenceLocation.Location.IsInSource)
                         {
-                            var symbolLocation = await CreateSymbolLocationAsync(
+                            SymbolLocation? symbolLocation = await CreateSymbolLocationAsync(
                                 referenceLocation.Location,
                                 "Reference",
                                 cancellationToken);
@@ -261,14 +261,14 @@ public class SymbolNavigationService : IDisposable
             // Find implementations if requested (for interfaces and virtual members)
             if (options.IncludeImplementations && symbol is INamedTypeSymbol namedTypeSymbol)
             {
-                var implementations = await SymbolFinder.FindImplementationsAsync(namedTypeSymbol, currentSolution, false, null, cancellationToken);
-                foreach (var impl in implementations.Take(50)) // Limit implementations
+                IEnumerable<INamedTypeSymbol> implementations = await SymbolFinder.FindImplementationsAsync(namedTypeSymbol, currentSolution, false, null, cancellationToken);
+                foreach (INamedTypeSymbol impl in implementations.Take(50)) // Limit implementations
                 {
-                    foreach (var location in impl.Locations)
+                    foreach (Microsoft.CodeAnalysis.Location location in impl.Locations)
                     {
                         if (location.IsInSource)
                         {
-                            var symbolLocation = await CreateSymbolLocationAsync(location, "Implementation", cancellationToken);
+                            SymbolLocation? symbolLocation = await CreateSymbolLocationAsync(location, "Implementation", cancellationToken);
                             if (symbolLocation != null)
                             {
                                 locations.Add(symbolLocation);
@@ -329,10 +329,10 @@ public class SymbolNavigationService : IDisposable
     {
         try
         {
-            var currentSolution = _workspaceManagement.CurrentSolution;
+            Solution? currentSolution = _workspaceManagement.CurrentSolution;
             if (currentSolution == null)
             {
-                var refreshed = await _workspaceManagement.RefreshWorkspaceAsync(cancellationToken);
+                bool refreshed = await _workspaceManagement.RefreshWorkspaceAsync(cancellationToken);
                 currentSolution = _workspaceManagement.CurrentSolution;
                 if (!refreshed || currentSolution == null)
                 {
@@ -347,17 +347,17 @@ public class SymbolNavigationService : IDisposable
             var locations = new List<SymbolLocation>();
 
             // Use semantic analysis service to find symbols by name
-            var foundSymbols = await _semanticAnalysis.FindSymbolsByNameAsync(
+            IEnumerable<ISymbol> foundSymbols = await _semanticAnalysis.FindSymbolsByNameAsync(
                 currentSolution, symbolName, exactMatch, symbolKind, maxResults, cancellationToken);
 
             // Convert symbols to locations
-            foreach (var symbol in foundSymbols.Take(maxResults))
+            foreach (ISymbol symbol in foundSymbols.Take(maxResults))
             {
-                foreach (var location in symbol.Locations)
+                foreach (Microsoft.CodeAnalysis.Location location in symbol.Locations)
                 {
                     if (location.IsInSource)
                     {
-                        var symbolLocation = await CreateSymbolLocationAsync(location, "Declaration", cancellationToken);
+                        SymbolLocation? symbolLocation = await CreateSymbolLocationAsync(location, "Declaration", cancellationToken);
                         if (symbolLocation != null)
                         {
                             symbolLocation.Context = $"{symbol.Kind} in {symbol.ContainingType?.Name ?? symbol.ContainingNamespace?.Name ?? "Global"}";
@@ -399,14 +399,14 @@ public class SymbolNavigationService : IDisposable
         try
         {
             // Convert 1-based line/column to 0-based
-            var line = Math.Max(0, lineNumber - 1);
-            var col = Math.Max(0, column - 1);
+            int line = Math.Max(0, lineNumber - 1);
+            int col = Math.Max(0, column - 1);
 
             if (line >= sourceText.Lines.Count)
                 return -1;
 
-            var textLine = sourceText.Lines[line];
-            var position = textLine.Start + Math.Min(col, textLine.Span.Length);
+            TextLine textLine = sourceText.Lines[line];
+            int position = textLine.Start + Math.Min(col, textLine.Span.Length);
 
             return position;
         }
@@ -426,11 +426,11 @@ public class SymbolNavigationService : IDisposable
             if (!location.IsInSource || location.SourceTree == null)
                 return null;
 
-            var sourceText = await location.SourceTree.GetTextAsync(cancellationToken);
-            var linePosition = location.GetLineSpan().StartLinePosition;
+            SourceText sourceText = await location.SourceTree.GetTextAsync(cancellationToken);
+            LinePosition linePosition = location.GetLineSpan().StartLinePosition;
 
             // Get preview text (the line containing the symbol)
-            var preview = linePosition.Line < sourceText.Lines.Count
+            string preview = linePosition.Line < sourceText.Lines.Count
                 ? sourceText.Lines[linePosition.Line].ToString().Trim()
                 : "";
 

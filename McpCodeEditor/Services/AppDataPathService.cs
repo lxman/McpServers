@@ -18,7 +18,7 @@ namespace McpCodeEditor.Services
         public AppDataPathService()
         {
             // Get %APPDATA% path, fallback to current directory if not available
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             if (string.IsNullOrEmpty(appDataPath))
             {
                 appDataPath = Environment.CurrentDirectory;
@@ -64,12 +64,12 @@ namespace McpCodeEditor.Services
                 throw new ArgumentException("Workspace path cannot be null or empty", nameof(workspacePath));
             }
 
-            var normalizedPath = NormalizeWorkspacePath(workspacePath);
+            string normalizedPath = NormalizeWorkspacePath(workspacePath);
             
             using (var sha256 = SHA256.Create())
             {
-                var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(normalizedPath));
-                var hashString = Convert.ToHexString(hashBytes).ToLowerInvariant();
+                byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(normalizedPath));
+                string hashString = Convert.ToHexString(hashBytes).ToLowerInvariant();
                 
                 // Return first 16 characters for collision resistance while keeping paths manageable
                 return hashString[..WorkspaceHashLength];
@@ -78,37 +78,37 @@ namespace McpCodeEditor.Services
 
         public string GetWorkspaceDirectory(string workspacePath)
         {
-            var hash = GetWorkspaceHash(workspacePath);
+            string hash = GetWorkspaceHash(workspacePath);
             return Path.Combine(_appDataRoot, $"workspace_{hash}");
         }
 
         public string GetWorkspaceChangesFile(string workspacePath)
         {
-            var workspaceDir = GetWorkspaceDirectory(workspacePath);
+            string workspaceDir = GetWorkspaceDirectory(workspacePath);
             return Path.Combine(workspaceDir, "changes.jsonl");
         }
 
         public string GetWorkspaceSnapshotsDirectory(string workspacePath)
         {
-            var workspaceDir = GetWorkspaceDirectory(workspacePath);
+            string workspaceDir = GetWorkspaceDirectory(workspacePath);
             return Path.Combine(workspaceDir, "snapshots");
         }
 
         public string GetWorkspaceBackupsDirectory(string workspacePath)
         {
-            var workspaceDir = GetWorkspaceDirectory(workspacePath);
+            string workspaceDir = GetWorkspaceDirectory(workspacePath);
             return Path.Combine(workspaceDir, "backups");
         }
 
         public string GetWorkspaceCacheDirectory(string workspacePath)
         {
-            var workspaceDir = GetWorkspaceDirectory(workspacePath);
+            string workspaceDir = GetWorkspaceDirectory(workspacePath);
             return Path.Combine(workspaceDir, "cache");
         }
 
         public string GetWorkspaceTempDirectory(string workspacePath)
         {
-            var workspaceDir = GetWorkspaceDirectory(workspacePath);
+            string workspaceDir = GetWorkspaceDirectory(workspacePath);
             return Path.Combine(workspaceDir, "temp");
         }
 
@@ -142,16 +142,16 @@ namespace McpCodeEditor.Services
             try
             {
                 // Convert to absolute path
-                var absolutePath = Path.GetFullPath(workspacePath);
+                string absolutePath = Path.GetFullPath(workspacePath);
                 
                 // Convert to lowercase for consistent hashing
-                var lowerPath = absolutePath.ToLowerInvariant();
+                string lowerPath = absolutePath.ToLowerInvariant();
                 
                 // Replace backslashes with forward slashes for cross-platform consistency
-                var forwardSlashPath = lowerPath.Replace('\\', '/');
+                string forwardSlashPath = lowerPath.Replace('\\', '/');
                 
                 // Remove trailing slashes
-                var trimmedPath = forwardSlashPath.TrimEnd('/');
+                string trimmedPath = forwardSlashPath.TrimEnd('/');
                 
                 // Handle UNC paths: preserve //server/ prefix
                 if (trimmedPath.StartsWith("//"))

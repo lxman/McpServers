@@ -42,7 +42,7 @@ public class EcrTools
                 ServiceUrl = serviceUrl
             };
 
-            var success = await _ecrService.InitializeAsync(config);
+            bool success = await _ecrService.InitializeAsync(config);
             
             return JsonSerializer.Serialize(new
             {
@@ -67,7 +67,7 @@ public class EcrTools
     {
         try
         {
-            var response = await _ecrService.ListRepositoriesAsync();
+            DescribeRepositoriesResponse response = await _ecrService.ListRepositoriesAsync();
             
             var repositories = response.Repositories.Select(repo => new
             {
@@ -113,7 +113,7 @@ public class EcrTools
                 repositories = repositoryNames.Split(',').Select(r => r.Trim()).ToList();
             }
 
-            var response = await _ecrService.DescribeRepositoriesAsync(repositories);
+            DescribeRepositoriesResponse response = await _ecrService.DescribeRepositoriesAsync(repositories);
             
             var repositoryDetails = response.Repositories.Select(repo => new
             {
@@ -176,7 +176,7 @@ public class EcrTools
                 repositoryTags = tagData?.Select(t => new Tag { Key = t["Key"], Value = t["Value"] }).ToList();
             }
 
-            var response = await _ecrService.CreateRepositoryAsync(repositoryName, scanConfig, repositoryTags);
+            CreateRepositoryResponse response = await _ecrService.CreateRepositoryAsync(repositoryName, scanConfig, repositoryTags);
             
             return JsonSerializer.Serialize(new
             {
@@ -211,7 +211,7 @@ public class EcrTools
     {
         try
         {
-            var response = await _ecrService.DeleteRepositoryAsync(repositoryName, force);
+            DeleteRepositoryResponse response = await _ecrService.DeleteRepositoryAsync(repositoryName, force);
             
             return JsonSerializer.Serialize(new
             {
@@ -242,7 +242,7 @@ public class EcrTools
     {
         try
         {
-            var response = await _ecrService.ListImagesAsync(repositoryName);
+            ListImagesResponse response = await _ecrService.ListImagesAsync(repositoryName);
             
             var images = response.ImageIds.Select(image => new
             {
@@ -281,11 +281,11 @@ public class EcrTools
             List<ImageIdentifier>? imageIds = null;
             if (!string.IsNullOrEmpty(imageTags))
             {
-                var tags = imageTags.Split(',').Select(t => t.Trim()).ToList();
+                List<string> tags = imageTags.Split(',').Select(t => t.Trim()).ToList();
                 imageIds = tags.Select(tag => new ImageIdentifier { ImageTag = tag }).ToList();
             }
 
-            var response = await _ecrService.DescribeImagesAsync(repositoryName, imageIds);
+            DescribeImagesResponse response = await _ecrService.DescribeImagesAsync(repositoryName, imageIds);
             
             var imageDetails = response.ImageDetails.Select(image => new
             {
@@ -328,7 +328,7 @@ public class EcrTools
     {
         try
         {
-            var response = await _ecrService.GetAuthorizationTokenAsync();
+            GetAuthorizationTokenResponse response = await _ecrService.GetAuthorizationTokenAsync();
             
             var authData = response.AuthorizationData.Select(auth => new
             {
@@ -363,10 +363,10 @@ public class EcrTools
     {
         try
         {
-            var tags = imageTags.Split(',').Select(t => t.Trim()).ToList();
-            var imageIds = tags.Select(tag => new ImageIdentifier { ImageTag = tag }).ToList();
+            List<string> tags = imageTags.Split(',').Select(t => t.Trim()).ToList();
+            List<ImageIdentifier> imageIds = tags.Select(tag => new ImageIdentifier { ImageTag = tag }).ToList();
 
-            var response = await _ecrService.BatchDeleteImageAsync(repositoryName, imageIds);
+            BatchDeleteImageResponse response = await _ecrService.BatchDeleteImageAsync(repositoryName, imageIds);
             
             return JsonSerializer.Serialize(new
             {
@@ -407,7 +407,7 @@ public class EcrTools
     {
         try
         {
-            var response = await _ecrService.GetRepositoryPolicyAsync(repositoryName);
+            GetRepositoryPolicyResponse response = await _ecrService.GetRepositoryPolicyAsync(repositoryName);
             
             return JsonSerializer.Serialize(new
             {
@@ -437,7 +437,7 @@ public class EcrTools
     {
         try
         {
-            var response = await _ecrService.SetRepositoryPolicyAsync(repositoryName, policyText);
+            SetRepositoryPolicyResponse response = await _ecrService.SetRepositoryPolicyAsync(repositoryName, policyText);
             
             return JsonSerializer.Serialize(new
             {
@@ -465,7 +465,7 @@ public class EcrTools
     {
         try
         {
-            var response = await _ecrService.DeleteRepositoryPolicyAsync(repositoryName);
+            DeleteRepositoryPolicyResponse response = await _ecrService.DeleteRepositoryPolicyAsync(repositoryName);
             
             return JsonSerializer.Serialize(new
             {
@@ -496,7 +496,7 @@ public class EcrTools
         try
         {
             var imageId = new ImageIdentifier { ImageTag = imageTag };
-            var response = await _ecrService.DescribeImageScanFindingsAsync(repositoryName, imageId);
+            DescribeImageScanFindingsResponse response = await _ecrService.DescribeImageScanFindingsAsync(repositoryName, imageId);
             
             return JsonSerializer.Serialize(new
             {
@@ -551,7 +551,7 @@ public class EcrTools
         try
         {
             var imageId = new ImageIdentifier { ImageTag = imageTag };
-            var response = await _ecrService.StartImageScanAsync(repositoryName, imageId);
+            StartImageScanResponse response = await _ecrService.StartImageScanAsync(repositoryName, imageId);
             
             return JsonSerializer.Serialize(new
             {
@@ -588,7 +588,7 @@ public class EcrTools
     {
         try
         {
-            var response = await _ecrService.GetLifecyclePolicyAsync(repositoryName);
+            GetLifecyclePolicyResponse response = await _ecrService.GetLifecyclePolicyAsync(repositoryName);
             
             return JsonSerializer.Serialize(new
             {
@@ -619,7 +619,7 @@ public class EcrTools
     {
         try
         {
-            var response = await _ecrService.PutLifecyclePolicyAsync(repositoryName, lifecyclePolicyText);
+            PutLifecyclePolicyResponse response = await _ecrService.PutLifecyclePolicyAsync(repositoryName, lifecyclePolicyText);
             
             return JsonSerializer.Serialize(new
             {
@@ -646,7 +646,7 @@ public class EcrTools
     {
         try
         {
-            var response = await _ecrService.DeleteLifecyclePolicyAsync(repositoryName);
+            DeleteLifecyclePolicyResponse response = await _ecrService.DeleteLifecyclePolicyAsync(repositoryName);
             
             return JsonSerializer.Serialize(new
             {
@@ -678,14 +678,14 @@ public class EcrTools
         try
         {
             var tagData = JsonSerializer.Deserialize<List<Dictionary<string, string>>>(tags);
-            var resourceTags = tagData?.Select(t => new Tag { Key = t["Key"], Value = t["Value"] }).ToList();
+            List<Tag>? resourceTags = tagData?.Select(t => new Tag { Key = t["Key"], Value = t["Value"] }).ToList();
 
             if (resourceTags == null || resourceTags.Count == 0)
             {
                 throw new ArgumentException("No valid tags provided");
             }
 
-            var response = await _ecrService.TagResourceAsync(resourceArn, resourceTags);
+            TagResourceResponse response = await _ecrService.TagResourceAsync(resourceArn, resourceTags);
             
             return JsonSerializer.Serialize(new
             {
@@ -713,8 +713,8 @@ public class EcrTools
     {
         try
         {
-            var keys = tagKeys.Split(',').Select(k => k.Trim()).ToList();
-            var response = await _ecrService.UntagResourceAsync(resourceArn, keys);
+            List<string> keys = tagKeys.Split(',').Select(k => k.Trim()).ToList();
+            UntagResourceResponse response = await _ecrService.UntagResourceAsync(resourceArn, keys);
             
             return JsonSerializer.Serialize(new
             {
@@ -740,7 +740,7 @@ public class EcrTools
     {
         try
         {
-            var response = await _ecrService.ListTagsForResourceAsync(resourceArn);
+            ListTagsForResourceResponse response = await _ecrService.ListTagsForResourceAsync(resourceArn);
             
             var tags = response.Tags?.Select(tag => new
             {

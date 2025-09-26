@@ -15,15 +15,15 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services)
     {
         // Create a temporary service provider for discovery
-        var tempProvider = services.BuildServiceProvider();
-        var loggerFactory = tempProvider.GetService<ILoggerFactory>() ?? 
-                           LoggerFactory.Create(builder => builder.AddDebug());
+        ServiceProvider tempProvider = services.BuildServiceProvider();
+        ILoggerFactory loggerFactory = tempProvider.GetService<ILoggerFactory>() ?? 
+                                       LoggerFactory.Create(builder => builder.AddDebug());
 
-        var discoveryLogger = loggerFactory.CreateLogger<AzureEnvironmentDiscovery>();
+        ILogger<AzureEnvironmentDiscovery> discoveryLogger = loggerFactory.CreateLogger<AzureEnvironmentDiscovery>();
         var discovery = new AzureEnvironmentDiscovery(discoveryLogger);
 
         // Discover all Azure environments
-        var discoveryResult = await discovery.DiscoverAzureEnvironmentsAsync();
+        AzureDiscoveryResult discoveryResult = await discovery.DiscoverAzureEnvironmentsAsync();
 
         // Register discovery result for tools to access
         services.AddSingleton(discoveryResult);
@@ -33,8 +33,8 @@ public static class ServiceCollectionExtensions
         {
             services.AddSingleton<ICredentialManager>(provider =>
             {
-                var logger = provider.GetService<ILogger<AzureCredentialManager>>() ??
-                           loggerFactory.CreateLogger<AzureCredentialManager>();
+                ILogger<AzureCredentialManager> logger = provider.GetService<ILogger<AzureCredentialManager>>() ??
+                                                         loggerFactory.CreateLogger<AzureCredentialManager>();
                 return new AzureCredentialManager(logger);
             });
         }
@@ -45,9 +45,9 @@ public static class ServiceCollectionExtensions
             // Register DevOps credential manager for primary organization
             services.AddSingleton<DevOpsCredentialManager>(provider =>
             {
-                var logger = provider.GetService<ILogger<DevOpsCredentialManager>>() ??
-                           loggerFactory.CreateLogger<DevOpsCredentialManager>();
-                var primaryEnv = discoveryResult.DevOpsEnvironments.First();
+                ILogger<DevOpsCredentialManager> logger = provider.GetService<ILogger<DevOpsCredentialManager>>() ??
+                                                          loggerFactory.CreateLogger<DevOpsCredentialManager>();
+                DevOpsEnvironmentInfo primaryEnv = discoveryResult.DevOpsEnvironments.First();
                 return new DevOpsCredentialManager(primaryEnv, logger);
             });
 
@@ -56,8 +56,8 @@ public static class ServiceCollectionExtensions
             {
                 services.AddSingleton<IMultiOrgDevOpsFactory>(provider =>
                 {
-                    var logger = provider.GetService<ILogger<MultiOrgDevOpsFactory>>() ??
-                               loggerFactory.CreateLogger<MultiOrgDevOpsFactory>();
+                    ILogger<MultiOrgDevOpsFactory> logger = provider.GetService<ILogger<MultiOrgDevOpsFactory>>() ??
+                                                            loggerFactory.CreateLogger<MultiOrgDevOpsFactory>();
                     return new MultiOrgDevOpsFactory(discoveryResult.DevOpsEnvironments, logger);
                 });
             }
@@ -66,8 +66,8 @@ public static class ServiceCollectionExtensions
             services.AddScoped<IDevOpsService>(provider =>
             {
                 var manager = provider.GetRequiredService<DevOpsCredentialManager>();
-                var logger = provider.GetService<ILogger<DevOpsService>>() ??
-                           loggerFactory.CreateLogger<DevOpsService>();
+                ILogger<DevOpsService> logger = provider.GetService<ILogger<DevOpsService>>() ??
+                                                loggerFactory.CreateLogger<DevOpsService>();
                 return new DevOpsService(manager, logger);
             });
         }
@@ -76,8 +76,8 @@ public static class ServiceCollectionExtensions
             // Register a service that provides helpful guidance
             services.AddSingleton<IDevOpsService>(provider =>
             {
-                var logger = provider.GetService<ILogger<DevOpsService>>() ??
-                           loggerFactory.CreateLogger<DevOpsService>();
+                ILogger<DevOpsService> logger = provider.GetService<ILogger<DevOpsService>>() ??
+                                                loggerFactory.CreateLogger<DevOpsService>();
                 return new NoCredentialsDevOpsService(logger);
             });
         }
@@ -118,28 +118,28 @@ public class MultiOrgDevOpsFactory : IMultiOrgDevOpsFactory
 
     public IDevOpsService CreateServiceForOrganization(string organizationUrl)
     {
-        var manager = CreateManagerForOrganization(organizationUrl);
-        var logger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<DevOpsService>();
+        DevOpsCredentialManager manager = CreateManagerForOrganization(organizationUrl);
+        ILogger<DevOpsService> logger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<DevOpsService>();
         return new DevOpsService(manager, logger);
     }
 
     public DevOpsCredentialManager CreateManagerForOrganization(string organizationUrl)
     {
-        if (_managerCache.TryGetValue(organizationUrl, out var cached))
+        if (_managerCache.TryGetValue(organizationUrl, out DevOpsCredentialManager? cached))
             return cached;
 
-        var environment = _environments.FirstOrDefault(e => 
+        DevOpsEnvironmentInfo? environment = _environments.FirstOrDefault(e => 
             e.OrganizationUrl.Equals(organizationUrl, StringComparison.OrdinalIgnoreCase));
         
         if (environment == null)
         {
-            var available = string.Join(", ", _environments.Select(e => e.OrganizationUrl));
+            string available = string.Join(", ", _environments.Select(e => e.OrganizationUrl));
             throw new InvalidOperationException(
                 $"Organization '{organizationUrl}' not found in discovered environments. " +
                 $"Available: {available}");
         }
 
-        var logger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<DevOpsCredentialManager>();
+        ILogger<DevOpsCredentialManager> logger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<DevOpsCredentialManager>();
         var manager = new DevOpsCredentialManager(environment, logger);
 
         _managerCache[organizationUrl] = manager;

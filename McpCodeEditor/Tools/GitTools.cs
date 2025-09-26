@@ -16,7 +16,7 @@ public partial class GitTools(GitService gitService)
     {
         try
         {
-            var result = await gitService.GetStatusAsync(repositoryPath);
+            object result = await gitService.GetStatusAsync(repositoryPath);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -42,7 +42,7 @@ public partial class GitTools(GitService gitService)
     {
         try
         {
-            var result = await gitService.GetDiffAsync(repositoryPath, fromCommit, toCommit, filePath, contextLines);
+            object result = await gitService.GetDiffAsync(repositoryPath, fromCommit, toCommit, filePath, contextLines);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -66,7 +66,7 @@ public partial class GitTools(GitService gitService)
     {
         try
         {
-            var result = await gitService.GetLogAsync(repositoryPath, maxCount, filePath, branch);
+            object result = await gitService.GetLogAsync(repositoryPath, maxCount, filePath, branch);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -86,7 +86,7 @@ public partial class GitTools(GitService gitService)
     {
         try
         {
-            var result = await gitService.GetBlameAsync(filePath, repositoryPath);
+            object result = await gitService.GetBlameAsync(filePath, repositoryPath);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -106,7 +106,7 @@ public partial class GitTools(GitService gitService)
     {
         try
         {
-            var result = await gitService.GetBranchesAsync(repositoryPath, includeRemote);
+            object result = await gitService.GetBranchesAsync(repositoryPath, includeRemote);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)

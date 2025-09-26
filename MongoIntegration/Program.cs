@@ -15,11 +15,11 @@ public class Program
         Console.SetError(TextWriter.Null);
         
         // Create the host builder with configuration
-        var builder = Host.CreateApplicationBuilder(args);
+        HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
         
         // Add configuration sources
         // CRITICAL: Use absolute path to appsettings.json since working directory differs in MCP
-        var configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        string configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
         builder.Configuration
             .AddJsonFile(configPath, optional: true, reloadOnChange: true)
             .AddEnvironmentVariables()
@@ -53,7 +53,7 @@ public class Program
             .WithTools<MongoDbTools>();
 
         // Build and run the host
-        var host = builder.Build();
+        IHost host = builder.Build();
         
         // Start the MCP server
         await host.RunAsync();

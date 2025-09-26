@@ -15,14 +15,14 @@ public class FileOperationTools(FileOperationsService fileService)
     [McpServerTool]
     [Description("Read the contents of a file")]
     public async Task<string> FileReadAsync(
-        [Description("Path to the file to read")]
+        [Description("Path to the file to read - must be canonical")]
         string path,
         [Description("File encoding (utf-8, ascii, etc.)")]
         string encoding = "utf-8")
     {
         try
         {
-            var result = await fileService.ReadFileAsync(path, encoding);
+            object result = await fileService.ReadFileAsync(path, encoding);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -35,7 +35,7 @@ public class FileOperationTools(FileOperationsService fileService)
     [McpServerTool]
     [Description("Write content to a file")]
     public async Task<string> FileWriteAsync(
-        [Description("Path to the file to write")]
+        [Description("Path to the file to write - must be canonical")]
         string path,
         [Description("Content to write to the file")]
         string content,
@@ -46,7 +46,7 @@ public class FileOperationTools(FileOperationsService fileService)
     {
         try
         {
-            var result = await fileService.WriteFileAsync(path, content, encoding, createDirectories);
+            object result = await fileService.WriteFileAsync(path, content, encoding, createDirectories);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -59,7 +59,7 @@ public class FileOperationTools(FileOperationsService fileService)
     [McpServerTool]
     [Description("List files and directories")]
     public async Task<string> FileListAsync(
-        [Description("Directory path to list")]
+        [Description("Directory path to list - must be canonical")]
         string path = ".",
         [Description("List files recursively")]
         bool recursive = false,
@@ -70,7 +70,7 @@ public class FileOperationTools(FileOperationsService fileService)
     {
         try
         {
-            var result = await fileService.ListFilesAsync(path, recursive, includeHidden, pattern);
+            object result = await fileService.ListFilesAsync(path, recursive, includeHidden, pattern);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -83,14 +83,14 @@ public class FileOperationTools(FileOperationsService fileService)
     [McpServerTool]
     [Description("Delete a file or directory")]
     public async Task<string> FileDeleteAsync(
-        [Description("Path to delete")]
+        [Description("Path to delete - must be canonical")]
         string path,
         [Description("Delete directories recursively")]
         bool recursive = false)
     {
         try
         {
-            var result = await fileService.DeleteAsync(path, recursive);
+            object result = await fileService.DeleteAsync(path, recursive);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)
@@ -105,7 +105,7 @@ public class FileOperationTools(FileOperationsService fileService)
     public async Task<string> FileSearchAsync(
         [Description("Text to search for")]
         string query,
-        [Description("Directory to search in")]
+        [Description("Directory to search in - must be canonical")]
         string path = ".",
         [Description("File pattern to search in")]
         string filePattern = "*",
@@ -118,7 +118,7 @@ public class FileOperationTools(FileOperationsService fileService)
     {
         try
         {
-            var result = await fileService.SearchAsync(query, path, filePattern, caseSensitive, regex, maxResults);
+            object result = await fileService.SearchAsync(query, path, filePattern, caseSensitive, regex, maxResults);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using McpCodeEditor.Models;
 using ModelContextProtocol.Server;
 using McpCodeEditor.Models.Options;
 using McpCodeEditor.Services;
@@ -40,7 +41,7 @@ public partial class CodeGenerationTools(CodeGenerationService codeGenerationSer
                 AddNullChecks = addNullChecks
             };
 
-            var result = await codeGenerationService.GenerateConstructorAsync(
+            CodeGenerationResult result = await codeGenerationService.GenerateConstructorAsync(
                 filePath, className, options, previewOnly);
 
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
@@ -77,7 +78,7 @@ public partial class CodeGenerationTools(CodeGenerationService codeGenerationSer
                 AccessModifier = accessModifier
             };
 
-            var result = await codeGenerationService.GenerateEqualsMethodAsync(
+            CodeGenerationResult result = await codeGenerationService.GenerateEqualsMethodAsync(
                 filePath, className, options, previewOnly);
 
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
@@ -114,7 +115,7 @@ public partial class CodeGenerationTools(CodeGenerationService codeGenerationSer
                 AccessModifier = accessModifier
             };
 
-            var result = await codeGenerationService.GenerateGetHashCodeMethodAsync(
+            CodeGenerationResult result = await codeGenerationService.GenerateGetHashCodeMethodAsync(
                 filePath, className, options, previewOnly);
 
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });

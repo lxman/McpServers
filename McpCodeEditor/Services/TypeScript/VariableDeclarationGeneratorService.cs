@@ -23,7 +23,7 @@ public class VariableDeclarationGeneratorService(ILogger<VariableDeclarationGene
         string selectedExpression, 
         string requestedDeclarationType)
     {
-        var strategy = scopeAnalysis.VariablePlacementStrategy;
+        TypeScriptVariablePlacementStrategy strategy = scopeAnalysis.VariablePlacementStrategy;
         
         logger.LogDebug("TS-013 REF-002: Generating declaration for {PlacementLocation} with {DeclarationType}",
             strategy.PlacementLocation, strategy.DeclarationType);
@@ -32,7 +32,7 @@ public class VariableDeclarationGeneratorService(ILogger<VariableDeclarationGene
         {
             case VariablePlacementLocation.ClassMember:
                 // For class members, use proper TypeScript class member syntax
-                var accessModifier = strategy.SuggestedAccessModifier ?? "private";
+                string accessModifier = strategy.SuggestedAccessModifier ?? "private";
                 var memberDeclaration = $"{accessModifier} readonly {variableName} = {selectedExpression};";
                 
                 return new VariableDeclarationResult
@@ -49,7 +49,7 @@ public class VariableDeclarationGeneratorService(ILogger<VariableDeclarationGene
             case VariablePlacementLocation.FunctionLocal:
             case VariablePlacementLocation.BlockLocal:
                 // For method/function/block scope, use standard variable declarations
-                var localDeclarationType = IsValidDeclarationType(requestedDeclarationType) ? 
+                string localDeclarationType = IsValidDeclarationType(requestedDeclarationType) ? 
                     requestedDeclarationType : strategy.DeclarationType;
                 var localDeclaration = $"{localDeclarationType} {variableName} = {selectedExpression};";
                 
@@ -65,7 +65,7 @@ public class VariableDeclarationGeneratorService(ILogger<VariableDeclarationGene
 
             case VariablePlacementLocation.ModuleLevel:
                 // For module level, use const/let with optional export
-                var moduleDeclarationType = IsValidDeclarationType(requestedDeclarationType) ? 
+                string moduleDeclarationType = IsValidDeclarationType(requestedDeclarationType) ? 
                     requestedDeclarationType : "const";
                 var moduleDeclaration = $"{moduleDeclarationType} {variableName} = {selectedExpression};";
                 
@@ -107,7 +107,7 @@ public class VariableDeclarationGeneratorService(ILogger<VariableDeclarationGene
             {
                 case "class":
                     // REF-002 FIX: For class scope, use proper TypeScript class member syntax
-                    var classDeclaration = typeAnnotation != null
+                    string classDeclaration = typeAnnotation != null
                         ? $"private readonly {variableName}: {typeAnnotation} = {expression};"
                         : $"private readonly {variableName} = {expression};";
 
@@ -123,7 +123,7 @@ public class VariableDeclarationGeneratorService(ILogger<VariableDeclarationGene
                 case "method":
                 case "function":
                     // REF-002 FIX: For method/function scope, use const for local variables
-                    var localDeclaration = typeAnnotation != null
+                    string localDeclaration = typeAnnotation != null
                         ? $"const {variableName}: {typeAnnotation} = {expression};"
                         : $"const {variableName} = {expression};";
 
@@ -138,7 +138,7 @@ public class VariableDeclarationGeneratorService(ILogger<VariableDeclarationGene
 
                 case "constructor":
                     // REF-002 FIX: For constructor scope, use const but suggest class property
-                    var constructorDeclaration = typeAnnotation != null
+                    string constructorDeclaration = typeAnnotation != null
                         ? $"const {variableName}: {typeAnnotation} = {expression};"
                         : $"const {variableName} = {expression};";
 

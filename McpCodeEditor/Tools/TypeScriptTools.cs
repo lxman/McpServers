@@ -7,6 +7,7 @@ using McpCodeEditor.Services.Refactoring;
 using McpCodeEditor.Services.TypeScript;
 using McpCodeEditor.Services.FileOperations;
 using McpCodeEditor.Interfaces;
+using McpCodeEditor.Models.Refactoring;
 
 namespace McpCodeEditor.Tools;
 
@@ -33,7 +34,7 @@ public partial class TypeScriptTools(
     {
         try
         {
-            var result = await analysisService.AnalyzeFileAsync(filePath);
+            TypeScriptAnalysisResult result = await analysisService.AnalyzeFileAsync(filePath);
             
             var response = new
             {
@@ -125,14 +126,14 @@ public partial class TypeScriptTools(
     {
         try
         {
-            var analysisResult = await analysisService.AnalyzeFileAsync(filePath);
+            TypeScriptAnalysisResult analysisResult = await analysisService.AnalyzeFileAsync(filePath);
             if (!analysisResult.Success)
             {
                 return JsonSerializer.Serialize(new { success = false, error = analysisResult.ErrorMessage },
                     new JsonSerializerOptions { WriteIndented = true });
             }
 
-            var symbols = TypeScriptAnalysisService.FindSymbolsByName(analysisResult, symbolName);
+            List<TypeScriptSymbol> symbols = TypeScriptAnalysisService.FindSymbolsByName(analysisResult, symbolName);
             
             var response = new
             {
@@ -178,7 +179,7 @@ public partial class TypeScriptTools(
     {
         try
         {
-            var result = await symbolRenameService.RenameSymbolAsync(symbolName, newName, filePath, previewOnly);
+            RefactoringResult result = await symbolRenameService.RenameSymbolAsync(symbolName, newName, filePath, previewOnly);
             
             var response = new
             {
@@ -244,7 +245,7 @@ public partial class TypeScriptTools(
         {
             // Use the new RefactoringOrchestrator for TypeScript method extraction
             // The orchestrator will automatically detect TypeScript files and delegate to the appropriate service
-            var result = await refactoringOrchestrator.ExtractMethodAsync(
+            RefactoringResult result = await refactoringOrchestrator.ExtractMethodAsync(
                 filePath, methodName, startLine, endLine, previewOnly);
             
             var response = new
@@ -299,7 +300,7 @@ public partial class TypeScriptTools(
         try
         {
             // TS-004: Use TypeScriptFileResolver for intelligent project discovery
-            var discoveredProjects = await fileResolver.DiscoverTypeScriptProjectsAsync(baseSearchPath);
+            List<TypeScriptProjectInfo> discoveredProjects = await fileResolver.DiscoverTypeScriptProjectsAsync(baseSearchPath);
             
             if (discoveredProjects.Count == 0)
             {
@@ -320,26 +321,26 @@ public partial class TypeScriptTools(
 
             // Analyze a sample of projects for overview
             var projectAnalysis = new List<object>();
-            var maxProjectsToAnalyze = Math.Min(discoveredProjects.Count, 5); // Limit for performance
+            int maxProjectsToAnalyze = Math.Min(discoveredProjects.Count, 5); // Limit for performance
 
-            foreach (var project in discoveredProjects.Take(maxProjectsToAnalyze))
+            foreach (TypeScriptProjectInfo project in discoveredProjects.Take(maxProjectsToAnalyze))
             {
                 try
                 {
                     // Get TypeScript files for this project
-                    var fileDiscovery = await fileResolver.FindTypeScriptFilesAsync(project.ProjectPath);
+                    TypeScriptFileDiscoveryResult fileDiscovery = await fileResolver.FindTypeScriptFilesAsync(project.ProjectPath);
                     
                     if (fileDiscovery is { Success: true, SourceFiles.Count: > 0 })
                     {
                         // Analyze a sample of source files
-                        var sampleFiles = fileDiscovery.SourceFiles.Take(10).ToList();
+                        List<string> sampleFiles = fileDiscovery.SourceFiles.Take(10).ToList();
                         var analysisResults = new List<object>();
 
-                        foreach (var file in sampleFiles)
+                        foreach (string file in sampleFiles)
                         {
                             try
                             {
-                                var analysis = await analysisService.AnalyzeFileAsync(file);
+                                TypeScriptAnalysisResult analysis = await analysisService.AnalyzeFileAsync(file);
                                 if (analysis.Success)
                                 {
                                     analysisResults.Add(new
@@ -456,7 +457,7 @@ public partial class TypeScriptTools(
 
     private bool IsExcludedDirectory(string path)
     {
-        var dirName = Path.GetFileName(path);
+        string dirName = Path.GetFileName(path);
         return config.ExcludedDirectories.Contains(dirName);
     }
 

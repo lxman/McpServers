@@ -68,7 +68,7 @@ public class ArchitectureRecommendationService
     {
         var recommendations = new List<string>();
 
-        foreach (var pattern in patterns.OrderByDescending(p => p.ConfidenceScore))
+        foreach (ArchitecturePattern pattern in patterns.OrderByDescending(p => p.ConfidenceScore))
         {
             switch (pattern.Type)
             {
@@ -154,10 +154,10 @@ public class ArchitectureRecommendationService
     {
         var recommendations = new List<string>();
 
-        foreach (var pattern in patterns)
+        foreach (ArchitecturePattern pattern in patterns)
         {
             // Check if the pattern uses older technologies
-            var technologies = pattern.Technologies ?? [];
+            List<string> technologies = pattern.Technologies ?? [];
             
             if (technologies.Any(t => t.Contains("jQuery")))
             {

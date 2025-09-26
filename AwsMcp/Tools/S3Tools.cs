@@ -46,7 +46,7 @@ public class S3Tools
                 ForcePathStyle = forcePathStyle
             };
 
-            var success = await _s3Service.InitializeAsync(config);
+            bool success = await _s3Service.InitializeAsync(config);
             
             return JsonSerializer.Serialize(new
             {
@@ -69,7 +69,7 @@ public class S3Tools
     {
         try
         {
-            var buckets = await _s3Service.ListBucketsAsync();
+            List<S3Bucket> buckets = await _s3Service.ListBucketsAsync();
             
             return JsonSerializer.Serialize(new
             {
@@ -100,7 +100,7 @@ public class S3Tools
     {
         try
         {
-            var objects = await _s3Service.ListObjectsAsync(bucketName, prefix, maxKeys);
+            List<S3Object> objects = await _s3Service.ListObjectsAsync(bucketName, prefix, maxKeys);
             
             return JsonSerializer.Serialize(new
             {
@@ -134,7 +134,7 @@ public class S3Tools
     {
         try
         {
-            var content = await _s3Service.GetObjectContentAsync(bucketName, key);
+            string content = await _s3Service.GetObjectContentAsync(bucketName, key);
             
             return JsonSerializer.Serialize(new
             {
@@ -161,7 +161,7 @@ public class S3Tools
     {
         try
         {
-            var metadata = await _s3Service.GetObjectMetadataAsync(bucketName, key);
+            GetObjectMetadataResponse metadata = await _s3Service.GetObjectMetadataAsync(bucketName, key);
             
             return JsonSerializer.Serialize(new
             {
@@ -196,7 +196,7 @@ public class S3Tools
     {
         try
         {
-            var response = await _s3Service.PutObjectAsync(bucketName, key, content, contentType);
+            PutObjectResponse response = await _s3Service.PutObjectAsync(bucketName, key, content, contentType);
             
             return JsonSerializer.Serialize(new
             {
@@ -300,8 +300,8 @@ public class S3Tools
     {
         try
         {
-            var expiry = DateTime.UtcNow.AddHours(expirationHours);
-            var httpVerb = httpMethod.ToUpperInvariant() switch
+            DateTime expiry = DateTime.UtcNow.AddHours(expirationHours);
+            HttpVerb httpVerb = httpMethod.ToUpperInvariant() switch
             {
                 "GET" => HttpVerb.GET,
                 "PUT" => HttpVerb.PUT,
@@ -309,7 +309,7 @@ public class S3Tools
                 _ => HttpVerb.GET
             };
             
-            var url = await _s3Service.GeneratePresignedUrl(bucketName, key, expiry, httpVerb);
+            string url = await _s3Service.GeneratePresignedUrl(bucketName, key, expiry, httpVerb);
             
             return JsonSerializer.Serialize(new
             {
@@ -336,7 +336,7 @@ public class S3Tools
     {
         try
         {
-            var exists = await _s3Service.BucketExistsAsync(bucketName);
+            bool exists = await _s3Service.BucketExistsAsync(bucketName);
             
             return JsonSerializer.Serialize(new
             {
@@ -361,7 +361,7 @@ public class S3Tools
     {
         try
         {
-            var exists = await _s3Service.ObjectExistsAsync(bucketName, key);
+            bool exists = await _s3Service.ObjectExistsAsync(bucketName, key);
             
             return JsonSerializer.Serialize(new
             {
@@ -385,7 +385,7 @@ public class S3Tools
     {
         try
         {
-            var response = await _s3Service.GetBucketVersioningAsync(bucketName);
+            GetBucketVersioningResponse response = await _s3Service.GetBucketVersioningAsync(bucketName);
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -407,7 +407,7 @@ public class S3Tools
     {
         try
         {
-            var response = await _s3Service.ListObjectVersionsAsync(bucketName, prefix);
+            ListVersionsResponse response = await _s3Service.ListObjectVersionsAsync(bucketName, prefix);
             List<S3ObjectVersion> delMarkers = response.Versions.Where(v => v.IsDeleteMarker.HasValue && v.IsDeleteMarker.Value).ToList();
             return JsonSerializer.Serialize(new
             {
@@ -467,7 +467,7 @@ public class S3Tools
                 break;
             case AmazonS3Exception s3Ex:
             {
-                var actions = s3Ex.ErrorCode switch
+                string[] actions = s3Ex.ErrorCode switch
                 {
                     "NoSuchBucket" => new[]
                     {
@@ -552,7 +552,7 @@ public class S3Tools
             }
             case Amazon.Runtime.AmazonServiceException awsEx:
             {
-                var actions = awsEx.ErrorCode switch
+                string[] actions = awsEx.ErrorCode switch
                 {
                     "InvalidAccessKeyId" => new[]
                     {

@@ -1,4 +1,5 @@
 ﻿using McpCodeEditor.Interfaces;
+using McpCodeEditor.Models;
 using McpCodeEditor.Models.Refactoring;
 using McpCodeEditor.Models.Refactoring.CSharp;
 using McpCodeEditor.Services.Refactoring.CSharp;
@@ -89,13 +90,13 @@ namespace TestApp
             };
 
             // Act - Use real validator
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, $"Simple extraction should succeed. Error: {result.Error}");
             Assert.Single(result.Changes);
             
-            var change = result.Changes.First();
+            FileChange change = result.Changes.First();
             Assert.Contains("private (int sum, int product) PerformCalculation(int a, int b)", change.ModifiedContent);
             Assert.Contains("return (sum, product);", change.ModifiedContent);
             Assert.Contains("var (sum, product) = PerformCalculation(a, b);", change.ModifiedContent);
@@ -138,12 +139,12 @@ namespace TestApp
             };
 
             // Act
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, $"Should succeed. Error: {result.Error}");
             
-            var change = result.Changes.First();
+            FileChange change = result.Changes.First();
             Assert.Contains("private int CalculateSquare(int number)", change.ModifiedContent);
             Assert.Contains("return square;", change.ModifiedContent);
             Assert.Contains("int square = CalculateSquare(number);", change.ModifiedContent);
@@ -194,12 +195,12 @@ namespace TestApp
             };
 
             // Act
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, $"Loop extraction should work. Error: {result.Error}");
             
-            var change = result.Changes.First();
+            FileChange change = result.Changes.First();
             Assert.Contains("private int CalculateSum(int[] numbers)", change.ModifiedContent);
             Assert.Contains("return total;", change.ModifiedContent);
         }
@@ -243,12 +244,12 @@ namespace TestApp
             };
 
             // Act
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, $"Conditional extraction should work. Error: {result.Error}");
             
-            var change = result.Changes.First();
+            FileChange change = result.Changes.First();
             // Should return multiple values
             Assert.Contains("DetermineAgeCategory", change.ModifiedContent);
             Assert.Contains("return", change.ModifiedContent);
@@ -325,7 +326,7 @@ namespace BugDemo
             };
 
             // Act - This will likely fail with current implementation
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert - Document the actual behavior
             if (!result.Success)
@@ -337,7 +338,7 @@ namespace BugDemo
             else
             {
                 // If it succeeds (after fix), verify correct extraction
-                var change = result.Changes.First();
+                FileChange change = result.Changes.First();
                 Assert.Contains("totalPending", change.ModifiedContent);
                 Assert.Contains("return", change.ModifiedContent);
             }
@@ -384,12 +385,12 @@ namespace TestApp
             };
 
             // Act
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.True(result.Success, $"Static extraction should work. Error: {result.Error}");
             
-            var change = result.Changes.First();
+            FileChange change = result.Changes.First();
             Assert.Contains("private static int Calculate()", change.ModifiedContent);
         }
 
@@ -399,7 +400,7 @@ namespace TestApp
             // Test different access modifiers
             var accessModifiers = new[] { "public", "private", "protected", "internal" };
             
-            foreach (var modifier in accessModifiers)
+            foreach (string modifier in accessModifiers)
             {
                 var context = new RefactoringContext
                 {
@@ -433,12 +434,12 @@ namespace TestApp
                 };
 
                 // Act
-                var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+                RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
                 // Assert
                 Assert.True(result.Success, $"{modifier} extraction should work. Error: {result.Error}");
                 
-                var change = result.Changes.First();
+                FileChange change = result.Changes.First();
                 Assert.Contains($"{modifier} int Extract{modifier}", change.ModifiedContent);
             }
         }
@@ -479,7 +480,7 @@ namespace TestApp
             };
 
             // Act
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.False(result.Success, "Should fail with invalid line numbers");
@@ -523,7 +524,7 @@ namespace TestApp
             };
 
             // Act
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             Assert.False(result.Success, "Should fail when crossing method boundaries");
@@ -616,9 +617,9 @@ namespace TestApp
             };
 
             // Act
-            var startTime = DateTime.Now;
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
-            var elapsed = DateTime.Now - startTime;
+            DateTime startTime = DateTime.Now;
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            TimeSpan elapsed = DateTime.Now - startTime;
 
             // Assert
             Assert.True(elapsed.TotalSeconds < 5, "Should complete within 5 seconds");
@@ -627,7 +628,7 @@ namespace TestApp
             if (result.Success)
             {
                 Assert.Single(result.Changes);
-                var change = result.Changes.First();
+                FileChange change = result.Changes.First();
                 Assert.Contains("ProcessDataStatistics", change.ModifiedContent);
             }
         }
@@ -673,12 +674,12 @@ namespace TestApp
             };
 
             // Act
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             if (result.Success)
             {
-                var change = result.Changes.First();
+                FileChange change = result.Changes.First();
                 // Check that basic structure is maintained
                 Assert.Contains("CalculateFormattedSum", change.ModifiedContent);
                 Assert.Contains("return sum;", change.ModifiedContent);
@@ -729,12 +730,12 @@ namespace TestApp
             };
 
             // Act
-            var result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
+            RefactoringResult result = await _extractor.ExtractMethodAsync(context, options, previewOnly: true);
 
             // Assert
             if (result.Success)
             {
-                var change = result.Changes.First();
+                FileChange change = result.Changes.First();
                 // Comments should be in the extracted method
                 Assert.Contains("CalculateWithComments", change.ModifiedContent);
                 // The extraction should maintain the basic structure

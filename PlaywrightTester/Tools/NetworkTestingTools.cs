@@ -70,7 +70,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
@@ -119,7 +119,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
             // Set up the route
             await session.Page.RouteAsync(urlPattern, async route =>
             {
-                var request = route.Request;
+                IRequest request = route.Request;
                 
                 // Check if method matches
                 if (mockRule.Method != "*" && request.Method.ToUpper() != mockRule.Method)
@@ -190,7 +190,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
@@ -228,7 +228,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
             // Set up the route
             await session.Page.RouteAsync(urlPattern, async route =>
             {
-                var request = route.Request;
+                IRequest request = route.Request;
                 
                 // Check if method matches
                 if (interceptRule.Method != "*" && request.Method.ToUpper() != interceptRule.Method)
@@ -255,8 +255,8 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
                         
                     case "modify":
                         // Get original response first
-                        var response = await route.FetchAsync();
-                        var originalBody = await response.TextAsync();
+                        IAPIResponse response = await route.FetchAsync();
+                        string originalBody = await response.TextAsync();
                         
                         await route.FulfillAsync(new RouteFulfillOptions
                         {
@@ -328,15 +328,15 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var finalSelector = DetermineSelector(triggerSelector);
-            var element = session.Page.Locator(finalSelector);
+            string finalSelector = DetermineSelector(triggerSelector);
+            ILocator element = session.Page.Locator(finalSelector);
             
             // Check if element exists
-            var count = await element.CountAsync();
+            int count = await element.CountAsync();
             if (count == 0)
             {
                 return JsonSerializer.Serialize(new { 
@@ -353,7 +353,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
             };
 
             // Set up download directory
-            var downloadDir = Path.Combine(Directory.GetCurrentDirectory(), "downloads", sessionId);
+            string downloadDir = Path.Combine(Directory.GetCurrentDirectory(), "downloads", sessionId);
             Directory.CreateDirectory(downloadDir);
 
             // Set up download handling
@@ -370,8 +370,8 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
                 await element.ClickAsync();
                 
                 // Wait for download to start
-                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(timeoutSeconds));
-                var completedTask = await Task.WhenAny(downloadTcs.Task, timeoutTask);
+                Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(timeoutSeconds));
+                Task completedTask = await Task.WhenAny(downloadTcs.Task, timeoutTask);
                 
                 if (completedTask == timeoutTask)
                 {
@@ -385,7 +385,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
                     });
                 }
 
-                var download = await downloadTcs.Task;
+                IDownload download = await downloadTcs.Task;
                 
                 // Update download info
                 downloadInfo.FileName = download.SuggestedFilename;
@@ -461,7 +461,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
                 });
             }
 
-            var downloads = _activeDownloads[sessionId];
+            List<DownloadInfo> downloads = _activeDownloads[sessionId];
             var toRemove = new List<DownloadInfo>();
             var cleanedFiles = new List<object>();
             var errors = new List<string>();
@@ -469,7 +469,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
             if (!string.IsNullOrEmpty(downloadId))
             {
                 // Clean specific download
-                var download = downloads.FirstOrDefault(d => d.Id == downloadId);
+                DownloadInfo? download = downloads.FirstOrDefault(d => d.Id == downloadId);
                 if (download != null)
                 {
                     toRemove.Add(download);
@@ -488,7 +488,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
                 toRemove.AddRange(downloads);
             }
 
-            foreach (var download in toRemove)
+            foreach (DownloadInfo download in toRemove)
             {
                 try
                 {
@@ -549,7 +549,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var downloads = _activeDownloads.GetValueOrDefault(sessionId, []);
+            List<DownloadInfo> downloads = _activeDownloads.GetValueOrDefault(sessionId, []);
             
             var result = new
             {
@@ -588,7 +588,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var mockRules = _mockRules.GetValueOrDefault(sessionId, []);
+            List<MockRule> mockRules = _mockRules.GetValueOrDefault(sessionId, []);
             
             var result = new
             {
@@ -626,7 +626,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var interceptRules = _interceptRules.GetValueOrDefault(sessionId, []);
+            List<InterceptRule> interceptRules = _interceptRules.GetValueOrDefault(sessionId, []);
             
             var result = new
             {
@@ -665,12 +665,12 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
             // Ensure output directory exists
-            var directory = Path.GetDirectoryName(outputPath);
+            string? directory = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(directory))
             {
                 Directory.CreateDirectory(directory);
@@ -688,13 +688,13 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
 
             // Start tracing network activity (we'll create a simplified HAR-like format)
             var networkEvents = new List<object>();
-            var startTime = DateTime.UtcNow;
+            DateTime startTime = DateTime.UtcNow;
 
             // Enable request/response interception to capture network data
             await session.Page.RouteAsync("**/*", async route =>
             {
-                var request = route.Request;
-                var requestTime = DateTime.UtcNow;
+                IRequest request = route.Request;
+                DateTime requestTime = DateTime.UtcNow;
                 
                 try
                 {
@@ -713,7 +713,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
             });
 
             // Get current network activity using CDP (Chrome DevTools Protocol)
-            var cdpSession = await session.Page.Context.NewCDPSessionAsync(session.Page);
+            ICDPSession cdpSession = await session.Page.Context.NewCDPSessionAsync(session.Page);
             
             // Enable Network domain
             await cdpSession.SendAsync("Network.enable");
@@ -784,7 +784,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
             };
 
             // Write HAR file
-            var harJson = JsonSerializer.Serialize(harData, new JsonSerializerOptions 
+            string harJson = JsonSerializer.Serialize(harData, new JsonSerializerOptions 
             { 
                 WriteIndented = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull

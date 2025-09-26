@@ -39,7 +39,7 @@ public class OrganizeImportsCommand : IRefactoringCommand
 
     public bool SupportsFile(string filePath)
     {
-        var language = LanguageDetectionService.DetectLanguage(filePath);
+        LanguageType language = LanguageDetectionService.DetectLanguage(filePath);
         return SupportedLanguages.Contains(language);
     }
 
@@ -64,7 +64,7 @@ public class OrganizeImportsCommand : IRefactoringCommand
         // Validate language support
         if (!SupportsFile(context.FilePath))
         {
-            var language = LanguageDetectionService.DetectLanguage(context.FilePath);
+            LanguageType language = LanguageDetectionService.DetectLanguage(context.FilePath);
             return CreateErrorResult($"Import organization not supported for {LanguageDetectionService.GetLanguageName(language)} files");
         }
 
@@ -76,13 +76,13 @@ public class OrganizeImportsCommand : IRefactoringCommand
         _logger.LogInformation("OrganizeImportsCommand executing for file: {FilePath}", context.FilePath);
 
         // Extract parameters with defaults
-        var removeUnused = bool.Parse(context.AdditionalData.GetValueOrDefault("removeUnused")?.ToString() ?? "true");
-        var sortAlphabetically = bool.Parse(context.AdditionalData.GetValueOrDefault("sortAlphabetically")?.ToString() ?? "true");
-        var previewOnly = bool.Parse(context.AdditionalData.GetValueOrDefault("previewOnly")?.ToString() ?? "false");
+        bool removeUnused = bool.Parse(context.AdditionalData.GetValueOrDefault("removeUnused")?.ToString() ?? "true");
+        bool sortAlphabetically = bool.Parse(context.AdditionalData.GetValueOrDefault("sortAlphabetically")?.ToString() ?? "true");
+        bool previewOnly = bool.Parse(context.AdditionalData.GetValueOrDefault("previewOnly")?.ToString() ?? "false");
         var importStatement = context.AdditionalData.GetValueOrDefault("importStatement")?.ToString();
 
-        var validatedPath = _pathValidation.ValidateFileExists(context.FilePath);
-        var language = LanguageDetectionService.DetectLanguage(validatedPath);
+        string validatedPath = _pathValidation.ValidateFileExists(context.FilePath);
+        LanguageType language = LanguageDetectionService.DetectLanguage(validatedPath);
 
         _logger.LogInformation("Organizing imports in {Language} file: {FilePath} (removeUnused={RemoveUnused}, sort={Sort}, addImport={ImportStatement})", 
             language, validatedPath, removeUnused, sortAlphabetically, importStatement);
@@ -118,8 +118,8 @@ public class OrganizeImportsCommand : IRefactoringCommand
         if (!string.IsNullOrEmpty(importStatement))
         {
             // Extract namespace from "using System.Collections;" format
-            var usingNamespace = importStatement.Replace("using ", "").Replace(";", "").Trim();
-            var addResult = await _csharpImportManager.AddUsingAsync(filePath, usingNamespace, previewOnly, cancellationToken);
+            string usingNamespace = importStatement.Replace("using ", "").Replace(";", "").Trim();
+            RefactoringResult addResult = await _csharpImportManager.AddUsingAsync(filePath, usingNamespace, previewOnly, cancellationToken);
             
             if (!addResult.Success)
             {
@@ -154,7 +154,7 @@ public class OrganizeImportsCommand : IRefactoringCommand
         // If we have an import statement to add, add it first
         if (!string.IsNullOrEmpty(importStatement))
         {
-            var addResult = await _typeScriptRefactoringService.AddImportAsync(filePath, importStatement, previewOnly, cancellationToken);
+            RefactoringResult addResult = await _typeScriptRefactoringService.AddImportAsync(filePath, importStatement, previewOnly, cancellationToken);
             
             if (!addResult.Success)
             {

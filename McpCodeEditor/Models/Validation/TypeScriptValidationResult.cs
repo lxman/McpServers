@@ -99,7 +99,7 @@
 
         public override string ToString()
         {
-            var location = Line.HasValue ? $" at line {Line}" : "";
+            string location = Line.HasValue ? $" at line {Line}" : "";
             if (Column.HasValue)
                 location += $", column {Column}";
             return $"TS{Code}: {Message}{location}";
@@ -126,7 +126,7 @@
 
         public override string ToString()
         {
-            var location = Line.HasValue ? $" at line {Line}" : "";
+            string location = Line.HasValue ? $" at line {Line}" : "";
             return $"[{Severity}] {Rule}: {Message}{location}";
         }
     }

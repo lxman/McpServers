@@ -35,11 +35,11 @@ public class AngularMaterialAccessibilityTesting(PlaywrightSessionManager sessio
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var jsCode = @"
+            string jsCode = @"
                 (() => {
                     const results = {
                         testSummary: {
@@ -1099,7 +1099,7 @@ public class AngularMaterialAccessibilityTesting(PlaywrightSessionManager sessio
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 

@@ -45,11 +45,11 @@ public class Program
             Log.Information("Console output redirected");
 
             // Create the host builder with configuration
-            var builder = Host.CreateApplicationBuilder(args);
+            HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
             // Add configuration sources
             // CRITICAL: Use an absolute path to appsettings.json since the working directory differs in MCP
-            var configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+            string configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
             Log.Information("Loading configuration from: {ConfigPath}", configPath);
 
             builder.Configuration
@@ -98,7 +98,7 @@ public class Program
 
             // Build and run the host
             Log.Information("Building host...");
-            var host = builder.Build();
+            IHost host = builder.Build();
             Log.Information("Host built successfully");
 
             // Start the MCP server

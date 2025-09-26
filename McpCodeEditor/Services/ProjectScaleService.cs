@@ -113,7 +113,7 @@ public class ProjectScaleService(CodeEditorConfigurationService config)
             throw new DirectoryNotFoundException($"Project path does not exist: {projectPath}");
         }
         
-        var allFiles = Directory.GetFiles(projectPath, "*", SearchOption.AllDirectories);
+        string[] allFiles = Directory.GetFiles(projectPath, "*", SearchOption.AllDirectories);
         var analysis = new ProjectScaleAnalysis
         {
             ProjectPath = projectPath,
@@ -121,11 +121,11 @@ public class ProjectScaleService(CodeEditorConfigurationService config)
         };
         
         // Categorize all files
-        foreach (var file in allFiles)
+        foreach (string file in allFiles)
         {
-            var relativePath = Path.GetRelativePath(projectPath, file);
+            string relativePath = Path.GetRelativePath(projectPath, file);
             var fileInfo = new FileInfo(file);
-            var category = CategorizeFile(relativePath, fileInfo);
+            FileCategory category = CategorizeFile(relativePath, fileInfo);
             
             analysis.AddFile(relativePath, fileInfo.Length, category);
         }
@@ -141,7 +141,7 @@ public class ProjectScaleService(CodeEditorConfigurationService config)
     /// </summary>
     public static async Task<SourceFileStatistics> GetSourceStatisticsAsync(string projectPath)
     {
-        var analysis = await AnalyzeProjectScaleAsync(projectPath);
+        ProjectScaleAnalysis analysis = await AnalyzeProjectScaleAsync(projectPath);
         
         return new SourceFileStatistics
         {
@@ -164,7 +164,7 @@ public class ProjectScaleService(CodeEditorConfigurationService config)
     /// </summary>
     public static async Task<BuildArtifactDetectionResult> DetectBuildArtifactsAsync(string projectPath)
     {
-        var analysis = await AnalyzeProjectScaleAsync(projectPath);
+        ProjectScaleAnalysis analysis = await AnalyzeProjectScaleAsync(projectPath);
         
         var result = new BuildArtifactDetectionResult
         {
@@ -184,7 +184,7 @@ public class ProjectScaleService(CodeEditorConfigurationService config)
     
     private static FileCategory CategorizeFile(string relativePath, FileInfo fileInfo)
     {
-        var normalizedPath = relativePath.Replace('\\', '/');
+        string normalizedPath = relativePath.Replace('\\', '/');
         
         // Check for build artifacts first (directory-based)
         if (IsBuildArtifact(normalizedPath))
@@ -199,7 +199,7 @@ public class ProjectScaleService(CodeEditorConfigurationService config)
         }
         
         // Check if it's a source file
-        var extension = Path.GetExtension(relativePath).ToLowerInvariant();
+        string extension = Path.GetExtension(relativePath).ToLowerInvariant();
         if (SourceFileExtensions.Contains(extension))
         {
             return FileCategory.Source;
@@ -228,7 +228,7 @@ public class ProjectScaleService(CodeEditorConfigurationService config)
     
     private static bool IsGeneratedFile(string relativePath)
     {
-        var fileName = Path.GetFileName(relativePath);
+        string fileName = Path.GetFileName(relativePath);
         
         return GeneratedFilePatterns.Any(pattern =>
         {
@@ -247,7 +247,7 @@ public class ProjectScaleService(CodeEditorConfigurationService config)
     
     private static int CalculateSourceComplexity(ProjectScaleAnalysis analysis)
     {
-        var sourceFiles = analysis.SourceFiles.Count;
+        int sourceFiles = analysis.SourceFiles.Count;
         
         // Basic complexity scoring
         if (sourceFiles < 10) return 1;           // Very Simple
@@ -260,7 +260,7 @@ public class ProjectScaleService(CodeEditorConfigurationService config)
     
     private static ProjectScale DetermineProjectScale(ProjectScaleAnalysis analysis)
     {
-        var sourceFiles = analysis.SourceFiles.Count;
+        int sourceFiles = analysis.SourceFiles.Count;
         
         return sourceFiles switch
         {
@@ -284,9 +284,9 @@ public class ProjectScaleService(CodeEditorConfigurationService config)
     {
         var categories = new Dictionary<string, int>();
         
-        foreach (var artifact in analysis.BuildArtifacts)
+        foreach (ProjectFile artifact in analysis.BuildArtifacts)
         {
-            var category = GetArtifactCategory(artifact.RelativePath);
+            string category = GetArtifactCategory(artifact.RelativePath);
             categories[category] = categories.GetValueOrDefault(category, 0) + 1;
         }
         
@@ -299,7 +299,7 @@ public class ProjectScaleService(CodeEditorConfigurationService config)
     
     private static string GetArtifactCategory(string relativePath)
     {
-        var normalizedPath = relativePath.Replace('\\', '/');
+        string normalizedPath = relativePath.Replace('\\', '/');
         
         if (normalizedPath.Contains("node_modules/")) return "Node.js Dependencies";
         if (normalizedPath.Contains("bin/") || normalizedPath.Contains("obj/")) return ".NET Build Output";

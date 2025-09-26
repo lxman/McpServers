@@ -62,7 +62,7 @@ namespace McpCodeEditor.Models.Validation
         {
             var result = new MethodInliningValidationResult();
             result.SetInvalid(message);
-            foreach (var error in errors)
+            foreach (ValidationError error in errors)
             {
                 result.AddError(error);
             }

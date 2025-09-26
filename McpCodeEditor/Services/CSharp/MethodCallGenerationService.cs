@@ -35,13 +35,13 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         _logger?.LogDebug("Creating method call for {MethodName}", methodName);
 
         // Perform enhanced variable analysis
-        var enhancedAnalysisTask = _enhancedVariableAnalysis.PerformCompleteAnalysisAsync(
+        Task<EnhancedVariableAnalysisResult> enhancedAnalysisTask = _enhancedVariableAnalysis.PerformCompleteAnalysisAsync(
             extractedLines,
             null, // SemanticModel will be created internally if needed
             []
         );
         
-        var enhancedAnalysis = await enhancedAnalysisTask;
+        EnhancedVariableAnalysisResult enhancedAnalysis = await enhancedAnalysisTask;
         
         if (!enhancedAnalysis.IsSuccessful)
         {
@@ -51,10 +51,10 @@ public class MethodCallGenerationService : IMethodCallGenerationService
             return GenerateSimpleMethodCall(indentation, methodName, validationResult);
         }
 
-        var mapping = enhancedAnalysis.HandlingMapping;
+        VariableHandlingMapping mapping = enhancedAnalysis.HandlingMapping;
         
         // Build parameters list
-        var parameters = BuildParametersList(mapping, validationResult);
+        string parameters = BuildParametersList(mapping, validationResult);
         
         // If no return values, it's a void method
         if (mapping.VariablesToReturn.Count == 0 || mapping.SuggestedReturnType == "void")
@@ -64,11 +64,11 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         }
         
         // Determine which variables need declaration vs. assignment
-        var variablesToDeclare = mapping.VariablesToDeclare
+        List<VariableInfo> variablesToDeclare = mapping.VariablesToDeclare
             .Where(v => mapping.VariablesToReturn.Any(r => r.Name == v.Name))
             .ToList();
             
-        var variablesToAssign = mapping.VariablesToAssign
+        List<VariableInfo> variablesToAssign = mapping.VariablesToAssign
             .Where(v => mapping.VariablesToReturn.Any(r => r.Name == v.Name))
             .ToList();
         
@@ -115,13 +115,13 @@ public class MethodCallGenerationService : IMethodCallGenerationService
     public async Task<string> ExtractTupleVariableNamesAsync(string[] extractedLines, string tupleType)
     {
         // Perform analysis to find variables that need to be returned
-        var analysisTask = _enhancedVariableAnalysis.PerformCompleteAnalysisAsync(
+        Task<EnhancedVariableAnalysisResult> analysisTask = _enhancedVariableAnalysis.PerformCompleteAnalysisAsync(
             extractedLines,
             null,
             []
         );
         
-        var analysis = await analysisTask;
+        EnhancedVariableAnalysisResult analysis = await analysisTask;
         
         if (analysis is { IsSuccessful: true, HandlingMapping.VariablesToReturn.Count: > 0 })
         {
@@ -133,8 +133,8 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         var variableNames = new List<string>();
         
         // Remove parentheses and split by comma
-        var inner = tupleType.Trim('(', ')');
-        var parts = inner.Split(',');
+        string inner = tupleType.Trim('(', ')');
+        string[] parts = inner.Split(',');
         
         for (var i = 0; i < parts.Length; i++)
         {
@@ -150,13 +150,13 @@ public class MethodCallGenerationService : IMethodCallGenerationService
     public async Task<string?> FindMainVariableAsync(string[] extractedLines, string returnType)
     {
         // Perform analysis to find the main return variable
-        var analysisTask = _enhancedVariableAnalysis.PerformCompleteAnalysisAsync(
+        Task<EnhancedVariableAnalysisResult> analysisTask = _enhancedVariableAnalysis.PerformCompleteAnalysisAsync(
             extractedLines,
             null,
             []
         );
         
-        var analysis = await analysisTask;
+        EnhancedVariableAnalysisResult analysis = await analysisTask;
         
         if (analysis is { IsSuccessful: true, HandlingMapping.VariablesToReturn.Count: > 0 })
         {
@@ -165,7 +165,7 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         }
         
         // Fallback: look for common patterns
-        var lines = string.Join(" ", extractedLines);
+        string lines = string.Join(" ", extractedLines);
         
         // Look for "result" variable
         if (lines.Contains("result"))
@@ -176,7 +176,7 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         {
             // Simple pattern matching for variable declarations
             var pattern = $@"\b{returnType}\s+(\w+)\s*=";
-            var match = Regex.Match(lines, pattern);
+            Match match = Regex.Match(lines, pattern);
             if (match.Success)
                 return match.Groups[1].Value;
         }
@@ -223,14 +223,14 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         if (returnVars.Count == 1)
         {
             // Single variable: var x = Method();
-            var varName = returnVars[0].Name;
+            string varName = returnVars[0].Name;
             _logger?.LogDebug("Generating single variable declaration: var {Name} = {Method}()", varName, methodName);
             return $"{indentation}var {varName} = {methodName}({parameters});";
         }
         else
         {
             // Multiple variables: var (x, y, z) = Method();
-            var varNames = string.Join(", ", returnVars.Select(v => v.Name));
+            string varNames = string.Join(", ", returnVars.Select(v => v.Name));
             _logger?.LogDebug("Generating tuple declaration: var ({Names}) = {Method}()", varNames, methodName);
             return $"{indentation}var ({varNames}) = {methodName}({parameters});";
         }
@@ -244,14 +244,14 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         if (returnVars.Count == 1)
         {
             // Single variable: x = Method();
-            var varName = returnVars[0].Name;
+            string varName = returnVars[0].Name;
             _logger?.LogDebug("Generating single variable assignment: {Name} = {Method}()", varName, methodName);
             return $"{indentation}{varName} = {methodName}({parameters});";
         }
         else
         {
             // Multiple variables: (x, y, z) = Method();
-            var varNames = string.Join(", ", returnVars.Select(v => v.Name));
+            string varNames = string.Join(", ", returnVars.Select(v => v.Name));
             _logger?.LogDebug("Generating tuple assignment: ({Names}) = {Method}()", varNames, methodName);
             return $"{indentation}({varNames}) = {methodName}({parameters});";
         }
@@ -267,7 +267,7 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         if (mapping.ParametersToPass?.Count > 0)
         {
             // Clean parameter names - ensure no type information
-            var cleanParams = mapping.ParametersToPass
+            List<string> cleanParams = mapping.ParametersToPass
                 .Select(p => CleanParameterName(p.Name))
                 .Where(name => !string.IsNullOrEmpty(name))
                 .ToList();
@@ -282,7 +282,7 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         // SESSION 2 FIX: Priority 2 - Use validation result parameters but clean them
         if (validationResult.Analysis?.SuggestedParameters?.Count > 0)
         {
-            var cleanParams = validationResult.Analysis.SuggestedParameters
+            List<string> cleanParams = validationResult.Analysis.SuggestedParameters
                 .Select(p => CleanParameterName(p))
                 .Where(name => !string.IsNullOrEmpty(name))
                 .ToList();
@@ -308,11 +308,11 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         // Remove any type declarations (e.g., "int x" -> "x")
         // Pattern: type name or just name
         var typePattern = @"^(?:\w+(?:\<[^>]+\>)?(?:\[\])?(?:\?)?)\s+(\w+)$";
-        var match = Regex.Match(parameterName.Trim(), typePattern);
+        Match match = Regex.Match(parameterName.Trim(), typePattern);
         
         if (match.Success)
         {
-            var cleanName = match.Groups[1].Value;
+            string cleanName = match.Groups[1].Value;
             _logger?.LogDebug("Cleaned parameter: '{Original}' -> '{Clean}'", parameterName, cleanName);
             return cleanName;
         }
@@ -334,10 +334,10 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         
         // If there are spaces but didn't match the pattern, take the last word
         // This handles cases like "ref int x" -> "x"
-        var parts = parameterName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string[] parts = parameterName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length > 0)
         {
-            var lastPart = parts[^1];
+            string lastPart = parts[^1];
             if (!IsKeywordOrStaticMember(lastPart))
             {
                 _logger?.LogDebug("Using last part as parameter: '{Original}' -> '{Clean}'", 
@@ -362,7 +362,7 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         var parameters = "";
         if (validationResult.Analysis?.SuggestedParameters?.Count > 0)
         {
-            var cleanParams = validationResult.Analysis.SuggestedParameters
+            List<string> cleanParams = validationResult.Analysis.SuggestedParameters
                 .Select(p => CleanParameterName(p))
                 .Where(name => !string.IsNullOrEmpty(name))
                 .ToList();
@@ -373,7 +373,7 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         // Check if we need a return value
         if (validationResult.Analysis?.RequiresReturnValue == true)
         {
-            var returnType = validationResult.Analysis.SuggestedReturnType;
+            string? returnType = validationResult.Analysis.SuggestedReturnType;
             
             // If we have modified variables, use them for assignment
             if (validationResult.Analysis.ModifiedVariables?.Count > 0)
@@ -384,7 +384,7 @@ public class MethodCallGenerationService : IMethodCallGenerationService
                 }
                 else
                 {
-                    var vars = string.Join(", ", validationResult.Analysis.ModifiedVariables);
+                    string vars = string.Join(", ", validationResult.Analysis.ModifiedVariables);
                     return $"{indentation}({vars}) = {methodName}({parameters});";
                 }
             }
@@ -398,7 +398,7 @@ public class MethodCallGenerationService : IMethodCallGenerationService
                 }
                 else
                 {
-                    var vars = string.Join(", ", validationResult.Analysis.LocalVariables);
+                    string vars = string.Join(", ", validationResult.Analysis.LocalVariables);
                     return $"{indentation}var ({vars}) = {methodName}({parameters});";
                 }
             }
@@ -420,8 +420,8 @@ public class MethodCallGenerationService : IMethodCallGenerationService
         List<VariableInfo> modifiedVariables, 
         List<string> parameters)
     {
-        var variableNames = modifiedVariables.Select(v => v.Name).ToList();
-        var parameterList = string.Join(", ", parameters);
+        List<string> variableNames = modifiedVariables.Select(v => v.Name).ToList();
+        string parameterList = string.Join(", ", parameters);
     
         return $"({string.Join(", ", variableNames)}) = {methodName}({parameterList});";
     }

@@ -42,7 +42,7 @@ public class DocTools(
     [McpServerTool]
     [Description("Register a password for a specific file")]
     public Task<string> RegisterSpecificPassword(
-        [Description("Full path to the file")] string filePath,
+        [Description("Full path to the file - must be canonical")] string filePath,
         [Description("Password for this specific file")] string password)
     {
         try
@@ -69,7 +69,7 @@ public class DocTools(
     [McpServerTool]
     [Description("Automatically detect and register passwords from password files (*.txt, *.pwd)")]
     public async Task<string> AutoDetectPasswords(
-        [Description("Root directory to search for password files")] string rootPath)
+        [Description("Root directory to search for password files - must be canonical")] string rootPath)
     {
         try
         {
@@ -142,7 +142,7 @@ public class DocTools(
     [McpServerTool]
     [Description("Extract content from a single document (supports password-protected files)")]
     public async Task<string> ExtractDocumentContent(
-        [Description("Path to the document file")] string filePath,
+        [Description("Path to the document file - must be canonical")] string filePath,
         [Description("Optional password (will try auto-detected passwords first)")] string? password = null)
     {
         try
@@ -193,7 +193,7 @@ public class DocTools(
     [McpServerTool]
     [Description("Get detailed metadata from a document")]
     public async Task<string> GetDocumentMetadata(
-        [Description("Path to the document file")] string filePath,
+        [Description("Path to the document file - must be canonical")] string filePath,
         [Description("Optional password")] string? password = null)
     {
         try
@@ -257,7 +257,7 @@ public class DocTools(
     [Description("Create a searchable index from a directory of documents")]
     public async Task<string> CreateDocumentIndex(
         [Description("Name for the search index")] string indexName,
-        [Description("Root directory containing documents to index")] string rootPath,
+        [Description("Root directory containing documents to index - must be canonical")] string rootPath,
         [Description("JSON options for indexing (optional)")] string? optionsJson = null)
     {
         try
@@ -527,7 +527,6 @@ public class DocTools(
         }
     }
 
-    // Update the existing RemoveDocumentIndex tool description for clarity
     [McpServerTool]
     [Description("Permanently remove a document index from the system (both memory and discovery). Use unload_index_from_memory if you only want to free memory.")]
     public string RemoveDocumentIndex(
@@ -560,7 +559,7 @@ public class DocTools(
     [McpServerTool]
     [Description("Discover documents in a directory (without indexing)")]
     public Task<string> DiscoverDocuments(
-        [Description("Root directory to search")] string rootPath,
+        [Description("Root directory to search - must be canonical")] string rootPath,
         [Description("File patterns to include (comma-separated, e.g., '*.pdf,*.docx')")] string includePatterns = "*",
         [Description("Whether to search subdirectories")] bool recursive = true)
     {

@@ -29,7 +29,7 @@ public class RedisService
         try
         {
             // Try environment variables first
-            var envConnectionString = Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING");
+            string? envConnectionString = Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING");
             
             if (!string.IsNullOrEmpty(envConnectionString))
             {
@@ -39,7 +39,7 @@ public class RedisService
             }
             
             // Try configuration file
-            var configConnectionString = _configuration.GetConnectionString("Redis");
+            string? configConnectionString = _configuration.GetConnectionString("Redis");
             if (!string.IsNullOrEmpty(configConnectionString))
             {
                 _logger.LogInformation("Attempting auto-connect using configuration file");
@@ -171,8 +171,8 @@ public class RedisService
     {
         try
         {
-            var db = EnsureConnected();
-            var value = await db.StringGetAsync(key);
+            IDatabase db = EnsureConnected();
+            RedisValue value = await db.StringGetAsync(key);
             
             return JsonSerializer.Serialize(new 
             { 
@@ -196,8 +196,8 @@ public class RedisService
     {
         try
         {
-            var db = EnsureConnected();
-            var result = await db.StringSetAsync(key, value, expiry);
+            IDatabase db = EnsureConnected();
+            bool result = await db.StringSetAsync(key, value, expiry);
             
             return JsonSerializer.Serialize(new 
             { 
@@ -221,8 +221,8 @@ public class RedisService
     {
         try
         {
-            var db = EnsureConnected();
-            var result = await db.KeyDeleteAsync(key);
+            IDatabase db = EnsureConnected();
+            bool result = await db.KeyDeleteAsync(key);
             
             return JsonSerializer.Serialize(new 
             { 
@@ -245,8 +245,8 @@ public class RedisService
     {
         try
         {
-            var db = EnsureConnected();
-            var exists = await db.KeyExistsAsync(key);
+            IDatabase db = EnsureConnected();
+            bool exists = await db.KeyExistsAsync(key);
             
             return JsonSerializer.Serialize(new 
             { 
@@ -268,10 +268,10 @@ public class RedisService
     {
         try
         {
-            var db = EnsureConnected();
-            var server = _connection!.GetServer(_connection.GetEndPoints().First());
+            IDatabase db = EnsureConnected();
+            IServer server = _connection!.GetServer(_connection.GetEndPoints().First());
             
-            var keys = server.Keys(database: _currentDatabase, pattern: pattern, pageSize: count)
+            List<string> keys = server.Keys(database: _currentDatabase, pattern: pattern, pageSize: count)
                              .Take(count)
                              .Select(key => (string)key!)
                              .ToList();
@@ -298,8 +298,8 @@ public class RedisService
     {
         try
         {
-            var db = EnsureConnected();
-            var type = await db.KeyTypeAsync(key);
+            IDatabase db = EnsureConnected();
+            RedisType type = await db.KeyTypeAsync(key);
             
             return JsonSerializer.Serialize(new 
             { 
@@ -322,8 +322,8 @@ public class RedisService
     {
         try
         {
-            var db = EnsureConnected();
-            var ttl = await db.KeyTimeToLiveAsync(key);
+            IDatabase db = EnsureConnected();
+            TimeSpan? ttl = await db.KeyTimeToLiveAsync(key);
             
             return JsonSerializer.Serialize(new 
             { 
@@ -347,8 +347,8 @@ public class RedisService
     {
         try
         {
-            var db = EnsureConnected();
-            var result = await db.KeyExpireAsync(key, expiry);
+            IDatabase db = EnsureConnected();
+            bool result = await db.KeyExpireAsync(key, expiry);
             
             return JsonSerializer.Serialize(new 
             { 
@@ -372,14 +372,14 @@ public class RedisService
     {
         try
         {
-            var server = _connection!.GetServer(_connection.GetEndPoints().First());
-            var info = await server.InfoAsync(section);
+            IServer server = _connection!.GetServer(_connection.GetEndPoints().First());
+            IGrouping<string, KeyValuePair<string, string>>[] info = await server.InfoAsync(section);
             
             var infoDict = new Dictionary<string, object>();
-            foreach (var group in info)
+            foreach (IGrouping<string, KeyValuePair<string, string>> group in info)
             {
                 var groupDict = new Dictionary<string, string>();
-                foreach (var item in group)
+                foreach (KeyValuePair<string, string> item in group)
                 {
                     groupDict[item.Key] = item.Value;
                 }
@@ -406,7 +406,7 @@ public class RedisService
     {
         try
         {
-            var server = _connection!.GetServer(_connection.GetEndPoints().First());
+            IServer server = _connection!.GetServer(_connection.GetEndPoints().First());
             await server.FlushDatabaseAsync(_currentDatabase);
             
             return JsonSerializer.Serialize(new 

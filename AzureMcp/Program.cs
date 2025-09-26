@@ -19,7 +19,7 @@ public class Program
         Console.SetOut(TextWriter.Null);
         Console.SetError(TextWriter.Null);
         
-        var builder = Host.CreateApplicationBuilder(args);
+        HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
         
         // Minimal configuration - only environment variables and command line
         builder.Configuration
@@ -32,7 +32,7 @@ public class Program
             logging.AddDebug();
     
             // Add file logging to project directory (not blocked)
-            var logPath = Path.Combine(AppContext.BaseDirectory, "azure-discovery.log");
+            string logPath = Path.Combine(AppContext.BaseDirectory, "azure-discovery.log");
             logging.AddFile(logPath, LogLevel.Debug);
     
             // Keep minimal logging for MCP protocol
@@ -56,7 +56,7 @@ public class Program
             .WithResources<EmptyResourceProvider>()
             .WithPrompts<EmptyPromptProvider>();
 
-        var host = builder.Build();
+        IHost host = builder.Build();
         await host.RunAsync();
     }
     
@@ -67,7 +67,7 @@ public class Program
             Environment.SetEnvironmentVariable("PATHEXT", ".COM;.EXE;.BAT;.CMD;.VBS;.JS;.WS;.MSC");
         }
         
-        var path = Environment.GetEnvironmentVariable("PATH") ?? "";
+        string path = Environment.GetEnvironmentVariable("PATH") ?? "";
         const string dotnetPath = @"C:\Program Files\dotnet";
         if (!path.Contains(dotnetPath, StringComparison.OrdinalIgnoreCase))
         {

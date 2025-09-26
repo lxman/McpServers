@@ -30,7 +30,7 @@ public class ArchitecturePatternTemplateService
     /// </summary>
     public double GetMinConfidenceThreshold(ArchitectureType type)
     {
-        var template = GetTemplate(type);
+        ArchitecturePatternTemplate? template = GetTemplate(type);
         return template?.MinConfidenceThreshold ?? 0.3; // LOWERED default from 0.6
     }
 

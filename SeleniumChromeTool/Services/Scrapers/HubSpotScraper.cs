@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Support.UI;
 using SeleniumChromeTool.Models;
@@ -56,7 +57,7 @@ public partial class HubSpotScraper : BaseJobScraper
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {
             // HubSpot careers page uses query parameters for search
-            var searchTerm = Uri.EscapeDataString(request.SearchTerm);
+            string searchTerm = Uri.EscapeDataString(request.SearchTerm);
             careersUrl += $"?search={searchTerm}";
         }
         
@@ -102,12 +103,12 @@ public partial class HubSpotScraper : BaseJobScraper
                 "[data-module-id*='popup'] .close"
             };
 
-            foreach (var selector in modalSelectors)
+            foreach (string selector in modalSelectors)
             {
                 try
                 {
-                    var closeButtons = driver.FindElements(By.CssSelector(selector));
-                    foreach (var closeButton in closeButtons)
+                    ReadOnlyCollection<IWebElement> closeButtons = driver.FindElements(By.CssSelector(selector));
+                    foreach (IWebElement closeButton in closeButtons)
                     {
                         if (closeButton is { Displayed: true, Enabled: true })
                         {
@@ -174,7 +175,7 @@ public partial class HubSpotScraper : BaseJobScraper
             IList<IWebElement> jobElements = new List<IWebElement>();
 
             // Try different selectors to find job listings
-            foreach (var selector in jobContainerSelectors)
+            foreach (string selector in jobContainerSelectors)
             {
                 jobElements = driver.FindElements(By.CssSelector(selector));
                 if (jobElements.Count <= 0) continue;
@@ -198,14 +199,14 @@ public partial class HubSpotScraper : BaseJobScraper
 
             // Process each job listing
             var processedJobs = 0;
-            foreach (var jobElement in jobElements)
+            foreach (IWebElement jobElement in jobElements)
             {
                 if (processedJobs >= request.MaxResults)
                     break;
 
                 try
                 {
-                    var job = ExtractJobDetails(jobElement, driver).Result;
+                    EnhancedJobListing? job = ExtractJobDetails(jobElement, driver).Result;
                     
                     if (job != null && IsRelevantJob(job, request))
                     {
@@ -240,11 +241,11 @@ public partial class HubSpotScraper : BaseJobScraper
             await Task.Delay(8000);
             
             // Check if we can find the main content
-            var hasContent = Driver.FindElements(By.CssSelector("main, .careers-page, .job-listings, body")).Count > 0;
+            bool hasContent = Driver.FindElements(By.CssSelector("main, .careers-page, .job-listings, body")).Count > 0;
             
             // Also check if we're not blocked (look for error pages)
-            var errorIndicators = Driver.FindElements(By.CssSelector(".error, .blocked, .forbidden, .not-found"));
-            var isBlocked = errorIndicators.Any(e => e.Displayed);
+            ReadOnlyCollection<IWebElement> errorIndicators = Driver.FindElements(By.CssSelector(".error, .blocked, .forbidden, .not-found"));
+            bool isBlocked = errorIndicators.Any(e => e.Displayed);
             
             return hasContent && !isBlocked;
         }

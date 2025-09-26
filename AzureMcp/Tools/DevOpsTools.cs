@@ -2,6 +2,7 @@
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json;
+using AzureMcp.Services.DevOps.Models;
 
 namespace AzureMcp.Tools;
 
@@ -21,7 +22,7 @@ public class DevOpsTools
     {
         try
         {
-            var projects = await _devOpsService.GetProjectsAsync();
+            IEnumerable<ProjectDto> projects = await _devOpsService.GetProjectsAsync();
             return JsonSerializer.Serialize(new { success = true, projects = projects.ToArray() }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -38,7 +39,7 @@ public class DevOpsTools
     {
         try
         {
-            var project = await _devOpsService.GetProjectAsync(projectName);
+            ProjectDto? project = await _devOpsService.GetProjectAsync(projectName);
             return JsonSerializer.Serialize(new { success = true, project }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -55,7 +56,7 @@ public class DevOpsTools
     {
         try
         {
-            var workItem = await _devOpsService.GetWorkItemAsync(id);
+            WorkItemDto? workItem = await _devOpsService.GetWorkItemAsync(id);
             return JsonSerializer.Serialize(new { success = true, workItem }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -73,7 +74,7 @@ public class DevOpsTools
     {
         try
         {
-            var workItems = await _devOpsService.GetWorkItemsAsync(projectName, wiql);
+            IEnumerable<WorkItemDto> workItems = await _devOpsService.GetWorkItemsAsync(projectName, wiql);
             return JsonSerializer.Serialize(new { success = true, workItems = workItems.ToArray() }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -106,7 +107,7 @@ public class DevOpsTools
             if (priority.HasValue)
                 fields["Microsoft.VSTS.Common.Priority"] = priority.Value;
 
-            var workItem = await _devOpsService.CreateWorkItemAsync(projectName, workItemType, title, fields);
+            WorkItemDto workItem = await _devOpsService.CreateWorkItemAsync(projectName, workItemType, title, fields);
             return JsonSerializer.Serialize(new { success = true, workItem }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -123,7 +124,7 @@ public class DevOpsTools
     {
         try
         {
-            var repositories = await _devOpsService.GetRepositoriesAsync(projectName);
+            IEnumerable<RepositoryDto> repositories = await _devOpsService.GetRepositoriesAsync(projectName);
             return JsonSerializer.Serialize(new { success = true, repositories = repositories.ToArray() }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -141,7 +142,7 @@ public class DevOpsTools
     {
         try
         {
-            var repository = await _devOpsService.GetRepositoryAsync(projectName, repositoryName);
+            RepositoryDto? repository = await _devOpsService.GetRepositoryAsync(projectName, repositoryName);
             return JsonSerializer.Serialize(new { success = true, repository }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -160,7 +161,7 @@ public class DevOpsTools
     {
         try
         {
-            var definitions = await _devOpsService.GetBuildDefinitionsAsync(projectName);
+            IEnumerable<BuildDefinitionDto> definitions = await _devOpsService.GetBuildDefinitionsAsync(projectName);
             return JsonSerializer.Serialize(new { success = true, buildDefinitions = definitions.ToArray() }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -178,7 +179,7 @@ public class DevOpsTools
     {
         try
         {
-            var definition = await _devOpsService.GetBuildDefinitionAsync(projectName, definitionId);
+            BuildDefinitionDto? definition = await _devOpsService.GetBuildDefinitionAsync(projectName, definitionId);
             return JsonSerializer.Serialize(new { success = true, buildDefinition = definition }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -197,7 +198,7 @@ public class DevOpsTools
     {
         try
         {
-            var builds = await _devOpsService.GetBuildsAsync(projectName, definitionId, top);
+            IEnumerable<BuildDto> builds = await _devOpsService.GetBuildsAsync(projectName, definitionId, top);
             return JsonSerializer.Serialize(new { success = true, builds = builds.ToArray() }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -215,7 +216,7 @@ public class DevOpsTools
     {
         try
         {
-            var build = await _devOpsService.GetBuildAsync(projectName, buildId);
+            BuildDto? build = await _devOpsService.GetBuildAsync(projectName, buildId);
             return JsonSerializer.Serialize(new { success = true, build }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -234,7 +235,7 @@ public class DevOpsTools
     {
         try
         {
-            var build = await _devOpsService.QueueBuildAsync(projectName, definitionId, branch);
+            BuildDto build = await _devOpsService.QueueBuildAsync(projectName, definitionId, branch);
             return JsonSerializer.Serialize(new { success = true, queuedBuild = build }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -251,7 +252,7 @@ public class DevOpsTools
     {
         try
         {
-            var definitions = await _devOpsService.GetReleaseDefinitionsAsync(projectName);
+            IEnumerable<ReleaseDefinitionDto> definitions = await _devOpsService.GetReleaseDefinitionsAsync(projectName);
             return JsonSerializer.Serialize(new { success = true, releaseDefinitions = definitions.ToArray() }, 
                 new JsonSerializerOptions { WriteIndented = true });
         }
@@ -270,12 +271,12 @@ public class DevOpsTools
     public async Task<string> GetRepositoryFileAsync(
         [Description("Project name")] string projectName,
         [Description("Repository name")] string repositoryName,
-        [Description("File path (e.g., azure-pipelines.yml, .github/workflows/build.yml)")] string filePath,
+        [Description("File path (e.g., azure-pipelines.yml, .github/workflows/build.yml) - must be canonical")] string filePath,
         [Description("Optional branch name (defaults to main/master)")] string? branch = null)
     {
         try
         {
-            var content = await _devOpsService.GetRepositoryFileContentAsync(projectName, repositoryName, filePath, branch);
+            string? content = await _devOpsService.GetRepositoryFileContentAsync(projectName, repositoryName, filePath, branch);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 filePath, 
@@ -296,14 +297,14 @@ public class DevOpsTools
     public async Task<string> UpdateRepositoryFileAsync(
         [Description("Project name")] string projectName,
         [Description("Repository name")] string repositoryName,
-        [Description("File path (e.g., azure-pipelines.yml)")] string filePath,
+        [Description("File path (e.g., azure-pipelines.yml) - must be canonical")] string filePath,
         [Description("New file content")] string content,
         [Description("Commit message")] string commitMessage,
         [Description("Optional branch name (defaults to main)")] string? branch = null)
     {
         try
         {
-            var success = await _devOpsService.UpdateRepositoryFileAsync(projectName, repositoryName, filePath, content, commitMessage, branch);
+            bool success = await _devOpsService.UpdateRepositoryFileAsync(projectName, repositoryName, filePath, content, commitMessage, branch);
             return JsonSerializer.Serialize(new { 
                 success, 
                 message = success ? "File updated successfully" : "File update failed",
@@ -327,7 +328,7 @@ public class DevOpsTools
     {
         try
         {
-            var yamlFiles = await _devOpsService.FindYamlPipelineFilesAsync(projectName, repositoryName);
+            IEnumerable<string> yamlFiles = await _devOpsService.FindYamlPipelineFilesAsync(projectName, repositoryName);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 yamlFiles = yamlFiles.ToArray(),
@@ -349,7 +350,7 @@ public class DevOpsTools
     {
         try
         {
-            var yamlContent = await _devOpsService.GetPipelineYamlAsync(projectName, definitionId);
+            string? yamlContent = await _devOpsService.GetPipelineYamlAsync(projectName, definitionId);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 definitionId,
@@ -373,7 +374,7 @@ public class DevOpsTools
     {
         try
         {
-            var success = await _devOpsService.UpdatePipelineYamlAsync(projectName, definitionId, yamlContent, commitMessage);
+            bool success = await _devOpsService.UpdatePipelineYamlAsync(projectName, definitionId, yamlContent, commitMessage);
             return JsonSerializer.Serialize(new { 
                 success, 
                 message = success ? "Pipeline YAML updated successfully" : "Pipeline YAML update failed",
@@ -404,7 +405,7 @@ public class DevOpsTools
     {
         try
         {
-            var result = await _devOpsService.SearchBuildLogsWithRegexAsync(
+            string result = await _devOpsService.SearchBuildLogsWithRegexAsync(
                 projectName, buildId, regexPattern, contextLines, caseSensitive, maxMatches);
             return result;
         }
@@ -422,7 +423,7 @@ public class DevOpsTools
     {
         try
         {
-            var logs = await _devOpsService.GetBuildLogsAsync(projectName, buildId);
+            IEnumerable<BuildLogDto> logs = await _devOpsService.GetBuildLogsAsync(projectName, buildId);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 buildId,
@@ -444,7 +445,7 @@ public class DevOpsTools
     {
         try
         {
-            var logContent = await _devOpsService.GetCompleteBuildLogAsync(projectName, buildId);
+            string logContent = await _devOpsService.GetCompleteBuildLogAsync(projectName, buildId);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 buildId,
@@ -466,7 +467,7 @@ public class DevOpsTools
     {
         try
         {
-            var timeline = await _devOpsService.GetBuildTimelineAsync(projectName, buildId);
+            BuildTimelineDto? timeline = await _devOpsService.GetBuildTimelineAsync(projectName, buildId);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 buildId,
@@ -488,7 +489,7 @@ public class DevOpsTools
     {
         try
         {
-            var stepLogs = (await _devOpsService.GetBuildStepLogsAsync(projectName, buildId)).ToList();
+            List<BuildStepLogDto> stepLogs = (await _devOpsService.GetBuildStepLogsAsync(projectName, buildId)).ToList();
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 buildId,
@@ -516,7 +517,7 @@ public class DevOpsTools
     {
         try
         {
-            var logContent = await _devOpsService.GetBuildLogContentAsync(projectName, buildId, logId);
+            BuildLogContentDto? logContent = await _devOpsService.GetBuildLogContentAsync(projectName, buildId, logId);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 buildId,
@@ -540,7 +541,7 @@ public class DevOpsTools
     {
         try
         {
-            var taskLog = await _devOpsService.GetBuildTaskLogAsync(projectName, buildId, taskId);
+            BuildLogContentDto? taskLog = await _devOpsService.GetBuildTaskLogAsync(projectName, buildId, taskId);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 buildId,

@@ -28,7 +28,7 @@ public class DiffTools(DiffService diffService)
     {
         try
         {
-            var result = await diffService.GenerateAsync(originalPath, modifiedPath, originalContent, modifiedContent, format, contextLines);
+            object result = await diffService.GenerateAsync(originalPath, modifiedPath, originalContent, modifiedContent, format, contextLines);
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         }
         catch (Exception ex)

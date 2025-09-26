@@ -52,7 +52,7 @@ public class TypeScriptAstAnalysisService(ILogger<TypeScriptAstAnalysisService> 
                 @"^\{.*\}$" // Object literal
             };
 
-            var isValid = patterns.Any(pattern => Regex.IsMatch(expression.Trim(), pattern));
+            bool isValid = patterns.Any(pattern => Regex.IsMatch(expression.Trim(), pattern));
             logger.LogDebug("Pattern-based validation result: {IsValid}", isValid);
             return isValid;
         }
@@ -73,7 +73,7 @@ public class TypeScriptAstAnalysisService(ILogger<TypeScriptAstAnalysisService> 
         {
             logger.LogDebug("Inferring type for expression: '{Expression}' in scope: {ScopeContext}", expression, scopeContext);
 
-            var inference = InferTypeFromPatterns(expression);
+            TypeScriptTypeInference inference = InferTypeFromPatterns(expression);
             inference.InferenceMethod = "Pattern";
             logger.LogDebug("Pattern-based type inference: {Type}", inference.InferredType);
             return inference;

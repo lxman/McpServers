@@ -31,7 +31,7 @@ public class JobScrapingController : ControllerBase
         {
             _logger.LogInformation($"Starting multi-site scrape for user: {request.UserId}");
             
-            var jobs = await _scrapingService.ScrapeMultipleSitesAsync(request);
+            List<EnhancedJobListing> jobs = await _scrapingService.ScrapeMultipleSitesAsync(request);
             
             return Ok(new { 
                 Success = true,
@@ -122,7 +122,7 @@ public class JobScrapingController : ControllerBase
         {
             _logger.LogInformation($"Saving {request.Jobs.Count} filtered jobs for user: {request.UserId}");
             
-            var success = await _scrapingService.SaveJobsAsync(request);
+            bool success = await _scrapingService.SaveJobsAsync(request);
             
             if (success)
             {
@@ -159,7 +159,7 @@ public class JobScrapingController : ControllerBase
         try
         {
             filters ??= new JobSearchFilters();
-            var jobs = await _scrapingService.GetStoredJobsAsync(userId, filters);
+            List<EnhancedJobListing> jobs = await _scrapingService.GetStoredJobsAsync(userId, filters);
             
             return Ok(new { 
                 Success = true,
@@ -184,7 +184,7 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            var config = await _scrapingService.GetSiteConfigurationAsync(site);
+            SiteConfiguration config = await _scrapingService.GetSiteConfigurationAsync(site);
             return Ok(new { Success = true, Configuration = config });
         }
         catch (Exception ex)
@@ -214,7 +214,7 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            var filePath = await _scrapingService.TakeScreenshotAsync(url);
+            string filePath = await _scrapingService.TakeScreenshotAsync(url);
             return Ok(new { Success = true, FilePath = filePath });
         }
         catch (Exception ex)
@@ -238,7 +238,7 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            var config = await _scrapingService.GetSiteConfigurationAsync(site);
+            SiteConfiguration config = await _scrapingService.GetSiteConfigurationAsync(site);
             return Ok(new { 
                 Success = true, 
                 Site = site.ToString(),
@@ -263,7 +263,7 @@ public class JobScrapingController : ControllerBase
                 return StatusCode(500, new { Success = false, Error = "Email service not configured" });
             }
 
-            var summary = await emailService.GetJobAlertSummaryAsync(daysBack);
+            EmailJobAlertSummary summary = await emailService.GetJobAlertSummaryAsync(daysBack);
             return Ok(new { Success = true, Summary = summary });
         }
         catch (Exception ex)
@@ -327,7 +327,7 @@ public class JobScrapingController : ControllerBase
                 return StatusCode(500, new { Success = false, Error = "Email service not configured" });
             }
 
-            var jobs = await emailService.GetRecentJobAlertsAsync();
+            List<EnhancedJobListing> jobs = await emailService.GetRecentJobAlertsAsync();
             return Ok(new { 
                 Success = true, 
                 JobCount = jobs.Count,
@@ -371,7 +371,7 @@ public class JobScrapingController : ControllerBase
             }
 
             // Enhance jobs with detailed information scraped from their URLs
-            var enhancedJobs = await emailService.EnhanceJobsWithDetails(jobs);
+            List<EnhancedJobListing> enhancedJobs = await emailService.EnhanceJobsWithDetails(jobs);
 
             return Ok(new { 
                 Success = true, 
@@ -405,7 +405,7 @@ public class JobScrapingController : ControllerBase
                 return StatusCode(500, new { Success = false, Error = "Automated search service not configured" });
             }
 
-            var results = await automatedSearch.RunComprehensiveNetSearchAsync(request);
+            EnhancedSearchResults results = await automatedSearch.RunComprehensiveNetSearchAsync(request);
 
             return Ok(new { 
                 Success = true,
@@ -444,7 +444,7 @@ public class JobScrapingController : ControllerBase
                 return StatusCode(500, new { Success = false, Error = "Bulk processor service not configured" });
             }
 
-            var results = await bulkProcessor.ProcessJobsBulkAsync(request);
+            BulkProcessingResult results = await bulkProcessor.ProcessJobsBulkAsync(request);
 
             return Ok(new { 
                 Success = results.IsSuccessful,
@@ -498,7 +498,7 @@ public class JobScrapingController : ControllerBase
                 ScoringProfile = new NetDeveloperScoringProfile()
             };
 
-            var results = await bulkProcessor.ProcessJobsBulkAsync(bulkRequest);
+            BulkProcessingResult results = await bulkProcessor.ProcessJobsBulkAsync(bulkRequest);
 
             return Ok(new { 
                 Success = results.IsSuccessful,
@@ -541,7 +541,7 @@ public class JobScrapingController : ControllerBase
                 return StatusCode(500, new { Success = false, Error = "Smart deduplication service not configured" });
             }
 
-            var result = await deduplicationService.DeduplicateJobsAsync(request.Jobs);
+            DeduplicationResult result = await deduplicationService.DeduplicateJobsAsync(request.Jobs);
 
             return Ok(new { 
                 Success = true,
@@ -591,7 +591,7 @@ public class JobScrapingController : ControllerBase
                 return StatusCode(500, new { Success = false, Error = "Application management service not configured" });
             }
 
-            var result = await applicationService.CategorizeJobsAsync(request.Jobs, request.Preferences);
+            ApplicationCategorizationResult result = await applicationService.CategorizeJobsAsync(request.Jobs, request.Preferences);
 
             return Ok(new { 
                 Success = true,
@@ -653,7 +653,7 @@ public class JobScrapingController : ControllerBase
                 return StatusCode(500, new { Success = false, Error = "Market intelligence service not configured" });
             }
 
-            var result = await marketService.GenerateMarketReportAsync(request.Jobs, request.AnalysisRequest);
+            MarketIntelligenceReport result = await marketService.GenerateMarketReportAsync(request.Jobs, request.AnalysisRequest);
 
             return Ok(new { 
                 Success = true,
@@ -756,13 +756,13 @@ public class JobScrapingController : ControllerBase
 
             // Phase 2a: Deduplication
             _logger.LogInformation("Phase 2a: Running smart deduplication");
-            var deduplicationResult = await deduplicationService.DeduplicateJobsAsync(request.Jobs);
+            DeduplicationResult deduplicationResult = await deduplicationService.DeduplicateJobsAsync(request.Jobs);
             analysisResult.DeduplicationResult = deduplicationResult;
             analysisResult.ProcessingSteps.Add($"Deduplication: {deduplicationResult.DuplicatesRemoved} duplicates removed");
 
             // Phase 2b: Application Categorization
             _logger.LogInformation("Phase 2b: Running application categorization");
-            var categorizationResult = await applicationService.CategorizeJobsAsync(
+            ApplicationCategorizationResult categorizationResult = await applicationService.CategorizeJobsAsync(
                 deduplicationResult.UniqueJobs, 
                 request.ApplicationPreferences ?? new ApplicationPreferences { UserId = request.UserId ?? "default" });
             analysisResult.CategorizationResult = categorizationResult;
@@ -770,7 +770,7 @@ public class JobScrapingController : ControllerBase
 
             // Phase 2c: Market Intelligence
             _logger.LogInformation("Phase 2c: Generating market intelligence");
-            var marketResult = await marketService.GenerateMarketReportAsync(
+            MarketIntelligenceReport marketResult = await marketService.GenerateMarketReportAsync(
                 deduplicationResult.UniqueJobs, 
                 request.MarketAnalysisRequest ?? new MarketAnalysisRequest { JobTitle = "Software Engineer", FocusArea = "comprehensive" });
             analysisResult.MarketIntelligenceResult = marketResult;
@@ -838,7 +838,7 @@ public class JobScrapingController : ControllerBase
                 return StatusCode(500, new { Success = false, Error = "Application management service not configured" });
             }
 
-            var success = await applicationService.TrackApplicationAsync(request.Application);
+            bool success = await applicationService.TrackApplicationAsync(request.Application);
 
             if (success)
             {
@@ -874,7 +874,7 @@ public class JobScrapingController : ControllerBase
                 return StatusCode(500, new { Success = false, Error = "Application management service not configured" });
             }
 
-            var success = await applicationService.UpdateApplicationStatusAsync(
+            bool success = await applicationService.UpdateApplicationStatusAsync(
                 request.ApplicationId, 
                 request.Status, 
                 request.Notes);
@@ -916,7 +916,7 @@ public class JobScrapingController : ControllerBase
                 return StatusCode(500, new { Success = false, Error = "SimplifyJobs API service not configured" });
             }
 
-            var jobs = await simplifyApiService.FetchJobsByIdsAsync(request.JobIds, request.UserId);
+            List<EnhancedJobListing> jobs = await simplifyApiService.FetchJobsByIdsAsync(request.JobIds, request.UserId);
 
             return Ok(new { 
                 Success = true,
@@ -948,7 +948,7 @@ public class JobScrapingController : ControllerBase
         {
             _logger.LogInformation($"🚀 Phase 2: Starting Google-based SimplifyJobs discovery for '{request.SearchTerm}'");
             
-            var jobs = await _googleSimplifyService.DiscoverAndFetchJobsAsync(request);
+            List<EnhancedJobListing> jobs = await _googleSimplifyService.DiscoverAndFetchJobsAsync(request);
 
             return Ok(new { 
                 Success = true,

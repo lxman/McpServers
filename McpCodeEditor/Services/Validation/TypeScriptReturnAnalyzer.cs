@@ -78,7 +78,7 @@ public class TypeScriptReturnAnalyzer(ILogger<TypeScriptReturnAnalyzer> logger)
         TypeScriptReturnAnalysisResult result, 
         CancellationToken cancellationToken)
     {
-        var returnMatches = ReturnStatementPattern.Matches(extractedCode);
+        MatchCollection returnMatches = ReturnStatementPattern.Matches(extractedCode);
         
         foreach (Match match in returnMatches)
         {
@@ -108,7 +108,7 @@ public class TypeScriptReturnAnalyzer(ILogger<TypeScriptReturnAnalyzer> logger)
         CancellationToken cancellationToken)
     {
         // Find variables that are modified in the extracted code
-        var modificationMatches = ModificationPattern.Matches(extractedCode);
+        MatchCollection modificationMatches = ModificationPattern.Matches(extractedCode);
         var modifiedVariables = new HashSet<string>();
 
         foreach (Match match in modificationMatches)
@@ -125,7 +125,7 @@ public class TypeScriptReturnAnalyzer(ILogger<TypeScriptReturnAnalyzer> logger)
         }
 
         // Check if these variables are used outside the extracted code
-        foreach (var variable in modifiedVariables)
+        foreach (string variable in modifiedVariables)
         {
             if (await IsVariableUsedAfterExtractionAsync(variable, fullSourceCode, cancellationToken))
             {
@@ -149,12 +149,12 @@ public class TypeScriptReturnAnalyzer(ILogger<TypeScriptReturnAnalyzer> logger)
         CancellationToken cancellationToken)
     {
         // Analyze variable assignments
-        var assignmentMatches = VariableAssignmentPattern.Matches(extractedCode);
+        MatchCollection assignmentMatches = VariableAssignmentPattern.Matches(extractedCode);
         
         foreach (Match match in assignmentMatches)
         {
-            var variableName = match.Groups[1].Value;
-            var expression = match.Groups[2].Value;
+            string variableName = match.Groups[1].Value;
+            string expression = match.Groups[2].Value;
 
             var variableReturn = new TypeScriptVariableReturn
             {
@@ -182,14 +182,14 @@ public class TypeScriptReturnAnalyzer(ILogger<TypeScriptReturnAnalyzer> logger)
         TypeScriptReturnAnalysisResult result, 
         CancellationToken cancellationToken)
     {
-        var conditionalMatches = ConditionalPattern.Matches(extractedCode);
+        MatchCollection conditionalMatches = ConditionalPattern.Matches(extractedCode);
         
         foreach (Match match in conditionalMatches)
         {
-            var conditionalCode = match.Groups[1].Value;
+            string conditionalCode = match.Groups[1].Value;
             
             // Recursively analyze return statements in conditional blocks
-            var conditionalReturns = ReturnStatementPattern.Matches(conditionalCode);
+            MatchCollection conditionalReturns = ReturnStatementPattern.Matches(conditionalCode);
             
             foreach (Match returnMatch in conditionalReturns)
             {
@@ -272,7 +272,7 @@ public class TypeScriptReturnAnalyzer(ILogger<TypeScriptReturnAnalyzer> logger)
 
             case TypeScriptReturnStrategy.MultipleVariables:
                 suggestions.Add("Return object with multiple properties:");
-                foreach (var variable in result.VariablesToReturn)
+                foreach (TypeScriptVariableReturn variable in result.VariablesToReturn)
                 {
                     suggestions.Add($"  {variable.VariableName}: {variable.InferredType}");
                 }
@@ -362,7 +362,7 @@ public class TypeScriptReturnAnalyzer(ILogger<TypeScriptReturnAnalyzer> logger)
         
         // Look for type declarations or assignments
         var typePattern = new Regex($@"{variableName}\s*:\s*(\w+)", RegexOptions.IgnoreCase);
-        var match = typePattern.Match(context);
+        Match match = typePattern.Match(context);
         
         if (match.Success)
         {
@@ -371,7 +371,7 @@ public class TypeScriptReturnAnalyzer(ILogger<TypeScriptReturnAnalyzer> logger)
 
         // Look for assignments to infer type
         var assignmentPattern = new Regex($@"{variableName}\s*=\s*(.+?)[;\n]", RegexOptions.IgnoreCase);
-        var assignmentMatch = assignmentPattern.Match(context);
+        Match assignmentMatch = assignmentPattern.Match(context);
         
         if (assignmentMatch.Success)
         {
@@ -393,11 +393,11 @@ public class TypeScriptReturnAnalyzer(ILogger<TypeScriptReturnAnalyzer> logger)
     private static async Task AnalyzeDestructuringPatternsAsync(string extractedCode, TypeScriptReturnAnalysisResult result, CancellationToken cancellationToken)
     {
         // Analyze object destructuring
-        var objectMatches = ObjectDestructuringPattern.Matches(extractedCode);
+        MatchCollection objectMatches = ObjectDestructuringPattern.Matches(extractedCode);
         foreach (Match match in objectMatches)
         {
-            var variables = match.Groups[1].Value.Split(',').Select(v => v.Trim());
-            foreach (var variable in variables)
+            IEnumerable<string> variables = match.Groups[1].Value.Split(',').Select(v => v.Trim());
+            foreach (string variable in variables)
             {
                 result.VariablesToReturn.Add(new TypeScriptVariableReturn
                 {
@@ -409,11 +409,11 @@ public class TypeScriptReturnAnalyzer(ILogger<TypeScriptReturnAnalyzer> logger)
         }
 
         // Analyze array destructuring  
-        var arrayMatches = ArrayDestructuringPattern.Matches(extractedCode);
+        MatchCollection arrayMatches = ArrayDestructuringPattern.Matches(extractedCode);
         foreach (Match match in arrayMatches)
         {
-            var variables = match.Groups[1].Value.Split(',').Select(v => v.Trim());
-            foreach (var variable in variables)
+            IEnumerable<string> variables = match.Groups[1].Value.Split(',').Select(v => v.Trim());
+            foreach (string variable in variables)
             {
                 result.VariablesToReturn.Add(new TypeScriptVariableReturn
                 {
@@ -427,7 +427,7 @@ public class TypeScriptReturnAnalyzer(ILogger<TypeScriptReturnAnalyzer> logger)
 
     private static async Task AnalyzeAsyncOperationsAsync(string extractedCode, TypeScriptReturnAnalysisResult result, CancellationToken cancellationToken)
     {
-        var asyncMatches = AsyncCallPattern.Matches(extractedCode);
+        MatchCollection asyncMatches = AsyncCallPattern.Matches(extractedCode);
         
         if (asyncMatches.Count > 0)
         {
@@ -459,7 +459,7 @@ public class TypeScriptReturnAnalyzer(ILogger<TypeScriptReturnAnalyzer> logger)
             return returnPaths[0].InferredType;
 
         // Multiple return paths - check if they're compatible
-        var types = returnPaths.Select(p => p.InferredType).Distinct().ToList();
+        List<string> types = returnPaths.Select(p => p.InferredType).Distinct().ToList();
         
         if (types.Count == 1)
         {
@@ -480,14 +480,14 @@ public class TypeScriptReturnAnalyzer(ILogger<TypeScriptReturnAnalyzer> logger)
     {
         await Task.CompletedTask;
         
-        var properties = variables.Select(v => $"{v.VariableName}: {v.InferredType}");
+        IEnumerable<string> properties = variables.Select(v => $"{v.VariableName}: {v.InferredType}");
         return $"{{ {string.Join(", ", properties)} }}";
     }
 
     private static string ExtractConstructorType(string expression)
     {
         var newPattern = new Regex(@"new\s+(\w+)", RegexOptions.IgnoreCase);
-        var match = newPattern.Match(expression);
+        Match match = newPattern.Match(expression);
         return match.Success ? match.Groups[1].Value : "object";
     }
 

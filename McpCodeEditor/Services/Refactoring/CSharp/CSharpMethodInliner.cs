@@ -55,7 +55,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
             var result = new RefactoringResult();
 
             // Validate options first
-            var optionsValidation = options.Validate();
+            MethodInliningValidationResult optionsValidation = options.Validate();
             if (!optionsValidation.IsValid)
             {
                 return new RefactoringResult
@@ -66,7 +66,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
             }
 
             // Resolve relative paths to absolute paths
-            var resolvedFilePath = _pathValidationService.ValidateAndResolvePath(filePath);
+            string resolvedFilePath = _pathValidationService.ValidateAndResolvePath(filePath);
 
             if (!File.Exists(resolvedFilePath))
             {
@@ -77,8 +77,8 @@ public class CSharpMethodInliner : ICSharpMethodInliner
                 };
             }
 
-            var sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
-            var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
+            string sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
 
             if (await syntaxTree.GetRootAsync(cancellationToken) is not CompilationUnitSyntax root)
             {
@@ -90,7 +90,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
             }
 
             // Find the method to inline
-            var methodToInline = root.DescendantNodes()
+            MethodDeclarationSyntax? methodToInline = root.DescendantNodes()
                 .OfType<MethodDeclarationSyntax>()
                 .FirstOrDefault(m => m.Identifier.ValueText == options.MethodName);
 
@@ -104,7 +104,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
             }
 
             // Perform validation for inlining
-            var validationResult = await ValidateMethodForInliningAsync(methodToInline, options);
+            MethodInliningValidationResult validationResult = await ValidateMethodForInliningAsync(methodToInline, options);
             if (!validationResult.IsValid)
             {
                 return new RefactoringResult
@@ -125,7 +125,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
             }
 
             // Get the method body statements (excluding braces)
-            var methodBody = string.Join("\n",
+            string methodBody = string.Join("\n",
                 methodToInline.Body.Statements.Select(s => s.ToFullString().Trim()));
 
             if (string.IsNullOrWhiteSpace(methodBody))
@@ -138,7 +138,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
             }
 
             // Find all call sites of this method
-            var invocations = root.DescendantNodes()
+            List<InvocationExpressionSyntax> invocations = root.DescendantNodes()
                 .OfType<InvocationExpressionSyntax>()
                 .Where(inv => inv.Expression is IdentifierNameSyntax identifier &&
                              identifier.Identifier.ValueText == options.MethodName)
@@ -164,10 +164,10 @@ public class CSharpMethodInliner : ICSharpMethodInliner
             }
 
             // Track changes for each replacement
-            var modifiedRoot = root;
+            CompilationUnitSyntax? modifiedRoot = root;
 
             // Replace each invocation with the method body
-            foreach (var invocation in invocations.OrderByDescending(inv => inv.SpanStart))
+            foreach (InvocationExpressionSyntax invocation in invocations.OrderByDescending(inv => inv.SpanStart))
             {
                 modifiedRoot = await ReplaceInvocationWithMethodBodyAsync(
                     modifiedRoot, invocation, methodBody, sourceCode, options, cancellationToken);
@@ -177,7 +177,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
             modifiedRoot = modifiedRoot.RemoveNode(methodToInline, SyntaxRemoveOptions.KeepNoTrivia);
 
             // Format the result
-            var modifiedContent = await FormatResultAsync(modifiedRoot, options, cancellationToken);
+            string modifiedContent = await FormatResultAsync(modifiedRoot, options, cancellationToken);
 
             // Create backup if not preview
             string? backupId = null;
@@ -251,7 +251,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
     {
         try
         {
-            var resolvedFilePath = _pathValidationService.ValidateAndResolvePath(filePath);
+            string resolvedFilePath = _pathValidationService.ValidateAndResolvePath(filePath);
 
             if (!File.Exists(resolvedFilePath))
             {
@@ -259,8 +259,8 @@ public class CSharpMethodInliner : ICSharpMethodInliner
                     [new ValidationError("FILE_NOT_FOUND", $"File not found: {filePath}")]);
             }
 
-            var sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
-            var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
+            string sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
 
             if (await syntaxTree.GetRootAsync(cancellationToken) is not CompilationUnitSyntax root)
             {
@@ -268,7 +268,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
                     [new ValidationError("PARSE_ERROR", "Failed to parse C# file")]);
             }
 
-            var method = root.DescendantNodes()
+            MethodDeclarationSyntax? method = root.DescendantNodes()
                 .OfType<MethodDeclarationSyntax>()
                 .FirstOrDefault(m => m.Identifier.ValueText == methodName);
 
@@ -303,7 +303,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
 
         try
         {
-            var resolvedFilePath = _pathValidationService.ValidateAndResolvePath(filePath);
+            string resolvedFilePath = _pathValidationService.ValidateAndResolvePath(filePath);
 
             if (!File.Exists(resolvedFilePath))
             {
@@ -311,8 +311,8 @@ public class CSharpMethodInliner : ICSharpMethodInliner
                 return info;
             }
 
-            var sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
-            var syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
+            string sourceCode = await File.ReadAllTextAsync(resolvedFilePath, cancellationToken);
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
 
             if (await syntaxTree.GetRootAsync(cancellationToken) is not CompilationUnitSyntax root)
             {
@@ -320,7 +320,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
                 return info;
             }
 
-            var method = root.DescendantNodes()
+            MethodDeclarationSyntax? method = root.DescendantNodes()
                 .OfType<MethodDeclarationSyntax>()
                 .FirstOrDefault(m => m.Identifier.ValueText == methodName);
 
@@ -339,7 +339,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
             info.MethodBodyLines = method.Body?.Statements.Count ?? 0;
 
             // Find call sites
-            var invocations = root.DescendantNodes()
+            List<InvocationExpressionSyntax> invocations = root.DescendantNodes()
                 .OfType<InvocationExpressionSyntax>()
                 .Where(inv => inv.Expression is IdentifierNameSyntax identifier &&
                              identifier.Identifier.ValueText == methodName)
@@ -351,7 +351,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
                 .ToList();
 
             // Determine if can be inlined
-            var validation = await ValidateMethodForInliningAsync(method, MethodInliningOptions.CreateDefault(methodName));
+            MethodInliningValidationResult validation = await ValidateMethodForInliningAsync(method, MethodInliningOptions.CreateDefault(methodName));
             info.CanBeInlined = validation.IsValid;
 
             // Generate recommendation
@@ -399,7 +399,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
             result.AddWarning("HIGH_STATEMENT_COUNT", "Method has many statements - inlining may result in significant code duplication");
         }
 
-        var modifiers = method.Modifiers.Select(m => m.ValueText).ToList();
+        List<string> modifiers = method.Modifiers.Select(m => m.ValueText).ToList();
         if (modifiers.Contains("virtual") || modifiers.Contains("abstract") || modifiers.Contains("override"))
         {
             result.AddWarning("POLYMORPHISM_WARNING", "Method uses polymorphism - inlining will remove virtual dispatch behavior");
@@ -424,18 +424,18 @@ public class CSharpMethodInliner : ICSharpMethodInliner
         if (statement == null) return root;
 
         // Get the indentation of the current statement
-        var indentation = GetStatementIndentation(statement, sourceCode);
+        string indentation = GetStatementIndentation(statement, sourceCode);
 
         // Format the method body with proper indentation
-        var bodyLines = methodBody.Split('\n');
-        var formattedBody = string.Join("\n",
+        string[] bodyLines = methodBody.Split('\n');
+        string formattedBody = string.Join("\n",
             bodyLines.Select(line => string.IsNullOrWhiteSpace(line) ? line : indentation + line.Trim()));
 
         // Create replacement statements from the method body
         StatementSyntax[] replacementStatements;
         try
         {
-            var parsedStatement = SyntaxFactory.ParseStatement($"{formattedBody}\n");
+            StatementSyntax parsedStatement = SyntaxFactory.ParseStatement($"{formattedBody}\n");
             replacementStatements = parsedStatement
                 .DescendantNodes()
                 .OfType<StatementSyntax>()
@@ -457,17 +457,17 @@ public class CSharpMethodInliner : ICSharpMethodInliner
         var parentBlock = statement.FirstAncestorOrSelf<BlockSyntax>();
         if (parentBlock != null)
         {
-            var statementIndex = parentBlock.Statements.IndexOf(statement);
+            int statementIndex = parentBlock.Statements.IndexOf(statement);
             if (statementIndex >= 0)
             {
                 // Remove the old statement and insert the new ones
-                var newStatements = parentBlock.Statements.RemoveAt(statementIndex);
+                SyntaxList<StatementSyntax> newStatements = parentBlock.Statements.RemoveAt(statementIndex);
                 for (var i = 0; i < replacementStatements.Length; i++)
                 {
                     newStatements = newStatements.Insert(statementIndex + i, replacementStatements[i]);
                 }
 
-                var newBlock = parentBlock.WithStatements(newStatements);
+                BlockSyntax newBlock = parentBlock.WithStatements(newStatements);
                 root = root.ReplaceNode(parentBlock, newBlock);
             }
         }
@@ -486,7 +486,7 @@ public class CSharpMethodInliner : ICSharpMethodInliner
         if (options.PreserveFormatting)
         {
             var workspace = new AdhocWorkspace();
-            var formattedRoot = Formatter.Format(root, workspace, cancellationToken: cancellationToken);
+            SyntaxNode formattedRoot = Formatter.Format(root, workspace, cancellationToken: cancellationToken);
             return formattedRoot.ToFullString();
         }
 
@@ -498,8 +498,8 @@ public class CSharpMethodInliner : ICSharpMethodInliner
     /// </summary>
     private static string GetStatementIndentation(StatementSyntax statement, string sourceCode)
     {
-        var lines = sourceCode.Split('\n');
-        var statementStart = statement.SpanStart;
+        string[] lines = sourceCode.Split('\n');
+        int statementStart = statement.SpanStart;
 
         // Find the line containing the statement
         var currentPosition = 0;

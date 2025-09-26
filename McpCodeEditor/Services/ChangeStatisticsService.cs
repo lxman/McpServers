@@ -25,9 +25,9 @@ public class ChangeStatisticsService(
         try
         {
             // Load recent changes based on time range
-            var changes = await GetRecentChangesAsync(1000, timeRange);
-            var undoableChanges = await undoRedoOperationsService.GetUndoableChangesAsync();
-            var redoableChanges = await undoRedoOperationsService.GetRedoableChangesAsync();
+            List<ChangeRecord> changes = await GetRecentChangesAsync(1000, timeRange);
+            List<ChangeRecord> undoableChanges = await undoRedoOperationsService.GetUndoableChangesAsync();
+            List<ChangeRecord> redoableChanges = await undoRedoOperationsService.GetRedoableChangesAsync();
 
             var stats = new
             {
@@ -86,8 +86,8 @@ public class ChangeStatisticsService(
     {
         try
         {
-            var timeRange = TimeSpan.FromDays(days);
-            var changes = await GetRecentChangesAsync(1000, timeRange);
+            TimeSpan timeRange = TimeSpan.FromDays(days);
+            List<ChangeRecord> changes = await GetRecentChangesAsync(1000, timeRange);
 
             return changes
                 .GroupBy(c => c.Timestamp.Date)
@@ -108,7 +108,7 @@ public class ChangeStatisticsService(
     {
         try
         {
-            var changes = await GetRecentChangesAsync(1000, timeRange);
+            List<ChangeRecord> changes = await GetRecentChangesAsync(1000, timeRange);
 
             return changes
                 .GroupBy(c => c.Operation)
@@ -127,7 +127,7 @@ public class ChangeStatisticsService(
     {
         try
         {
-            var changes = await GetRecentChangesAsync(1000, timeRange);
+            List<ChangeRecord> changes = await GetRecentChangesAsync(1000, timeRange);
 
             var fileStats = changes
                 .GroupBy(c => c.FilePath)
@@ -166,12 +166,12 @@ public class ChangeStatisticsService(
     /// </summary>
     private async Task<List<ChangeRecord>> GetRecentChangesAsync(int maxRecords, TimeSpan? timeRange)
     {
-        var allChanges = await changeRecordPersistenceService.LoadChangeRecordsAsync();
-        var query = allChanges.OrderByDescending(c => c.Timestamp);
+        List<ChangeRecord> allChanges = await changeRecordPersistenceService.LoadChangeRecordsAsync();
+        IOrderedEnumerable<ChangeRecord> query = allChanges.OrderByDescending(c => c.Timestamp);
 
         if (timeRange.HasValue)
         {
-            var cutoffTime = DateTime.UtcNow - timeRange.Value;
+            DateTime cutoffTime = DateTime.UtcNow - timeRange.Value;
             query = query.Where(c => c.Timestamp >= cutoffTime).OrderByDescending(c => c.Timestamp);
         }
 

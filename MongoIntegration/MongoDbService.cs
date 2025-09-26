@@ -29,16 +29,16 @@ public class MongoDbService
         _mongoConfig = new MongoDbConfiguration();
         
         // Create connection manager with its own logger
-        var connectionLogger = LoggerFactory.Create(builder => builder.AddConsole())
+        ILogger<ConnectionManager> connectionLogger = LoggerFactory.Create(builder => builder.AddConsole())
             .CreateLogger<ConnectionManager>();
         _connectionManager = new ConnectionManager(connectionLogger);
         
         // DEBUG: Log configuration details
-        var currentDir = Directory.GetCurrentDirectory();
-        var baseDir = AppContext.BaseDirectory;
+        string currentDir = Directory.GetCurrentDirectory();
+        string baseDir = AppContext.BaseDirectory;
         
         // Create a debug file to bypass console output restrictions
-        var debugPath = Path.Combine(baseDir, "debug-config.log");
+        string debugPath = Path.Combine(baseDir, "debug-config.log");
         var debugInfo = new List<string>
         {
             $"=== MongoDB Configuration Debug - {DateTime.Now} ===",
@@ -49,16 +49,16 @@ public class MongoDbService
         };
 
         // Check if MongoDB section exists
-        var mongoSection = _configuration.GetSection("MongoDB");
+        IConfigurationSection mongoSection = _configuration.GetSection("MongoDB");
         debugInfo.Add($"MongoDB section exists: {mongoSection.Exists()}");
         debugInfo.Add($"MongoDB section path: {mongoSection.Path}");
         debugInfo.Add($"MongoDB section key: {mongoSection.Key}");
         
         // Get all keys in the section
-        var children = mongoSection.GetChildren().ToList();
+        List<IConfigurationSection> children = mongoSection.GetChildren().ToList();
         debugInfo.Add($"MongoDB section children count: {children.Count}");
         
-        foreach (var child in children)
+        foreach (IConfigurationSection child in children)
         {
             debugInfo.Add($"  Child Key: {child.Key}, Value: {child.Value}");
         }
@@ -78,7 +78,7 @@ public class MongoDbService
         {
             for (var i = 0; i < _mongoConfig.ConnectionProfiles.Count; i++)
             {
-                var profile = _mongoConfig.ConnectionProfiles[i];
+                ConnectionProfile profile = _mongoConfig.ConnectionProfiles[i];
                 debugInfo.Add($"  Profile {i}: Name='{profile.Name}', ConnectionString='{profile.ConnectionString}', Database='{profile.DefaultDatabase}', AutoConnect={profile.AutoConnect}");
             }
         }
@@ -105,8 +105,8 @@ public class MongoDbService
             var connectTasks = new List<Task<string>>();
             
             // Try environment variables first (highest priority)
-            var envConnectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING");
-            var envDatabase = Environment.GetEnvironmentVariable("MONGODB_DATABASE");
+            string? envConnectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING");
+            string? envDatabase = Environment.GetEnvironmentVariable("MONGODB_DATABASE");
             
             if (!string.IsNullOrEmpty(envConnectionString) && !string.IsNullOrEmpty(envDatabase))
             {
@@ -117,18 +117,18 @@ public class MongoDbService
             }
             
             // Try profiles with AutoConnect enabled
-            var autoConnectProfiles = _mongoConfig.ConnectionProfiles
+            List<ConnectionProfile> autoConnectProfiles = _mongoConfig.ConnectionProfiles
                 .Where(p => p.AutoConnect && 
                            !string.IsNullOrEmpty(p.ConnectionString) && 
                            !string.IsNullOrEmpty(p.DefaultDatabase))
                 .ToList();
             
-            foreach (var profile in autoConnectProfiles)
+            foreach (ConnectionProfile profile in autoConnectProfiles)
             {
                 try
                 {
                     _logger.LogInformation("Attempting auto-connect to profile: {ProfileName}", profile.Name);
-                    var serverName = profile.Name.Replace(" ", "_").ToLowerInvariant();
+                    string serverName = profile.Name.Replace(" ", "_").ToLowerInvariant();
                     
                     // Don't overwrite the environment variable connection
                     if (serverName == DefaultServerName && hasConnected)
@@ -172,13 +172,13 @@ public class MongoDbService
             // Final fallback to first available profile
             if (!hasConnected)
             {
-                var activeProfile = _mongoConfig.ConnectionProfiles
+                ConnectionProfile? activeProfile = _mongoConfig.ConnectionProfiles
                     .FirstOrDefault(p => !string.IsNullOrEmpty(p.ConnectionString) && !string.IsNullOrEmpty(p.DefaultDatabase));
                 
                 if (activeProfile != null)
                 {
                     _logger.LogInformation("Attempting fallback auto-connect using profile: {ProfileName}", activeProfile.Name);
-                    var serverName = activeProfile.Name.Replace(" ", "_").ToLowerInvariant();
+                    string serverName = activeProfile.Name.Replace(" ", "_").ToLowerInvariant();
                     await ConnectToServerAsync(serverName, activeProfile.ConnectionString, activeProfile.DefaultDatabase);
                     _connectionManager.SetDefaultServer(serverName);
                     hasConnected = true;
@@ -210,7 +210,7 @@ public class MongoDbService
 
     public string DisconnectFromServer(string serverName)
     {
-        var result = _connectionManager.RemoveConnection(serverName);
+        bool result = _connectionManager.RemoveConnection(serverName);
         return result ? $"Disconnected from server '{serverName}'" : $"Failed to disconnect from server '{serverName}'";
     }
 
@@ -221,7 +221,7 @@ public class MongoDbService
 
     public string SetDefaultServer(string serverName)
     {
-        var serverNames = _connectionManager.GetServerNames();
+        List<string> serverNames = _connectionManager.GetServerNames();
         if (!serverNames.Contains(serverName))
         {
             return $"Server '{serverName}' is not connected. Available servers: {string.Join(", ", serverNames)}";
@@ -233,7 +233,7 @@ public class MongoDbService
 
     public string GetServerConnectionStatus(string serverName)
     {
-        var info = _connectionManager.GetConnectionInfo(serverName);
+        ConnectionInfo? info = _connectionManager.GetConnectionInfo(serverName);
         if (info == null)
         {
             return JsonSerializer.Serialize(new
@@ -249,8 +249,8 @@ public class MongoDbService
 
     public async Task<string> PingServerAsync(string serverName)
     {
-        var result = await _connectionManager.PingConnectionAsync(serverName);
-        var info = _connectionManager.GetConnectionInfo(serverName);
+        bool result = await _connectionManager.PingConnectionAsync(serverName);
+        ConnectionInfo? info = _connectionManager.GetConnectionInfo(serverName);
         
         return JsonSerializer.Serialize(new
         {
@@ -264,10 +264,10 @@ public class MongoDbService
 
     private IMongoDatabase GetDatabase(string serverName = DefaultServerName)
     {
-        var database = _connectionManager.GetDatabase(serverName);
+        IMongoDatabase? database = _connectionManager.GetDatabase(serverName);
         if (database == null)
         {
-            var availableServers = _connectionManager.GetServerNames();
+            List<string> availableServers = _connectionManager.GetServerNames();
             if (availableServers.Count == 0)
             {
                 throw new InvalidOperationException("Not connected to any MongoDB servers. Use ConnectToServer command first.");
@@ -286,7 +286,7 @@ public class MongoDbService
     {
         try
         {
-            var databases = await _connectionManager.ListDatabasesAsync(serverName);
+            List<string> databases = await _connectionManager.ListDatabasesAsync(serverName);
             
             return JsonSerializer.Serialize(new
             {
@@ -313,7 +313,7 @@ public class MongoDbService
     {
         try
         {
-            var result = await _connectionManager.SwitchDatabaseAsync(serverName, databaseName);
+            string result = await _connectionManager.SwitchDatabaseAsync(serverName, databaseName);
             
             return JsonSerializer.Serialize(new
             {
@@ -340,8 +340,8 @@ public class MongoDbService
     {
         try
         {
-            var info = _connectionManager.GetConnectionInfo(serverName);
-            var currentDb = _connectionManager.GetCurrentDatabase(serverName);
+            ConnectionInfo? info = _connectionManager.GetConnectionInfo(serverName);
+            string? currentDb = _connectionManager.GetCurrentDatabase(serverName);
             
             if (info == null)
             {
@@ -390,19 +390,19 @@ public class MongoDbService
     {
         try
         {
-            var database = _connectionManager.GetDatabase(serverName, databaseName);
+            IMongoDatabase? database = _connectionManager.GetDatabase(serverName, databaseName);
             if (database == null)
             {
                 throw new InvalidOperationException($"Cannot access database '{databaseName}' on server '{serverName}'. Server may not be connected.");
             }
 
-            var collection = database.GetCollection<BsonDocument>(collectionName);
+            IMongoCollection<BsonDocument>? collection = database.GetCollection<BsonDocument>(collectionName);
             
-            var filter = string.IsNullOrEmpty(filterJson) ? 
+            FilterDefinition<BsonDocument>? filter = string.IsNullOrEmpty(filterJson) ? 
                 FilterDefinition<BsonDocument>.Empty : 
                 BsonDocument.Parse(filterJson);
             
-            var results = await collection.Find(filter)
+            List<BsonDocument>? results = await collection.Find(filter)
                 .Skip(skip)
                 .Limit(limit)
                 .ToListAsync();
@@ -433,14 +433,14 @@ public class MongoDbService
     {
         try
         {
-            var database = _connectionManager.GetDatabase(serverName, databaseName);
+            IMongoDatabase? database = _connectionManager.GetDatabase(serverName, databaseName);
             if (database == null)
             {
                 throw new InvalidOperationException($"Cannot access database '{databaseName}' on server '{serverName}'. Server may not be connected.");
             }
 
             IAsyncCursor<string> collections = await database.ListCollectionNamesAsync();
-            var collectionList = await collections.ToListAsync();
+            List<string>? collectionList = await collections.ToListAsync();
             
             return JsonSerializer.Serialize(new { 
                 serverName,
@@ -477,7 +477,7 @@ public class MongoDbService
 
     public string GetConnectionStatus()
     {
-        var info = _connectionManager.GetConnectionInfo(DefaultServerName);
+        ConnectionInfo? info = _connectionManager.GetConnectionInfo(DefaultServerName);
         if (info == null)
             return "Not connected to MongoDB";
         
@@ -491,9 +491,9 @@ public class MongoDbService
 
     public async Task<string> ListCollectionsAsync(string serverName = DefaultServerName)
     {
-        var db = GetDatabase(serverName);
+        IMongoDatabase db = GetDatabase(serverName);
         IAsyncCursor<string>? collections = await db.ListCollectionNamesAsync();
-        var collectionList = await collections.ToListAsync();
+        List<string>? collectionList = await collections.ToListAsync();
         
         return JsonSerializer.Serialize(new { 
             serverName,
@@ -503,14 +503,14 @@ public class MongoDbService
 
     public async Task<string> QueryAsync(string serverName, string collectionName, string filterJson, int limit = 100, int skip = 0)
     {
-        var db = GetDatabase(serverName);
-        var collection = db.GetCollection<BsonDocument>(collectionName);
+        IMongoDatabase db = GetDatabase(serverName);
+        IMongoCollection<BsonDocument>? collection = db.GetCollection<BsonDocument>(collectionName);
         
-        var filter = string.IsNullOrEmpty(filterJson) ? 
+        FilterDefinition<BsonDocument>? filter = string.IsNullOrEmpty(filterJson) ? 
             FilterDefinition<BsonDocument>.Empty : 
             BsonDocument.Parse(filterJson);
         
-        var results = await collection.Find(filter)
+        List<BsonDocument>? results = await collection.Find(filter)
             .Skip(skip)
             .Limit(limit)
             .ToListAsync();
@@ -532,10 +532,10 @@ public class MongoDbService
 
     public async Task<string> InsertOneAsync(string serverName, string collectionName, string documentJson)
     {
-        var db = GetDatabase(serverName);
-        var collection = db.GetCollection<BsonDocument>(collectionName);
+        IMongoDatabase db = GetDatabase(serverName);
+        IMongoCollection<BsonDocument>? collection = db.GetCollection<BsonDocument>(collectionName);
         
-        var document = BsonDocument.Parse(documentJson);
+        BsonDocument? document = BsonDocument.Parse(documentJson);
         await collection.InsertOneAsync(document);
         
         return JsonSerializer.Serialize(new 
@@ -555,11 +555,11 @@ public class MongoDbService
 
     public async Task<string> InsertManyAsync(string serverName, string collectionName, string documentsJson)
     {
-        var db = GetDatabase(serverName);
-        var collection = db.GetCollection<BsonDocument>(collectionName);
+        IMongoDatabase db = GetDatabase(serverName);
+        IMongoCollection<BsonDocument>? collection = db.GetCollection<BsonDocument>(collectionName);
         
         var documentsArray = BsonSerializer.Deserialize<BsonArray>(documentsJson);
-        var documents = documentsArray.Select(doc => doc.AsBsonDocument).ToList();
+        List<BsonDocument> documents = documentsArray.Select(doc => doc.AsBsonDocument).ToList();
         
         await collection.InsertManyAsync(documents);
         
@@ -579,13 +579,13 @@ public class MongoDbService
 
     public async Task<string> UpdateOneAsync(string serverName, string collectionName, string filterJson, string updateJson)
     {
-        var db = GetDatabase(serverName);
-        var collection = db.GetCollection<BsonDocument>(collectionName);
+        IMongoDatabase db = GetDatabase(serverName);
+        IMongoCollection<BsonDocument>? collection = db.GetCollection<BsonDocument>(collectionName);
         
-        var filter = BsonDocument.Parse(filterJson);
-        var update = BsonDocument.Parse(updateJson);
+        BsonDocument? filter = BsonDocument.Parse(filterJson);
+        BsonDocument? update = BsonDocument.Parse(updateJson);
         
-        var result = await collection.UpdateOneAsync(filter, update);
+        UpdateResult? result = await collection.UpdateOneAsync(filter, update);
         
         return JsonSerializer.Serialize(new 
         { 
@@ -605,13 +605,13 @@ public class MongoDbService
 
     public async Task<string> UpdateManyAsync(string serverName, string collectionName, string filterJson, string updateJson)
     {
-        var db = GetDatabase(serverName);
-        var collection = db.GetCollection<BsonDocument>(collectionName);
+        IMongoDatabase db = GetDatabase(serverName);
+        IMongoCollection<BsonDocument>? collection = db.GetCollection<BsonDocument>(collectionName);
         
-        var filter = BsonDocument.Parse(filterJson);
-        var update = BsonDocument.Parse(updateJson);
+        BsonDocument? filter = BsonDocument.Parse(filterJson);
+        BsonDocument? update = BsonDocument.Parse(updateJson);
         
-        var result = await collection.UpdateManyAsync(filter, update);
+        UpdateResult? result = await collection.UpdateManyAsync(filter, update);
         
         return JsonSerializer.Serialize(new 
         { 
@@ -630,11 +630,11 @@ public class MongoDbService
 
     public async Task<string> DeleteOneAsync(string serverName, string collectionName, string filterJson)
     {
-        var db = GetDatabase(serverName);
-        var collection = db.GetCollection<BsonDocument>(collectionName);
+        IMongoDatabase db = GetDatabase(serverName);
+        IMongoCollection<BsonDocument>? collection = db.GetCollection<BsonDocument>(collectionName);
         
-        var filter = BsonDocument.Parse(filterJson);
-        var result = await collection.DeleteOneAsync(filter);
+        BsonDocument? filter = BsonDocument.Parse(filterJson);
+        DeleteResult? result = await collection.DeleteOneAsync(filter);
         
         return JsonSerializer.Serialize(new 
         { 
@@ -652,11 +652,11 @@ public class MongoDbService
 
     public async Task<string> DeleteManyAsync(string serverName, string collectionName, string filterJson)
     {
-        var db = GetDatabase(serverName);
-        var collection = db.GetCollection<BsonDocument>(collectionName);
+        IMongoDatabase db = GetDatabase(serverName);
+        IMongoCollection<BsonDocument>? collection = db.GetCollection<BsonDocument>(collectionName);
         
-        var filter = BsonDocument.Parse(filterJson);
-        var result = await collection.DeleteManyAsync(filter);
+        BsonDocument? filter = BsonDocument.Parse(filterJson);
+        DeleteResult? result = await collection.DeleteManyAsync(filter);
         
         return JsonSerializer.Serialize(new 
         { 
@@ -674,13 +674,13 @@ public class MongoDbService
 
     public async Task<string> AggregateAsync(string serverName, string collectionName, string pipelineJson)
     {
-        var db = GetDatabase(serverName);
-        var collection = db.GetCollection<BsonDocument>(collectionName);
+        IMongoDatabase db = GetDatabase(serverName);
+        IMongoCollection<BsonDocument>? collection = db.GetCollection<BsonDocument>(collectionName);
         
         var pipelineArray = BsonSerializer.Deserialize<BsonArray>(pipelineJson);
-        var pipeline = pipelineArray.Select(stage => stage.AsBsonDocument).ToArray();
+        BsonDocument[] pipeline = pipelineArray.Select(stage => stage.AsBsonDocument).ToArray();
         
-        var results = await collection.Aggregate<BsonDocument>(pipeline).ToListAsync();
+        List<BsonDocument>? results = await collection.Aggregate<BsonDocument>(pipeline).ToListAsync();
         
         return JsonSerializer.Serialize(new 
         { 
@@ -699,11 +699,11 @@ public class MongoDbService
 
     public async Task<string> CountDocumentsAsync(string serverName, string collectionName, string filterJson = "{}")
     {
-        var db = GetDatabase(serverName);
-        var collection = db.GetCollection<BsonDocument>(collectionName);
+        IMongoDatabase db = GetDatabase(serverName);
+        IMongoCollection<BsonDocument>? collection = db.GetCollection<BsonDocument>(collectionName);
         
-        var filter = BsonDocument.Parse(filterJson);
-        var count = await collection.CountDocumentsAsync(filter);
+        BsonDocument? filter = BsonDocument.Parse(filterJson);
+        long count = await collection.CountDocumentsAsync(filter);
         
         return JsonSerializer.Serialize(new 
         { 
@@ -721,16 +721,16 @@ public class MongoDbService
 
     public async Task<string> CreateIndexAsync(string serverName, string collectionName, string indexJson, string? indexName = null)
     {
-        var db = GetDatabase(serverName);
-        var collection = db.GetCollection<BsonDocument>(collectionName);
+        IMongoDatabase db = GetDatabase(serverName);
+        IMongoCollection<BsonDocument>? collection = db.GetCollection<BsonDocument>(collectionName);
         
-        var indexKeys = BsonDocument.Parse(indexJson);
+        BsonDocument? indexKeys = BsonDocument.Parse(indexJson);
         var indexModel = new CreateIndexModel<BsonDocument>(indexKeys, new CreateIndexOptions 
         { 
             Name = indexName 
         });
         
-        var result = await collection.Indexes.CreateOneAsync(indexModel);
+        string? result = await collection.Indexes.CreateOneAsync(indexModel);
         
         return JsonSerializer.Serialize(new 
         { 
@@ -748,7 +748,7 @@ public class MongoDbService
 
     public async Task<string> DropCollectionAsync(string serverName, string collectionName)
     {
-        var db = GetDatabase(serverName);
+        IMongoDatabase db = GetDatabase(serverName);
         await db.DropCollectionAsync(collectionName);
         
         return JsonSerializer.Serialize(new 
@@ -767,8 +767,8 @@ public class MongoDbService
 
     public async Task<string> ExecuteCommandAsync(string serverName, string command)
     {
-        var db = GetDatabase(serverName);
-        var commandDoc = BsonDocument.Parse(command);
+        IMongoDatabase db = GetDatabase(serverName);
+        BsonDocument? commandDoc = BsonDocument.Parse(command);
         var result = await db.RunCommandAsync<BsonDocument>(commandDoc);
         
         return JsonSerializer.Serialize(new
@@ -790,7 +790,7 @@ public class MongoDbService
     public string ListConnectionProfiles()
     {
         // DEBUG: Add detailed debugging
-        var debugPath = Path.Combine(AppContext.BaseDirectory, "debug-profiles.log");
+        string debugPath = Path.Combine(AppContext.BaseDirectory, "debug-profiles.log");
         var debugInfo = new List<string>
         {
             $"=== ListConnectionProfiles Debug - {DateTime.Now} ===",
@@ -805,12 +805,12 @@ public class MongoDbService
             debugInfo.Add("Raw profiles from _mongoConfig:");
             for (var i = 0; i < _mongoConfig.ConnectionProfiles.Count; i++)
             {
-                var p = _mongoConfig.ConnectionProfiles[i];
+                ConnectionProfile? p = _mongoConfig.ConnectionProfiles[i];
                 debugInfo.Add($"  Profile {i}: Name='{p?.Name}', ConnectionString='{p?.ConnectionString}', DefaultDatabase='{p?.DefaultDatabase}', Description='{p?.Description}'");
             }
         }
 
-        var profiles = _mongoConfig?.ConnectionProfiles?.Select(p => new
+        IEnumerable<object> profiles = _mongoConfig?.ConnectionProfiles?.Select(p => new
         {
             p.Name,
             p.Description,
@@ -819,14 +819,14 @@ public class MongoDbService
             p.AutoConnect
         }) ?? Enumerable.Empty<object>();
         
-        var profilesList = profiles.ToList();
+        List<object> profilesList = profiles.ToList();
         debugInfo.Add($"");
         debugInfo.Add($"Processed profiles count: {profilesList.Count}");
         
         // Include current connections from connection manager
         var currentConnections = _connectionManager.GetServerNames().Select(name =>
         {
-            var info = _connectionManager.GetConnectionInfo(name);
+            ConnectionInfo? info = _connectionManager.GetConnectionInfo(name);
             return new
             {
                 ServerName = name,
@@ -837,7 +837,7 @@ public class MongoDbService
             };
         }).ToList();
         
-        var result = JsonSerializer.Serialize(new 
+        string result = JsonSerializer.Serialize(new 
         { 
             profiles = profilesList,
             currentConnections = currentConnections,
@@ -861,7 +861,7 @@ public class MongoDbService
 
     public async Task<string> ConnectWithProfileAsync(string profileName)
     {
-        var profile = _mongoConfig.ConnectionProfiles
+        ConnectionProfile? profile = _mongoConfig.ConnectionProfiles
             .FirstOrDefault(p => p.Name.Equals(profileName, StringComparison.OrdinalIgnoreCase));
         
         if (profile == null)
@@ -871,14 +871,14 @@ public class MongoDbService
             return $"Profile '{profileName}' is incomplete (missing connection string or database)";
         
         // Connect using the profile name as the server name
-        var serverName = profile.Name.Replace(" ", "_").ToLowerInvariant();
+        string serverName = profile.Name.Replace(" ", "_").ToLowerInvariant();
         return await ConnectToServerAsync(serverName, profile.ConnectionString, profile.DefaultDatabase);
     }
 
     public string GetAutoConnectStatus()
     {
-        var envConnectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING");
-        var envDatabase = Environment.GetEnvironmentVariable("MONGODB_DATABASE");
+        string? envConnectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING");
+        string? envDatabase = Environment.GetEnvironmentVariable("MONGODB_DATABASE");
         
         return JsonSerializer.Serialize(new 
         {

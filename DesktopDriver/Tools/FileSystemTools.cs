@@ -11,7 +11,7 @@ public class FileSystemTools(SecurityManager securityManager, AuditLogger auditL
     [McpServerTool]
     [Description("Read the contents of a file with optional offset and length parameters")]
     public async Task<string> ReadFile(
-        [Description("Path to the file to read")] string path,
+        [Description("Path to the file to read - must be canonical")] string path,
         [Description("Start line offset (0-based, negative for tail)")] int offset = 0,
         [Description("Maximum number of lines to read")] int length = 1000)
     {
@@ -48,7 +48,7 @@ public class FileSystemTools(SecurityManager securityManager, AuditLogger auditL
     [McpServerTool]
     [Description("Write content to a file (overwrite or append)")]
     public async Task<string> WriteFile(
-        [Description("Path to the file to write")] string path,
+        [Description("Path to the file to write - must be canonical")] string path,
         [Description("Content to write")] string content,
         [Description("Write mode: overwrite or append")] string mode = "overwrite")
     {
@@ -86,7 +86,7 @@ public class FileSystemTools(SecurityManager securityManager, AuditLogger auditL
     [McpServerTool]
     [Description("List files and directories in a path")]
     public string ListDirectory(
-        [Description("Directory path to list")] string path)
+        [Description("Directory path to list - must be canonical")] string path)
     {
         try
         {
@@ -136,7 +136,7 @@ public class FileSystemTools(SecurityManager securityManager, AuditLogger auditL
     [McpServerTool]
     [Description("Create a directory")]
     public string CreateDirectory(
-        [Description("Directory path to create")] string path)
+        [Description("Directory path to create - must be canonical")] string path)
     {
         try
         {
@@ -162,8 +162,8 @@ public class FileSystemTools(SecurityManager securityManager, AuditLogger auditL
     [McpServerTool]
     [Description("Move or rename a file or directory")]
     public string MoveFile(
-        [Description("Source path")] string sourcePath,
-        [Description("Destination path")] string destinationPath)
+        [Description("Source path - must be canonical")] string sourcePath,
+        [Description("Destination path - must be canonical")] string destinationPath)
     {
         try
         {
@@ -210,7 +210,7 @@ public class FileSystemTools(SecurityManager securityManager, AuditLogger auditL
     [McpServerTool]
     [Description("Delete a file or directory")]
     public string DeletePath(
-        [Description("Path to delete")] string path,
+        [Description("Path to delete - must be canonical")] string path,
         [Description("Force delete (for directories with contents)")] bool force = false)
     {
         try
@@ -253,7 +253,7 @@ public class FileSystemTools(SecurityManager securityManager, AuditLogger auditL
     [McpServerTool]
     [Description("Search for files by name pattern")]
     public string SearchFiles(
-        [Description("Directory to search in")] string searchPath,
+        [Description("Directory to search in - must be canonical")] string searchPath,
         [Description("File name pattern (supports wildcards)")] string pattern,
         [Description("Include subdirectories")] bool recursive = true)
     {
@@ -300,7 +300,7 @@ public class FileSystemTools(SecurityManager securityManager, AuditLogger auditL
     [McpServerTool]
     [Description("Get file or directory information")]
     public string GetFileInfo(
-        [Description("Path to examine")] string path)
+        [Description("Path to examine - must be canonical")] string path)
     {
         try
         {

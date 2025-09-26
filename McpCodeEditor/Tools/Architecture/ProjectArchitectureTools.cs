@@ -3,6 +3,7 @@ using McpCodeEditor.Services.Analysis;  // RS-004: Added for RelationshipScoring
 using ProjectInfo = McpCodeEditor.Services.ProjectInfo;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
+using McpCodeEditor.Models;
 using McpCodeEditor.Tools.Common;
 
 namespace McpCodeEditor.Tools.Architecture;
@@ -33,7 +34,7 @@ public class ProjectArchitectureTools(
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
             // Use the current workspace if no path provided
-            var searchPath = string.IsNullOrEmpty(rootPath) ? config.DefaultWorkspace : rootPath;
+            string searchPath = string.IsNullOrEmpty(rootPath) ? config.DefaultWorkspace : rootPath;
 
             if (!Directory.Exists(searchPath))
             {
@@ -41,19 +42,19 @@ public class ProjectArchitectureTools(
             }
 
             // Detect architecture patterns
-            var patterns = await architectureDetection.DetectArchitecturePatternsAsync(searchPath);
+            List<ArchitecturePattern> patterns = await architectureDetection.DetectArchitecturePatternsAsync(searchPath);
 
             // Get project information for context
             var projects = new List<ProjectInfo>();
             try
             {
-                var immediateDirectories = Directory.GetDirectories(searchPath, "*", SearchOption.TopDirectoryOnly)
+                IEnumerable<string> immediateDirectories = Directory.GetDirectories(searchPath, "*", SearchOption.TopDirectoryOnly)
                     .Where(dir => !IsExcludedDirectory(dir))
                     .Take(10); // Limit for performance
 
-                foreach (var directory in immediateDirectories)
+                foreach (string directory in immediateDirectories)
                 {
-                    var projectInfo = await projectDetection.AnalyzeDirectoryAsync(directory);
+                    ProjectInfo projectInfo = await projectDetection.AnalyzeDirectoryAsync(directory);
                     if (projectInfo.Type != ProjectType.Unknown)
                     {
                         projects.Add(projectInfo);
@@ -61,7 +62,7 @@ public class ProjectArchitectureTools(
                 }
 
                 // Also check the root directory
-                var rootProject = await projectDetection.AnalyzeDirectoryAsync(searchPath);
+                ProjectInfo rootProject = await projectDetection.AnalyzeDirectoryAsync(searchPath);
                 if (rootProject.Type != ProjectType.Unknown)
                 {
                     projects.Add(rootProject);
@@ -114,17 +115,17 @@ public class ProjectArchitectureTools(
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
-            var searchPath = string.IsNullOrEmpty(directoryPath) ? config.DefaultWorkspace : directoryPath;
+            string searchPath = string.IsNullOrEmpty(directoryPath) ? config.DefaultWorkspace : directoryPath;
 
             if (!Directory.Exists(searchPath))
             {
                 throw new DirectoryNotFoundException($"Directory does not exist: {searchPath}");
             }
 
-            var patterns = await architectureDetection.DetectArchitecturePatternsAsync(searchPath);
+            List<ArchitecturePattern> patterns = await architectureDetection.DetectArchitecturePatternsAsync(searchPath);
 
             // Filter by confidence threshold
-            var filteredPatterns = patterns.Where(p => p.ConfidenceScore >= minConfidence).ToList();
+            List<ArchitecturePattern> filteredPatterns = patterns.Where(p => p.ConfidenceScore >= minConfidence).ToList();
 
             return CreateSuccessResponse(new
             {
@@ -174,10 +175,10 @@ public class ProjectArchitectureTools(
     {
         return await ExecuteWithErrorHandlingAsync(async () =>
         {
-            var searchBase = string.IsNullOrEmpty(baseDirectory) ? config.DefaultWorkspace : baseDirectory;
+            string searchBase = string.IsNullOrEmpty(baseDirectory) ? config.DefaultWorkspace : baseDirectory;
 
             // Start from parent directory to find related workspaces
-            var parentDir = Directory.GetParent(searchBase)?.FullName ?? searchBase;
+            string parentDir = Directory.GetParent(searchBase)?.FullName ?? searchBase;
 
             if (!Directory.Exists(parentDir))
             {
@@ -185,25 +186,25 @@ public class ProjectArchitectureTools(
             }
 
             var suggestions = new List<object>();
-            var currentPatterns = await architectureDetection.DetectArchitecturePatternsAsync(searchBase);
+            List<ArchitecturePattern> currentPatterns = await architectureDetection.DetectArchitecturePatternsAsync(searchBase);
 
             // Look for related projects in sibling directories
-            var siblingDirectories = Directory.GetDirectories(parentDir, "*", SearchOption.TopDirectoryOnly)
+            IEnumerable<string> siblingDirectories = Directory.GetDirectories(parentDir, "*", SearchOption.TopDirectoryOnly)
                 .Where(dir => !IsExcludedDirectory(dir) && !dir.Equals(searchBase, StringComparison.OrdinalIgnoreCase))
                 .Take(15); // Limit for performance
 
-            var directories = siblingDirectories.ToList();
-            foreach (var siblingDir in directories)
+            List<string> directories = siblingDirectories.ToList();
+            foreach (string siblingDir in directories)
             {
                 try
                 {
-                    var projectInfo = await projectDetection.AnalyzeDirectoryAsync(siblingDir);
+                    ProjectInfo projectInfo = await projectDetection.AnalyzeDirectoryAsync(siblingDir);
                     if (projectInfo.Type != ProjectType.Unknown)
                     {
-                        var siblingPatterns = await architectureDetection.DetectArchitecturePatternsAsync(siblingDir);
+                        List<ArchitecturePattern> siblingPatterns = await architectureDetection.DetectArchitecturePatternsAsync(siblingDir);
                         
                         // RS-004: Using extracted service instead of helper method
-                        var relationshipScore = relationshipScoring.CalculateRelationshipScore(currentPatterns, siblingPatterns, projectInfo);
+                        double relationshipScore = relationshipScoring.CalculateRelationshipScore(currentPatterns, siblingPatterns, projectInfo);
 
                         if (relationshipScore > 0.3) // Minimum relationship threshold
                         {
@@ -230,7 +231,7 @@ public class ProjectArchitectureTools(
             }
 
             // Sort by relationship score
-            var sortedSuggestions = suggestions
+            object[] sortedSuggestions = suggestions
                 .OrderByDescending(s => (double)((dynamic)s).relationship_score)
                 .Take(maxSuggestions)
                 .ToArray();
@@ -265,7 +266,7 @@ public class ProjectArchitectureTools(
     // RS-004: Kept minimal essential helper methods, complex logic moved to services
     private static bool IsExcludedDirectory(string directory)
     {
-        var dirName = Path.GetFileName(directory).ToLowerInvariant();
+        string dirName = Path.GetFileName(directory).ToLowerInvariant();
         var excludedDirs = new[] { ".git", ".vs", ".vscode", "bin", "obj", "node_modules", "packages", "target", "dist", "build", ".angular" };
         return excludedDirs.Contains(dirName);
     }

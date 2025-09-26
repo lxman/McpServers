@@ -32,30 +32,30 @@ public class TypeScriptCodeModificationService(ILogger<TypeScriptCodeModificatio
             logger.LogDebug("Applying scope-aware variable introduction for {VariableName} at line {TargetLine}", variableName, targetLine);
 
             var modifiedLines = new List<string>(lines);
-            var strategy = declarationResult.PlacementStrategy;
+            TypeScriptVariablePlacementStrategy strategy = declarationResult.PlacementStrategy;
 
             // Find the appropriate insertion point based on scope
-            var insertionLine = FindScopeAwareInsertionPoint(lines, targetLine, scopeAnalysis);
+            int insertionLine = FindScopeAwareInsertionPoint(lines, targetLine, scopeAnalysis);
             
             logger.LogDebug("TS-013 REF-002: Inserting at line {InsertionLine} for {PlacementLocation}",
                 insertionLine, strategy.PlacementLocation);
 
             // Insert variable declaration with appropriate indentation
-            var indentation = declarationResult.RequiresIndentation ?
+            string indentation = declarationResult.RequiresIndentation ?
                 GetScopeAwareIndentation(lines, insertionLine, scopeAnalysis) : "";
-            var fullDeclaration = indentation + declarationResult.Declaration;
+            string fullDeclaration = indentation + declarationResult.Declaration;
 
             modifiedLines.Insert(insertionLine, fullDeclaration);
 
             // Replace the original expression with variable reference
-            var targetLineContent = lines[targetLine - 1];
-            var variableReference = strategy.RequiresThisPrefix ? $"this.{variableName}" : variableName;
+            string targetLineContent = lines[targetLine - 1];
+            string variableReference = strategy.RequiresThisPrefix ? $"this.{variableName}" : variableName;
             
-            var updatedLine = targetLineContent[..(startColumn - 1)] + variableReference + 
-                              targetLineContent[endColumn..];
+            string updatedLine = targetLineContent[..(startColumn - 1)] + variableReference + 
+                                 targetLineContent[endColumn..];
             
             // Adjust line index due to insertion
-            var updatedLineIndex = targetLine;
+            int updatedLineIndex = targetLine;
             if (insertionLine <= targetLine - 1)
             {
                 updatedLineIndex++;
@@ -95,19 +95,19 @@ public class TypeScriptCodeModificationService(ILogger<TypeScriptCodeModificatio
         {
             logger.LogDebug("Finding scope-aware insertion point for target line {TargetLine}", targetLine);
 
-            var strategy = scopeAnalysis.VariablePlacementStrategy;
+            TypeScriptVariablePlacementStrategy strategy = scopeAnalysis.VariablePlacementStrategy;
 
             switch (strategy.PlacementLocation)
             {
                 case VariablePlacementLocation.ClassMember:
                     // Insert as class member - find a good spot in the class
-                    var classScope = scopeAnalysis.ScopeHierarchy.FirstOrDefault(s => s.ScopeType == TypeScriptScopeType.Class);
+                    TypeScriptScopeInfo? classScope = scopeAnalysis.ScopeHierarchy.FirstOrDefault(s => s.ScopeType == TypeScriptScopeType.Class);
                     if (classScope != null)
                     {
                         // Find the end of existing properties/fields
-                        for (var i = classScope.StartLine; i < Math.Min(targetLine, lines.Length); i++)
+                        for (int i = classScope.StartLine; i < Math.Min(targetLine, lines.Length); i++)
                         {
-                            var line = lines[i - 1].Trim();
+                            string line = lines[i - 1].Trim();
                             // Insert before the first method or at the end of properties
                             if (line.Contains("(") && (line.Contains("constructor") || 
                                 Regex.IsMatch(line, @"\w+\s*\([^)]*\)\s*(\:\s*\w+)?\s*\{")))
@@ -125,7 +125,7 @@ public class TypeScriptCodeModificationService(ILogger<TypeScriptCodeModificatio
                 case VariablePlacementLocation.MethodLocal:
                 case VariablePlacementLocation.FunctionLocal:
                     // Insert at the beginning of the method/function
-                    var methodScope = scopeAnalysis.ScopeHierarchy.LastOrDefault(s => 
+                    TypeScriptScopeInfo? methodScope = scopeAnalysis.ScopeHierarchy.LastOrDefault(s => 
                         s.ScopeType is TypeScriptScopeType.Method or TypeScriptScopeType.Constructor or TypeScriptScopeType.Function);
                     if (methodScope != null)
                     {
@@ -136,7 +136,7 @@ public class TypeScriptCodeModificationService(ILogger<TypeScriptCodeModificatio
 
                 case VariablePlacementLocation.BlockLocal:
                     // Insert at the beginning of the current block
-                    var blockScope = scopeAnalysis.ScopeHierarchy.LastOrDefault(s => s.ScopeType == TypeScriptScopeType.Block);
+                    TypeScriptScopeInfo? blockScope = scopeAnalysis.ScopeHierarchy.LastOrDefault(s => s.ScopeType == TypeScriptScopeType.Block);
                     if (blockScope != null)
                     {
                         logger.LogDebug("Found block insertion point at line {InsertionLine}", blockScope.StartLine);
@@ -148,7 +148,7 @@ public class TypeScriptCodeModificationService(ILogger<TypeScriptCodeModificatio
                     // Insert at the top of the file (after imports)
                     for (var i = 0; i < Math.Min(targetLine, lines.Length); i++)
                     {
-                        var line = lines[i].Trim();
+                        string line = lines[i].Trim();
                         if (!string.IsNullOrWhiteSpace(line) && 
                             !line.StartsWith("import") && 
                             !line.StartsWith("//") && 
@@ -162,7 +162,7 @@ public class TypeScriptCodeModificationService(ILogger<TypeScriptCodeModificatio
             }
 
             // Fallback: insert before the current line
-            var fallbackLine = Math.Max(0, targetLine - 1);
+            int fallbackLine = Math.Max(0, targetLine - 1);
             logger.LogDebug("Using fallback insertion point at line {InsertionLine}", fallbackLine);
             return fallbackLine;
         }
@@ -183,16 +183,16 @@ public class TypeScriptCodeModificationService(ILogger<TypeScriptCodeModificatio
         {
             logger.LogDebug("Determining scope-aware indentation for insertion line {InsertionLine}", insertionLine);
 
-            var strategy = scopeAnalysis.VariablePlacementStrategy;
+            TypeScriptVariablePlacementStrategy strategy = scopeAnalysis.VariablePlacementStrategy;
 
             // For class members, use class-level indentation
             if (strategy.PlacementLocation == VariablePlacementLocation.ClassMember)
             {
-                var classScope = scopeAnalysis.ScopeHierarchy.FirstOrDefault(s => s.ScopeType == TypeScriptScopeType.Class);
+                TypeScriptScopeInfo? classScope = scopeAnalysis.ScopeHierarchy.FirstOrDefault(s => s.ScopeType == TypeScriptScopeType.Class);
                 if (classScope != null && classScope.StartLine <= lines.Length)
                 {
-                    var classLine = lines[classScope.StartLine - 1];
-                    var classIndentation = GetIndentation(classLine) + "    "; // Add one level of indentation
+                    string classLine = lines[classScope.StartLine - 1];
+                    string classIndentation = GetIndentation(classLine) + "    "; // Add one level of indentation
                     logger.LogDebug("Using class member indentation: '{Indentation}'", classIndentation);
                     return classIndentation;
                 }
@@ -202,12 +202,12 @@ public class TypeScriptCodeModificationService(ILogger<TypeScriptCodeModificatio
             if (insertionLine > 0 && insertionLine <= lines.Length)
             {
                 // Look for a nearby non-empty line to match indentation
-                for (var i = Math.Max(0, insertionLine - 1); i < Math.Min(insertionLine + 3, lines.Length); i++)
+                for (int i = Math.Max(0, insertionLine - 1); i < Math.Min(insertionLine + 3, lines.Length); i++)
                 {
-                    var line = lines[i];
+                    string line = lines[i];
                     if (!string.IsNullOrWhiteSpace(line.Trim()))
                     {
-                        var indentation = GetIndentation(line);
+                        string indentation = GetIndentation(line);
                         logger.LogDebug("Using surrounding code indentation: '{Indentation}'", indentation);
                         return indentation;
                     }
@@ -233,7 +233,7 @@ public class TypeScriptCodeModificationService(ILogger<TypeScriptCodeModificatio
     private static string GetIndentation(string line)
     {
         var indentCount = 0;
-        foreach (var c in line)
+        foreach (char c in line)
         {
             if (c == ' ')
                 indentCount++;

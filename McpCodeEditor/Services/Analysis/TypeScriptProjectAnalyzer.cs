@@ -63,10 +63,10 @@ public class TypeScriptProjectAnalyzer(
         try
         {
             var result = new ProjectAnalysisResult { Success = true };
-            var projectRoot = rootPath ?? config.DefaultWorkspace;
+            string projectRoot = rootPath ?? config.DefaultWorkspace;
 
             // Discover TypeScript files in the project
-            var fileDiscoveryResult = await fileResolver.FindTypeScriptFilesAsync(projectRoot);
+            TypeScriptFileDiscoveryResult fileDiscoveryResult = await fileResolver.FindTypeScriptFilesAsync(projectRoot);
             if (!fileDiscoveryResult.Success)
             {
                 return new ProjectAnalysisResult
@@ -79,7 +79,7 @@ public class TypeScriptProjectAnalyzer(
             result.ProjectFiles = fileDiscoveryResult.SourceFiles;
 
             // Analyze each file and build symbol map
-            foreach (var filePath in fileDiscoveryResult.SourceFiles)
+            foreach (string filePath in fileDiscoveryResult.SourceFiles)
             {
                 if (cancellationToken.IsCancellationRequested)
                     break;
@@ -110,7 +110,7 @@ public class TypeScriptProjectAnalyzer(
         string? rootPath = null,
         CancellationToken cancellationToken = default)
     {
-        var projectAnalysis = await AnalyzeProjectAsync(rootPath, cancellationToken);
+        ProjectAnalysisResult projectAnalysis = await AnalyzeProjectAsync(rootPath, cancellationToken);
         if (!projectAnalysis.Success)
             return [];
 
@@ -121,7 +121,7 @@ public class TypeScriptProjectAnalyzer(
             .Where(r => r.SymbolName == symbolName));
 
         // Find symbol in project symbols and get its references
-        if (projectAnalysis.Symbols.TryGetValue(symbolName, out var symbolInfo))
+        if (projectAnalysis.Symbols.TryGetValue(symbolName, out ProjectSymbolInfo? symbolInfo))
         {
             references.AddRange(symbolInfo.References);
         }
@@ -139,14 +139,14 @@ public class TypeScriptProjectAnalyzer(
     {
         try
         {
-            var fileAnalysis = await analysisService.AnalyzeFileAsync(filePath, cancellationToken);
+            TypeScriptAnalysisResult fileAnalysis = await analysisService.AnalyzeFileAsync(filePath, cancellationToken);
             if (!fileAnalysis.Success)
                 return;
 
-            var content = await File.ReadAllTextAsync(filePath, cancellationToken);
+            string content = await File.ReadAllTextAsync(filePath, cancellationToken);
             
             // Extract symbols with export information
-            foreach (var symbol in fileAnalysis.Classes)
+            foreach (TypeScriptClass symbol in fileAnalysis.Classes)
             {
                 var symbolInfo = new ProjectSymbolInfo
                 {
@@ -160,7 +160,7 @@ public class TypeScriptProjectAnalyzer(
                 result.Symbols[symbol.Name] = symbolInfo;
             }
 
-            foreach (var symbol in fileAnalysis.Functions)
+            foreach (TypeScriptFunction symbol in fileAnalysis.Functions)
             {
                 var symbolInfo = new ProjectSymbolInfo
                 {
@@ -174,7 +174,7 @@ public class TypeScriptProjectAnalyzer(
                 result.Symbols[symbol.Name] = symbolInfo;
             }
 
-            foreach (var symbol in fileAnalysis.Interfaces)
+            foreach (TypeScriptInterface symbol in fileAnalysis.Interfaces)
             {
                 var symbolInfo = new ProjectSymbolInfo
                 {
@@ -204,14 +204,14 @@ public class TypeScriptProjectAnalyzer(
         ProjectAnalysisResult result,
         CancellationToken cancellationToken)
     {
-        foreach (var filePath in result.ProjectFiles)
+        foreach (string filePath in result.ProjectFiles)
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
 
             try
             {
-                var content = await File.ReadAllTextAsync(filePath, cancellationToken);
+                string content = await File.ReadAllTextAsync(filePath, cancellationToken);
                 await AnalyzeFileReferencesAsync(filePath, content, result);
             }
             catch (Exception)
@@ -233,18 +233,18 @@ public class TypeScriptProjectAnalyzer(
 
         // Find import statements
         var importPattern = @"import\s*\{([^}]+)\}\s*from\s*['""]([^'""]+)['""]";
-        var importMatches = Regex.Matches(content, importPattern, RegexOptions.Multiline);
+        MatchCollection importMatches = Regex.Matches(content, importPattern, RegexOptions.Multiline);
 
         foreach (Match match in importMatches)
         {
-            var importedSymbols = match.Groups[1].Value;
-            var importPath = match.Groups[2].Value;
+            string importedSymbols = match.Groups[1].Value;
+            string importPath = match.Groups[2].Value;
             
-            var symbols = importedSymbols.Split(',')
+            IEnumerable<string> symbols = importedSymbols.Split(',')
                 .Select(s => s.Trim())
                 .Where(s => !string.IsNullOrEmpty(s));
 
-            foreach (var symbol in symbols)
+            foreach (string symbol in symbols)
             {
                 var reference = new CrossFileReference
                 {
@@ -269,16 +269,16 @@ public class TypeScriptProjectAnalyzer(
 
         // Find export statements
         var exportPattern = @"export\s*\{([^}]+)\}";
-        var exportMatches = Regex.Matches(content, exportPattern, RegexOptions.Multiline);
+        MatchCollection exportMatches = Regex.Matches(content, exportPattern, RegexOptions.Multiline);
 
         foreach (Match match in exportMatches)
         {
-            var exportedSymbols = match.Groups[1].Value;
-            var symbols = exportedSymbols.Split(',')
+            string exportedSymbols = match.Groups[1].Value;
+            IEnumerable<string> symbols = exportedSymbols.Split(',')
                 .Select(s => s.Trim())
                 .Where(s => !string.IsNullOrEmpty(s));
 
-            foreach (var symbol in symbols)
+            foreach (string symbol in symbols)
             {
                 if (result.Symbols.ContainsKey(symbol))
                 {
@@ -300,7 +300,7 @@ public class TypeScriptProjectAnalyzer(
         await Task.CompletedTask; // Make async for consistency
 
         // For each known symbol, find its usage in this file
-        foreach (var symbolInfo in result.Symbols.Values)
+        foreach (ProjectSymbolInfo symbolInfo in result.Symbols.Values)
         {
             if (symbolInfo.DefinitionFile == filePath)
                 continue; // Skip self-references
@@ -314,9 +314,9 @@ public class TypeScriptProjectAnalyzer(
                 $@":\s*{Regex.Escape(symbolInfo.SymbolName)}\b"    // Type annotations
             };
 
-            foreach (var pattern in usagePatterns)
+            foreach (string pattern in usagePatterns)
             {
-                var matches = Regex.Matches(content, pattern, RegexOptions.Multiline);
+                MatchCollection matches = Regex.Matches(content, pattern, RegexOptions.Multiline);
                 foreach (Match match in matches)
                 {
                     var reference = new CrossFileReference
@@ -342,10 +342,10 @@ public class TypeScriptProjectAnalyzer(
     private static bool IsSymbolExported(string content, string symbolName, int definitionLine)
     {
         // Check for export keyword on the same line or nearby
-        var lines = content.Split('\n');
+        string[] lines = content.Split('\n');
         if (definitionLine > 0 && definitionLine <= lines.Length)
         {
-            var definitionLineContent = lines[definitionLine - 1];
+            string definitionLineContent = lines[definitionLine - 1];
             
             // Check if export keyword is on the definition line
             if (definitionLineContent.Contains("export"))
@@ -369,8 +369,8 @@ public class TypeScriptProjectAnalyzer(
             if (importPath.StartsWith("./") || importPath.StartsWith("../"))
             {
                 // Relative path
-                var currentDir = Path.GetDirectoryName(currentFile) ?? string.Empty;
-                var resolvedPath = Path.Combine(currentDir, importPath);
+                string currentDir = Path.GetDirectoryName(currentFile) ?? string.Empty;
+                string resolvedPath = Path.Combine(currentDir, importPath);
                 
                 // Add .ts extension if not present
                 if (!Path.HasExtension(resolvedPath))
@@ -383,8 +383,8 @@ public class TypeScriptProjectAnalyzer(
             else
             {
                 // Absolute or package import - try to resolve within project
-                var projectRoot = config.DefaultWorkspace;
-                var possiblePath = Path.Combine(projectRoot, importPath + ".ts");
+                string projectRoot = config.DefaultWorkspace;
+                string possiblePath = Path.Combine(projectRoot, importPath + ".ts");
                 
                 if (File.Exists(possiblePath))
                     return possiblePath;
@@ -411,7 +411,7 @@ public class TypeScriptProjectAnalyzer(
     /// </summary>
     private static int GetColumnNumber(string content, int index)
     {
-        var lastNewLine = content.LastIndexOf('\n', index);
+        int lastNewLine = content.LastIndexOf('\n', index);
         return index - lastNewLine;
     }
 
@@ -420,8 +420,8 @@ public class TypeScriptProjectAnalyzer(
     /// </summary>
     private static string GetContextAroundMatch(string content, int index, int contextLength = 50)
     {
-        var start = Math.Max(0, index - contextLength);
-        var end = Math.Min(content.Length, index + contextLength);
+        int start = Math.Max(0, index - contextLength);
+        int end = Math.Min(content.Length, index + contextLength);
         return content.Substring(start, end - start).Trim();
     }
 }

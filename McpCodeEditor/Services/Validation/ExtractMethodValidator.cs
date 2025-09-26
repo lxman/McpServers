@@ -91,14 +91,14 @@ public class ExtractMethodValidator
             ValidateLineRange(sourceCode, options.StartLine, options.EndLine, result);
             
             // 3. Parse and analyze the code
-            var lines = sourceCode.Split('\n');
-            var selectedCode = GetSelectedCode(lines, options.StartLine, options.EndLine);
+            string[] lines = sourceCode.Split('\n');
+            string selectedCode = GetSelectedCode(lines, options.StartLine, options.EndLine);
             
             // 4. ENHANCED: Use Enhanced Variable Analysis Service for better validation
             await ValidateSyntaxImprovedAsync(selectedCode, sourceCode, options, result, cancellationToken);
             
             // 5. *** ENHANCED: Comprehensive semantic analysis with proper return value detection ***
-            var analysis = await AnalyzeExtractionSemanticsAsync(sourceCode, options, cancellationToken);
+            ExtractMethodAnalysis analysis = await AnalyzeExtractionSemanticsAsync(sourceCode, options, cancellationToken);
             
             // Convert ExtractMethodAnalysis to CSharpExtractionAnalysis for compatibility
             result.Analysis = new CSharpExtractionAnalysis
@@ -158,16 +158,16 @@ class TestClass {{
     }}
 }}";
 
-            var basicTree = CSharpSyntaxTree.ParseText(basicWrappedCode, cancellationToken: cancellationToken);
-            var basicDiagnostics = basicTree.GetDiagnostics(cancellationToken).ToList();
-            var basicErrors = basicDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+            SyntaxTree basicTree = CSharpSyntaxTree.ParseText(basicWrappedCode, cancellationToken: cancellationToken);
+            List<Diagnostic> basicDiagnostics = basicTree.GetDiagnostics(cancellationToken).ToList();
+            List<Diagnostic> basicErrors = basicDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
 
             // If basic validation passes, we're good
             if (basicErrors.Count == 0)
             {
                 // Add any warnings
-                var warnings = basicDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Warning).ToList();
-                foreach (var warning in warnings)
+                List<Diagnostic> warnings = basicDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Warning).ToList();
+                foreach (Diagnostic warning in warnings)
                 {
                     result.AddWarning("SYNTAX_WARNING", $"Syntax warning: {warning.GetMessage()}");
                 }
@@ -186,21 +186,21 @@ class TestClass {{
                 enhancedCode = CreateImprovedContextualValidationCode(selectedCode, fullSourceCode);
             }
             
-            var enhancedTree = CSharpSyntaxTree.ParseText(enhancedCode, cancellationToken: cancellationToken);
-            var enhancedDiagnostics = enhancedTree.GetDiagnostics(cancellationToken).ToList();
-            var enhancedErrors = enhancedDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+            SyntaxTree enhancedTree = CSharpSyntaxTree.ParseText(enhancedCode, cancellationToken: cancellationToken);
+            List<Diagnostic> enhancedDiagnostics = enhancedTree.GetDiagnostics(cancellationToken).ToList();
+            List<Diagnostic> enhancedErrors = enhancedDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
 
             // Filter out expected errors for undefined variables that will become parameters
-            var filteredErrors = FilterExpectedUndefinedVariableErrors(enhancedErrors, selectedCode);
+            List<Diagnostic> filteredErrors = FilterExpectedUndefinedVariableErrors(enhancedErrors, selectedCode);
 
-            foreach (var error in filteredErrors)
+            foreach (Diagnostic error in filteredErrors)
             {
                 result.AddError("SYNTAX_ERROR", $"Syntax error: {error.GetMessage()}");
             }
 
             // Add warnings
-            var enhancedWarnings = enhancedDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Warning).ToList();
-            foreach (var warning in enhancedWarnings)
+            List<Diagnostic> enhancedWarnings = enhancedDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Warning).ToList();
+            foreach (Diagnostic warning in enhancedWarnings)
             {
                 result.AddWarning("SYNTAX_WARNING", $"Syntax warning: {warning.GetMessage()}");
             }
@@ -224,19 +224,19 @@ class TestClass {{
         try
         {
             // Parse the full source code for analysis
-            var tree = CSharpSyntaxTree.ParseText(fullSourceCode, cancellationToken: cancellationToken);
-            var compilation = CSharpCompilation.Create("ValidationAnalysis")
+            SyntaxTree tree = CSharpSyntaxTree.ParseText(fullSourceCode, cancellationToken: cancellationToken);
+            CSharpCompilation compilation = CSharpCompilation.Create("ValidationAnalysis")
                 .AddReferences(MetadataReference.CreateFromFile(typeof(object).Assembly.Location))
                 .AddSyntaxTrees(tree);
-            var semanticModel = compilation.GetSemanticModel(tree);
-            var root = await tree.GetRootAsync(cancellationToken);
+            SemanticModel semanticModel = compilation.GetSemanticModel(tree);
+            SyntaxNode root = await tree.GetRootAsync(cancellationToken);
 
             // Extract selected code nodes for analysis
-            var selectedNodes = ExtractSelectedCodeNodes(root, options.StartLine, options.EndLine);
-            var extractedLines = selectedCode.Split('\n');
+            List<SyntaxNode> selectedNodes = ExtractSelectedCodeNodes(root, options.StartLine, options.EndLine);
+            string[] extractedLines = selectedCode.Split('\n');
 
             // Use Enhanced Variable Analysis Service
-            var analysisResult = await _enhancedVariableAnalysis!.PerformCompleteAnalysisAsync(
+            EnhancedVariableAnalysisResult analysisResult = await _enhancedVariableAnalysis!.PerformCompleteAnalysisAsync(
                 extractedLines, semanticModel, selectedNodes);
 
             // Generate enhanced validation code with proper variable context
@@ -257,17 +257,17 @@ class TestClass {{
         string fullSourceCode, 
         EnhancedVariableAnalysisResult analysisResult)
     {
-        var usingStatements = ExtractUsingStatements(fullSourceCode);
+        List<string> usingStatements = ExtractUsingStatements(fullSourceCode);
         var variableDeclarations = new List<string>();
 
         // Add variable declarations based on Enhanced Variable Analysis
-        foreach (var paramVar in analysisResult.HandlingMapping.ParametersToPass)
+        foreach (VariableInfo paramVar in analysisResult.HandlingMapping.ParametersToPass)
         {
             variableDeclarations.Add($"        {paramVar.Type} {paramVar.Name} = default;");
         }
 
         // Add tuple deconstruction variables if needed
-        foreach (var declVar in analysisResult.HandlingMapping.VariablesToDeclare)
+        foreach (VariableInfo declVar in analysisResult.HandlingMapping.VariablesToDeclare)
         {
             if (!variableDeclarations.Any(d => d.Contains(declVar.Name)))
             {
@@ -276,7 +276,7 @@ class TestClass {{
         }
 
         // Add existing variables that will be assigned
-        foreach (var assignVar in analysisResult.HandlingMapping.VariablesToAssign)
+        foreach (VariableInfo assignVar in analysisResult.HandlingMapping.VariablesToAssign)
         {
             if (!variableDeclarations.Any(d => d.Contains(assignVar.Name)))
             {
@@ -285,17 +285,17 @@ class TestClass {{
         }
 
         // Add method declarations from the containing method context
-        var methodDeclarations = await ExtractMethodDeclarationsAsync(fullSourceCode);
+        List<string> methodDeclarations = await ExtractMethodDeclarationsAsync(fullSourceCode);
 
         // Ensure proper indentation for selected code
-        var selectedLines = selectedCode.Split('\n');
+        string[] selectedLines = selectedCode.Split('\n');
         var properlyIndentedCode = new List<string>();
         
-        foreach (var line in selectedLines)
+        foreach (string line in selectedLines)
         {
             if (!string.IsNullOrWhiteSpace(line))
             {
-                var trimmed = line.TrimStart();
+                string trimmed = line.TrimStart();
                 properlyIndentedCode.Add($"        {trimmed}");
             }
             else
@@ -326,11 +326,11 @@ class TestClass {{
     {
         var nodes = new List<SyntaxNode>();
         
-        foreach (var node in root.DescendantNodes())
+        foreach (SyntaxNode node in root.DescendantNodes())
         {
-            var span = node.GetLocation().GetLineSpan();
-            var nodeStartLine = span.StartLinePosition.Line + 1; // Convert to 1-based
-            var nodeEndLine = span.EndLinePosition.Line + 1;
+            FileLinePositionSpan span = node.GetLocation().GetLineSpan();
+            int nodeStartLine = span.StartLinePosition.Line + 1; // Convert to 1-based
+            int nodeEndLine = span.EndLinePosition.Line + 1;
             
             // Include nodes that overlap with the selection range
             if (nodeStartLine <= endLine && nodeEndLine >= startLine)
@@ -351,17 +351,17 @@ class TestClass {{
         
         try
         {
-            var tree = CSharpSyntaxTree.ParseText(fullSourceCode);
-            var root = await tree.GetRootAsync();
+            SyntaxTree tree = CSharpSyntaxTree.ParseText(fullSourceCode);
+            SyntaxNode root = await tree.GetRootAsync();
             
-            var methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
+            IEnumerable<MethodDeclarationSyntax> methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
             
-            foreach (var method in methods)
+            foreach (MethodDeclarationSyntax method in methods)
             {
                 // Create simplified method signature for validation
                 var returnType = method.ReturnType.ToString();
-                var methodName = method.Identifier.ValueText;
-                var parameters = string.Join(", ", method.ParameterList.Parameters.Select(p => 
+                string methodName = method.Identifier.ValueText;
+                string parameters = string.Join(", ", method.ParameterList.Parameters.Select(p => 
                     $"{p.Type} {p.Identifier.ValueText}"));
                 
                 methodDeclarations.Add($"    {returnType} {methodName}({parameters}) {{ return default; }}");
@@ -385,26 +385,26 @@ class TestClass {{
         try
         {
             var inferredDeclarations = new List<string>();
-            var usingStatements = ExtractUsingStatements(fullSourceCode);
+            List<string> usingStatements = ExtractUsingStatements(fullSourceCode);
 
             // Analyze the selected code to infer variable types
-            var variableInferences = VariableTypeInferenceHelper.InferVariableTypesEnhanced(selectedCode);
+            List<(string Name, string Type)> variableInferences = VariableTypeInferenceHelper.InferVariableTypesEnhanced(selectedCode);
             
-            foreach (var inference in variableInferences)
+            foreach ((string Name, string Type) inference in variableInferences)
             {
                 inferredDeclarations.Add($"        {inference.Type} {inference.Name} = default;");
             }
 
             // FIXED: Ensure proper indentation and structure for complex code
-            var selectedLines = selectedCode.Split('\n');
+            string[] selectedLines = selectedCode.Split('\n');
             var properlyIndentedCode = new List<string>();
             
-            foreach (var line in selectedLines)
+            foreach (string line in selectedLines)
             {
                 if (!string.IsNullOrWhiteSpace(line))
                 {
                     // Ensure proper indentation within method (at least 8 spaces)
-                    var trimmed = line.TrimStart();
+                    string trimmed = line.TrimStart();
                     properlyIndentedCode.Add($"        {trimmed}");
                 }
                 else
@@ -444,10 +444,10 @@ class TestClass {{
     {
         var usingStatements = new List<string>();
         
-        var lines = sourceCode.Split('\n');
-        foreach (var line in lines)
+        string[] lines = sourceCode.Split('\n');
+        foreach (string line in lines)
         {
-            var trimmed = line.Trim();
+            string trimmed = line.Trim();
             if (trimmed.StartsWith("using ") && trimmed.EndsWith(";"))
             {
                 usingStatements.Add(trimmed);
@@ -462,7 +462,7 @@ class TestClass {{
             "using System.Linq;"
         };
 
-        foreach (var essential in essentialUsings)
+        foreach (string essential in essentialUsings)
         {
             if (!usingStatements.Contains(essential))
             {
@@ -480,19 +480,19 @@ class TestClass {{
     {
         var filteredErrors = new List<Diagnostic>();
         
-        foreach (var error in errors)
+        foreach (Diagnostic error in errors)
         {
-            var errorMessage = error.GetMessage();
+            string errorMessage = error.GetMessage();
             
             // Filter out "The name 'variable' does not exist in the current context" errors
             // since these variables will become method parameters
             if (errorMessage.Contains("does not exist in the current context"))
             {
                 // Extract variable name from error message
-                var match = Regex.Match(errorMessage, @"The name '(\w+)' does not exist");
+                Match match = Regex.Match(errorMessage, @"The name '(\w+)' does not exist");
                 if (match.Success)
                 {
-                    var varName = match.Groups[1].Value;
+                    string varName = match.Groups[1].Value;
                     
                     // Check if this variable is actually used in the selected code
                     if (selectedCode.Contains(varName))
@@ -541,7 +541,7 @@ class TestClass {{
         try
         {
             // Use the new semantic analyzer for proper return value detection
-            var semanticResult = await SemanticReturnAnalyzer.AnalyzeReturnRequirementsAsync(
+            SemanticReturnAnalyzer.ReturnAnalysisResult semanticResult = await SemanticReturnAnalyzer.AnalyzeReturnRequirementsAsync(
                 sourceCode, 
                 options.StartLine, 
                 options.EndLine, 
@@ -561,7 +561,7 @@ class TestClass {{
             }
 
             // Add any warnings from semantic analysis
-            foreach (var warning in semanticResult.Warnings)
+            foreach (string warning in semanticResult.Warnings)
             {
                 result.AddWarning("SEMANTIC_ANALYSIS", warning);
             }
@@ -591,11 +591,11 @@ class TestClass {{
     {
         try
         {
-            var tree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
-            var root = await tree.GetRootAsync(cancellationToken);
+            SyntaxTree tree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
+            SyntaxNode root = await tree.GetRootAsync(cancellationToken);
             
-            var lines = sourceCode.Split('\n');
-            var selectedCode = GetSelectedCode(lines, options.StartLine, options.EndLine);
+            string[] lines = sourceCode.Split('\n');
+            string selectedCode = GetSelectedCode(lines, options.StartLine, options.EndLine);
             
             // Parse selected code for analysis  
             var wrappedCode = $@"
@@ -605,16 +605,16 @@ class TestClass {{
     }}
 }}";
             
-            var selectedTree = CSharpSyntaxTree.ParseText(wrappedCode, cancellationToken: cancellationToken);
-            var selectedRoot = await selectedTree.GetRootAsync(cancellationToken);
+            SyntaxTree selectedTree = CSharpSyntaxTree.ParseText(wrappedCode, cancellationToken: cancellationToken);
+            SyntaxNode selectedRoot = await selectedTree.GetRootAsync(cancellationToken);
             
             // Find the containing method in the original code
-            var containingMethod = FindContainingMethodNode(root, options.StartLine);
+            MethodDeclarationSyntax? containingMethod = FindContainingMethodNode(root, options.StartLine);
             
             if (containingMethod != null)
             {
                 // Analyze variables in the context of the containing method
-                var variableUsages = AnalyzeVariableUsages(
+                Dictionary<string, VariableUsage> variableUsages = AnalyzeVariableUsages(
                     selectedRoot, containingMethod, root, options.StartLine, options.EndLine);
 
                 // Populate analysis results
@@ -652,24 +652,24 @@ class TestClass {{
         var usages = new Dictionary<string, VariableUsage>();
         
         // Get all variable references in the selected code
-        var identifiers = selectedRoot.DescendantNodes()
+        List<IdentifierNameSyntax> identifiers = selectedRoot.DescendantNodes()
             .OfType<IdentifierNameSyntax>()
             .Where(id => !IsTypeOrNamespace(id))
             .ToList();
         
         // Get all variable declarations in the containing method
-        var methodVariables = GetMethodVariables(containingMethod);
-        var methodParameters = GetMethodParameters(containingMethod);
+        Dictionary<string, string> methodVariables = GetMethodVariables(containingMethod);
+        Dictionary<string, string> methodParameters = GetMethodParameters(containingMethod);
         
-        foreach (var identifier in identifiers)
+        foreach (IdentifierNameSyntax identifier in identifiers)
         {
-            var varName = identifier.Identifier.ValueText;
+            string varName = identifier.Identifier.ValueText;
             
             if (!usages.ContainsKey(varName))
             {
-                var isDeclaredInSelection = IsVariableDeclaredInSelectionRange(varName, containingMethod, startLine, endLine);
-                var isDeclaredBefore = IsVariableDeclaredBeforeSelection(varName, containingMethod, startLine);
-                var isUsedAfter = IsVariableUsedAfterSelection(varName, containingMethod, endLine);
+                bool isDeclaredInSelection = IsVariableDeclaredInSelectionRange(varName, containingMethod, startLine, endLine);
+                bool isDeclaredBefore = IsVariableDeclaredBeforeSelection(varName, containingMethod, startLine);
+                bool isUsedAfter = IsVariableUsedAfterSelection(varName, containingMethod, endLine);
                 
                 usages[varName] = new VariableUsage
                 {
@@ -681,7 +681,7 @@ class TestClass {{
                 };
             }
             
-            var usage = usages[varName];
+            VariableUsage usage = usages[varName];
             usage.UsageCount++;
             
             // Determine if variable is being read or modified
@@ -696,19 +696,19 @@ class TestClass {{
         }
         
         // Also check for variables declared in the original method within the selection range
-        var variableDeclaratorsInRange = containingMethod.DescendantNodes()
+        List<VariableDeclaratorSyntax> variableDeclaratorsInRange = containingMethod.DescendantNodes()
             .OfType<VariableDeclaratorSyntax>()
             .Where(v =>
             {
-                var lineSpan = v.GetLocation().GetLineSpan();
-                var line = lineSpan.StartLinePosition.Line + 1; // Convert to 1-based
+                FileLinePositionSpan lineSpan = v.GetLocation().GetLineSpan();
+                int line = lineSpan.StartLinePosition.Line + 1; // Convert to 1-based
                 return line >= startLine && line <= endLine;
             })
             .ToList();
             
-        foreach (var declarator in variableDeclaratorsInRange)
+        foreach (VariableDeclaratorSyntax declarator in variableDeclaratorsInRange)
         {
-            var varName = declarator.Identifier.ValueText;
+            string varName = declarator.Identifier.ValueText;
             
             if (!usages.ContainsKey(varName))
             {
@@ -749,10 +749,10 @@ class TestClass {{
         Dictionary<string, VariableUsage> variableUsages,
         MethodExtractionValidationResult result)
     {
-        foreach (var kvp in variableUsages)
+        foreach (KeyValuePair<string, VariableUsage> kvp in variableUsages)
         {
-            var varName = kvp.Key;
-            var usage = kvp.Value;
+            string varName = kvp.Key;
+            VariableUsage usage = kvp.Value;
             
             analysis.VariableTypes[varName] = usage.Type;
             
@@ -793,7 +793,7 @@ class TestClass {{
         // Add variable-specific warnings
         if (analysis.LocalVariables.Count > 0)
         {
-            var varsUsedAfter = variableUsages
+            List<string> varsUsedAfter = variableUsages
                 .Where(v => v.Value is { IsDeclaredInSelection: true, IsUsedAfterSelection: true })
                 .Select(v => v.Key)
                 .ToList();
@@ -820,11 +820,11 @@ class TestClass {{
     private static void GenerateExtractionSuggestions(ExtractMethodAnalysis analysis, Dictionary<string, VariableUsage> variableUsages)
     {
         // Suggest parameters for external variables that are read
-        foreach (var varName in analysis.ExternalVariables)
+        foreach (string varName in analysis.ExternalVariables)
         {
             if (variableUsages.ContainsKey(varName))
             {
-                var usage = variableUsages[varName];
+                VariableUsage usage = variableUsages[varName];
                 if (usage is { IsRead: true, IsModified: false })
                 {
                     analysis.SuggestedParameters.Add($"{usage.Type} {varName}");
@@ -840,13 +840,13 @@ class TestClass {{
         analysis.RequiresParameters = analysis.SuggestedParameters.Count > 0;
         
         // Check for variables declared in selection and used after
-        var varsNeedingReturn = variableUsages
+        List<KeyValuePair<string, VariableUsage>> varsNeedingReturn = variableUsages
             .Where(v => v.Value is { IsDeclaredInSelection: true, IsUsedAfterSelection: true })
             .ToList();
         
         if (varsNeedingReturn.Count == 1)
         {
-            var varToReturn = varsNeedingReturn.First();
+            KeyValuePair<string, VariableUsage> varToReturn = varsNeedingReturn.First();
             analysis.SuggestedReturnType = varToReturn.Value.Type;
             analysis.RequiresReturnValue = true;
             analysis.ReturnTypeReason = $"Variable '{varToReturn.Key}' is declared in extraction and used after";
@@ -854,7 +854,7 @@ class TestClass {{
         else if (varsNeedingReturn.Count > 1)
         {
             // Multiple variables need to be returned - suggest tuple
-            var types = varsNeedingReturn.Select(v => v.Value.Type).ToList();
+            List<string> types = varsNeedingReturn.Select(v => v.Value.Type).ToList();
             analysis.SuggestedReturnType = $"({string.Join(", ", types)})";
             analysis.RequiresReturnValue = true;
             analysis.ReturnTypeReason = $"Multiple variables need to be returned: {string.Join(", ", varsNeedingReturn.Select(v => v.Key))}";
@@ -873,13 +873,13 @@ class TestClass {{
     {
         var variables = new Dictionary<string, string>();
         
-        var variableDeclarations = method.DescendantNodes()
+        IEnumerable<VariableDeclarationSyntax> variableDeclarations = method.DescendantNodes()
             .OfType<VariableDeclarationSyntax>();
             
-        foreach (var declaration in variableDeclarations)
+        foreach (VariableDeclarationSyntax declaration in variableDeclarations)
         {
             var typeName = declaration.Type.ToString();
-            foreach (var variable in declaration.Variables)
+            foreach (VariableDeclaratorSyntax variable in declaration.Variables)
             {
                 variables[variable.Identifier.ValueText] = typeName;
             }
@@ -892,7 +892,7 @@ class TestClass {{
     {
         var parameters = new Dictionary<string, string>();
         
-        foreach (var parameter in method.ParameterList.Parameters)
+        foreach (ParameterSyntax parameter in method.ParameterList.Parameters)
         {
             if (parameter.Type != null)
             {
@@ -926,14 +926,14 @@ class TestClass {{
 
     private static bool IsVariableDeclaredInSelectionRange(string varName, MethodDeclarationSyntax method, int startLine, int endLine)
     {
-        var declarations = method.DescendantNodes()
+        IEnumerable<VariableDeclaratorSyntax> declarations = method.DescendantNodes()
             .OfType<VariableDeclaratorSyntax>()
             .Where(v => v.Identifier.ValueText == varName);
         
-        foreach (var declaration in declarations)
+        foreach (VariableDeclaratorSyntax declaration in declarations)
         {
-            var lineSpan = declaration.GetLocation().GetLineSpan();
-            var declarationLine = lineSpan.StartLinePosition.Line + 1; // Convert to 1-based
+            FileLinePositionSpan lineSpan = declaration.GetLocation().GetLineSpan();
+            int declarationLine = lineSpan.StartLinePosition.Line + 1; // Convert to 1-based
         
             if (declarationLine >= startLine && declarationLine <= endLine)
             {
@@ -946,14 +946,14 @@ class TestClass {{
 
     private static bool IsVariableDeclaredBeforeSelection(string varName, MethodDeclarationSyntax method, int selectionStartLine)
     {
-        var declarations = method.DescendantNodes()
+        IEnumerable<VariableDeclaratorSyntax> declarations = method.DescendantNodes()
             .OfType<VariableDeclaratorSyntax>()
             .Where(v => v.Identifier.ValueText == varName);
             
-        foreach (var declaration in declarations)
+        foreach (VariableDeclaratorSyntax declaration in declarations)
         {
-            var lineSpan = declaration.GetLocation().GetLineSpan();
-            var declarationLine = lineSpan.StartLinePosition.Line + 1; // Convert to 1-based
+            FileLinePositionSpan lineSpan = declaration.GetLocation().GetLineSpan();
+            int declarationLine = lineSpan.StartLinePosition.Line + 1; // Convert to 1-based
             
             if (declarationLine < selectionStartLine)
             {
@@ -966,14 +966,14 @@ class TestClass {{
 
     private static bool IsVariableUsedAfterSelection(string varName, MethodDeclarationSyntax method, int selectionEndLine)
     {
-        var identifiers = method.DescendantNodes()
+        IEnumerable<IdentifierNameSyntax> identifiers = method.DescendantNodes()
             .OfType<IdentifierNameSyntax>()
             .Where(id => id.Identifier.ValueText == varName);
             
-        foreach (var identifier in identifiers)
+        foreach (IdentifierNameSyntax identifier in identifiers)
         {
-            var lineSpan = identifier.GetLocation().GetLineSpan();
-            var usageLine = lineSpan.StartLinePosition.Line + 1; // Convert to 1-based
+            FileLinePositionSpan lineSpan = identifier.GetLocation().GetLineSpan();
+            int usageLine = lineSpan.StartLinePosition.Line + 1; // Convert to 1-based
             
             if (usageLine > selectionEndLine)
             {
@@ -986,7 +986,7 @@ class TestClass {{
 
     private static bool IsVariableModified(IdentifierNameSyntax identifier)
     {
-        var parent = identifier.Parent;
+        SyntaxNode? parent = identifier.Parent;
         
         return parent is AssignmentExpressionSyntax assignment && assignment.Left == identifier ||
                parent is PostfixUnaryExpressionSyntax ||
@@ -997,7 +997,7 @@ class TestClass {{
     {
         var complexity = 0;
         
-        foreach (var usage in variableUsages.Values)
+        foreach (VariableUsage usage in variableUsages.Values)
         {
             complexity += 1;
             if (usage.IsModified) complexity += 2;
@@ -1011,13 +1011,13 @@ class TestClass {{
 
     private static MethodDeclarationSyntax? FindContainingMethodNode(SyntaxNode root, int startLine)
     {
-        var methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
+        IEnumerable<MethodDeclarationSyntax> methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
         
-        foreach (var method in methods)
+        foreach (MethodDeclarationSyntax method in methods)
         {
-            var span = method.GetLocation().GetLineSpan();
-            var methodStartLine = span.StartLinePosition.Line + 1; // Convert to 1-based
-            var methodEndLine = span.EndLinePosition.Line + 1;
+            FileLinePositionSpan span = method.GetLocation().GetLineSpan();
+            int methodStartLine = span.StartLinePosition.Line + 1; // Convert to 1-based
+            int methodEndLine = span.EndLinePosition.Line + 1;
             
             if (startLine >= methodStartLine && startLine <= methodEndLine)
             {
@@ -1078,7 +1078,7 @@ class TestClass {{
     /// </summary>
     private static void ValidateLineRange(string sourceCode, int startLine, int endLine, MethodExtractionValidationResult result)
     {
-        var lines = sourceCode.Split('\n');
+        string[] lines = sourceCode.Split('\n');
         
         if (startLine < 1)
         {
@@ -1097,7 +1097,7 @@ class TestClass {{
 
         if (startLine == endLine)
         {
-            var selectedLine = lines[startLine - 1].Trim();
+            string selectedLine = lines[startLine - 1].Trim();
             if (string.IsNullOrWhiteSpace(selectedLine))
             {
                 result.AddError("EMPTY_SELECTION", "Cannot extract empty or whitespace-only lines");
@@ -1117,11 +1117,11 @@ class TestClass {{
         
         try
         {
-            var tree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
-            var root = await tree.GetRootAsync(cancellationToken);
+            SyntaxTree tree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
+            SyntaxNode root = await tree.GetRootAsync(cancellationToken);
             
-            var lines = sourceCode.Split('\n');
-            var selectedCode = GetSelectedCode(lines, options.StartLine, options.EndLine);
+            string[] lines = sourceCode.Split('\n');
+            string selectedCode = GetSelectedCode(lines, options.StartLine, options.EndLine);
             
             var wrappedCode = $@"
 class TestClass {{
@@ -1130,15 +1130,15 @@ class TestClass {{
     }}
 }}";
             
-            var selectedTree = CSharpSyntaxTree.ParseText(wrappedCode, cancellationToken: cancellationToken);
-            var selectedRoot = await selectedTree.GetRootAsync(cancellationToken);
+            SyntaxTree selectedTree = CSharpSyntaxTree.ParseText(wrappedCode, cancellationToken: cancellationToken);
+            SyntaxNode selectedRoot = await selectedTree.GetRootAsync(cancellationToken);
             
             // Analyze return statements
-            var returnStatements = selectedRoot.DescendantNodes().OfType<ReturnStatementSyntax>();
+            IEnumerable<ReturnStatementSyntax> returnStatements = selectedRoot.DescendantNodes().OfType<ReturnStatementSyntax>();
             analysis.HasReturnStatements = returnStatements.Any();
             
             // Analyze control flow complexity
-            var controlFlowNodes = selectedRoot.DescendantNodes().Where(node =>
+            IEnumerable<SyntaxNode> controlFlowNodes = selectedRoot.DescendantNodes().Where(node =>
                 node is IfStatementSyntax or WhileStatementSyntax or ForStatementSyntax or ForEachStatementSyntax or SwitchStatementSyntax or TryStatementSyntax);
                 
             analysis.HasComplexControlFlow = controlFlowNodes.Count() > 2;
@@ -1197,10 +1197,10 @@ class TestClass {{
     {
         try
         {
-            var tree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
-            var root = await tree.GetRootAsync(cancellationToken);
+            SyntaxTree tree = CSharpSyntaxTree.ParseText(sourceCode, cancellationToken: cancellationToken);
+            SyntaxNode root = await tree.GetRootAsync(cancellationToken);
             
-            var existingMethods = root.DescendantNodes()
+            IEnumerable<MethodDeclarationSyntax> existingMethods = root.DescendantNodes()
                 .OfType<MethodDeclarationSyntax>()
                 .Where(m => m.Identifier.ValueText.Equals(methodName, StringComparison.Ordinal));
                 
@@ -1220,13 +1220,13 @@ class TestClass {{
     /// </summary>
     private static void FindContainingMethod(SyntaxNode root, int startLine, ExtractMethodAnalysis analysis)
     {
-        var methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
+        IEnumerable<MethodDeclarationSyntax> methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
         
-        foreach (var method in methods)
+        foreach (MethodDeclarationSyntax method in methods)
         {
-            var span = method.GetLocation().GetLineSpan();
-            var methodStartLine = span.StartLinePosition.Line + 1; // Convert to 1-based
-            var methodEndLine = span.EndLinePosition.Line + 1;
+            FileLinePositionSpan span = method.GetLocation().GetLineSpan();
+            int methodStartLine = span.StartLinePosition.Line + 1; // Convert to 1-based
+            int methodEndLine = span.EndLinePosition.Line + 1;
             
             if (startLine >= methodStartLine && startLine <= methodEndLine)
             {
@@ -1244,7 +1244,7 @@ class TestClass {{
     {
         var complexity = 1;
         
-        var decisionNodes = node.DescendantNodes().Where(n =>
+        IEnumerable<SyntaxNode> decisionNodes = node.DescendantNodes().Where(n =>
             n is IfStatementSyntax or WhileStatementSyntax or ForStatementSyntax or ForEachStatementSyntax or CaseSwitchLabelSyntax or CatchClauseSyntax or ConditionalExpressionSyntax);
             
         complexity += decisionNodes.Count();
@@ -1258,7 +1258,7 @@ class TestClass {{
     private static string GetSelectedCode(string[] lines, int startLine, int endLine)
     {
         var selectedLines = new List<string>();
-        for (var i = startLine - 1; i <= endLine - 1 && i < lines.Length; i++)
+        for (int i = startLine - 1; i <= endLine - 1 && i < lines.Length; i++)
         {
             selectedLines.Add(lines[i]);
         }

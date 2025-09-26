@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using McpCodeEditor.Interfaces;
+using McpCodeEditor.Models;
 using ModelContextProtocol.Server;
 using McpCodeEditor.Services;
 
@@ -14,15 +15,15 @@ public class BackupTools(
     [McpServerTool]
     [Description("Create a backup of the workspace or specific directory")]
     public async Task<string> BackupCreateAsync(
-        [Description("Path to backup (defaults to current workspace)")]
+        [Description("Path to backup (defaults to current workspace) - must be canonical")]
         string? sourcePath = null,
         [Description("Description for the backup")]
         string description = "Manual backup")
     {
         try
         {
-            var pathToBackup = sourcePath ?? config.DefaultWorkspace;
-            var backupId = await backupService.CreateBackupAsync(pathToBackup, description);
+            string pathToBackup = sourcePath ?? config.DefaultWorkspace;
+            string backupId = await backupService.CreateBackupAsync(pathToBackup, description);
 
             var result = new
             {
@@ -44,13 +45,13 @@ public class BackupTools(
     [McpServerTool]
     [Description("List backups for current workspace")]
     public async Task<string> BackupListAsync(
-        [Description("Workspace path (defaults to current workspace)")]
+        [Description("Workspace path (defaults to current workspace) - must be canonical")]
         string? workspacePath = null)
     {
         try
         {
-            var targetWorkspace = workspacePath ?? config.DefaultWorkspace;
-            var backups = await backupService.ListBackupsAsync(targetWorkspace);
+            string targetWorkspace = workspacePath ?? config.DefaultWorkspace;
+            List<BackupInfo> backups = await backupService.ListBackupsAsync(targetWorkspace);
             
             var result = new
             {
@@ -85,7 +86,7 @@ public class BackupTools(
     {
         try
         {
-            var allBackups = await backupService.ListAllBackupsAsync();
+            List<BackupInfo> allBackups = await backupService.ListAllBackupsAsync();
             var groupedByWorkspace = allBackups.GroupBy(b => new { b.WorkspaceHash, b.WorkspaceDisplayName })
                 .Select(g => new
                 {
@@ -128,15 +129,15 @@ public class BackupTools(
     public async Task<string> BackupRestoreAsync(
         [Description("Backup ID to restore")]
         string backupId,
-        [Description("Workspace path (defaults to current workspace)")]
+        [Description("Workspace path (defaults to current workspace) - must be canonical")]
         string? workspacePath = null,
         [Description("Target path for restoration (optional)")]
         string? targetPath = null)
     {
         try
         {
-            var sourceWorkspace = workspacePath ?? config.DefaultWorkspace;
-            var restored = await backupService.RestoreBackupAsync(backupId, sourceWorkspace, targetPath);
+            string sourceWorkspace = workspacePath ?? config.DefaultWorkspace;
+            bool restored = await backupService.RestoreBackupAsync(backupId, sourceWorkspace, targetPath);
             
             var result = new
             {
@@ -161,13 +162,13 @@ public class BackupTools(
     public async Task<string> BackupDeleteAsync(
         [Description("Backup ID to delete")]
         string backupId,
-        [Description("Workspace path (defaults to current workspace)")]
+        [Description("Workspace path (defaults to current workspace) - must be canonical")]
         string? workspacePath = null)
     {
         try
         {
-            var targetWorkspace = workspacePath ?? config.DefaultWorkspace;
-            var deleted = await backupService.DeleteBackupAsync(backupId, targetWorkspace);
+            string targetWorkspace = workspacePath ?? config.DefaultWorkspace;
+            bool deleted = await backupService.DeleteBackupAsync(backupId, targetWorkspace);
             
             var result = new
             {
@@ -191,13 +192,13 @@ public class BackupTools(
     public async Task<string> BackupGetInfoAsync(
         [Description("Backup ID to get info for")]
         string backupId,
-        [Description("Workspace path (defaults to current workspace)")]
+        [Description("Workspace path (defaults to current workspace) - must be canonical")]
         string? workspacePath = null)
     {
         try
         {
-            var targetWorkspace = workspacePath ?? config.DefaultWorkspace;
-            var backupInfo = await backupService.GetBackupInfoAsync(backupId, targetWorkspace);
+            string targetWorkspace = workspacePath ?? config.DefaultWorkspace;
+            BackupInfo? backupInfo = await backupService.GetBackupInfoAsync(backupId, targetWorkspace);
             
             if (backupInfo == null)
             {
@@ -242,13 +243,13 @@ public class BackupTools(
     public async Task<string> BackupCleanupAsync(
         [Description("Number of recent backups to keep")]
         int keepCount = 10,
-        [Description("Workspace path (defaults to current workspace)")]
+        [Description("Workspace path (defaults to current workspace) - must be canonical")]
         string? workspacePath = null)
     {
         try
         {
-            var targetWorkspace = workspacePath ?? config.DefaultWorkspace;
-            var deletedCount = await backupService.CleanupOldBackupsAsync(targetWorkspace, keepCount);
+            string targetWorkspace = workspacePath ?? config.DefaultWorkspace;
+            int deletedCount = await backupService.CleanupOldBackupsAsync(targetWorkspace, keepCount);
             
             var result = new
             {

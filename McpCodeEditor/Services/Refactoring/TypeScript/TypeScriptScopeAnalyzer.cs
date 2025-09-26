@@ -25,7 +25,7 @@ public class TypeScriptScopeAnalyzer(ILogger<TypeScriptScopeAnalyzer> logger)
             };
 
             // Convert to 0-based indexing for array access
-            var lineIndex = targetLine - 1;
+            int lineIndex = targetLine - 1;
             
             // Validate line index
             if (lineIndex < 0 || lineIndex >= lines.Length)
@@ -38,7 +38,7 @@ public class TypeScriptScopeAnalyzer(ILogger<TypeScriptScopeAnalyzer> logger)
             }
 
             // Find the scope hierarchy from the target line upward
-            var scopeHierarchy = AnalyzeScopeHierarchy(lines, lineIndex);
+            List<TypeScriptScopeInfo> scopeHierarchy = AnalyzeScopeHierarchy(lines, lineIndex);
             result.ScopeHierarchy = scopeHierarchy;
 
             // Determine the primary scope type
@@ -80,14 +80,14 @@ public class TypeScriptScopeAnalyzer(ILogger<TypeScriptScopeAnalyzer> logger)
         // Scan from the beginning of the file to the target line to build accurate scope context
         for (var i = 0; i <= startLineIndex; i++)
         {
-            var line = lines[i].Trim();
+            string line = lines[i].Trim();
             
             // Skip empty lines and comments
             if (string.IsNullOrWhiteSpace(line) || line.StartsWith("//") || line.StartsWith("/*"))
                 continue;
 
             // Detect scope-opening patterns
-            var scopeInfo = DetectScopeOpening(line, i + 1);
+            TypeScriptScopeInfo? scopeInfo = DetectScopeOpening(line, i + 1);
             if (scopeInfo != null)
             {
                 braceStack.Push(scopeInfo);
@@ -97,10 +97,10 @@ public class TypeScriptScopeAnalyzer(ILogger<TypeScriptScopeAnalyzer> logger)
             // Handle closing braces
             if (line.Contains("}"))
             {
-                var braceCount = line.Count(c => c == '}');
+                int braceCount = line.Count(c => c == '}');
                 for (var j = 0; j < braceCount && braceStack.Count > 0; j++)
                 {
-                    var closedScope = braceStack.Pop();
+                    TypeScriptScopeInfo closedScope = braceStack.Pop();
                     closedScope.EndLine = i + 1;
                 }
             }
@@ -119,7 +119,7 @@ public class TypeScriptScopeAnalyzer(ILogger<TypeScriptScopeAnalyzer> logger)
         // Class detection
         if (Regex.IsMatch(line, @"\b(export\s+)?(abstract\s+)?class\s+\w+"))
         {
-            var match = Regex.Match(line, @"\b(export\s+)?(abstract\s+)?class\s+(\w+)");
+            Match match = Regex.Match(line, @"\b(export\s+)?(abstract\s+)?class\s+(\w+)");
             return new TypeScriptScopeInfo
             {
                 ScopeType = TypeScriptScopeType.Class,
@@ -132,7 +132,7 @@ public class TypeScriptScopeAnalyzer(ILogger<TypeScriptScopeAnalyzer> logger)
         // Interface detection
         if (Regex.IsMatch(line, @"\b(export\s+)?interface\s+\w+"))
         {
-            var match = Regex.Match(line, @"\b(export\s+)?interface\s+(\w+)");
+            Match match = Regex.Match(line, @"\b(export\s+)?interface\s+(\w+)");
             return new TypeScriptScopeInfo
             {
                 ScopeType = TypeScriptScopeType.Interface,
@@ -145,8 +145,8 @@ public class TypeScriptScopeAnalyzer(ILogger<TypeScriptScopeAnalyzer> logger)
         // Method detection (including constructors, getters, setters)
         if (Regex.IsMatch(line, @"\b(constructor|get|set|\w+)\s*\([^)]*\)\s*(\:\s*\w+)?\s*\{"))
         {
-            var match = Regex.Match(line, @"\b(constructor|get|set|(\w+))\s*\([^)]*\)");
-            var methodName = match.Groups[1].Value == "constructor" ? "constructor" : 
+            Match match = Regex.Match(line, @"\b(constructor|get|set|(\w+))\s*\([^)]*\)");
+            string methodName = match.Groups[1].Value == "constructor" ? "constructor" : 
                                match.Groups[1].Value is "get" or "set" ? 
                                match.Groups[1].Value : match.Groups[2].Value;
             
@@ -162,7 +162,7 @@ public class TypeScriptScopeAnalyzer(ILogger<TypeScriptScopeAnalyzer> logger)
         // Function detection
         if (Regex.IsMatch(line, @"\b(export\s+)?(async\s+)?function\s+\w+"))
         {
-            var match = Regex.Match(line, @"\b(export\s+)?(async\s+)?function\s+(\w+)");
+            Match match = Regex.Match(line, @"\b(export\s+)?(async\s+)?function\s+(\w+)");
             return new TypeScriptScopeInfo
             {
                 ScopeType = TypeScriptScopeType.Function,
@@ -187,7 +187,7 @@ public class TypeScriptScopeAnalyzer(ILogger<TypeScriptScopeAnalyzer> logger)
         // Generic block detection (if, for, while, etc.)
         if (Regex.IsMatch(line, @"\b(if|for|while|switch|try|catch|finally)\b.*\{"))
         {
-            var match = Regex.Match(line, @"\b(if|for|while|switch|try|catch|finally)\b");
+            Match match = Regex.Match(line, @"\b(if|for|while|switch|try|catch|finally)\b");
             return new TypeScriptScopeInfo
             {
                 ScopeType = TypeScriptScopeType.Block,
@@ -218,7 +218,7 @@ public class TypeScriptScopeAnalyzer(ILogger<TypeScriptScopeAnalyzer> logger)
         if (hierarchy.Count == 0) return TypeScriptScopeType.Module;
 
         // Return the most specific (deepest) scope
-        var lastScope = hierarchy.Last();
+        TypeScriptScopeInfo lastScope = hierarchy.Last();
         return lastScope.ScopeType;
     }
 
@@ -227,7 +227,7 @@ public class TypeScriptScopeAnalyzer(ILogger<TypeScriptScopeAnalyzer> logger)
     /// </summary>
     private static TypeScriptClassContext? AnalyzeClassContext(string[] lines, int lineIndex, List<TypeScriptScopeInfo> hierarchy)
     {
-        var classScope = hierarchy.FirstOrDefault(s => s.ScopeType == TypeScriptScopeType.Class);
+        TypeScriptScopeInfo? classScope = hierarchy.FirstOrDefault(s => s.ScopeType == TypeScriptScopeType.Class);
         if (classScope == null) return null;
 
         return new TypeScriptClassContext
@@ -246,7 +246,7 @@ public class TypeScriptScopeAnalyzer(ILogger<TypeScriptScopeAnalyzer> logger)
     private static string DetermineCurrentAccessLevel(string[] lines, int lineIndex, List<TypeScriptScopeInfo> hierarchy)
     {
         // If we're in a method, use the method's access modifier
-        var methodScope = hierarchy.LastOrDefault(s => s.ScopeType is TypeScriptScopeType.Method or TypeScriptScopeType.Constructor);
+        TypeScriptScopeInfo? methodScope = hierarchy.LastOrDefault(s => s.ScopeType is TypeScriptScopeType.Method or TypeScriptScopeType.Constructor);
         if (methodScope != null)
         {
             return methodScope.AccessModifier ?? "public";

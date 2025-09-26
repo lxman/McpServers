@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using OpenQA.Selenium;
 using SeleniumChromeTool.Models;
 
@@ -31,12 +32,12 @@ public partial class StackOverflowScraper
                 ".js-dismissable"
             };
 
-            foreach (var selector in modalSelectors)
+            foreach (string selector in modalSelectors)
             {
                 try
                 {
-                    var closeButtons = driver.FindElements(By.CssSelector(selector));
-                    foreach (var closeButton in closeButtons)
+                    ReadOnlyCollection<IWebElement> closeButtons = driver.FindElements(By.CssSelector(selector));
+                    foreach (IWebElement closeButton in closeButtons)
                     {
                         if (closeButton is { Displayed: true, Enabled: true })
                         {
@@ -79,7 +80,7 @@ public partial class StackOverflowScraper
             IList<IWebElement> jobElements = new List<IWebElement>();
 
             // Try different selectors to find job listings
-            foreach (var selector in jobContainerSelectors)
+            foreach (string selector in jobContainerSelectors)
             {
                 jobElements = driver.FindElements(By.CssSelector(selector));
                 if (jobElements.Count <= 0) continue;
@@ -95,14 +96,14 @@ public partial class StackOverflowScraper
 
             // Process each job listing
             var processedJobs = 0;
-            foreach (var jobElement in jobElements)
+            foreach (IWebElement jobElement in jobElements)
             {
                 if (processedJobs >= request.MaxResults)
                     break;
 
                 try
                 {
-                    var job = ExtractJobDetails(jobElement, driver).Result;
+                    EnhancedJobListing? job = ExtractJobDetails(jobElement, driver).Result;
                     
                     if (job != null && IsRelevantJob(job, request))
                     {
@@ -166,10 +167,10 @@ public partial class StackOverflowScraper
                 ".excerpt"
             };
 
-            var title = ExtractTextUsingSelectorArray(jobElement, titleSelectors);
-            var location = ExtractTextUsingSelectorArray(jobElement, locationSelectors);
-            var company = ExtractTextUsingSelectorArray(jobElement, companySelectors) ?? "Stack Overflow Company";
-            var description = ExtractTextUsingSelectorArray(jobElement, descriptionSelectors);
+            string? title = ExtractTextUsingSelectorArray(jobElement, titleSelectors);
+            string? location = ExtractTextUsingSelectorArray(jobElement, locationSelectors);
+            string company = ExtractTextUsingSelectorArray(jobElement, companySelectors) ?? "Stack Overflow Company";
+            string? description = ExtractTextUsingSelectorArray(jobElement, descriptionSelectors);
 
             // Get the job URL
             var jobUrl = "";
@@ -184,11 +185,11 @@ public partial class StackOverflowScraper
                     ".job-link"
                 };
 
-                foreach (var selector in linkSelectors)
+                foreach (string selector in linkSelectors)
                 {
                     try
                     {
-                        var linkElement = jobElement.FindElement(By.CssSelector(selector));
+                        IWebElement linkElement = jobElement.FindElement(By.CssSelector(selector));
                         jobUrl = linkElement.GetAttribute("href") ?? "";
                         if (!string.IsNullOrWhiteSpace(jobUrl))
                             break;
@@ -246,12 +247,12 @@ public partial class StackOverflowScraper
 
     private static string? ExtractTextUsingSelectorArray(IWebElement parent, string[] selectors)
     {
-        foreach (var selector in selectors)
+        foreach (string selector in selectors)
         {
             try
             {
-                var element = parent.FindElement(By.CssSelector(selector));
-                var text = element?.Text?.Trim();
+                IWebElement? element = parent.FindElement(By.CssSelector(selector));
+                string? text = element?.Text?.Trim();
                 if (!string.IsNullOrWhiteSpace(text))
                 {
                     return text;
@@ -267,7 +268,7 @@ public partial class StackOverflowScraper
 
     private static string ExtractExperienceLevel(string? title, string? description)
     {
-        var text = (title + " " + description).ToLowerInvariant();
+        string text = (title + " " + description).ToLowerInvariant();
 
         if (text.Contains("senior") || text.Contains("sr.") || text.Contains("lead"))
             return "Senior";
@@ -290,14 +291,14 @@ public partial class StackOverflowScraper
             "software engineer", "api", "developer", "engineering" 
         };
         
-        var searchText = (job.Title + " " + job.Description + " " + job.Company).ToLowerInvariant();
+        string searchText = (job.Title + " " + job.Description + " " + job.Company).ToLowerInvariant();
         
         // High priority for .NET specific roles
-        var hasNetKeywords = dotNetKeywords.Any(keyword => searchText.Contains(keyword));
+        bool hasNetKeywords = dotNetKeywords.Any(keyword => searchText.Contains(keyword));
         
         // Include general software engineering roles at Stack Overflow
-        var isSoftwareRole = searchText.Contains("software") && 
-                             (searchText.Contains("engineer") || searchText.Contains("developer"));
+        bool isSoftwareRole = searchText.Contains("software") && 
+                              (searchText.Contains("engineer") || searchText.Contains("developer"));
         
         return hasNetKeywords || isSoftwareRole || job.MatchScore > 40;
     }
@@ -323,9 +324,9 @@ public partial class StackOverflowScraper
             "Stack Overflow", "Q&A Platform", "Community Platform"
         };
 
-        var lowerText = text.ToLowerInvariant();
+        string lowerText = text.ToLowerInvariant();
         
-        foreach (var tech in techKeywords)
+        foreach (string tech in techKeywords)
         {
             if (lowerText.Contains(tech.ToLowerInvariant()))
             {
@@ -338,14 +339,14 @@ public partial class StackOverflowScraper
 
     private static int CalculateMatchScore(string? title, string? description, string? company, string[] requiredKeywords)
     {
-        var text = (title + " " + description + " " + company).ToLowerInvariant();
+        string text = (title + " " + description + " " + company).ToLowerInvariant();
         var score = 0;
 
         // Base score for being at Stack Overflow (developer-focused company)
         score += 30;
 
         // Score for required keywords
-        foreach (var keyword in requiredKeywords)
+        foreach (string keyword in requiredKeywords)
         {
             if (text.Contains(keyword.ToLowerInvariant()))
             {
@@ -395,7 +396,7 @@ public partial class StackOverflowScraper
 
     private static bool IsRemotePosition(string? location, string? description)
     {
-        var text = (location + " " + description).ToLowerInvariant();
+        string text = (location + " " + description).ToLowerInvariant();
         
         var remoteKeywords = new[] 
         { 

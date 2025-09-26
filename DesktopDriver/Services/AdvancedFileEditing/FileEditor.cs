@@ -7,10 +7,12 @@ public class FileEditor(
     DiffPatchService diffPatchService,
     IndentationManager indentationManager)
 {
+    private readonly HashSet<string> _backedUpFilesThisSession = [];
+    
     /// <summary>
     /// Replaces a range of lines in a file with new content
     /// </summary>
-    public async Task<EditResult> ReplaceFileLines(string filePath, int startLine, int endLine, string newContent, bool createBackup = true)
+    public async Task<EditResult> ReplaceFileLines(string filePath, int startLine, int endLine, string newContent, bool createBackup = false)
     {
         try
         {
@@ -25,7 +27,7 @@ public class FileEditor(
             if (!success)
                 return EditResult.CreateFailure(filePath, errorMessage ?? "Unknown error occurred");
             
-            if (createBackup) CreateBackup(filePath);
+            if (createBackup) CreateBackupIfNeeded(filePath, createBackup);
             
             await File.WriteAllLinesAsync(filePath, newLines);
             
@@ -44,7 +46,7 @@ public class FileEditor(
     /// <summary>
     /// Inserts content after the specified line in a file
     /// </summary>
-    public async Task<EditResult> InsertAfterLine(string filePath, int afterLine, string content, bool maintainIndentation = true, bool createBackup = true)
+    public async Task<EditResult> InsertAfterLine(string filePath, int afterLine, string content, bool maintainIndentation = true, bool createBackup = false)
     {
         try
         {
@@ -61,7 +63,7 @@ public class FileEditor(
             if (!success)
                 return EditResult.CreateFailure(filePath, errorMessage ?? "Unknown error occurred");
             
-            if (createBackup) CreateBackup(filePath);
+            if (createBackup) CreateBackupIfNeeded(filePath, createBackup);
             
             await File.WriteAllLinesAsync(filePath, newLines);
             
@@ -80,7 +82,7 @@ public class FileEditor(
     /// <summary>
     /// Deletes a range of lines from a file
     /// </summary>
-    public async Task<EditResult> DeleteLines(string filePath, int startLine, int endLine, bool createBackup = true)
+    public async Task<EditResult> DeleteLines(string filePath, int startLine, int endLine, bool createBackup = false)
     {
         try
         {
@@ -95,7 +97,7 @@ public class FileEditor(
             if (!success)
                 return EditResult.CreateFailure(filePath, errorMessage ?? "Unknown error occurred");
             
-            if (createBackup) CreateBackup(filePath);
+            if (createBackup) CreateBackupIfNeeded(filePath, createBackup);
             
             await File.WriteAllLinesAsync(filePath, newLines);
             
@@ -115,7 +117,7 @@ public class FileEditor(
     /// Replaces text patterns within a file
     /// </summary>
     public async Task<EditResult> ReplaceInFile(string filePath, string searchPattern, string replaceWith, 
-        bool useRegex = false, bool caseSensitive = false, bool createBackup = true)
+        bool useRegex = false, bool caseSensitive = false, bool createBackup = false)
     {
         try
         {
@@ -131,7 +133,7 @@ public class FileEditor(
             if (!success)
                 return EditResult.CreateFailure(filePath, errorMessage ?? "No replacements made");
             
-            if (createBackup) CreateBackup(filePath);
+            if (createBackup) CreateBackupIfNeeded(filePath, createBackup);
             
             await File.WriteAllLinesAsync(filePath, newLines);
             
@@ -177,7 +179,7 @@ public class FileEditor(
     /// <summary>
     /// Finds lines in a file matching a pattern
     /// </summary>
-    public async Task<(bool success, int[] lineNumbers, string? errorMessage)> FindInFile(
+    public static async Task<(bool success, int[] lineNumbers, string? errorMessage)> FindInFile(
         string filePath, string pattern, bool useRegex = false, bool caseSensitive = false)
     {
         try
@@ -199,7 +201,7 @@ public class FileEditor(
     /// <summary>
     /// Validates file indentation and provides recommendations
     /// </summary>
-    public async Task<(bool isConsistent, string analysis)> AnalyzeIndentation(string filePath)
+    public static async Task<(bool isConsistent, string analysis)> AnalyzeIndentation(string filePath)
     {
         try
         {
@@ -228,10 +230,19 @@ public class FileEditor(
         }
     }
     
-    private static void CreateBackup(string filePath)
+    private void CreateBackupIfNeeded(string filePath, bool createBackup = false)
     {
+        if (!createBackup)
+            return;
+            
+        // Only create one backup per file per session
+        string normalizedPath = Path.GetFullPath(filePath);
+        if (_backedUpFilesThisSession.Contains(normalizedPath))
+            return;
+            
         var backupPath = $"{filePath}.backup.{DateTime.Now:yyyyMMdd-HHmmss}";
         File.Copy(filePath, backupPath);
+        _backedUpFilesThisSession.Add(normalizedPath);
     }
     
     private static int CountChangedLines(string[] original, string[] modified)

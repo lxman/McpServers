@@ -35,7 +35,7 @@ public class TypeScriptRefactoringTools(
         {
             ValidateFilePath(filePath);
 
-            var result = await refactoringOrchestrator.OrganizeImportsAsync(
+            RefactoringResult result = await refactoringOrchestrator.OrganizeImportsAsync(
                 filePath, removeUnused, sortAlphabetically, previewOnly);
             return result;
         });
@@ -56,7 +56,7 @@ public class TypeScriptRefactoringTools(
             ValidateFilePath(filePath);
             ValidateRequiredParameter(importStatement, nameof(importStatement));
 
-            var result = await refactoringOrchestrator.AddImportAsync(
+            RefactoringResult result = await refactoringOrchestrator.AddImportAsync(
                 filePath, importStatement, previewOnly);
             return result;
         });
@@ -97,7 +97,7 @@ public class TypeScriptRefactoringTools(
             }
 
             // Use the new orchestrator for TypeScript method extraction
-            var result = await refactoringOrchestrator.ExtractMethodAsync(filePath, functionName, startLine, endLine, previewOnly);
+            RefactoringResult result = await refactoringOrchestrator.ExtractMethodAsync(filePath, functionName, startLine, endLine, previewOnly);
             return result;
         });
     }
@@ -141,7 +141,7 @@ public class TypeScriptRefactoringTools(
             }
 
             // Use the new orchestrator for TypeScript variable introduction
-            var result = await refactoringOrchestrator.IntroduceVariableAsync(
+            RefactoringResult result = await refactoringOrchestrator.IntroduceVariableAsync(
                 filePath, line, startColumn, endColumn, variableName, previewOnly);
             return result;
         });
@@ -165,7 +165,7 @@ public class TypeScriptRefactoringTools(
             ValidateRequiredParameter(functionName, nameof(functionName));
 
             // Use the new orchestrator for TypeScript function inlining
-            var result = await refactoringOrchestrator.InlineMethodAsync(
+            RefactoringResult result = await refactoringOrchestrator.InlineMethodAsync(
                 filePath, functionName, previewOnly);
             return result;
         });
@@ -210,7 +210,7 @@ public class TypeScriptRefactoringTools(
             }
 
             // FIXED: Call orchestrator with correct parameter order (filePath, symbolName, newName, previewOnly)
-            var result = await refactoringOrchestrator.RenameSymbolAsync(filePath, symbolName, newName, previewOnly);
+            RefactoringResult result = await refactoringOrchestrator.RenameSymbolAsync(filePath, symbolName, newName, previewOnly);
             return result;
         });
     }
@@ -251,7 +251,7 @@ public class TypeScriptRefactoringTools(
             }
 
             // Use the unified method that always returns SummaryRefactoringResult
-            var result = await crossFileRenamer.RenameSymbolAcrossFilesUnifiedAsync(
+            SummaryRefactoringResult result = await crossFileRenamer.RenameSymbolAcrossFilesUnifiedAsync(
                 symbolName, newName, rootPath, previewOnly, useSummaryMode);
             
             return result;

@@ -29,8 +29,8 @@ public class TimeUtilities
     {
         _logger.LogInformation("GetCurrentTime called");
         
-        var now = DateTime.Now;
-        var utcNow = DateTime.UtcNow;
+        DateTime now = DateTime.Now;
+        DateTime utcNow = DateTime.UtcNow;
         
         var result = new
         {
@@ -61,18 +61,18 @@ public class TimeUtilities
         try
         {
             // Parse start timestamp with proper timezone handling
-            var start = DateTimeOffset.Parse(startTimestamp, null, DateTimeStyles.RoundtripKind);
+            DateTimeOffset start = DateTimeOffset.Parse(startTimestamp, null, DateTimeStyles.RoundtripKind);
             
             // Parse end timestamp or use current UTC time, ensuring both are in UTC for calculation
-            var end = string.IsNullOrEmpty(endTimestamp) 
+            DateTimeOffset end = string.IsNullOrEmpty(endTimestamp) 
                 ? DateTimeOffset.UtcNow 
                 : DateTimeOffset.Parse(endTimestamp, null, DateTimeStyles.RoundtripKind);
             
             // Convert both to UTC for accurate calculation
-            var startUtc = start.ToUniversalTime();
-            var endUtc = end.ToUniversalTime();
+            DateTimeOffset startUtc = start.ToUniversalTime();
+            DateTimeOffset endUtc = end.ToUniversalTime();
             
-            var elapsed = endUtc - startUtc;
+            TimeSpan elapsed = endUtc - startUtc;
             
             var result = new
             {
@@ -107,7 +107,7 @@ public class TimeUtilities
     {
         _logger.LogInformation("GetTimestamp called");
         
-        var now = DateTimeOffset.Now;
+        DateTimeOffset now = DateTimeOffset.Now;
         
         var result = new
         {
@@ -147,11 +147,11 @@ public class TimeUtilities
         var timestampKey = $"timer_{timerName}";
         
         // Check if timer already exists and warn about collision
-        var existingTimer = Environment.GetEnvironmentVariable(timestampKey);
-        var isOverwriting = !string.IsNullOrEmpty(existingTimer);
+        string? existingTimer = Environment.GetEnvironmentVariable(timestampKey);
+        bool isOverwriting = !string.IsNullOrEmpty(existingTimer);
         
         // Store the UTC timestamp for consistent timezone handling
-        var startTime = DateTimeOffset.UtcNow;
+        DateTimeOffset startTime = DateTimeOffset.UtcNow;
         Environment.SetEnvironmentVariable(timestampKey, startTime.ToString("o"));
         
         var result = new
@@ -178,7 +178,7 @@ public class TimeUtilities
         _logger.LogInformation("StopTimer called for timer: {Timer}", timerName);
         
         var timestampKey = $"timer_{timerName}";
-        var startTimeStr = Environment.GetEnvironmentVariable(timestampKey);
+        string? startTimeStr = Environment.GetEnvironmentVariable(timestampKey);
         
         if (string.IsNullOrEmpty(startTimeStr))
         {
@@ -192,14 +192,14 @@ public class TimeUtilities
         }
         
         // Parse start time as UTC and get current UTC time for consistent calculation
-        var startTime = DateTimeOffset.Parse(startTimeStr, null, DateTimeStyles.RoundtripKind);
-        var endTime = DateTimeOffset.UtcNow;
+        DateTimeOffset startTime = DateTimeOffset.Parse(startTimeStr, null, DateTimeStyles.RoundtripKind);
+        DateTimeOffset endTime = DateTimeOffset.UtcNow;
         
         // Ensure both times are in UTC for accurate calculation
-        var startUtc = startTime.ToUniversalTime();
-        var endUtc = endTime.ToUniversalTime();
+        DateTimeOffset startUtc = startTime.ToUniversalTime();
+        DateTimeOffset endUtc = endTime.ToUniversalTime();
         
-        var elapsed = endUtc - startUtc;
+        TimeSpan elapsed = endUtc - startUtc;
         
         // Clear the timer
         Environment.SetEnvironmentVariable(timestampKey, null);
@@ -228,26 +228,26 @@ public class TimeUtilities
         _logger.LogInformation("ListTimers called");
         
         var timers = new List<object>();
-        var currentUtc = DateTimeOffset.UtcNow;
+        DateTimeOffset currentUtc = DateTimeOffset.UtcNow;
         
         foreach (DictionaryEntry entry in Environment.GetEnvironmentVariables())
         {
-            var key = entry.Key.ToString() ?? "";
+            string key = entry.Key.ToString() ?? "";
             
             if (key.StartsWith("timer_"))
             {
-                var timerName = key[6..]; // Remove "timer_" prefix
-                var startTimeStr = entry.Value?.ToString() ?? "";
+                string timerName = key[6..]; // Remove "timer_" prefix
+                string startTimeStr = entry.Value?.ToString() ?? "";
                 
                 try
                 {
                     // Parse the stored UTC timestamp properly
-                    var startTime = DateTimeOffset.Parse(startTimeStr, null, DateTimeStyles.RoundtripKind);
+                    DateTimeOffset startTime = DateTimeOffset.Parse(startTimeStr, null, DateTimeStyles.RoundtripKind);
                     
                     // Ensure both times are in UTC for accurate calculation
-                    var startUtc = startTime.ToUniversalTime();
+                    DateTimeOffset startUtc = startTime.ToUniversalTime();
                     
-                    var elapsed = currentUtc - startUtc;
+                    TimeSpan elapsed = currentUtc - startUtc;
                     
                     timers.Add(new
                     {
@@ -289,14 +289,14 @@ public class TimeUtilities
         // Bound the duration to reasonable values (0.1 to 30 seconds)
         durationSeconds = Math.Max(0.1, Math.Min(30, durationSeconds));
         
-        var startTime = DateTimeOffset.UtcNow;
+        DateTimeOffset startTime = DateTimeOffset.UtcNow;
         
         // Perform actual waiting
         var milliseconds = (int)(durationSeconds * 1000);
         Thread.Sleep(milliseconds);
         
-        var endTime = DateTimeOffset.UtcNow;
-        var actualDuration = endTime - startTime;
+        DateTimeOffset endTime = DateTimeOffset.UtcNow;
+        TimeSpan actualDuration = endTime - startTime;
         
         var result = new
         {
@@ -317,8 +317,8 @@ public class TimeUtilities
     private static string FormatTimeSpan(TimeSpan timeSpan)
     {
         // Handle negative times
-        var sign = timeSpan.TotalMilliseconds < 0 ? "-" : "";
-        var abs = timeSpan.Duration();
+        string sign = timeSpan.TotalMilliseconds < 0 ? "-" : "";
+        TimeSpan abs = timeSpan.Duration();
         
         return $"{sign}{abs.Days}d {abs.Hours}h {abs.Minutes}m {abs.Seconds}.{abs.Milliseconds:D3}s";
     }

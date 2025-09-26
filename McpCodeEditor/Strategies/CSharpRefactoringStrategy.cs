@@ -68,7 +68,7 @@ public class CSharpRefactoringStrategy : ILanguageRefactoringStrategy
 
         try
         {
-            var result = await _methodExtractor.ExecuteAsync(context);
+            RefactoringResult result = await _methodExtractor.ExecuteAsync(context);
             _logger.LogDebug("C# method extraction returned: success={Success}, message={Message}", result.Success, result.Message);
             return result;
         }
@@ -114,7 +114,7 @@ public class CSharpRefactoringStrategy : ILanguageRefactoringStrategy
 
         try
         {
-            var result = await _methodExtractor.ExecuteAsync(context);
+            RefactoringResult result = await _methodExtractor.ExecuteAsync(context);
             _logger.LogDebug("C# method extraction (advanced) returned: success={Success}, message={Message}", result.Success, result.Message);
             return result;
         }
@@ -223,7 +223,7 @@ public class CSharpRefactoringStrategy : ILanguageRefactoringStrategy
         try
         {
             // Extract namespace from "using System.Collections;" format
-            var usingNamespace = importStatement.Replace("using ", "").Replace(";", "").Trim();
+            string usingNamespace = importStatement.Replace("using ", "").Replace(";", "").Trim();
             return await _importManager.AddUsingAsync(filePath, usingNamespace, previewOnly, cancellationToken);
         }
         catch (Exception ex)

@@ -37,7 +37,7 @@ public class RenameSymbolCommand : IRefactoringCommand
 
     public bool SupportsFile(string filePath)
     {
-        var language = LanguageDetectionService.DetectLanguage(filePath);
+        LanguageType language = LanguageDetectionService.DetectLanguage(filePath);
         return SupportedLanguages.Contains(language);
     }
 
@@ -50,8 +50,8 @@ public class RenameSymbolCommand : IRefactoringCommand
         }
 
         // Validate symbol names
-        var symbolName = context.AdditionalData["symbolName"]?.ToString() ?? "";
-        var newName = context.AdditionalData["newName"]?.ToString() ?? "";
+        string symbolName = context.AdditionalData["symbolName"]?.ToString() ?? "";
+        string newName = context.AdditionalData["newName"]?.ToString() ?? "";
         
         if (string.IsNullOrWhiteSpace(symbolName))
         {
@@ -83,7 +83,7 @@ public class RenameSymbolCommand : IRefactoringCommand
             // Validate language support if file is specified
             if (!SupportsFile(context.FilePath))
             {
-                var language = LanguageDetectionService.DetectLanguage(context.FilePath);
+                LanguageType language = LanguageDetectionService.DetectLanguage(context.FilePath);
                 return CreateErrorResult($"Symbol renaming not supported for {LanguageDetectionService.GetLanguageName(language)} files");
             }
         }
@@ -96,17 +96,17 @@ public class RenameSymbolCommand : IRefactoringCommand
         _logger.LogInformation("RenameSymbolCommand executing for file: {FilePath}", context.FilePath ?? "project-wide");
 
         // Extract parameters
-        var symbolName = context.AdditionalData["symbolName"]?.ToString() ?? throw new InvalidOperationException("SymbolName is required");
-        var newName = context.AdditionalData["newName"]?.ToString() ?? throw new InvalidOperationException("NewName is required");
-        var previewOnly = bool.Parse(context.AdditionalData["previewOnly"]?.ToString() ?? "false");
+        string symbolName = context.AdditionalData["symbolName"]?.ToString() ?? throw new InvalidOperationException("SymbolName is required");
+        string newName = context.AdditionalData["newName"]?.ToString() ?? throw new InvalidOperationException("NewName is required");
+        bool previewOnly = bool.Parse(context.AdditionalData["previewOnly"]?.ToString() ?? "false");
 
         try
         {
             if (!string.IsNullOrEmpty(context.FilePath))
             {
                 // File-scoped rename
-                var validatedPath = _pathValidation.ValidateFileExists(context.FilePath);
-                var language = LanguageDetectionService.DetectLanguage(validatedPath);
+                string validatedPath = _pathValidation.ValidateFileExists(context.FilePath);
+                LanguageType language = LanguageDetectionService.DetectLanguage(validatedPath);
 
                 _logger.LogInformation("Renaming symbol '{SymbolName}' to '{NewName}' in {Language} file: {FilePath}", 
                     symbolName, newName, language, validatedPath);

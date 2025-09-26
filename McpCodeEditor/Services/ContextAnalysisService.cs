@@ -121,7 +121,7 @@ public class ContextAnalysisService(
         string? focusDirectory = null, 
         int maxFiles = 20)
     {
-        var workspacePath = focusDirectory ?? config.DefaultWorkspace;
+        string workspacePath = focusDirectory ?? config.DefaultWorkspace;
         
         if (!Directory.Exists(workspacePath))
         {
@@ -137,10 +137,10 @@ public class ContextAnalysisService(
         try
         {
             // Get project information
-            var projectInfo = await projectDetection.AnalyzeDirectoryAsync(workspacePath);
+            ProjectInfo projectInfo = await projectDetection.AnalyzeDirectoryAsync(workspacePath);
             
             // UX-008 ENHANCEMENT: Use ProjectScaleService for intelligent file discovery
-            var relevantFiles = await GetRelevantFilesWithIntelligentFilteringAsync(workspacePath, maxFiles);
+            List<FileRelevanceInfo> relevantFiles = await GetRelevantFilesWithIntelligentFilteringAsync(workspacePath, maxFiles);
             
             return new ContextAnalysisResult
             {
@@ -176,7 +176,7 @@ public class ContextAnalysisService(
         string? focusDirectory = null,
         int maxSuggestions = 10)
     {
-        var context = await AnalyzeCurrentContextAsync(focusDirectory, maxSuggestions * 2);
+        ContextAnalysisResult context = await AnalyzeCurrentContextAsync(focusDirectory, maxSuggestions * 2);
         
         if (!context.Success || context.RelevantFiles == null)
         {
@@ -202,7 +202,7 @@ public class ContextAnalysisService(
         var relevantFiles = new List<FileRelevanceInfo>();
         
         // UX-008: Use ProjectScaleService for intelligent build artifact filtering
-        var scaleAnalysis = await ProjectScaleService.AnalyzeProjectScaleAsync(directoryPath);
+        ProjectScaleAnalysis scaleAnalysis = await ProjectScaleService.AnalyzeProjectScaleAsync(directoryPath);
         
         // Combine source files and other files (excluding build artifacts)
         var filesToAnalyze = new List<ProjectFile>();
@@ -210,16 +210,16 @@ public class ContextAnalysisService(
         filesToAnalyze.AddRange(scaleAnalysis.OtherFiles); // Include config files, docs, etc.
         // Note: We intentionally exclude BuildArtifacts and GeneratedFiles for better context
         
-        foreach (var projectFile in filesToAnalyze)
+        foreach (ProjectFile projectFile in filesToAnalyze)
         {
-            var filePath = Path.Combine(directoryPath, projectFile.RelativePath);
+            string filePath = Path.Combine(directoryPath, projectFile.RelativePath);
             
             // Skip if file matches our additional excluded patterns (belt and suspenders)
             if (MatchesExcludedPattern(filePath))
                 continue;
                 
             // Calculate relevance score using our context-specific logic
-            var relevanceScore = CalculateFileRelevance(filePath);
+            int relevanceScore = CalculateFileRelevance(filePath);
             
             // Only include files with reasonable relevance
             if (relevanceScore >= 20)
@@ -254,9 +254,9 @@ public class ContextAnalysisService(
         var relevantFiles = new List<FileRelevanceInfo>();
         
         // Get all files recursively (OLD APPROACH - includes build artifacts)
-        var allFiles = Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories);
+        string[] allFiles = Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories);
         
-        foreach (var filePath in allFiles)
+        foreach (string filePath in allFiles)
         {
             // Skip if file is in excluded directory
             if (IsInExcludedDirectory(filePath, directoryPath))
@@ -267,7 +267,7 @@ public class ContextAnalysisService(
                 continue;
                 
             // Calculate relevance score
-            var relevanceScore = CalculateFileRelevance(filePath);
+            int relevanceScore = CalculateFileRelevance(filePath);
             
             // Only include files with reasonable relevance
             if (relevanceScore >= 20)
@@ -296,25 +296,25 @@ public class ContextAnalysisService(
 
     private bool IsInExcludedDirectory(string filePath, string basePath)
     {
-        var relativePath = Path.GetRelativePath(basePath, filePath);
-        var pathParts = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string relativePath = Path.GetRelativePath(basePath, filePath);
+        string[] pathParts = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         
         return pathParts.Any(part => _excludedDirectories.Contains(part, StringComparer.OrdinalIgnoreCase));
     }
 
     private bool MatchesExcludedPattern(string filePath)
     {
-        var fileName = Path.GetFileName(filePath);
+        string fileName = Path.GetFileName(filePath);
         return _excludedFilePatterns.Any(pattern => Regex.IsMatch(fileName, pattern, RegexOptions.IgnoreCase));
     }
 
     private int CalculateFileRelevance(string filePath)
     {
-        var extension = Path.GetExtension(filePath).ToLowerInvariant();
-        var fileName = Path.GetFileName(filePath).ToLowerInvariant();
+        string extension = Path.GetExtension(filePath).ToLowerInvariant();
+        string fileName = Path.GetFileName(filePath).ToLowerInvariant();
         
         // Base score from file type
-        var score = _fileTypePriorities.GetValueOrDefault(extension, 15);
+        int score = _fileTypePriorities.GetValueOrDefault(extension, 15);
         
         // Bonus for important file names
         if (fileName.Contains("readme") || fileName.Contains("main") || fileName.Contains("index"))
@@ -332,7 +332,7 @@ public class ContextAnalysisService(
         
         // Bonus for recently modified files
         var fileInfo = new FileInfo(filePath);
-        var age = DateTime.Now - fileInfo.LastWriteTime;
+        TimeSpan age = DateTime.Now - fileInfo.LastWriteTime;
         if (age.TotalDays < 7)
             score += 15;
         else if (age.TotalDays < 30)
@@ -341,7 +341,7 @@ public class ContextAnalysisService(
             score += 5;
         
         // Bonus for reasonable file sizes (not too small, not too large)
-        var sizeKb = fileInfo.Length / 1024;
+        long sizeKb = fileInfo.Length / 1024;
         if (sizeKb is > 1 and < 1000) // 1KB to 1MB is reasonable for source files
             score += 5;
         else if (sizeKb > 5000) // Very large files are less likely to be relevant
@@ -352,8 +352,8 @@ public class ContextAnalysisService(
 
     private string GetRelevanceReason(string filePath, int score)
     {
-        var extension = Path.GetExtension(filePath).ToLowerInvariant();
-        var fileName = Path.GetFileName(filePath).ToLowerInvariant();
+        string extension = Path.GetExtension(filePath).ToLowerInvariant();
+        string fileName = Path.GetFileName(filePath).ToLowerInvariant();
         
         var reasons = new List<string>();
         
@@ -368,7 +368,7 @@ public class ContextAnalysisService(
             reasons.Add("Important project file");
         
         var fileInfo = new FileInfo(filePath);
-        var age = DateTime.Now - fileInfo.LastWriteTime;
+        TimeSpan age = DateTime.Now - fileInfo.LastWriteTime;
         if (age.TotalDays < 30)
             reasons.Add("Recently modified");
         

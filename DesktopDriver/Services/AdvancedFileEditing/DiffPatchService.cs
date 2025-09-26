@@ -61,7 +61,7 @@ public class DiffPatchService
             
             if (operation.EndLine < operation.StartLine || operation.EndLine > originalLines.Length + 1)
                 return (false, $"End line {operation.EndLine} is invalid (start: {operation.StartLine}, file has {originalLines.Length} lines)");
-            
+
             // Try to apply the operation
             ApplyOperationToLines(originalLines, operation);
             return (true, null);
@@ -72,9 +72,9 @@ public class DiffPatchService
         }
     }
     
-    private string[] ApplyOperationToLines(string[] originalLines, EditOperation operation)
+    private static string[] ApplyOperationToLines(string[] originalLines, EditOperation operation)
     {
-        var result = new List<string>(originalLines);
+        List<string> result = [..originalLines];
         
         switch (operation.Type)
         {
@@ -102,6 +102,8 @@ public class DiffPatchService
                 int deleteCount = operation.EndLine - operation.StartLine + 1;
                 result.RemoveRange(operation.StartLine - 1, deleteCount);
                 break;
+            default:
+                throw new ArgumentOutOfRangeException($"Unknown operation type: {operation.Type}");
         }
         
         return result.ToArray();

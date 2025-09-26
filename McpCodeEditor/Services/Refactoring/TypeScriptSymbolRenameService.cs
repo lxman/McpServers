@@ -28,7 +28,7 @@ public class TypeScriptSymbolRenameService(
         try
         {
             var result = new RefactoringResult();
-            var workspaceRoot = config.DefaultWorkspace;
+            string workspaceRoot = config.DefaultWorkspace;
 
             // Resolve file path if provided
             string? resolvedFilePath = null;
@@ -45,27 +45,27 @@ public class TypeScriptSymbolRenameService(
             }
 
             // Get TypeScript files to process
-            var filesToProcess = GetTypeScriptFiles(resolvedFilePath);
+            IEnumerable<string> filesToProcess = GetTypeScriptFiles(resolvedFilePath);
 
             var changes = new List<FileChange>();
 
-            foreach (var file in filesToProcess)
+            foreach (string file in filesToProcess)
             {
                 if (!File.Exists(file)) continue;
 
                 // Analyze the file to understand its structure
-                var analysisResult = await analysisService.AnalyzeFileAsync(file, cancellationToken);
+                TypeScriptAnalysisResult analysisResult = await analysisService.AnalyzeFileAsync(file, cancellationToken);
                 if (!analysisResult.Success) continue;
 
                 // Find symbols matching the target name
-                var symbols = TypeScriptAnalysisService.FindSymbolsByName(analysisResult, symbolName);
+                List<TypeScriptSymbol> symbols = TypeScriptAnalysisService.FindSymbolsByName(analysisResult, symbolName);
                 if (symbols.Count == 0) continue;
 
                 // Read file content
-                var content = await File.ReadAllTextAsync(file, cancellationToken);
+                string content = await File.ReadAllTextAsync(file, cancellationToken);
 
                 // Perform symbol renaming
-                var modifiedContent = await RenameSymbolInContentAsync(content, symbolName, newName, analysisResult, cancellationToken);
+                string modifiedContent = await RenameSymbolInContentAsync(content, symbolName, newName, analysisResult, cancellationToken);
 
                 if (content != modifiedContent)
                 {
@@ -168,10 +168,10 @@ public class TypeScriptSymbolRenameService(
         // 11. Standalone identifier references
         patterns.Add($@"\b{Regex.Escape(symbolName)}\b");
 
-        var modifiedContent = content;
+        string modifiedContent = content;
 
         // Apply replacements in order of specificity (most specific first)
-        foreach (var pattern in patterns)
+        foreach (string pattern in patterns)
         {
             try
             {
@@ -207,7 +207,7 @@ public class TypeScriptSymbolRenameService(
         }
 
         // Scan workspace for TypeScript files
-        var workspaceRoot = config.DefaultWorkspace;
+        string workspaceRoot = config.DefaultWorkspace;
         return Directory.GetFiles(workspaceRoot, "*.ts", SearchOption.AllDirectories)
             .Concat(Directory.GetFiles(workspaceRoot, "*.tsx", SearchOption.AllDirectories))
             .Where(f => !IsExcludedDirectory(Path.GetDirectoryName(f) ?? ""))
@@ -219,7 +219,7 @@ public class TypeScriptSymbolRenameService(
     /// </summary>
     private static bool IsTypeScriptFile(string filePath)
     {
-        var extension = Path.GetExtension(filePath).ToLowerInvariant();
+        string extension = Path.GetExtension(filePath).ToLowerInvariant();
         return extension is ".ts" or ".tsx";
     }
 
@@ -228,13 +228,13 @@ public class TypeScriptSymbolRenameService(
     /// </summary>
     private static void CalculateLineChanges(string originalContent, string modifiedContent, FileChange change)
     {
-        var originalLines = originalContent.Split('\n');
-        var modifiedLines = modifiedContent.Split('\n');
+        string[] originalLines = originalContent.Split('\n');
+        string[] modifiedLines = modifiedContent.Split('\n');
 
         for (var i = 0; i < Math.Max(originalLines.Length, modifiedLines.Length); i++)
         {
-            var originalLine = i < originalLines.Length ? originalLines[i] : "";
-            var modifiedLine = i < modifiedLines.Length ? modifiedLines[i] : "";
+            string originalLine = i < originalLines.Length ? originalLines[i] : "";
+            string modifiedLine = i < modifiedLines.Length ? modifiedLines[i] : "";
 
             if (originalLine != modifiedLine)
             {
@@ -259,7 +259,7 @@ public class TypeScriptSymbolRenameService(
         string? backupId,
         CancellationToken cancellationToken)
     {
-        foreach (var change in changes)
+        foreach (FileChange change in changes)
         {
             await File.WriteAllTextAsync(change.FilePath, change.ModifiedContent, cancellationToken);
 
@@ -279,13 +279,13 @@ public class TypeScriptSymbolRenameService(
     private string ValidateAndResolvePath(string path)
     {
         // Convert to absolute path
-        var fullPath = Path.IsPathRooted(path) ? path : Path.Combine(config.DefaultWorkspace, path);
+        string fullPath = Path.IsPathRooted(path) ? path : Path.Combine(config.DefaultWorkspace, path);
         fullPath = Path.GetFullPath(fullPath);
 
         // Security check: ensure path is within workspace if restricted
         if (config.Security.RestrictToWorkspace)
         {
-            var workspaceFullPath = Path.GetFullPath(config.DefaultWorkspace);
+            string workspaceFullPath = Path.GetFullPath(config.DefaultWorkspace);
             if (!fullPath.StartsWith(workspaceFullPath, StringComparison.OrdinalIgnoreCase))
             {
                 throw new UnauthorizedAccessException($"Access denied: Path outside workspace: {path}");
@@ -300,7 +300,7 @@ public class TypeScriptSymbolRenameService(
     /// </summary>
     private bool IsExcludedDirectory(string path)
     {
-        var dirName = Path.GetFileName(path);
+        string dirName = Path.GetFileName(path);
         return config.ExcludedDirectories.Contains(dirName);
     }
 }
