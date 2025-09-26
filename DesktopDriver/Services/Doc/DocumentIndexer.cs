@@ -29,7 +29,6 @@ public class DocumentIndexer : IDisposable
         _logger = logger;
         _documentProcessor = documentProcessor;
         
-        // NEW: Discover existing indexes at startup
         DiscoverExistingIndexes();
     }
 
