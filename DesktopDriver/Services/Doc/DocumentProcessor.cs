@@ -1,5 +1,6 @@
 using System.Text;
 using DesktopDriver.Services.Doc.Models;
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Presentation;
 using DocumentFormat.OpenXml.Wordprocessing;
@@ -26,8 +27,8 @@ public class DocumentProcessor
     {
         try
         {
-            var extension = Path.GetExtension(filePath).ToLowerInvariant();
-            var documentType = GetDocumentType(extension);
+            string extension = Path.GetExtension(filePath).ToLowerInvariant();
+            DocType documentType = GetDocumentType(extension);
             
             // Use provided password or try to find one
             password ??= _passwordManager.GetPasswordForFile(filePath);
@@ -121,10 +122,10 @@ public class DocumentProcessor
             }
 
             // Try OpenXML first for non-password protected docs
-            using var document = WordprocessingDocument.Open(content.FilePath, false);
+            using WordprocessingDocument document = WordprocessingDocument.Open(content.FilePath, false);
             
             // Extract basic text
-            var body = document.MainDocumentPart?.Document?.Body;
+            Body? body = document.MainDocumentPart?.Document?.Body;
             if (body != null)
             {
                 content.PlainText = body.InnerText;
@@ -171,14 +172,14 @@ public class DocumentProcessor
         var currentSection = new DocumentSection();
         var contentBuilder = new StringBuilder();
 
-        foreach (var element in body.Elements())
+        foreach (OpenXmlElement element in body.Elements())
         {
             if (element is Paragraph para)
             {
-                var text = para.InnerText;
+                string text = para.InnerText;
                 
                 // Check if this is a heading
-                var heading = GetHeadingLevel(para);
+                int heading = GetHeadingLevel(para);
                 if (heading > 0 && !string.IsNullOrWhiteSpace(text))
                 {
                     // Save previous section
@@ -214,12 +215,12 @@ public class DocumentProcessor
 
     private static int GetHeadingLevel(Paragraph paragraph)
     {
-        var styleId = paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value;
+        string? styleId = paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value;
         if (styleId != null)
         {
             if (styleId.StartsWith("Heading"))
             {
-                if (int.TryParse(styleId.Replace("Heading", ""), out var level))
+                if (int.TryParse(styleId.Replace("Heading", ""), out int level))
                 {
                     return level;
                 }
@@ -233,15 +234,15 @@ public class DocumentProcessor
         try
         {
             // Try NPOI first (better password support)
-            using var workbook = WorkbookFactory.Create(content.FilePath, password);
+            using IWorkbook? workbook = WorkbookFactory.Create(content.FilePath, password);
             
             var textBuilder = new StringBuilder();
             var structuredData = new Dictionary<string, object>();
 
             for (var i = 0; i < workbook.NumberOfSheets; i++)
             {
-                var sheet = workbook.GetSheetAt(i);
-                var sheetName = sheet.SheetName;
+                ISheet? sheet = workbook.GetSheetAt(i);
+                string? sheetName = sheet.SheetName;
                 
                 textBuilder.AppendLine($"=== Sheet: {sheetName} ===");
                 
@@ -250,9 +251,9 @@ public class DocumentProcessor
                 foreach (IRow row in sheet)
                 {
                     var rowData = new List<string>();
-                    foreach (var cell in row)
+                    foreach (ICell? cell in row)
                     {
-                        var cellValue = cell?.ToString() ?? "";
+                        string cellValue = cell?.ToString() ?? "";
                         rowData.Add(cellValue);
                         if (!string.IsNullOrWhiteSpace(cellValue))
                         {
@@ -295,17 +296,17 @@ public class DocumentProcessor
             using var pdfDocument = new PdfDocument(pdfReader);
 
             var textBuilder = new StringBuilder();
-            var pageCount = pdfDocument.GetNumberOfPages();
+            int pageCount = pdfDocument.GetNumberOfPages();
             
             for (var i = 1; i <= pageCount; i++)
             {
-                var pageText = PdfTextExtractor.GetTextFromPage(pdfDocument.GetPage(i));
+                string? pageText = PdfTextExtractor.GetTextFromPage(pdfDocument.GetPage(i));
                 textBuilder.AppendLine(pageText);
                 
                 if (i == 1 && !string.IsNullOrWhiteSpace(pageText))
                 {
                     // Use first line of first page as title if no title set
-                    var firstLine = pageText.Split('\n').FirstOrDefault(l => !string.IsNullOrWhiteSpace(l));
+                    string? firstLine = pageText.Split('\n').FirstOrDefault(l => !string.IsNullOrWhiteSpace(l));
                     if (!string.IsNullOrWhiteSpace(firstLine) && firstLine.Length < 100)
                     {
                         content.Title = firstLine.Trim();
@@ -341,15 +342,15 @@ public class DocumentProcessor
                 return;
             }
 
-            using var presentation = PresentationDocument.Open(content.FilePath, false);
+            using PresentationDocument presentation = PresentationDocument.Open(content.FilePath, false);
             
             var textBuilder = new StringBuilder();
-            var slides = presentation.PresentationPart?.Presentation?.SlideIdList?.Elements<SlideId>();
+            IEnumerable<SlideId>? slides = presentation.PresentationPart?.Presentation?.SlideIdList?.Elements<SlideId>();
             
             if (slides != null)
             {
                 var slideNumber = 1;
-                foreach (var slide in slides)
+                foreach (SlideId slide in slides)
                 {
                     var slidePart = presentation.PresentationPart?.GetPartById(slide.RelationshipId!) as SlidePart;
                     if (slidePart != null)
@@ -381,7 +382,7 @@ public class DocumentProcessor
 
     private static async Task ExtractCsvContent(DocumentContent content)
     {
-        var lines = await File.ReadAllLinesAsync(content.FilePath);
+        string[] lines = await File.ReadAllLinesAsync(content.FilePath);
         content.PlainText = string.Join(Environment.NewLine, lines);
         content.Title = Path.GetFileNameWithoutExtension(content.FilePath);
         
@@ -389,9 +390,9 @@ public class DocumentProcessor
         if (lines.Length > 0)
         {
             var csvData = new List<List<string>>();
-            foreach (var line in lines)
+            foreach (string line in lines)
             {
-                var values = line.Split(',').Select(v => v.Trim('"').Trim()).ToList();
+                List<string> values = line.Split(',').Select(v => v.Trim('"').Trim()).ToList();
                 csvData.Add(values);
             }
             content.StructuredData["csv_data"] = csvData;

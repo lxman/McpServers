@@ -26,7 +26,7 @@ public class FileSystemTools
     {
         try
         {
-            var fullPath = Path.GetFullPath(path);
+            string fullPath = Path.GetFullPath(path);
             if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
@@ -41,8 +41,8 @@ public class FileSystemTools
                 return error;
             }
 
-            var lines = await File.ReadAllLinesAsync(fullPath);
-            var result = GetLinesWithOffset(lines, offset, length);
+            string[] lines = await File.ReadAllLinesAsync(fullPath);
+            string[] result = GetLinesWithOffset(lines, offset, length);
             
             _auditLogger.LogFileOperation("Read", fullPath, true);
             return $"File: {fullPath}\nLines {offset} to {offset + result.Length - 1} of {lines.Length}:\n\n{string.Join('\n', result)}";
@@ -63,7 +63,7 @@ public class FileSystemTools
     {
         try
         {
-            var fullPath = Path.GetFullPath(path);
+            string fullPath = Path.GetFullPath(path);
             if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
@@ -99,7 +99,7 @@ public class FileSystemTools
     {
         try
         {
-            var fullPath = Path.GetFullPath(path);
+            string fullPath = Path.GetFullPath(path);
             if (!_securityManager.IsDirectoryAllowed(fullPath))
             {
                 var error = $"Access denied to directory: {fullPath}";
@@ -118,15 +118,15 @@ public class FileSystemTools
             result.AppendLine($"Contents of: {fullPath}\n");
 
             // List directories first
-            var directories = Directory.GetDirectories(fullPath);
-            foreach (var dir in directories.OrderBy(d => Path.GetFileName(d)))
+            string[] directories = Directory.GetDirectories(fullPath);
+            foreach (string dir in directories.OrderBy(d => Path.GetFileName(d)))
             {
                 result.AppendLine($"[DIR]  {Path.GetFileName(dir)}");
             }
 
             // Then list files
-            var files = Directory.GetFiles(fullPath);
-            foreach (var file in files.OrderBy(f => Path.GetFileName(f)))
+            string[] files = Directory.GetFiles(fullPath);
+            foreach (string file in files.OrderBy(f => Path.GetFileName(f)))
             {
                 var fileInfo = new FileInfo(file);
                 result.AppendLine($"[FILE] {Path.GetFileName(file)} ({fileInfo.Length} bytes)");
@@ -149,7 +149,7 @@ public class FileSystemTools
     {
         try
         {
-            var fullPath = Path.GetFullPath(path);
+            string fullPath = Path.GetFullPath(path);
             if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to parent directory: {Path.GetDirectoryName(fullPath)}";
@@ -176,8 +176,8 @@ public class FileSystemTools
     {
         try
         {
-            var fullSourcePath = Path.GetFullPath(sourcePath);
-            var fullDestPath = Path.GetFullPath(destinationPath);
+            string fullSourcePath = Path.GetFullPath(sourcePath);
+            string fullDestPath = Path.GetFullPath(destinationPath);
 
             if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullSourcePath)!) ||
                 !_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullDestPath)!))
@@ -224,7 +224,7 @@ public class FileSystemTools
     {
         try
         {
-            var fullPath = Path.GetFullPath(path);
+            string fullPath = Path.GetFullPath(path);
             if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
@@ -268,7 +268,7 @@ public class FileSystemTools
     {
         try
         {
-            var fullPath = Path.GetFullPath(searchPath);
+            string fullPath = Path.GetFullPath(searchPath);
             if (!_securityManager.IsDirectoryAllowed(fullPath))
             {
                 var error = $"Access denied to directory: {fullPath}";
@@ -283,14 +283,14 @@ public class FileSystemTools
                 return error;
             }
 
-            var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-            var files = Directory.GetFiles(fullPath, pattern, searchOption);
+            SearchOption searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+            string[] files = Directory.GetFiles(fullPath, pattern, searchOption);
 
             var result = new StringBuilder();
             result.AppendLine($"Search results for '{pattern}' in {fullPath}:");
             result.AppendLine($"Found {files.Length} files:\n");
 
-            foreach (var file in files.OrderBy(f => f))
+            foreach (string file in files.OrderBy(f => f))
             {
                 var fileInfo = new FileInfo(file);
                 result.AppendLine($"{file} ({fileInfo.Length} bytes, {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm})");
@@ -313,7 +313,7 @@ public class FileSystemTools
     {
         try
         {
-            var fullPath = Path.GetFullPath(path);
+            string fullPath = Path.GetFullPath(path);
             if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
@@ -337,8 +337,8 @@ public class FileSystemTools
             if (Directory.Exists(fullPath))
             {
                 var dirInfo = new DirectoryInfo(fullPath);
-                var fileCount = dirInfo.GetFiles().Length;
-                var subDirCount = dirInfo.GetDirectories().Length;
+                int fileCount = dirInfo.GetFiles().Length;
+                int subDirCount = dirInfo.GetDirectories().Length;
                 
                 _auditLogger.LogFileOperation("Info", fullPath, true);
                 return $"Directory Information:\n" +
@@ -369,7 +369,7 @@ public class FileSystemTools
         if (offset < 0)
         {
             // Negative offset means read from end (tail behavior)
-            var start = Math.Max(0, lines.Length + offset);
+            int start = Math.Max(0, lines.Length + offset);
             return lines.Skip(start).ToArray();
         }
 

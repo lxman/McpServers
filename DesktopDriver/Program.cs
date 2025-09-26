@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 Console.SetOut(TextWriter.Null);
 Console.SetError(TextWriter.Null);
 
-var builder = Host.CreateApplicationBuilder(args);
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
 // Configure JSON serialization options globally
 builder.Services.Configure<JsonSerializerOptions>(options =>
@@ -57,5 +57,5 @@ builder.Services
     .WithTools<ConfigurationTools>()
     .WithTools<DocTools>();
 
-var host = builder.Build();
+IHost host = builder.Build();
 await host.RunAsync();

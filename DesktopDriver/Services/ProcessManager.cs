@@ -22,7 +22,7 @@ public class ProcessManager
     {
         try
         {
-            var processInfo = CreateProcessStartInfo(command, workingDirectory);
+            ProcessStartInfo processInfo = CreateProcessStartInfo(command, workingDirectory);
             var process = new Process { StartInfo = processInfo };
             
             var outputBuilder = new StringBuilder();
@@ -62,8 +62,8 @@ public class ProcessManager
 
             _processes.TryAdd(sessionId, managedProcess);
 
-            var processTask = process.WaitForExitAsync();
-            var completedTask = await Task.WhenAny(processTask, Task.Delay(timeoutMs));
+            Task processTask = process.WaitForExitAsync();
+            Task completedTask = await Task.WhenAny(processTask, Task.Delay(timeoutMs));
 
             if (completedTask == processTask)
             {
@@ -116,7 +116,7 @@ public class ProcessManager
 
     public ProcessResult? GetProcessOutput(string sessionId)
     {
-        if (_processes.TryGetValue(sessionId, out var managedProcess))
+        if (_processes.TryGetValue(sessionId, out ManagedProcess? managedProcess))
         {
             return new ProcessResult
             {
@@ -133,7 +133,7 @@ public class ProcessManager
 
     public async Task<bool> SendInputAsync(string sessionId, string input)
     {
-        if (_processes.TryGetValue(sessionId, out var managedProcess) && 
+        if (_processes.TryGetValue(sessionId, out ManagedProcess? managedProcess) && 
             !managedProcess.Process.HasExited)
         {
             try
@@ -153,7 +153,7 @@ public class ProcessManager
 
     public bool KillProcess(string sessionId)
     {
-        if (_processes.TryGetValue(sessionId, out var managedProcess))
+        if (_processes.TryGetValue(sessionId, out ManagedProcess? managedProcess))
         {
             try
             {
@@ -189,7 +189,7 @@ public class ProcessManager
 
     private static ProcessStartInfo CreateProcessStartInfo(string command, string? workingDirectory)
     {
-        var isWindows = OperatingSystem.IsWindows();
+        bool isWindows = OperatingSystem.IsWindows();
         
         return new ProcessStartInfo
         {

@@ -19,17 +19,17 @@ public class SecurityManager
 
     public bool IsDirectoryAllowed(string path)
     {
-        if (!_allowedDirectories.Any())
+        if (_allowedDirectories.Count == 0)
             return true; // If no restrictions, allow all
 
-        var normalizedPath = Path.GetFullPath(path);
+        string normalizedPath = Path.GetFullPath(path);
         return _allowedDirectories.Any(allowed => 
             normalizedPath.StartsWith(Path.GetFullPath(allowed), StringComparison.OrdinalIgnoreCase));
     }
 
     public bool IsCommandBlocked(string command)
     {
-        var cmdLower = command.ToLowerInvariant();
+        string cmdLower = command.ToLowerInvariant();
         return _blockedCommands.Any(blocked => cmdLower.Contains(blocked));
     }
 
@@ -57,12 +57,12 @@ public class SecurityManager
         {
             if (File.Exists(_configPath))
             {
-                var json = File.ReadAllText(_configPath);
+                string json = File.ReadAllText(_configPath);
                 var config = JsonSerializer.Deserialize<SecurityConfig>(json);
                 if (config != null)
                 {
                     _allowedDirectories.AddRange(config.AllowedDirectories ?? []);
-                    foreach (var cmd in config.BlockedCommands ?? [])
+                    foreach (string cmd in config.BlockedCommands ?? [])
                     {
                         _blockedCommands.Add(cmd.ToLowerInvariant());
                     }
@@ -95,7 +95,7 @@ public class SecurityManager
             "firewall", "netsh", "sfc", "bcdedit", "reg", "takeown", "cipher"
         };
         
-        foreach (var cmd in defaultBlocked)
+        foreach (string cmd in defaultBlocked)
         {
             _blockedCommands.Add(cmd.ToLowerInvariant());
         }
@@ -113,7 +113,7 @@ public class SecurityManager
                 AllowedDirectories = _allowedDirectories.ToArray(),
                 BlockedCommands = _blockedCommands.ToArray()
             };
-            var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+            string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_configPath, json);
         }
         catch (Exception ex)

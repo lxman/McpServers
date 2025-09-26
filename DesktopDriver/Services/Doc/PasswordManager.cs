@@ -19,7 +19,7 @@ public class PasswordManager
         try
         {
             // Convert glob pattern to regex
-            var regexPattern = GlobToRegex(pattern);
+            string regexPattern = GlobToRegex(pattern);
             var regex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
             _patternPasswords[regex] = password;
             
@@ -33,7 +33,7 @@ public class PasswordManager
 
     public void RegisterSpecificPassword(string filePath, string password)
     {
-        var normalizedPath = Path.GetFullPath(filePath).ToLowerInvariant();
+        string normalizedPath = Path.GetFullPath(filePath).ToLowerInvariant();
         _specificPasswords[normalizedPath] = password;
         
         _logger.LogInformation("Registered specific password for file: {FilePath}", filePath);
@@ -43,21 +43,21 @@ public class PasswordManager
     {
         try
         {
-            var passwordFiles = Directory.GetFiles(rootPath, "*password*.txt", SearchOption.AllDirectories)
+            IEnumerable<string> passwordFiles = Directory.GetFiles(rootPath, "*password*.txt", SearchOption.AllDirectories)
                 .Concat(Directory.GetFiles(rootPath, "*pword*.txt", SearchOption.AllDirectories))
                 .Concat(Directory.GetFiles(rootPath, "*.pwd", SearchOption.AllDirectories));
 
-            foreach (var passwordFile in passwordFiles)
+            foreach (string passwordFile in passwordFiles)
             {
                 try
                 {
-                    var content = await File.ReadAllTextAsync(passwordFile);
-                    var password = content.Trim();
+                    string content = await File.ReadAllTextAsync(passwordFile);
+                    string password = content.Trim();
                     
                     if (IsValidPassword(password))
                     {
-                        var directory = Path.GetDirectoryName(passwordFile)!;
-                        var pattern = Path.Combine(directory, "**", "*").Replace("\\", "/");
+                        string directory = Path.GetDirectoryName(passwordFile)!;
+                        string pattern = Path.Combine(directory, "**", "*").Replace("\\", "/");
                         RegisterPasswordPattern(pattern, password);
                         
                         _logger.LogInformation("Auto-detected password from file: {PasswordFile}", passwordFile);
@@ -77,17 +77,17 @@ public class PasswordManager
 
     public string? GetPasswordForFile(string filePath)
     {
-        var normalizedPath = Path.GetFullPath(filePath).ToLowerInvariant();
+        string normalizedPath = Path.GetFullPath(filePath).ToLowerInvariant();
         
         // Check specific passwords first
-        if (_specificPasswords.TryGetValue(normalizedPath, out var specificPassword))
+        if (_specificPasswords.TryGetValue(normalizedPath, out string? specificPassword))
         {
             return specificPassword;
         }
 
         // Check pattern-based passwords
-        var unixPath = filePath.Replace('\\', '/');
-        foreach (var (regex, password) in _patternPasswords)
+        string unixPath = filePath.Replace('\\', '/');
+        foreach ((Regex regex, string password) in _patternPasswords)
         {
             if (regex.IsMatch(unixPath) || regex.IsMatch(filePath))
             {
@@ -121,11 +121,11 @@ public class PasswordManager
 
     private static string GlobToRegex(string glob)
     {
-        var regex = "^" + Regex.Escape(glob)
-            .Replace("\\*\\*", ".*")  // ** matches any number of directories
-            .Replace("\\*", "[^/\\\\]*")  // * matches anything except directory separators
-            .Replace("\\?", ".")  // ? matches any single character
-            + "$";
+        string regex = "^" + Regex.Escape(glob)
+                               .Replace("\\*\\*", ".*")  // ** matches any number of directories
+                               .Replace("\\*", "[^/\\\\]*")  // * matches anything except directory separators
+                               .Replace("\\?", ".")  // ? matches any single character
+                           + "$";
         
         return regex;
     }

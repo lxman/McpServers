@@ -90,7 +90,7 @@ public class DocTools
     {
         try
         {
-            var fullPath = Path.GetFullPath(rootPath);
+            string fullPath = Path.GetFullPath(rootPath);
             if (!_securityManager.IsDirectoryAllowed(fullPath))
             {
                 var error = $"Access denied to directory: {fullPath}";
@@ -126,7 +126,7 @@ public class DocTools
             var registered = 0;
             var failed = 0;
 
-            foreach (var (pattern, password) in passwordMap)
+            foreach ((string pattern, string password) in passwordMap)
             {
                 try
                 {
@@ -164,7 +164,7 @@ public class DocTools
     {
         try
         {
-            var fullPath = Path.GetFullPath(filePath);
+            string fullPath = Path.GetFullPath(filePath);
             if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
@@ -179,17 +179,17 @@ public class DocTools
                 return error;
             }
 
-            var content = await _documentProcessor.ExtractContent(fullPath, password);
+            DocumentContent content = await _documentProcessor.ExtractContent(fullPath, password);
             
-            var result = $"Document: {content.FilePath}\n" +
-                        $"Type: {content.DocumentType}\n" +
-                        $"Title: {content.Title}\n" +
-                        $"Size: {content.Metadata.FileSizeBytes:N0} bytes\n" +
-                        $"Modified: {content.Metadata.ModifiedDate:yyyy-MM-dd HH:mm:ss}\n" +
-                        $"Password Required: {content.RequiredPassword}\n" +
-                        $"Extracted: {content.ExtractedAt:yyyy-MM-dd HH:mm:ss}\n\n" +
-                        $"Content Preview (first 1000 chars):\n" +
-                        $"{content.PlainText.Substring(0, Math.Min(1000, content.PlainText.Length))}";
+            string result = $"Document: {content.FilePath}\n" +
+                            $"Type: {content.DocumentType}\n" +
+                            $"Title: {content.Title}\n" +
+                            $"Size: {content.Metadata.FileSizeBytes:N0} bytes\n" +
+                            $"Modified: {content.Metadata.ModifiedDate:yyyy-MM-dd HH:mm:ss}\n" +
+                            $"Password Required: {content.RequiredPassword}\n" +
+                            $"Extracted: {content.ExtractedAt:yyyy-MM-dd HH:mm:ss}\n\n" +
+                            $"Content Preview (first 1000 chars):\n" +
+                            $"{content.PlainText.Substring(0, Math.Min(1000, content.PlainText.Length))}";
 
             if (content.PlainText.Length > 1000)
             {
@@ -215,23 +215,23 @@ public class DocTools
     {
         try
         {
-            var fullPath = Path.GetFullPath(filePath);
+            string fullPath = Path.GetFullPath(filePath);
             if (!_securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 return $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
             }
 
-            var content = await _documentProcessor.ExtractContent(fullPath, password);
-            var metadata = content.Metadata;
+            DocumentContent content = await _documentProcessor.ExtractContent(fullPath, password);
+            DocumentMetadata metadata = content.Metadata;
 
-            var result = $"File: {metadata.FileName}\n" +
-                        $"Path: {content.FilePath}\n" +
-                        $"Document Type: {content.DocumentType}\n" +
-                        $"Title: {content.Title}\n" +
-                        $"Size: {metadata.FileSizeBytes:N0} bytes\n" +
-                        $"Created: {metadata.CreatedDate:yyyy-MM-dd HH:mm:ss}\n" +
-                        $"Modified: {metadata.ModifiedDate:yyyy-MM-dd HH:mm:ss}\n" +
-                        $"Accessed: {metadata.AccessedDate:yyyy-MM-dd HH:mm:ss}\n";
+            string result = $"File: {metadata.FileName}\n" +
+                            $"Path: {content.FilePath}\n" +
+                            $"Document Type: {content.DocumentType}\n" +
+                            $"Title: {content.Title}\n" +
+                            $"Size: {metadata.FileSizeBytes:N0} bytes\n" +
+                            $"Created: {metadata.CreatedDate:yyyy-MM-dd HH:mm:ss}\n" +
+                            $"Modified: {metadata.ModifiedDate:yyyy-MM-dd HH:mm:ss}\n" +
+                            $"Accessed: {metadata.AccessedDate:yyyy-MM-dd HH:mm:ss}\n";
 
             if (!string.IsNullOrWhiteSpace(metadata.Author))
                 result += $"Author: {metadata.Author}\n";
@@ -251,10 +251,10 @@ public class DocTools
             if (metadata.CharacterCount > 0)
                 result += $"Characters: {metadata.CharacterCount:N0}\n";
 
-            if (content.Sections.Any())
+            if (content.Sections.Count != 0)
                 result += $"Sections: {content.Sections.Count}\n";
             
-            if (content.StructuredData.Any())
+            if (content.StructuredData.Count != 0)
                 result += $"Structured Data: {string.Join(", ", content.StructuredData.Keys)}\n";
 
             return result;
@@ -279,7 +279,7 @@ public class DocTools
     {
         try
         {
-            var fullPath = Path.GetFullPath(rootPath);
+            string fullPath = Path.GetFullPath(rootPath);
             if (!_securityManager.IsDirectoryAllowed(fullPath))
             {
                 var error = $"Access denied to directory: {fullPath}";
@@ -300,33 +300,30 @@ public class DocTools
                 }
             }
 
-            var result = await _documentIndexer.BuildIndex(indexName, fullPath, options);
+            IndexingResult result = await _documentIndexer.BuildIndex(indexName, fullPath, options);
             
-            var response = $"Index '{indexName}' created successfully!\n" +
-                          $"Root Path: {result.RootPath}\n" +
-                          $"Duration: {result.Duration.TotalMinutes:F1} minutes\n" +
-                          $"Successful: {result.Successful.Count:N0} documents\n" +
-                          $"Failed: {result.Failed.Count:N0} documents\n" +
-                          $"Password Protected: {result.PasswordProtected.Count:N0} documents\n" +
-                          $"Total Size: {result.TotalSizeBytes / (1024 * 1024):N1} MB\n\n";
+            string response = $"Index '{indexName}' created successfully!\n" +
+                              $"Root Path: {result.RootPath}\n" +
+                              $"Duration: {result.Duration.TotalMinutes:F1} minutes\n" +
+                              $"Successful: {result.Successful.Count:N0} documents\n" +
+                              $"Failed: {result.Failed.Count:N0} documents\n" +
+                              $"Password Protected: {result.PasswordProtected.Count:N0} documents\n" +
+                              $"Total Size: {result.TotalSizeBytes / (1024 * 1024):N1} MB\n\n";
 
-            if (result.FileTypeStats.Any())
+            if (result.FileTypeStats.Count != 0)
             {
                 response += "File Types:\n";
-                foreach (var (type, count) in result.FileTypeStats.OrderByDescending(x => x.Value))
+                foreach ((string type, int count) in result.FileTypeStats.OrderByDescending(x => x.Value))
                 {
                     response += $"  {type}: {count:N0}\n";
                 }
                 response += "\n";
             }
 
-            if (result.Failed.Any())
+            if (result.Failed.Count != 0)
             {
                 response += "Failed Documents (first 5):\n";
-                foreach (var failed in result.Failed.Take(5))
-                {
-                    response += $"  {Path.GetFileName(failed.FilePath)}: {failed.ErrorMessage}\n";
-                }
+                response = result.Failed.Take(5).Aggregate(response, (current, failed) => current + $"  {Path.GetFileName(failed.FilePath)}: {failed.ErrorMessage}\n");
                 if (result.Failed.Count > 5)
                 {
                     response += $"  ... and {result.Failed.Count - 5} more\n";
@@ -346,7 +343,7 @@ public class DocTools
 
     [McpServerTool]
     [Description("Search documents in an index using natural language queries")]
-    public async Task<string> SearchDocuments(
+    public string SearchDocuments(
         [Description("Search query (natural language or keywords)")] string query,
         [Description("Name of the index to search")] string indexName,
         [Description("JSON search options (optional)")] string? searchOptionsJson = null)
@@ -370,17 +367,17 @@ public class DocTools
                 }
             }
 
-            var results = await _documentIndexer.Search(query, indexName, searchQuery);
+            SearchResults results = _documentIndexer.Search(query, indexName, searchQuery);
             
-            var response = $"Search Results for: \"{query}\"\n" +
-                          $"Index: {indexName}\n" +
-                          $"Total Hits: {results.TotalHits:N0}\n" +
-                          $"Search Time: {results.SearchTimeMs:F0}ms\n" +
-                          $"Showing: {results.Results.Count} results\n\n";
+            string response = $"Search Results for: \"{query}\"\n" +
+                              $"Index: {indexName}\n" +
+                              $"Total Hits: {results.TotalHits:N0}\n" +
+                              $"Search Time: {results.SearchTimeMs:F0}ms\n" +
+                              $"Showing: {results.Results.Count} results\n\n";
 
             for (var i = 0; i < results.Results.Count; i++)
             {
-                var result = results.Results[i];
+                SearchResult result = results.Results[i];
                 response += $"{i + 1}. {result.Title}\n" +
                            $"   File: {Path.GetFileName(result.FilePath)}\n" +
                            $"   Path: {Path.GetDirectoryName(result.FilePath)}\n" +
@@ -389,22 +386,19 @@ public class DocTools
                            $"   Modified: {result.ModifiedDate:yyyy-MM-dd}\n" +
                            $"   Size: {result.FileSizeBytes:N0} bytes\n";
 
-                if (result.Snippets.Any())
+                if (result.Snippets.Count != 0)
                 {
                     response += "   Snippets:\n";
-                    foreach (var snippet in result.Snippets.Take(2))
-                    {
-                        response += $"     \"{snippet}\"\n";
-                    }
+                    response = result.Snippets.Take(2).Aggregate(response, (current, snippet) => current + $"     \"{snippet}\"\n");
                 }
 
                 response += "\n";
             }
 
-            if (results.FileTypeCounts.Any())
+            if (results.FileTypeCounts.Count != 0)
             {
                 response += "File Types in Results:\n";
-                foreach (var (type, count) in results.FileTypeCounts)
+                foreach ((string type, int count) in results.FileTypeCounts)
                 {
                     response += $"  {type}: {count}\n";
                 }
@@ -427,20 +421,16 @@ public class DocTools
     {
         try
         {
-            var indexes = await _documentIndexer.GetIndexNames();
+            List<string> indexes = await _documentIndexer.GetIndexNames();
             
-            if (!indexes.Any())
+            if (indexes.Count == 0)
             {
                 return "No document indexes found. Use create_document_index to create one.";
             }
 
             var response = $"Available Document Indexes ({indexes.Count}):\n\n";
-            foreach (var indexName in indexes.OrderBy(x => x))
-            {
-                response += $"• {indexName}\n";
-            }
 
-            return response;
+            return indexes.OrderBy(x => x).Aggregate(response, (current, indexName) => current + $"• {indexName}\n");
         }
         catch (Exception ex)
         {
@@ -450,18 +440,124 @@ public class DocTools
     }
 
     [McpServerTool]
-    [Description("Remove a document index")]
-    public async Task<string> RemoveDocumentIndex(
-        [Description("Name of the index to remove")] string indexName)
+    [Description("Get memory status of all document indexes showing which are loaded vs discoverable")]
+    public async Task<string> GetIndexMemoryStatus()
     {
         try
         {
-            var removed = await _documentIndexer.RemoveIndex(indexName);
+            Dictionary<string, IndexMemoryStatus> status = await _documentIndexer.GetIndexMemoryStatus();
+            
+            if (status.Count == 0)
+            {
+                return "No document indexes found.";
+            }
+
+            var response = $"Index Memory Status ({status.Count} indexes):\n\n";
+            
+            var totalMemoryMb = 0.0;
+            var loadedCount = 0;
+            var discoverableCount = 0;
+            
+            foreach ((string indexName, IndexMemoryStatus indexStatus) in status.OrderBy(x => x.Key))
+            {
+                string memoryInfo = indexStatus.EstimatedMemoryUsageMb > 0 
+                    ? $" ({indexStatus.EstimatedMemoryUsageMb:F1} MB)" 
+                    : "";
+                
+                response += $"• {indexName}: {indexStatus.Status}{memoryInfo}\n";
+                
+                if (indexStatus.IsLoadedInMemory)
+                {
+                    loadedCount++;
+                    totalMemoryMb += indexStatus.EstimatedMemoryUsageMb;
+                }
+                else if (indexStatus.IsDiscovered)
+                {
+                    discoverableCount++;
+                }
+            }
+            
+            response += $"\nSummary:\n";
+            response += $"  Loaded in Memory: {loadedCount} (~{totalMemoryMb:F1} MB)\n";
+            response += $"  Discoverable: {discoverableCount}\n";
+            response += $"  Total Memory Usage: {totalMemoryMb:F1} MB\n";
+            
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get index memory status");
+            return $"Failed to get index memory status: {ex.Message}";
+        }
+    }
+
+    [McpServerTool]
+    [Description("Unload a specific index from memory while keeping it discoverable for future use")]
+    public string UnloadIndexFromMemory(
+        [Description("Name of the index to unload from memory")] string indexName)
+    {
+        try
+        {
+            bool wasUnloaded = _documentIndexer.UnloadIndex(indexName);
+            
+            if (wasUnloaded)
+            {
+                _auditLogger.LogIndexOperation("UnloadIndex", indexName, true);
+                return $"Index '{indexName}' unloaded from memory successfully. It remains discoverable and will be lazy-loaded when next accessed.";
+            }
+            else
+            {
+                return $"Index '{indexName}' was not loaded in memory (no action needed).";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to unload index: {IndexName}", indexName);
+            _auditLogger.LogIndexOperation("UnloadIndex", indexName, false, ex.Message);
+            return $"Failed to unload index: {ex.Message}";
+        }
+    }
+
+    [McpServerTool]
+    [Description("Unload all indexes from memory to free resources while keeping them discoverable")]
+    public string UnloadAllIndexesFromMemory()
+    {
+        try
+        {
+            int unloadedCount = _documentIndexer.UnloadAllIndexes();
+            
+            if (unloadedCount > 0)
+            {
+                _auditLogger.LogIndexOperation("UnloadAllIndexes", "ALL", true, $"Unloaded {unloadedCount} indexes");
+                return $"Successfully unloaded {unloadedCount} indexes from memory. All indexes remain discoverable and will be lazy-loaded when accessed.";
+            }
+            else
+            {
+                return "No indexes were loaded in memory (no action needed).";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to unload all indexes");
+            _auditLogger.LogIndexOperation("UnloadAllIndexes", "ALL", false, ex.Message);
+            return $"Failed to unload all indexes: {ex.Message}";
+        }
+    }
+
+    // Update the existing RemoveDocumentIndex tool description for clarity
+    [McpServerTool]
+    [Description("Permanently remove a document index from the system (both memory and discovery). Use unload_index_from_memory if you only want to free memory.")]
+    public string RemoveDocumentIndex(
+        [Description("Name of the index to permanently remove")] string indexName)
+    {
+        try
+        {
+            bool removed = _documentIndexer.RemoveIndex(indexName);
             
             if (removed)
             {
                 _auditLogger.LogIndexOperation("RemoveIndex", indexName, true);
-                return $"Index '{indexName}' removed successfully.";
+                return $"Index '{indexName}' permanently removed from system.";
             }
 
             return $"Index '{indexName}' not found.";
@@ -487,7 +583,7 @@ public class DocTools
     {
         try
         {
-            var fullPath = Path.GetFullPath(rootPath);
+            string fullPath = Path.GetFullPath(rootPath);
             if (!_securityManager.IsDirectoryAllowed(fullPath))
             {
                 return Task.FromResult($"Access denied to directory: {fullPath}");
@@ -498,43 +594,43 @@ public class DocTools
                 return Task.FromResult($"Directory not found: {fullPath}");
             }
 
-            var patterns = includePatterns.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            string[] patterns = includePatterns.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(p => p.Trim()).ToArray();
             
             var documents = new List<FileInfo>();
-            var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+            SearchOption searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
             
-            foreach (var pattern in patterns)
+            foreach (string pattern in patterns)
             {
-                var files = Directory.GetFiles(fullPath, pattern, searchOption);
+                string[] files = Directory.GetFiles(fullPath, pattern, searchOption);
                 documents.AddRange(files.Select(f => new FileInfo(f)));
             }
 
             documents = documents.DistinctBy(d => d.FullName).OrderBy(d => d.FullName).ToList();
             
-            var response = $"Document Discovery Results\n" +
-                          $"Directory: {fullPath}\n" +
-                          $"Patterns: {string.Join(", ", patterns)}\n" +
-                          $"Recursive: {recursive}\n" +
-                          $"Found: {documents.Count:N0} documents\n\n";
+            string response = $"Document Discovery Results\n" +
+                              $"Directory: {fullPath}\n" +
+                              $"Patterns: {string.Join(", ", patterns)}\n" +
+                              $"Recursive: {recursive}\n" +
+                              $"Found: {documents.Count:N0} documents\n\n";
 
-            var typeGroups = documents.GroupBy(d => d.Extension.ToLowerInvariant())
+            IOrderedEnumerable<IGrouping<string, FileInfo>> typeGroups = documents.GroupBy(d => d.Extension.ToLowerInvariant())
                 .OrderByDescending(g => g.Count());
             
             response += "File Types:\n";
-            foreach (var group in typeGroups)
+            foreach (IGrouping<string, FileInfo> group in typeGroups)
             {
-                var extension = string.IsNullOrEmpty(group.Key) ? "(no extension)" : group.Key;
+                string extension = string.IsNullOrEmpty(group.Key) ? "(no extension)" : group.Key;
                 response += $"  {extension}: {group.Count():N0} files\n";
             }
 
-            var totalSize = documents.Sum(d => d.Length);
+            long totalSize = documents.Sum(d => d.Length);
             response += $"\nTotal Size: {totalSize / (1024.0 * 1024):F1} MB\n";
 
             if (documents.Count <= 20)
             {
                 response += "\nFiles:\n";
-                foreach (var doc in documents)
+                foreach (FileInfo doc in documents)
                 {
                     response += $"  {Path.GetRelativePath(fullPath, doc.FullName)} " +
                                $"({doc.Length:N0} bytes, {doc.LastWriteTime:yyyy-MM-dd})\n";
@@ -560,15 +656,15 @@ public class DocTools
     {
         try
         {
-            var patterns = _passwordManager.GetRegisteredPatterns();
+            Dictionary<string, string> patterns = _passwordManager.GetRegisteredPatterns();
             
-            if (!patterns.Any())
+            if (patterns.Count == 0)
             {
                 return Task.FromResult("No password patterns registered. Use register_password_pattern to add some.");
             }
 
             var response = $"Registered Password Patterns ({patterns.Count}):\n\n";
-            foreach (var (pattern, maskedPassword) in patterns.OrderBy(x => x.Key))
+            foreach ((string pattern, string maskedPassword) in patterns.OrderBy(x => x.Key))
             {
                 response += $"• {pattern} → {maskedPassword}\n";
             }

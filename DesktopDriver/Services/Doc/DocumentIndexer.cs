@@ -11,6 +11,7 @@ using Lucene.Net.Store;
 using Lucene.Net.Util;
 using Microsoft.Extensions.Logging;
 using SystemDirectory = System.IO.Directory;
+// ReSharper disable InconsistentNaming
 
 namespace DesktopDriver.Services.Doc;
 
@@ -19,6 +20,7 @@ public class DocumentIndexer : IDisposable
     private readonly ILogger<DocumentIndexer> _logger;
     private readonly DocumentProcessor _documentProcessor;
     private readonly Dictionary<string, (FSDirectory Directory, IndexWriter Writer, Analyzer Analyzer)> _indexes = new();
+    private readonly HashSet<string> _discoveredIndexNames = [];
     
     private const LuceneVersion LUCENE_VERSION = LuceneVersion.LUCENE_48;
 
@@ -26,6 +28,49 @@ public class DocumentIndexer : IDisposable
     {
         _logger = logger;
         _documentProcessor = documentProcessor;
+        
+        // NEW: Discover existing indexes at startup
+        DiscoverExistingIndexes();
+    }
+
+    private void DiscoverExistingIndexes()
+    {
+        try
+        {
+            string indexesBasePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "DesktopDriver", "Indexes");
+
+            if (!SystemDirectory.Exists(indexesBasePath))
+            {
+                _logger.LogDebug("Indexes directory does not exist: {IndexesPath}", indexesBasePath);
+                return;
+            }
+
+            string[] indexDirectories = SystemDirectory.GetDirectories(indexesBasePath);
+            foreach (string indexDir in indexDirectories)
+            {
+                string indexName = Path.GetFileName(indexDir);
+                
+                // Verify it looks like a Lucene index (has segments files)
+                bool hasSegments = SystemDirectory.GetFiles(indexDir, "segments*").Any();
+                if (hasSegments)
+                {
+                    _discoveredIndexNames.Add(indexName);
+                    _logger.LogDebug("Discovered existing index: {IndexName}", indexName);
+                }
+            }
+            
+            if (_discoveredIndexNames.Count != 0)
+            {
+                _logger.LogInformation("Discovered {Count} existing indexes: {IndexNames}", 
+                    _discoveredIndexNames.Count, string.Join(", ", _discoveredIndexNames.OrderBy(x => x)));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to discover existing indexes");
+        }
     }
 
     public async Task<IndexingResult> BuildIndex(string indexName, string rootPath, IndexingOptions? options = null)
@@ -43,16 +88,16 @@ public class DocumentIndexer : IDisposable
         {
             _logger.LogInformation("Starting indexing: {IndexName} from {RootPath}", indexName, rootPath);
 
-            // Create or get index
-            var (directory, writer, analyzer) = GetOrCreateIndex(indexName);
+            // Create or get an index
+            (FSDirectory directory, IndexWriter writer, Analyzer analyzer) = GetOrCreateIndex(indexName);
 
             // Discover documents
-            var documents = DiscoverDocuments(rootPath, options);
+            List<FileInfo> documents = DiscoverDocuments(rootPath, options);
             _logger.LogInformation("Found {Count} documents to index", documents.Count);
 
             // Process documents with controlled concurrency
             var semaphore = new SemaphoreSlim(options.MaxConcurrency);
-            var tasks = documents.Select(async doc =>
+            IEnumerable<Task<bool>> tasks = documents.Select(async doc =>
             {
                 await semaphore.WaitAsync();
                 try
@@ -84,34 +129,41 @@ public class DocumentIndexer : IDisposable
         }
     }
 
-    public async Task<SearchResults> Search(string query, string indexName, SearchQuery? searchQuery = null)
+    public SearchResults Search(string query, string indexName, SearchQuery? searchQuery = null)
     {
         searchQuery ??= new SearchQuery { Query = query };
         var stopwatch = Stopwatch.StartNew();
 
         try
         {
-            if (!_indexes.TryGetValue(indexName, out var indexInfo))
+            // MODIFIED: Check discovered indexes first, then lazy load if needed
+            if (!_discoveredIndexNames.Contains(indexName))
             {
-                throw new ArgumentException($"Index '{indexName}' not found. Available indexes: {string.Join(", ", _indexes.Keys)}");
+                throw new ArgumentException($"Index '{indexName}' not found. Available indexes: {string.Join(", ", _discoveredIndexNames.OrderBy(x => x))}");
             }
 
-            var (luceneDir, _, analyzer) = indexInfo;
+            // Lazy load the index resources if not already loaded
+            if (!_indexes.TryGetValue(indexName, out (FSDirectory Directory, IndexWriter Writer, Analyzer Analyzer) indexInfo))
+            {
+                indexInfo = GetOrCreateIndex(indexName);
+            }
 
-            using var reader = DirectoryReader.Open(luceneDir);
+            (FSDirectory luceneDir, _, Analyzer analyzer) = indexInfo;
+
+            using DirectoryReader? reader = DirectoryReader.Open(luceneDir);
             var searcher = new IndexSearcher(reader);
             
             // Parse query
             var parser = new MultiFieldQueryParser(LUCENE_VERSION,
                 ["content", "title", "filename"], analyzer);
             
-            var luceneQuery = parser.Parse(searchQuery.Query);
+            Query? luceneQuery = parser.Parse(searchQuery.Query);
             
             // Apply filters by creating a boolean query
-            var finalQuery = ApplyFilters(luceneQuery, searchQuery);
+            Query finalQuery = ApplyFilters(luceneQuery, searchQuery);
             
             // Execute search
-            var topDocs = searcher.Search(finalQuery, searchQuery.MaxResults);
+            TopDocs topDocs = searcher.Search(finalQuery, searchQuery.MaxResults);
 
             // Build results
             var results = new SearchResults
@@ -121,17 +173,17 @@ public class DocumentIndexer : IDisposable
                 SearchTimeMs = stopwatch.Elapsed.TotalMilliseconds
             };
 
-            foreach (var scoreDoc in topDocs.ScoreDocs)
+            foreach (ScoreDoc? scoreDoc in topDocs.ScoreDocs)
             {
-                var doc = searcher.Doc(scoreDoc.Doc);
+                Document doc = searcher.Doc(scoreDoc.Doc);
                 var result = new SearchResult
                 {
                     FilePath = doc.Get("filepath") ?? "",
                     Title = doc.Get("title") ?? "",
                     RelevanceScore = scoreDoc.Score,
-                    DocumentType = Enum.TryParse<DocumentType>(doc.Get("doctype"), out var dt) ? dt : DocumentType.Unknown,
-                    ModifiedDate = DateTime.TryParse(doc.Get("modified"), out var modified) ? modified : DateTime.MinValue,
-                    FileSizeBytes = long.TryParse(doc.Get("filesize"), out var size) ? size : 0
+                    DocumentType = Enum.TryParse<DocumentType>(doc.Get("doctype"), out DocumentType dt) ? dt : DocumentType.Unknown,
+                    ModifiedDate = DateTime.TryParse(doc.Get("modified"), out DateTime modified) ? modified : DateTime.MinValue,
+                    FileSizeBytes = long.TryParse(doc.Get("filesize"), out long size) ? size : 0
                 };
 
                 // Add snippets if requested
@@ -146,7 +198,7 @@ public class DocumentIndexer : IDisposable
                 var docType = result.DocumentType.ToString();
                 results.FileTypeCounts[docType] = results.FileTypeCounts.GetValueOrDefault(docType, 0) + 1;
                 
-                var dirPath = Path.GetDirectoryName(result.FilePath) ?? "";
+                string dirPath = Path.GetDirectoryName(result.FilePath) ?? "";
                 results.DirectoryCounts[dirPath] = results.DirectoryCounts.GetValueOrDefault(dirPath, 0) + 1;
             }
 
@@ -167,53 +219,169 @@ public class DocumentIndexer : IDisposable
 
     public Task<bool> IndexExists(string indexName)
     {
-        return Task.FromResult(_indexes.ContainsKey(indexName));
+        // MODIFIED: Check discovered indexes instead of just loaded ones
+        return Task.FromResult(_discoveredIndexNames.Contains(indexName));
     }
 
     public Task<List<string>> GetIndexNames()
     {
-        return Task.FromResult(_indexes.Keys.ToList());
+        // MODIFIED: Return discovered indexes instead of just loaded ones
+        return Task.FromResult(_discoveredIndexNames.OrderBy(x => x).ToList());
     }
 
-    public async Task<bool> RemoveIndex(string indexName)
+    /// <summary>
+    /// Unloads an index from memory while keeping it discoverable.
+    /// The index can be lazy-loaded again when needed.
+    /// </summary>
+    /// <param name="indexName">Name of the index to unload from memory</param>
+    /// <returns>True if index was unloaded, false if it wasn't loaded</returns>
+    public bool UnloadIndex(string indexName)
     {
-        if (_indexes.TryGetValue(indexName, out var indexInfo))
+        if (_indexes.TryGetValue(indexName, out (FSDirectory Directory, IndexWriter Writer, Analyzer Analyzer) indexInfo))
         {
-            var (directory, writer, analyzer) = indexInfo;
+            (FSDirectory directory, IndexWriter writer, Analyzer analyzer) = indexInfo;
             
-            writer.Dispose();
-            analyzer.Dispose();
-            directory.Dispose();
+            try
+            {
+                writer.Dispose();
+                analyzer.Dispose();
+                directory.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error disposing index resources for: {IndexName}", indexName);
+            }
             
             _indexes.Remove(indexName);
             
-            _logger.LogInformation("Removed index: {IndexName}", indexName);
+            // Keep in discovered indexes - this is the key difference from RemoveIndex
+            // _discoveredIndexNames still contains indexName
+            
+            _logger.LogInformation("Unloaded index from memory: {IndexName}", indexName);
             return true;
         }
         
+        _logger.LogDebug("Index not loaded in memory: {IndexName}", indexName);
         return false;
+    }
+
+    /// <summary>
+    /// Gets the memory status of all indexes
+    /// </summary>
+    /// <returns>Dictionary with index names and their memory load status</returns>
+    public Task<Dictionary<string, IndexMemoryStatus>> GetIndexMemoryStatus()
+    {
+        var status = new Dictionary<string, IndexMemoryStatus>();
+        
+        foreach (string indexName in _discoveredIndexNames)
+        {
+            status[indexName] = new IndexMemoryStatus
+            {
+                IndexName = indexName,
+                IsDiscovered = true,
+                IsLoadedInMemory = _indexes.ContainsKey(indexName),
+                EstimatedMemoryUsageMb = _indexes.ContainsKey(indexName) ? GetEstimatedMemoryUsage(indexName) : 0
+            };
+        }
+        
+        return Task.FromResult(status);
+    }
+
+    /// <summary>
+    /// Unloads all indexes from memory while keeping them discoverable
+    /// </summary>
+    /// <returns>Number of indexes unloaded</returns>
+    public int UnloadAllIndexes()
+    {
+        List<string> indexesToUnload = _indexes.Keys.ToList();
+        var unloadedCount = 0;
+        
+        foreach (string indexName in indexesToUnload)
+        {
+            if (UnloadIndex(indexName))
+            {
+                unloadedCount++;
+            }
+        }
+        
+        _logger.LogInformation("Unloaded {Count} indexes from memory", unloadedCount);
+        return unloadedCount;
+    }
+
+    /// <summary>
+    /// Completely removes an index from the system (both memory and discovery).
+    /// Use UnloadIndex() if you only want to free memory while keeping the index discoverable.
+    /// </summary>
+    /// <param name="indexName">Name of the index to completely remove</param>
+    /// <returns>True if index was removed</returns>
+    public bool RemoveIndex(string indexName)
+    {
+        // First unload from memory if loaded
+        UnloadIndex(indexName);
+        
+        // Then remove from discovery (this is what makes it "completely removed")
+        _discoveredIndexNames.Remove(indexName);
+        
+        // Optionally delete the index files from disk
+        // (current implementation doesn't do this - should it?)
+        
+        _logger.LogInformation("Completely removed index: {IndexName}", indexName);
+        return true;
+    }
+
+    private double GetEstimatedMemoryUsage(string indexName)
+    {
+        // Simple estimation - in a real implementation you might want to
+        // track actual memory usage or calculate based on index size
+        if (_indexes.ContainsKey(indexName))
+        {
+            try
+            {
+                string indexPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "DesktopDriver", "Indexes", indexName);
+                
+                if (SystemDirectory.Exists(indexPath))
+                {
+                    string[] indexFiles = SystemDirectory.GetFiles(indexPath);
+                    long totalBytes = indexFiles.Sum(f => new FileInfo(f).Length);
+                    return totalBytes / (1024.0 * 1024.0); // Convert to MB
+                }
+            }
+            catch
+            {
+                // Ignore errors, return default estimate
+            }
+            
+            return 50.0; // Default estimate if we can't calculate
+        }
+        
+        return 0.0;
     }
 
     private (FSDirectory Directory, IndexWriter Writer, Analyzer Analyzer) GetOrCreateIndex(string indexName)
     {
-        if (_indexes.TryGetValue(indexName, out var existing))
+        if (_indexes.TryGetValue(indexName, out (FSDirectory Directory, IndexWriter Writer, Analyzer Analyzer) existing))
         {
             return existing;
         }
 
-        var indexPath = Path.Combine(
+        string indexPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "DesktopDriver", "Indexes", indexName);
         
         SystemDirectory.CreateDirectory(indexPath);
         
-        var directory = FSDirectory.Open(indexPath);
+        FSDirectory? directory = FSDirectory.Open(indexPath);
         var analyzer = new StandardAnalyzer(LUCENE_VERSION);
         var config = new IndexWriterConfig(LUCENE_VERSION, analyzer);
         var writer = new IndexWriter(directory, config);
 
-        var indexInfo = (directory, writer, analyzer);
+        (FSDirectory directory, IndexWriter writer, StandardAnalyzer analyzer) indexInfo = (directory, writer, analyzer);
         _indexes[indexName] = indexInfo;
+        
+        // MODIFIED: Add to discovered indexes when creating new ones
+        _discoveredIndexNames.Add(indexName);
         
         _logger.LogInformation("Created/opened index: {IndexName} at {IndexPath}", indexName, indexPath);
         
@@ -229,14 +397,14 @@ public class DocumentIndexer : IDisposable
             throw new DirectoryNotFoundException($"Directory not found: {rootPath}");
         }
 
-        var searchOption = options.Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        SearchOption searchOption = options.Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
         
-        foreach (var pattern in options.IncludePatterns)
+        foreach (string pattern in options.IncludePatterns)
         {
             try
             {
-                var files = SystemDirectory.GetFiles(rootPath, pattern, searchOption);
-                foreach (var file in files)
+                string[] files = SystemDirectory.GetFiles(rootPath, pattern, searchOption);
+                foreach (string file in files)
                 {
                     var fileInfo = new FileInfo(file);
                     
@@ -247,7 +415,7 @@ public class DocumentIndexer : IDisposable
                     }
                     
                     // Apply exclude patterns
-                    var relativePath = Path.GetRelativePath(rootPath, file);
+                    string relativePath = Path.GetRelativePath(rootPath, file);
                     if (options.ExcludePatterns.Any(exclude => 
                         IsMatch(relativePath, exclude) || IsMatch(file, exclude)))
                     {
@@ -271,7 +439,7 @@ public class DocumentIndexer : IDisposable
         try
         {
             // Extract document content
-            var content = await _documentProcessor.ExtractContent(fileInfo.FullName);
+            DocumentContent content = await _documentProcessor.ExtractContent(fileInfo.FullName);
             
             // Create Lucene document
             var doc = new Document();
@@ -363,10 +531,10 @@ public class DocumentIndexer : IDisposable
         var filters = new List<Query>();
 
         // File type filter
-        if (searchQuery.FileTypes.Any())
+        if (searchQuery.FileTypes.Count != 0)
         {
             var fileTypeQuery = new BooleanQuery();
-            foreach (var fileType in searchQuery.FileTypes)
+            foreach (string fileType in searchQuery.FileTypes)
             {
                 fileTypeQuery.Add(new TermQuery(new Term("doctype", fileType)), Occur.SHOULD);
             }
@@ -376,20 +544,20 @@ public class DocumentIndexer : IDisposable
         // Date range filter
         if (searchQuery.StartDate.HasValue || searchQuery.EndDate.HasValue)
         {
-            var startDate = searchQuery.StartDate?.ToString("O") ?? DateTime.MinValue.ToString("O");
-            var endDate = searchQuery.EndDate?.ToString("O") ?? DateTime.MaxValue.ToString("O");
+            string startDate = searchQuery.StartDate?.ToString("O") ?? DateTime.MinValue.ToString("O");
+            string endDate = searchQuery.EndDate?.ToString("O") ?? DateTime.MaxValue.ToString("O");
             
             filters.Add(TermRangeQuery.NewStringRange("modified", startDate, endDate, true, true));
         }
 
-        if (!filters.Any())
+        if (filters.Count == 0)
             return baseQuery;
 
         // Combine base query with filters
         var combinedQuery = new BooleanQuery();
         combinedQuery.Add(baseQuery, Occur.MUST);
 
-        foreach (var filter in filters)
+        foreach (Query filter in filters)
         {
             combinedQuery.Add(filter, Occur.MUST);
         }
@@ -400,16 +568,16 @@ public class DocumentIndexer : IDisposable
     private static List<string> ExtractSnippets(string content, string query, int maxSnippets)
     {
         var snippets = new List<string>();
-        var queryTerms = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var lines = content.Split('\n');
+        string[] queryTerms = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string[] lines = content.Split('\n');
         
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
             if (snippets.Count >= maxSnippets) break;
             
             if (queryTerms.Any(term => line.Contains(term, StringComparison.OrdinalIgnoreCase)))
             {
-                var snippet = line.Trim();
+                string snippet = line.Trim();
                 if (snippet.Length > 200)
                 {
                     snippet = snippet.Substring(0, 200) + "...";
