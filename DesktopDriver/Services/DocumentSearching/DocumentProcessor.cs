@@ -12,7 +12,7 @@ using DocType = DesktopDriver.Services.DocumentSearching.Models.DocumentType;
 
 namespace DesktopDriver.Services.DocumentSearching;
 
-public class DocumentProcessor(ILogger<DocumentProcessor> logger, PasswordManager passwordManager)
+public class DocumentProcessor(ILogger<DocumentProcessor> logger, PasswordManager passwordManager, OcrService ocrService)
 {
     public async Task<DocumentContent> ExtractContent(string filePath, string? password = null)
     {
@@ -44,7 +44,7 @@ public class DocumentProcessor(ILogger<DocumentProcessor> logger, PasswordManage
                     ExtractExcelContent(content, password);
                     break;
                 case DocType.Pdf:
-                    ExtractPdfContent(content, password);
+                    await ExtractPdfContent(content, password);
                     break;
                 case DocType.PowerPoint:
                     ExtractPowerPointContent(content, password);
@@ -55,6 +55,9 @@ public class DocumentProcessor(ILogger<DocumentProcessor> logger, PasswordManage
                     break;
                 case DocType.Csv:
                     await ExtractCsvContent(content);
+                    break;
+                case DocType.Image:
+                    await ExtractImageContent(content);
                     break;
                 default:
                     await ExtractGenericContent(content);
@@ -83,6 +86,7 @@ public class DocumentProcessor(ILogger<DocumentProcessor> logger, PasswordManage
             ".html" or ".htm" => DocType.Html,
             ".rtf" => DocType.Rtf,
             ".csv" => DocType.Csv,
+            ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" or ".tiff" or ".tif" => DocType.Image,
             _ => DocType.Unknown
         };
     }
@@ -273,7 +277,7 @@ public class DocumentProcessor(ILogger<DocumentProcessor> logger, PasswordManage
         }
     }
 
-    private void ExtractPdfContent(DocumentContent content, string? password)
+    private async Task ExtractPdfContent(DocumentContent content, string? password)
     {
         try
         {
@@ -387,6 +391,50 @@ public class DocumentProcessor(ILogger<DocumentProcessor> logger, PasswordManage
                 csvData.Add(values);
             }
             content.StructuredData["csv_data"] = csvData;
+        }
+    }
+
+
+    /// <summary>
+    /// Extracts text from image files using OCR
+    /// </summary>
+    private async Task ExtractImageContent(DocumentContent content)
+    {
+        try
+        {
+            if (!ocrService.IsAvailable)
+            {
+                logger.LogWarning("OCR service not available for image: {FilePath}", content.FilePath);
+                content.PlainText = $"Image file: {Path.GetFileName(content.FilePath)} (OCR not available)";
+                content.Title = Path.GetFileNameWithoutExtension(content.FilePath);
+                return;
+            }
+
+            logger.LogDebug("Extracting text from image using OCR: {FilePath}", content.FilePath);
+            string extractedText = await ocrService.ExtractTextFromImage(content.FilePath);
+
+            content.PlainText = !string.IsNullOrWhiteSpace(extractedText) 
+                ? extractedText.Trim() 
+                : $"Image file: {Path.GetFileName(content.FilePath)} (no text detected)";
+            
+            content.Title = Path.GetFileNameWithoutExtension(content.FilePath);
+            
+            // Add some metadata about the OCR process
+            content.Metadata.Keywords = "OCR, Image";
+            if (!string.IsNullOrWhiteSpace(extractedText))
+            {
+                content.Metadata.CharacterCount = extractedText.Length;
+                content.Metadata.WordCount = extractedText.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+            }
+
+            logger.LogDebug("OCR extraction completed for {FilePath}. Extracted {CharCount} characters", 
+                content.FilePath, content.Metadata.CharacterCount);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to extract text from image: {FilePath}", content.FilePath);
+            content.PlainText = $"Image file: {Path.GetFileName(content.FilePath)} (OCR failed: {ex.Message})";
+            content.Title = Path.GetFileNameWithoutExtension(content.FilePath);
         }
     }
 

@@ -29,17 +29,22 @@ builder.Services
     .AddSingleton<AuditLogger>()
     .AddSingleton<ProcessManager>()
     .AddSingleton<PasswordManager>()
+    .AddSingleton<OcrService>()
     .AddSingleton<DocumentProcessor>()
     .AddSingleton<DocumentIndexer>()
     .AddSingleton<DiffPatchService>()
     .AddSingleton<IndentationManager>()
     .AddSingleton<LineBasedEditor>()
     .AddSingleton<FileEditor>()
+    .AddSingleton<LineBasedEditor>()
     
     // Tools
+    .AddSingleton<AdvancedFileEditingTools>()
     .AddSingleton<TerminalTools>()
     .AddSingleton<FileSystemTools>()
     .AddSingleton<ProcessTools>()
+    .AddSingleton<ConfigurationTools>()
+    .AddSingleton<DocTools>()
     .AddSingleton<ConfigurationTools>()
     .AddSingleton<DocTools>()
     

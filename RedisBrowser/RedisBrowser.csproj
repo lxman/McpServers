@@ -14,7 +14,7 @@
       <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0-rc.1.25451.107" />
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.9" />
       <PackageReference Include="ModelContextProtocol" Version="0.4.0-preview.1" />
-      <PackageReference Include="StackExchange.Redis" Version="2.9.17" />
+      <PackageReference Include="StackExchange.Redis" Version="2.9.24" />
     </ItemGroup>
 
     <ItemGroup>

@@ -11,5 +11,6 @@ public enum DocumentType
     Markdown,
     Html,
     Rtf,
-    Csv
+    Csv,
+    Image
 }

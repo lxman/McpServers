@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text;
 using System.Text.Json;
 using DesktopDriver.Services;
 using DesktopDriver.Services.DocumentSearching;
@@ -15,6 +16,7 @@ public class DocTools(
     PasswordManager passwordManager,
     DocumentProcessor documentProcessor,
     DocumentIndexer documentIndexer,
+    OcrService ocrService,
     ILogger<DocTools> logger)
 {
     #region Password Management
@@ -133,6 +135,234 @@ public class DocTools(
             auditLogger.LogPasswordOperation("BulkRegister", "JSON", false, ex.Message);
             return Task.FromResult($"Failed to bulk register passwords: {ex.Message}");
         }
+    }
+
+    #endregion
+
+    #region OCR Operations
+
+    [McpServerTool]
+    [Description("Extract text from an image file using OCR (requires Tesseract OCR to be installed)")]
+    public async Task<string> ExtractTextFromImage(
+        [Description("Path to the image file - must be canonical")] string imagePath)
+    {
+        try
+        {
+            string fullPath = Path.GetFullPath(imagePath);
+            if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
+            {
+                var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
+                auditLogger.LogFileOperation("OCR_ExtractFromImage", fullPath, false, error);
+                return error;
+            }
+
+            if (!File.Exists(fullPath))
+            {
+                var error = $"File not found: {fullPath}";
+                auditLogger.LogFileOperation("OCR_ExtractFromImage", fullPath, false, error);
+                return error;
+            }
+
+            if (!IsImageFile(fullPath))
+            {
+                var error = $"File is not a supported image format: {fullPath}";
+                auditLogger.LogFileOperation("OCR_ExtractFromImage", fullPath, false, error);
+                return error;
+            }
+
+            if (!ocrService.IsAvailable)
+            {
+                var warning = "OCR service is not available. Please ensure Tesseract is installed and tessdata is properly configured.";
+                auditLogger.LogFileOperation("OCR_ExtractFromImage", fullPath, false, warning);
+                return warning;
+            }
+
+            string extractedText = await ocrService.ExtractTextFromImage(fullPath);
+            
+            string result = $"OCR Text Extraction Results\n" +
+            $"Image: {Path.GetFileName(fullPath)}\n" +
+            $"File Size: {new FileInfo(fullPath).Length:N0} bytes\n" +
+            $"Text Length: {extractedText.Length:N0} characters\n" +
+            $"Word Count: {extractedText.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length:N0}\n\n" +
+            $"Extracted Text:\n" +
+            $"{extractedText}";
+
+            auditLogger.LogFileOperation("OCR_ExtractFromImage", fullPath, true);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to extract text from image: {ImagePath}", imagePath);
+            auditLogger.LogFileOperation("OCR_ExtractFromImage", imagePath, false, ex.Message);
+            return $"Failed to extract text from image: {ex.Message}";
+        }
+    }
+
+    [McpServerTool]
+    [Description("Check if a PDF is likely scanned and needs OCR (requires Tesseract OCR to be installed)")]
+    public string CheckPdfForScannedContent(
+        [Description("Path to the PDF file - must be canonical")] string pdfPath,
+        [Description("Optional password for encrypted PDFs")] string? password = null)
+    {
+        try
+        {
+            string fullPath = Path.GetFullPath(pdfPath);
+            if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
+            {
+                return $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
+            }
+
+            if (!File.Exists(fullPath))
+            {
+                return $"File not found: {fullPath}";
+            }
+
+            if (!Path.GetExtension(fullPath).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"File is not a PDF: {fullPath}";
+            }
+
+            if (!ocrService.IsAvailable)
+            {
+                return "OCR service is not available. Cannot analyze PDF for scanned content.";
+            }
+
+            bool isScanned = ocrService.IsPdfScanned(fullPath, password);
+            var fileInfo = new FileInfo(fullPath);
+            
+            string result = $"PDF Scan Analysis Results\n" +
+            $"File: {fileInfo.Name}\n" +
+            $"Size: {fileInfo.Length:N0} bytes\n" +
+            $"Is Likely Scanned: {(isScanned ? "Yes" : "No")}\n" +
+            $"Recommendation: {(isScanned ? "Use OCR for text extraction" : "Standard text extraction should work")}\n";
+
+            if (isScanned)
+            {
+                result += "\nNote: This PDF appears to contain scanned images. " +
+            "Use extract_text_from_scanned_pdf for better text extraction.";
+            }
+
+            auditLogger.LogFileOperation("OCR_CheckPdfScanned", fullPath, true);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to analyze PDF: {PdfPath}", pdfPath);
+            return $"Failed to analyze PDF: {ex.Message}";
+        }
+    }
+
+    [McpServerTool]
+    [Description("Extract text from a scanned PDF using OCR (requires Tesseract OCR to be installed)")]
+    public async Task<string> ExtractTextFromScannedPdf(
+        [Description("Path to the PDF file - must be canonical")] string pdfPath,
+        [Description("Optional password for encrypted PDFs")] string? password = null)
+    {
+        try
+        {
+            string fullPath = Path.GetFullPath(pdfPath);
+            if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
+            {
+                var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
+                auditLogger.LogFileOperation("OCR_ExtractFromPdf", fullPath, false, error);
+                return error;
+            }
+
+            if (!File.Exists(fullPath))
+            {
+                var error = $"File not found: {fullPath}";
+                auditLogger.LogFileOperation("OCR_ExtractFromPdf", fullPath, false, error);
+                return error;
+            }
+
+            if (!Path.GetExtension(fullPath).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                var error = $"File is not a PDF: {fullPath}";
+                auditLogger.LogFileOperation("OCR_ExtractFromPdf", fullPath, false, error);
+                return error;
+            }
+
+            if (!ocrService.IsAvailable)
+            {
+                var warning = "OCR service is not available. Please ensure Tesseract is installed and tessdata is properly configured.";
+                auditLogger.LogFileOperation("OCR_ExtractFromPdf", fullPath, false, warning);
+                return warning;
+            }
+
+            string extractedText = await ocrService.ExtractTextFromScannedPdf(fullPath, password);
+            var fileInfo = new FileInfo(fullPath);
+            
+            string result = $"OCR PDF Text Extraction Results\n" +
+            $"PDF: {fileInfo.Name}\n" +
+            $"File Size: {fileInfo.Length:N0} bytes\n" +
+            $"Text Length: {extractedText.Length:N0} characters\n" +
+            $"Word Count: {extractedText.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length:N0}\n\n" +
+            $"Extracted Text (first 2000 characters):\n" +
+            $"{extractedText.Substring(0, Math.Min(2000, extractedText.Length))}";
+
+            if (extractedText.Length > 2000)
+            {
+                result += $"\n\n... (truncated {extractedText.Length - 2000} more characters)";
+            }
+
+            auditLogger.LogFileOperation("OCR_ExtractFromPdf", fullPath, true);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to extract text from scanned PDF: {PdfPath}", pdfPath);
+            auditLogger.LogFileOperation("OCR_ExtractFromPdf", pdfPath, false, ex.Message);
+            return $"Failed to extract text from scanned PDF: {ex.Message}";
+        }
+    }
+
+    [McpServerTool]
+    [Description("Check OCR service status and availability (use this to verify Tesseract OCR is installed and configured correctly)")]
+    public Task<string> GetOcrServiceStatus()
+    {
+        try
+        {
+            var status = new StringBuilder();
+            status.AppendLine("OCR Service Status Report");
+            status.AppendLine("========================");
+            status.AppendLine($"Service Available: {(ocrService.IsAvailable ? "Yes" : "No")}");
+            
+            if (!ocrService.IsAvailable)
+            {
+                status.AppendLine("\nOCR service is not available. This could be due to:");
+                status.AppendLine("• Tesseract OCR not installed");
+                status.AppendLine("• tessdata directory not found");
+                status.AppendLine("• Initialization errors");
+                status.AppendLine("\nTo enable OCR:");
+                status.AppendLine("1. Install Tesseract OCR");
+                status.AppendLine("2. Download tessdata files");
+                status.AppendLine("3. Ensure tessdata is in a standard location or current directory");
+            }
+            else
+            {
+                status.AppendLine("✓ Tesseract OCR engine initialized successfully");
+                status.AppendLine("✓ Ready to process images and scanned PDFs");
+                
+                status.AppendLine("\nSupported Operations:");
+                status.AppendLine("• Extract text from images (JPG, PNG, BMP, TIFF, GIF)");
+                status.AppendLine("• Analyze PDFs for scanned content");
+                status.AppendLine("• Extract text from scanned PDFs");
+                status.AppendLine("• Integration with document indexing");
+            }
+
+            return Task.FromResult(status.ToString());
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get OCR service status");
+            return Task.FromResult($"Failed to get OCR service status: {ex.Message}");
+        }
+    }
+
+    private static bool IsImageFile(string filePath)
+    {
+        string extension = Path.GetExtension(filePath).ToLowerInvariant();
+        return extension is ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" or ".tiff" or ".tif";
     }
 
     #endregion
