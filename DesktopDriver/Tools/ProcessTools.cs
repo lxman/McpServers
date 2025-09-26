@@ -7,15 +7,8 @@ using ModelContextProtocol.Server;
 namespace DesktopDriver.Tools;
 
 [McpServerToolType]
-public class ProcessTools
+public class ProcessTools(AuditLogger auditLogger)
 {
-    private readonly AuditLogger _auditLogger;
-
-    public ProcessTools(AuditLogger auditLogger)
-    {
-        _auditLogger = auditLogger;
-    }
-
     [McpServerTool]
     [Description("List all running processes on the system")]
     public string ListProcesses(
@@ -60,12 +53,12 @@ public class ProcessTools
                 }
             }
 
-            _auditLogger.LogOperation("List_Processes", $"Filter: {filter ?? "none"}, Count: {sortedProcesses.Count}", true);
+            auditLogger.LogOperation("List_Processes", $"Filter: {filter ?? "none"}, Count: {sortedProcesses.Count}", true);
             return result.ToString();
         }
         catch (Exception ex)
         {
-            _auditLogger.LogOperation("List_Processes", $"Filter: {filter ?? "none"}", false, ex.Message);
+            auditLogger.LogOperation("List_Processes", $"Filter: {filter ?? "none"}", false, ex.Message);
             return $"Error listing processes: {ex.Message}";
         }
     }
@@ -114,18 +107,18 @@ public class ProcessTools
                 result.AppendLine($"Some details unavailable: {ex.Message}");
             }
 
-            _auditLogger.LogProcessOperation("Get_Info", processId, true);
+            auditLogger.LogProcessOperation("Get_Info", processId, true);
             return result.ToString();
         }
         catch (ArgumentException)
         {
             var error = $"Process with ID {processId} not found";
-            _auditLogger.LogProcessOperation("Get_Info", processId, false, error);
+            auditLogger.LogProcessOperation("Get_Info", processId, false, error);
             return error;
         }
         catch (Exception ex)
         {
-            _auditLogger.LogProcessOperation("Get_Info", processId, false, ex.Message);
+            auditLogger.LogProcessOperation("Get_Info", processId, false, ex.Message);
             return $"Error getting process info: {ex.Message}";
         }
     }
@@ -146,7 +139,7 @@ public class ProcessTools
             if (criticalProcesses.Contains(processName, StringComparer.OrdinalIgnoreCase))
             {
                 var error = $"Refused to kill critical system process: {processName} (PID: {processId})";
-                _auditLogger.LogProcessOperation("Kill", processId, false, error);
+                auditLogger.LogProcessOperation("Kill", processId, false, error);
                 return error;
             }
 
@@ -163,18 +156,18 @@ public class ProcessTools
                 }
             }
 
-            _auditLogger.LogProcessOperation("Kill", processId, true);
+            auditLogger.LogProcessOperation("Kill", processId, true);
             return $"Process terminated: {processName} (PID: {processId})";
         }
         catch (ArgumentException)
         {
             var error = $"Process with ID {processId} not found";
-            _auditLogger.LogProcessOperation("Kill", processId, false, error);
+            auditLogger.LogProcessOperation("Kill", processId, false, error);
             return error;
         }
         catch (Exception ex)
         {
-            _auditLogger.LogProcessOperation("Kill", processId, false, ex.Message);
+            auditLogger.LogProcessOperation("Kill", processId, false, ex.Message);
             return $"Error killing process: {ex.Message}";
         }
     }
@@ -197,14 +190,14 @@ public class ProcessTools
             if (criticalProcesses.Contains(processName, StringComparer.OrdinalIgnoreCase))
             {
                 var error = $"Refused to kill critical system process: {processName}";
-                _auditLogger.LogOperation("Kill_By_Name", processName, false, error);
+                auditLogger.LogOperation("Kill_By_Name", processName, false, error);
                 return error;
             }
 
             Process[] processes = Process.GetProcessesByName(processName);
             if (!processes.Any())
             {
-                _auditLogger.LogOperation("Kill_By_Name", processName, false, "No processes found");
+                auditLogger.LogOperation("Kill_By_Name", processName, false, "No processes found");
                 return $"No processes found with name: {processName}";
             }
 
@@ -217,12 +210,12 @@ public class ProcessTools
                 {
                     process.Kill();
                     killedCount++;
-                    _auditLogger.LogProcessOperation("Kill", process.Id, true);
+                    auditLogger.LogProcessOperation("Kill", process.Id, true);
                 }
                 catch (Exception ex)
                 {
                     errors.Add($"PID {process.Id}: {ex.Message}");
-                    _auditLogger.LogProcessOperation("Kill", process.Id, false, ex.Message);
+                    auditLogger.LogProcessOperation("Kill", process.Id, false, ex.Message);
                 }
             }
 
@@ -232,12 +225,12 @@ public class ProcessTools
                 result += $"\nErrors:\n{string.Join("\n", errors)}";
             }
 
-            _auditLogger.LogOperation("Kill_By_Name", processName, killedCount > 0);
+            auditLogger.LogOperation("Kill_By_Name", processName, killedCount > 0);
             return result;
         }
         catch (Exception ex)
         {
-            _auditLogger.LogOperation("Kill_By_Name", processName, false, ex.Message);
+            auditLogger.LogOperation("Kill_By_Name", processName, false, ex.Message);
             return $"Error killing processes: {ex.Message}";
         }
     }
@@ -267,12 +260,12 @@ public class ProcessTools
             int totalProcesses = Process.GetProcesses().Length;
             result.AppendLine($"Total Processes: {totalProcesses}");
 
-            _auditLogger.LogOperation("Get_System_Info", "System information retrieved", true);
+            auditLogger.LogOperation("Get_System_Info", "System information retrieved", true);
             return result.ToString();
         }
         catch (Exception ex)
         {
-            _auditLogger.LogOperation("Get_System_Info", "System information retrieval", false, ex.Message);
+            auditLogger.LogOperation("Get_System_Info", "System information retrieval", false, ex.Message);
             return $"Error getting system info: {ex.Message}";
         }
     }
