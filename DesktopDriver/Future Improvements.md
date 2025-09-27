@@ -1,4 +1,4 @@
-﻿# Universal Document Indexing MCP Server - Future Enhancements
+# Universal Document Indexing MCP Server - Future Enhancements
 
 ## 🎉 Current Achievement Summary
 
@@ -10,6 +10,14 @@
 - ✅ Smart password pattern management
 - ✅ Integration with existing DesktopDriver MCP server
 - ✅ Full audit logging and security compliance
+- ✅ **NEW: Hybrid AI Question-Answering System**
+  - Intent-based routing ("How do I..." vs "Show me how...")
+  - AI content consumption for summarized answers
+  - Smart document opening with PDF page navigation
+  - Multi-viewer PDF support (Adobe, Foxit, SumatraPDF, Edge)
+- Intelligent PDF page relevance scoring using iText7
+- Keyword extraction and stop-word filtering
+- Password-protected PDF support in page analysis
 
 **Technologies Used:**
 - **Document Processing:** DocumentFormat.OpenXml, NPOI, iText7, ClosedXML
