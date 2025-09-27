@@ -8,7 +8,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Models\" />
       <Folder Include="Services\" />
       <Folder Include="Tools\" />
     </ItemGroup>
@@ -17,11 +16,11 @@
       <PackageReference Include="FuzzySharp" Version="2.0.2" />
       <PackageReference Include="itext" Version="9.3.0" />
       <PackageReference Include="itext.bouncy-castle-adapter" Version="9.3.0" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
       <PackageReference Include="ModelContextProtocol" Version="0.4.0-preview.1" />
       <PackageReference Include="PdfPig" Version="0.1.12-alpha-20250922-b2f4c" />
-      <PackageReference Include="PDFsharp" Version="6.2.2" />
       <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
-      <PackageReference Include="TesseractOCR" Version="5.5.1" />
     </ItemGroup>
 
 </Project>
