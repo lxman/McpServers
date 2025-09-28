@@ -59,7 +59,7 @@ public class OfficeService
             }
 
             var fileInfo = new FileInfo(filePath);
-            var extension = fileInfo.Extension.ToLowerInvariant();
+            string extension = fileInfo.Extension.ToLowerInvariant();
             
             if (!_supportedFormats.Contains(extension))
             {
@@ -88,7 +88,7 @@ public class OfficeService
                 };
             }
 
-            var documentType = GetDocumentType(extension);
+            DocumentType documentType = GetDocumentType(extension);
             var metadata = new OfficeMetadata
             {
                 Title = fileInfo.Name,
@@ -162,7 +162,7 @@ public class OfficeService
     {
         try
         {
-            var documents = _loadedDocuments.Values
+            List<DocumentInfo> documents = _loadedDocuments.Values
                 .Select(doc => new DocumentInfo
                 {
                     FilePath = doc.FilePath,
@@ -202,7 +202,7 @@ public class OfficeService
         await _operationSemaphore.WaitAsync();
         try
         {
-            if (!_loadedDocuments.TryGetValue(filePath, out var document))
+            if (!_loadedDocuments.TryGetValue(filePath, out OfficeDocument? document))
             {
                 return new ServiceResult<ExtractContentResult>
                 {
@@ -226,24 +226,24 @@ public class OfficeService
                     {
                         content.AppendLine($"=== Excel Workbook: {document.FileName} ===");
         
-                        foreach (var worksheet in document.ExcelContent.Worksheets)
+                        foreach (ExcelWorksheet worksheet in document.ExcelContent.Worksheets)
                         {
                             content.AppendLine($"\n=== Sheet: {worksheet.Name} ===");
                             content.AppendLine($"Rows: {worksheet.RowCount}, Columns: {worksheet.ColumnCount}");
             
                             // Group cells by row for readable output
-                            var cellsByRow = worksheet.Cells
+                            IEnumerable<IGrouping<int, ExcelCell>> cellsByRow = worksheet.Cells
                                 .Where(c => c.Value != null && !string.IsNullOrWhiteSpace(c.Value.ToString()))
                                 .GroupBy(c => c.Row)
                                 .OrderBy(g => g.Key)
                                 .Take(50); // Limit to prevent huge output
             
-                            foreach (var rowGroup in cellsByRow)
+                            foreach (IGrouping<int, ExcelCell> rowGroup in cellsByRow)
                             {
-                                var rowCells = rowGroup.OrderBy(c => c.Column).ToList();
-                                var rowValues = rowCells.Select(c => 
+                                List<ExcelCell> rowCells = rowGroup.OrderBy(c => c.Column).ToList();
+                                IEnumerable<string> rowValues = rowCells.Select(c => 
                                 {
-                                    var value = c.Value?.ToString() ?? "";
+                                    string value = c.Value?.ToString() ?? "";
                                     if (!string.IsNullOrEmpty(c.Formula))
                                         value += $" [{c.Formula}]";
                                     return $"{c.Address}:{value}";
@@ -299,7 +299,7 @@ public class OfficeService
         await _operationSemaphore.WaitAsync();
         try
         {
-            if (!_loadedDocuments.TryGetValue(filePath, out var document))
+            if (!_loadedDocuments.TryGetValue(filePath, out OfficeDocument? document))
             {
                 return new ServiceResult<SearchDocumentResult>
                 {
@@ -311,7 +311,7 @@ public class OfficeService
             var results = new List<OfficeSearchResult>();
 
             // Simple search implementation
-            var content = document.Type switch
+            string content = document.Type switch
             {
                 DocumentType.Word => document.WordContent?.PlainText ?? "",
                 DocumentType.Excel => $"Excel workbook: {document.FileName}",
@@ -369,18 +369,18 @@ public class OfficeService
                 .Where(doc => doc.IsLoaded)
                 .Select(async doc =>
                 {
-                    var result = await SearchInDocumentAsync(doc.FilePath, searchTerm, fuzzySearch, maxResults);
+                    ServiceResult<SearchDocumentResult> result = await SearchInDocumentAsync(doc.FilePath, searchTerm, fuzzySearch, maxResults);
                     return result.Success ? result.Data!.Results : [];
                 });
 
-            var searchResults = await Task.WhenAll(searchTasks);
+            List<OfficeSearchResult>[] searchResults = await Task.WhenAll(searchTasks);
             
-            foreach (var results in searchResults)
+            foreach (List<OfficeSearchResult> results in searchResults)
             {
                 allResults.AddRange(results);
             }
 
-            var sortedResults = allResults
+            List<OfficeSearchResult> sortedResults = allResults
                 .OrderByDescending(r => r.RelevanceScore)
                 .Take(maxResults)
                 .ToList();
@@ -412,7 +412,7 @@ public class OfficeService
         await _operationSemaphore.WaitAsync();
         try
         {
-            if (!_loadedDocuments.TryGetValue(filePath, out var document))
+            if (!_loadedDocuments.TryGetValue(filePath, out OfficeDocument? document))
             {
                 return new ServiceResult<DocumentAnalysisResult>
                 {
@@ -531,7 +531,7 @@ public class OfficeService
     {
         try
         {
-            var memoryUsage = GC.GetTotalMemory(false);
+            long memoryUsage = GC.GetTotalMemory(false);
             
             return new ServiceResult<ServiceStatusInfo>
             {
@@ -576,12 +576,12 @@ public class OfficeService
         if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(searchTerm))
             return text;
 
-        var index = text.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase);
+        int index = text.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase);
         if (index == -1) 
             return text.Length <= contextSize ? text : text[..contextSize];
 
-        var start = Math.Max(0, index - contextSize / 2);
-        var length = Math.Min(contextSize, text.Length - start);
+        int start = Math.Max(0, index - contextSize / 2);
+        int length = Math.Min(contextSize, text.Length - start);
         
         return text.Substring(start, length);
     }

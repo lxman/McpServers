@@ -16,10 +16,10 @@ public class Program
         Console.SetOut(TextWriter.Null);
         Console.SetError(TextWriter.Null);
         
-        var builder = Host.CreateApplicationBuilder(args);
+        HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
         
         // Add configuration
-        var configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        string configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
         builder.Configuration.AddJsonFile(configPath, optional: true, reloadOnChange: true);
         
         // Configure services
@@ -46,7 +46,7 @@ public class Program
             .WithStdioServerTransport()
             .WithTools<OfficeTools>();
 
-        var host = builder.Build();
+        IHost host = builder.Build();
         await host.RunAsync();
     }
 }

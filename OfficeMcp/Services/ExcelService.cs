@@ -23,7 +23,7 @@ public class ExcelService(ILogger<ExcelService> logger) : IExcelService
         try
         {
             IWorkbook workbook;
-            var fileExtension = Path.GetExtension(filePath).ToLowerInvariant();
+            string fileExtension = Path.GetExtension(filePath).ToLowerInvariant();
             
             // Use NPOI for password-protected files or as fallback
             if (!string.IsNullOrEmpty(password) || fileExtension == ".xls")
@@ -59,7 +59,7 @@ public class ExcelService(ILogger<ExcelService> logger) : IExcelService
         return await Task.Run<IWorkbook>(() =>
         {
             using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-            var fileExtension = Path.GetExtension(filePath).ToLowerInvariant();
+            string fileExtension = Path.GetExtension(filePath).ToLowerInvariant();
             
             if (fileExtension is ".xlsx" or ".xlsm")
             {
@@ -99,7 +99,7 @@ public class ExcelService(ILogger<ExcelService> logger) : IExcelService
         {
             var excelContent = new ExcelContent();
             
-            foreach (var worksheet in xlWorkbook.Worksheets)
+            foreach (IXLWorksheet worksheet in xlWorkbook.Worksheets)
             {
                 var excelWorksheet = new ExcelWorksheet
                 {
@@ -110,10 +110,10 @@ public class ExcelService(ILogger<ExcelService> logger) : IExcelService
                     IsVisible = worksheet.Visibility == XLWorksheetVisibility.Visible
                 };
 
-                var usedRange = worksheet.RangeUsed();
+                IXLRange? usedRange = worksheet.RangeUsed();
                 if (usedRange != null)
                 {
-                    foreach (var cell in usedRange.Cells())
+                    foreach (IXLCell? cell in usedRange.Cells())
                     {
                         var excelCell = new ExcelCell
                         {
@@ -145,7 +145,7 @@ public class ExcelService(ILogger<ExcelService> logger) : IExcelService
             
             for (var i = 0; i < npoiWorkbook.NumberOfSheets; i++)
             {
-                var sheet = npoiWorkbook.GetSheetAt(i);
+                ISheet? sheet = npoiWorkbook.GetSheetAt(i);
                 var excelWorksheet = new ExcelWorksheet
                 {
                     Name = sheet.SheetName,
@@ -156,14 +156,14 @@ public class ExcelService(ILogger<ExcelService> logger) : IExcelService
                 };
 
                 // Extract all cells with data
-                for (var rowIndex = sheet.FirstRowNum; rowIndex <= sheet.LastRowNum; rowIndex++)
+                for (int rowIndex = sheet.FirstRowNum; rowIndex <= sheet.LastRowNum; rowIndex++)
                 {
-                    var row = sheet.GetRow(rowIndex);
+                    IRow? row = sheet.GetRow(rowIndex);
                     if (row == null) continue;
                     
                     for (int colIndex = row.FirstCellNum; colIndex < row.LastCellNum; colIndex++)
                     {
-                        var cell = row.GetCell(colIndex);
+                        ICell? cell = row.GetCell(colIndex);
                         if (cell == null) continue;
                         
                         var excelCell = new ExcelCell
@@ -238,7 +238,7 @@ public class ExcelService(ILogger<ExcelService> logger) : IExcelService
     private static string GetNpoiCellStyle(ICell cell)
     {
         var styles = new List<string>();
-        var cellStyle = cell.CellStyle;
+        ICellStyle? cellStyle = cell.CellStyle;
         
         if (cellStyle?.GetFont(cell.Sheet.Workbook)?.IsBold == true) styles.Add("Bold");
         if (cellStyle?.GetFont(cell.Sheet.Workbook)?.IsItalic == true) styles.Add("Italic");
@@ -249,9 +249,9 @@ public class ExcelService(ILogger<ExcelService> logger) : IExcelService
     private static int GetMaxColumnCount(ISheet sheet)
     {
         var maxColumns = 0;
-        for (var rowIndex = sheet.FirstRowNum; rowIndex <= sheet.LastRowNum; rowIndex++)
+        for (int rowIndex = sheet.FirstRowNum; rowIndex <= sheet.LastRowNum; rowIndex++)
         {
-            var row = sheet.GetRow(rowIndex);
+            IRow? row = sheet.GetRow(rowIndex);
             if (row != null && row.LastCellNum > maxColumns)
             {
                 maxColumns = row.LastCellNum;

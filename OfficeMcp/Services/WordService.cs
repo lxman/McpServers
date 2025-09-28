@@ -1,10 +1,17 @@
-﻿using System.Text;
+﻿using System.ComponentModel;
+using System.Text;
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using GemBox.Document;
 using Microsoft.Extensions.Logging;
 using NPOI.HSSF.Record.Crypto;
 using NPOI.HWPF;
 using OfficeMcp.Models.Word;
+using Comment = DocumentFormat.OpenXml.Wordprocessing.Comment;
+using Paragraph = DocumentFormat.OpenXml.Wordprocessing.Paragraph;
+using Range = NPOI.HWPF.UserModel.Range;
+using Run = DocumentFormat.OpenXml.Wordprocessing.Run;
 
 namespace OfficeMcp.Services;
 
@@ -15,37 +22,29 @@ public interface IWordService
 
 public class WordService(ILogger<WordService> logger) : IWordService
 {
+    static WordService()
+    {
+        ComponentInfo.SetLicense("FREE-LIMITED-KEY");
+    }
+    
     public async Task<WordContent> LoadWordContentAsync(string filePath, string? password)
     {
         var wordContent = new WordContent();
         
         try
         {
-            var fileExtension = Path.GetExtension(filePath).ToLowerInvariant();
+            string fileExtension = Path.GetExtension(filePath).ToLowerInvariant();
             
             if (fileExtension == ".docx")
             {
-                if (!string.IsNullOrEmpty(password))
-                {
-                    // .docx password protection is complex with DocumentFormat.OpenXml
-                    logger.LogWarning("Password-protected .docx files have limited support: {FilePath}", filePath);
-                    wordContent.PlainText = "Password-protected .docx files require specialized handling";
-                    return wordContent;
-                }
-                else
-                {
-                    return await LoadDocxContentAsync(filePath);
-                }
+                return await LoadDocxContentAsync(filePath, password);
             }
-            else if (fileExtension == ".doc")
+            if (fileExtension == ".doc")
             {
                 // Use NPOI.HWPF for .doc files (supports passwords)
                 return await LoadWordWithNpoiAsync(filePath, password);
             }
-            else
-            {
-                throw new NotSupportedException($"Unsupported Word format: {fileExtension}");
-            }
+            throw new NotSupportedException($"Unsupported Word format: {fileExtension}");
         }
         catch (Exception ex)
         {
@@ -55,8 +54,16 @@ public class WordService(ILogger<WordService> logger) : IWordService
         }
     }
 
-    private static async Task<WordContent> LoadDocxContentAsync(string filePath)
+    private static async Task<WordContent> LoadDocxContentAsync(string filePath, string? password)
     {
+        using var unencryptedStream = new MemoryStream();
+        if (!string.IsNullOrEmpty(password))
+        {
+            // Need to open the document using GemBox and pass the unencrypted stream to the Word processing engine
+            DocumentModel gemboxDoc = DocumentModel.Load(filePath, new DocxLoadOptions { Password = password });
+            gemboxDoc.Save(unencryptedStream, SaveOptions.DocxDefault);
+            unencryptedStream.Position = 0;
+        }
         return await Task.Run(() =>
         {
             var wordContent = new WordContent();
@@ -67,8 +74,9 @@ public class WordService(ILogger<WordService> logger) : IWordService
             
             try
             {
-                using var doc = WordprocessingDocument.Open(filePath, false);
-                var body = doc.MainDocumentPart?.Document?.Body;
+                using WordprocessingDocument doc =
+                    WordprocessingDocument.Open(unencryptedStream.Length > 0 ? unencryptedStream : File.OpenRead(filePath), false);
+                Body? body = doc.MainDocumentPart?.Document?.Body;
                 
                 if (body == null)
                 {
@@ -79,7 +87,7 @@ public class WordService(ILogger<WordService> logger) : IWordService
                 var currentSection = new WordSection { Title = "Main Document", Level = 0 };
                 var currentSectionContent = new StringBuilder();
                 
-                foreach (var element in body.Elements())
+                foreach (OpenXmlElement element in body.Elements())
                 {
                     switch (element)
                     {
@@ -104,7 +112,7 @@ public class WordService(ILogger<WordService> logger) : IWordService
                     }
                 }
                 
-                // Add final section if it has content
+                // Add the final section if it has content
                 if (currentSectionContent.Length > 0)
                 {
                     currentSection.Content = currentSectionContent.ToString();
@@ -147,7 +155,7 @@ public class WordService(ILogger<WordService> logger) : IWordService
                 HWPFDocument doc;
                 if (!string.IsNullOrEmpty(password))
                 {
-                    // NPOI.HWPF supports password-protected .doc files using same mechanism as Excel
+                    // NPOI.HWPF supports password-protected .doc files using the same mechanism as Excel
                     Biff8EncryptionKey.CurrentUserPassword = password;
                     try
                     {
@@ -163,13 +171,13 @@ public class WordService(ILogger<WordService> logger) : IWordService
                     doc = new HWPFDocument(fileStream);
                 }
                 
-                var range = doc.GetRange();
+                Range? range = doc.GetRange();
                 
                 // Extract text content
                 for (var i = 0; i < range.NumParagraphs; i++)
                 {
-                    var paragraph = range.GetParagraph(i);
-                    var paragraphText = paragraph.Text;
+                    NPOI.HWPF.UserModel.Paragraph? paragraph = range.GetParagraph(i);
+                    string? paragraphText = paragraph.Text;
                     
                     if (!string.IsNullOrWhiteSpace(paragraphText))
                     {
@@ -195,7 +203,7 @@ public class WordService(ILogger<WordService> logger) : IWordService
 
                 for (var i = 0; i < range.NumParagraphs; i++)
                 {
-                    var paragraph = range.GetParagraph(i);
+                    NPOI.HWPF.UserModel.Paragraph? paragraph = range.GetParagraph(i);
     
                     if (paragraph.IsInTable())
                     {
@@ -244,7 +252,7 @@ public class WordService(ILogger<WordService> logger) : IWordService
     
     private static bool IsLikelyHeading(string text)
     {
-        var trimmed = text.Trim();
+        string trimmed = text.Trim();
         return trimmed.Length < 100 && 
                (trimmed.Contains("CHAPTER") || trimmed.Contains("SECTION") || 
                 trimmed.StartsWith("1.") || trimmed.StartsWith("2.") || 
@@ -254,12 +262,12 @@ public class WordService(ILogger<WordService> logger) : IWordService
     private static void ProcessParagraph(Paragraph paragraph, StringBuilder textBuilder, 
         List<WordSection> sections, ref WordSection currentSection, ref StringBuilder currentSectionContent)
     {
-        var paragraphText = GetParagraphText(paragraph);
+        string paragraphText = GetParagraphText(paragraph);
         if (string.IsNullOrWhiteSpace(paragraphText)) return;
         
         // Check if this is a heading
-        var styleId = paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value;
-        var isHeading = IsHeadingStyle(styleId, paragraphText);
+        string? styleId = paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value;
+        bool isHeading = IsHeadingStyle(styleId, paragraphText);
         
         if (isHeading)
         {
@@ -292,9 +300,9 @@ public class WordService(ILogger<WordService> logger) : IWordService
     {
         var textBuilder = new StringBuilder();
         
-        foreach (var run in paragraph.Elements<Run>())
+        foreach (Run run in paragraph.Elements<Run>())
         {
-            foreach (var element in run.Elements())
+            foreach (OpenXmlElement element in run.Elements())
             {
                 switch (element)
                 {
@@ -319,21 +327,21 @@ public class WordService(ILogger<WordService> logger) : IWordService
         var tableContent = new StringBuilder();
         textBuilder.AppendLine("\n[TABLE]");
         
-        foreach (var row in table.Elements<TableRow>())
+        foreach (TableRow row in table.Elements<TableRow>())
         {
             var rowText = new List<string>();
             
-            foreach (var cell in row.Elements<TableCell>())
+            foreach (TableCell cell in row.Elements<TableCell>())
             {
                 var cellText = new StringBuilder();
-                foreach (var paragraph in cell.Elements<Paragraph>())
+                foreach (Paragraph paragraph in cell.Elements<Paragraph>())
                 {
                     cellText.Append(GetParagraphText(paragraph).Trim());
                 }
                 rowText.Add(cellText.ToString());
             }
             
-            var rowString = string.Join(" | ", rowText);
+            string rowString = string.Join(" | ", rowText);
             textBuilder.AppendLine(rowString);
             tableContent.AppendLine(rowString);
         }
@@ -351,10 +359,10 @@ public class WordService(ILogger<WordService> logger) : IWordService
     {
         if (commentsPart.Comments is null) return;
         
-        foreach (var comment in commentsPart.Comments.Elements<Comment>())
+        foreach (Comment comment in commentsPart.Comments.Elements<Comment>())
         {
             var commentText = new StringBuilder();
-            foreach (var paragraph in comment.Elements<Paragraph>())
+            foreach (Paragraph paragraph in comment.Elements<Paragraph>())
             {
                 commentText.AppendLine(GetParagraphText(paragraph));
             }
