@@ -6,12 +6,20 @@ using OfficeMcp.Models.Word;
 using OfficeMcp.Models.Excel;
 using OfficeMcp.Models.PowerPoint;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text;
+using ClosedXML.Excel;
+using NPOI.HSSF.Record.Crypto;
+using NPOI.HSSF.UserModel;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 
 namespace OfficeMcp.Services;
 
 public class OfficeService
 {
+    private readonly IExcelService _excelService;
+    private readonly IWordService _wordService;
     private readonly ILogger<OfficeService> _logger;
     private readonly ConcurrentDictionary<string, OfficeDocument> _loadedDocuments;
     private readonly SemaphoreSlim _operationSemaphore;
@@ -20,8 +28,10 @@ public class OfficeService
     private readonly int _maxFileSizeMb;
     private readonly string[] _supportedFormats;
 
-    public OfficeService(ILogger<OfficeService> logger, IConfiguration configuration)
+    public OfficeService(IExcelService excelService, IWordService wordService, ILogger<OfficeService> logger, IConfiguration configuration)
     {
+        _excelService = excelService;
+        _wordService = wordService;
         _logger = logger;
         _loadedDocuments = new ConcurrentDictionary<string, OfficeDocument>();
         
@@ -49,7 +59,7 @@ public class OfficeService
             }
 
             var fileInfo = new FileInfo(filePath);
-            string extension = fileInfo.Extension.ToLowerInvariant();
+            var extension = fileInfo.Extension.ToLowerInvariant();
             
             if (!_supportedFormats.Contains(extension))
             {
@@ -78,7 +88,7 @@ public class OfficeService
                 };
             }
 
-            DocumentType documentType = GetDocumentType(extension);
+            var documentType = GetDocumentType(extension);
             var metadata = new OfficeMetadata
             {
                 Title = fileInfo.Name,
@@ -106,10 +116,10 @@ public class OfficeService
             switch (documentType)
             {
                 case DocumentType.Word:
-                    document.WordContent = new WordContent { PlainText = $"Word document loaded: {fileInfo.Name}" };
+                    document.WordContent = await _wordService.LoadWordContentAsync(document.FilePath, password);
                     break;
                 case DocumentType.Excel:
-                    document.ExcelContent = new ExcelContent();
+                    document.ExcelContent = await _excelService.LoadExcelContentAsync(document.FilePath, password);
                     break;
                 case DocumentType.PowerPoint:
                     document.PowerPointContent = new PowerPointContent();
@@ -152,7 +162,7 @@ public class OfficeService
     {
         try
         {
-            List<DocumentInfo> documents = _loadedDocuments.Values
+            var documents = _loadedDocuments.Values
                 .Select(doc => new DocumentInfo
                 {
                     FilePath = doc.FilePath,
@@ -192,7 +202,7 @@ public class OfficeService
         await _operationSemaphore.WaitAsync();
         try
         {
-            if (!_loadedDocuments.TryGetValue(filePath, out OfficeDocument? document))
+            if (!_loadedDocuments.TryGetValue(filePath, out var document))
             {
                 return new ServiceResult<ExtractContentResult>
                 {
@@ -212,7 +222,37 @@ public class OfficeService
                         content.AppendLine(document.WordContent.PlainText);
                     break;
                 case DocumentType.Excel:
-                    content.AppendLine($"Excel workbook: {document.FileName}");
+                    if (document.ExcelContent != null)
+                    {
+                        content.AppendLine($"=== Excel Workbook: {document.FileName} ===");
+        
+                        foreach (var worksheet in document.ExcelContent.Worksheets)
+                        {
+                            content.AppendLine($"\n=== Sheet: {worksheet.Name} ===");
+                            content.AppendLine($"Rows: {worksheet.RowCount}, Columns: {worksheet.ColumnCount}");
+            
+                            // Group cells by row for readable output
+                            var cellsByRow = worksheet.Cells
+                                .Where(c => c.Value != null && !string.IsNullOrWhiteSpace(c.Value.ToString()))
+                                .GroupBy(c => c.Row)
+                                .OrderBy(g => g.Key)
+                                .Take(50); // Limit to prevent huge output
+            
+                            foreach (var rowGroup in cellsByRow)
+                            {
+                                var rowCells = rowGroup.OrderBy(c => c.Column).ToList();
+                                var rowValues = rowCells.Select(c => 
+                                {
+                                    var value = c.Value?.ToString() ?? "";
+                                    if (!string.IsNullOrEmpty(c.Formula))
+                                        value += $" [{c.Formula}]";
+                                    return $"{c.Address}:{value}";
+                                });
+                
+                                content.AppendLine($"Row {rowGroup.Key}: {string.Join(" | ", rowValues)}");
+                            }
+                        }
+                    }
                     break;
                 case DocumentType.PowerPoint:
                     content.AppendLine($"PowerPoint presentation: {document.FileName}");
@@ -259,7 +299,7 @@ public class OfficeService
         await _operationSemaphore.WaitAsync();
         try
         {
-            if (!_loadedDocuments.TryGetValue(filePath, out OfficeDocument? document))
+            if (!_loadedDocuments.TryGetValue(filePath, out var document))
             {
                 return new ServiceResult<SearchDocumentResult>
                 {
@@ -271,7 +311,7 @@ public class OfficeService
             var results = new List<OfficeSearchResult>();
 
             // Simple search implementation
-            string content = document.Type switch
+            var content = document.Type switch
             {
                 DocumentType.Word => document.WordContent?.PlainText ?? "",
                 DocumentType.Excel => $"Excel workbook: {document.FileName}",
@@ -329,18 +369,18 @@ public class OfficeService
                 .Where(doc => doc.IsLoaded)
                 .Select(async doc =>
                 {
-                    ServiceResult<SearchDocumentResult> result = await SearchInDocumentAsync(doc.FilePath, searchTerm, fuzzySearch, maxResults);
+                    var result = await SearchInDocumentAsync(doc.FilePath, searchTerm, fuzzySearch, maxResults);
                     return result.Success ? result.Data!.Results : [];
                 });
 
-            List<OfficeSearchResult>[] searchResults = await Task.WhenAll(searchTasks);
+            var searchResults = await Task.WhenAll(searchTasks);
             
-            foreach (List<OfficeSearchResult> results in searchResults)
+            foreach (var results in searchResults)
             {
                 allResults.AddRange(results);
             }
 
-            List<OfficeSearchResult> sortedResults = allResults
+            var sortedResults = allResults
                 .OrderByDescending(r => r.RelevanceScore)
                 .Take(maxResults)
                 .ToList();
@@ -372,7 +412,7 @@ public class OfficeService
         await _operationSemaphore.WaitAsync();
         try
         {
-            if (!_loadedDocuments.TryGetValue(filePath, out OfficeDocument? document))
+            if (!_loadedDocuments.TryGetValue(filePath, out var document))
             {
                 return new ServiceResult<DocumentAnalysisResult>
                 {
@@ -491,7 +531,7 @@ public class OfficeService
     {
         try
         {
-            long memoryUsage = GC.GetTotalMemory(false);
+            var memoryUsage = GC.GetTotalMemory(false);
             
             return new ServiceResult<ServiceStatusInfo>
             {
@@ -519,8 +559,7 @@ public class OfficeService
             };
         }
     }
-
-    // Private helper methods
+    
     private static DocumentType GetDocumentType(string extension)
     {
         return extension.ToLowerInvariant() switch
@@ -537,12 +576,12 @@ public class OfficeService
         if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(searchTerm))
             return text;
 
-        int index = text.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase);
+        var index = text.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase);
         if (index == -1) 
             return text.Length <= contextSize ? text : text[..contextSize];
 
-        int start = Math.Max(0, index - contextSize / 2);
-        int length = Math.Min(contextSize, text.Length - start);
+        var start = Math.Max(0, index - contextSize / 2);
+        var length = Math.Min(contextSize, text.Length - start);
         
         return text.Substring(start, length);
     }

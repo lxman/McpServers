@@ -16,14 +16,16 @@ public class Program
         Console.SetOut(TextWriter.Null);
         Console.SetError(TextWriter.Null);
         
-        HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+        var builder = Host.CreateApplicationBuilder(args);
         
         // Add configuration
-        string configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+        var configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
         builder.Configuration.AddJsonFile(configPath, optional: true, reloadOnChange: true);
         
         // Configure services
         builder.Services
+            .AddSingleton<IExcelService, ExcelService>()
+            .AddSingleton<IWordService, WordService>()
             .AddSingleton<OfficeService>()
             .AddLogging(logging =>
             {
@@ -44,7 +46,7 @@ public class Program
             .WithStdioServerTransport()
             .WithTools<OfficeTools>();
 
-        IHost host = builder.Build();
+        var host = builder.Build();
         await host.RunAsync();
     }
 }

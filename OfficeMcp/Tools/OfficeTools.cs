@@ -21,7 +21,7 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
     {
         try
         {
-            ServiceResult<LoadDocumentResult> result = await officeService.LoadDocumentAsync(filePath, password);
+            var result = await officeService.LoadDocumentAsync(filePath, password);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -37,7 +37,7 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
     {
         try
         {
-            ServiceResult<LoadedDocumentsResult> result = officeService.GetLoadedDocuments();
+            var result = officeService.GetLoadedDocuments();
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -54,7 +54,7 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
     {
         try
         {
-            ServiceResult<ExtractContentResult> result = await officeService.ExtractAllContentAsync(filePath);
+            var result = await officeService.ExtractAllContentAsync(filePath);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -74,7 +74,7 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
     {
         try
         {
-            ServiceResult<SearchDocumentResult> result = await officeService.SearchInDocumentAsync(filePath, searchTerm, fuzzySearch, maxResults);
+            var result = await officeService.SearchInDocumentAsync(filePath, searchTerm, fuzzySearch, maxResults);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -93,7 +93,7 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
     {
         try
         {
-            ServiceResult<CrossDocumentSearchResult> result = await officeService.SearchAcrossDocumentsAsync(searchTerm, fuzzySearch, maxResults);
+            var result = await officeService.SearchAcrossDocumentsAsync(searchTerm, fuzzySearch, maxResults);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -110,7 +110,7 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
     {
         try
         {
-            ServiceResult<DocumentAnalysisResult> result = await officeService.AnalyzeDocumentAsync(filePath);
+            var result = await officeService.AnalyzeDocumentAsync(filePath);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -127,7 +127,7 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
     {
         try
         {
-            ServiceResult<SimpleOperationResult> result = officeService.UnloadDocument(filePath);
+            var result = officeService.UnloadDocument(filePath);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -143,7 +143,7 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
     {
         try
         {
-            ServiceResult<SimpleOperationResult> result = officeService.ClearAllDocuments();
+            var result = officeService.ClearAllDocuments();
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -159,7 +159,7 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
     {
         try
         {
-            ServiceResult<ServiceStatusInfo> result = officeService.GetServiceStatus();
+            var result = officeService.GetServiceStatus();
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -180,7 +180,7 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
         try
         {
             // This could be implemented as a specialized Excel extraction method
-            ServiceResult<ExtractContentResult> result = await officeService.ExtractAllContentAsync(filePath);
+            var result = await officeService.ExtractAllContentAsync(filePath);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -201,7 +201,7 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
         try
         {
             // This could be implemented as a specialized PowerPoint extraction method
-            ServiceResult<ExtractContentResult> result = await officeService.ExtractAllContentAsync(filePath);
+            var result = await officeService.ExtractAllContentAsync(filePath);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -222,7 +222,7 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
         try
         {
             // This could be implemented as a specialized Word structure extraction method
-            ServiceResult<ExtractContentResult> result = await officeService.ExtractAllContentAsync(filePath);
+            var result = await officeService.ExtractAllContentAsync(filePath);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -242,8 +242,8 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
         try
         {
             // This would need to be implemented as a document comparison method in the service
-            ServiceResult<ExtractContentResult> result1 = await officeService.ExtractAllContentAsync(filePath1);
-            ServiceResult<ExtractContentResult> result2 = await officeService.ExtractAllContentAsync(filePath2);
+            var result1 = await officeService.ExtractAllContentAsync(filePath1);
+            var result2 = await officeService.ExtractAllContentAsync(filePath2);
             
             var comparison = new
             {
@@ -270,7 +270,7 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
         try
         {
             // Load the document to check if it can be opened successfully
-            ServiceResult<LoadDocumentResult> result = await officeService.LoadDocumentAsync(filePath);
+            var result = await officeService.LoadDocumentAsync(filePath);
             
             var validation = new
             {
@@ -307,7 +307,7 @@ public class OfficeTools(OfficeService officeService, ILogger<OfficeTools> logge
             await officeService.LoadDocumentAsync(filePath);
             
             // Extract and analyze the document
-            ServiceResult<DocumentAnalysisResult> analysisResult = await officeService.AnalyzeDocumentAsync(filePath);
+            var analysisResult = await officeService.AnalyzeDocumentAsync(filePath);
             
             return JsonSerializer.Serialize(analysisResult, _jsonOptions);
         }
