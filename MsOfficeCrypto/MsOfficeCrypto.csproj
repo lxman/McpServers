@@ -1,0 +1,56 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <Nullable>enable</Nullable>
+        <Version>0.0.1</Version>
+        <Authors>Michael Jordan</Authors>
+        <Description>MS-OFFCRYPTO specification implementation for .NET - Phase 4 Complete with Enhanced Decryption</Description>
+        <PackageProjectUrl>https://github.com/yourusername/MsOfficeCrypto</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/yourusername/MsOfficeCrypto</RepositoryUrl>
+        <PackageTags>MS-OFFCRYPTO;encryption;decryption;Office;OOXML;AES;Agile;DataSpaces;Streaming</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <PackageReleaseNotes>
+            Phase 4 Release:
+            • Enhanced Agile encryption support with full PBKDF2 key derivation
+            • Streaming decryption for large files with progress reporting
+            • DataSpaces transformation support
+            • Async/await operations with cancellation support
+            • Comprehensive error handling and validation
+            • Memory-efficient processing for large documents
+            • Multi-threading support for password verification
+            • Enhanced security and performance optimizations
+        </PackageReleaseNotes>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+        <DocumentationFile>bin\Release\netstandard2.1\MsOfficeCrypto.xml</DocumentationFile>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <WarningsAsErrors />
+        <NoWarn>1591</NoWarn> <!-- Missing XML comment warnings -->
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="OpenMcdf" Version="3.0.3" />
+        <PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
+        <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
+        <PackageReference Include="System.Memory" Version="4.6.0" />
+    </ItemGroup>
+
+    <!-- Include README and documentation -->
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\" />
+        <None Include="CHANGELOG.md" Pack="true" PackagePath="\" />
+        <None Include="ROADMAP.md" Pack="true" PackagePath="\" />
+        <None Include="docs\**\*" Pack="true" PackagePath="docs\" />
+    </ItemGroup>
+
+    <!-- Ensure XML documentation is included in package -->
+    <PropertyGroup>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+</Project>

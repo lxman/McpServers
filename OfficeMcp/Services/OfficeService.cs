@@ -1,18 +1,10 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OfficeMcp.Models;
 using OfficeMcp.Models.Results;
-using OfficeMcp.Models.Word;
 using OfficeMcp.Models.Excel;
-using OfficeMcp.Models.PowerPoint;
 using System.Collections.Concurrent;
-using System.Globalization;
 using System.Text;
-using ClosedXML.Excel;
-using NPOI.HSSF.Record.Crypto;
-using NPOI.HSSF.UserModel;
-using NPOI.SS.UserModel;
-using NPOI.XSSF.UserModel;
 
 namespace OfficeMcp.Services;
 
@@ -20,6 +12,7 @@ public class OfficeService
 {
     private readonly IExcelService _excelService;
     private readonly IWordService _wordService;
+    private readonly IPowerPointService _powerPointService;
     private readonly ILogger<OfficeService> _logger;
     private readonly ConcurrentDictionary<string, OfficeDocument> _loadedDocuments;
     private readonly SemaphoreSlim _operationSemaphore;
@@ -27,20 +20,21 @@ public class OfficeService
     private readonly int _maxDocuments;
     private readonly int _maxFileSizeMb;
     private readonly string[] _supportedFormats;
-
-    public OfficeService(IExcelService excelService, IWordService wordService, ILogger<OfficeService> logger, IConfiguration configuration)
+    
+    public OfficeService(IExcelService excelService, IWordService wordService, IPowerPointService powerPointService, ILogger<OfficeService> logger, IConfiguration configuration)
     {
         _excelService = excelService;
         _wordService = wordService;
+        _powerPointService = powerPointService;
         _logger = logger;
         _loadedDocuments = new ConcurrentDictionary<string, OfficeDocument>();
         
-        _maxDocuments = configuration.GetValue<int>("OfficeService:MaxDocuments", 25);
-        _maxFileSizeMb = configuration.GetValue<int>("OfficeService:MaxFileSizeMB", 100);
+        _maxDocuments = configuration.GetValue("OfficeService:MaxDocuments", 25);
+        _maxFileSizeMb = configuration.GetValue("OfficeService:MaxFileSizeMB", 100);
         _supportedFormats = configuration.GetSection("OfficeService:SupportedFormats").Get<string[]>() ??
                             [".docx", ".xlsx", ".pptx", ".doc", ".xls", ".ppt"];
         
-        var maxConcurrentOps = configuration.GetValue<int>("Performance:MaxConcurrentOperations", 3);
+        int maxConcurrentOps = configuration.GetValue("Performance:MaxConcurrentOperations", 3);
         _operationSemaphore = new SemaphoreSlim(maxConcurrentOps, maxConcurrentOps);
     }
 
@@ -122,7 +116,7 @@ public class OfficeService
                     document.ExcelContent = await _excelService.LoadExcelContentAsync(document.FilePath, password);
                     break;
                 case DocumentType.PowerPoint:
-                    document.PowerPointContent = new PowerPointContent();
+                    document.PowerPointContent = await _powerPointService.LoadPowerPointContentAsync(document.FilePath, password);
                     break;
                 case DocumentType.Unknown:
                     break;

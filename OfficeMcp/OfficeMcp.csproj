@@ -11,11 +11,15 @@
       <PackageReference Include="ClosedXML" Version="0.105.0" />
       <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
       <PackageReference Include="FuzzySharp" Version="2.0.2" />
-      <PackageReference Include="GemBox.Document" Version="2025.9.108" />
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.9" />
       <PackageReference Include="ModelContextProtocol" Version="0.4.0-preview.1" />
       <PackageReference Include="NPOI" Version="2.3.0" />
       <PackageReference Include="NPOI.HWPF" Version="2.3.0" />
+      <PackageReference Include="ShapeCrawler" Version="0.73.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\MsOfficeCrypto\MsOfficeCrypto.csproj" />
     </ItemGroup>
 
 </Project>

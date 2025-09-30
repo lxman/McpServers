@@ -24,8 +24,10 @@ public class Program
         
         // Configure services
         builder.Services
+            .AddSingleton<IDocumentDecryptionService, DocumentDecryptionService>()
             .AddSingleton<IExcelService, ExcelService>()
             .AddSingleton<IWordService, WordService>()
+            .AddSingleton<IPowerPointService, PowerPointService>()
             .AddSingleton<OfficeService>()
             .AddLogging(logging =>
             {

@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 using ClosedXML.Excel;
 using Microsoft.Extensions.Logging;
-using NPOI.HSSF.Record.Crypto;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
@@ -14,7 +13,7 @@ public interface IExcelService
     Task<ExcelContent> LoadExcelContentAsync(string filePath, string? password = null);
 }
 
-public class ExcelService(ILogger<ExcelService> logger) : IExcelService
+public class ExcelService(IDocumentDecryptionService decryptionService, ILogger<ExcelService> logger) : IExcelService
 {
     public async Task<ExcelContent> LoadExcelContentAsync(string filePath, string? password = null)
     {
@@ -22,30 +21,32 @@ public class ExcelService(ILogger<ExcelService> logger) : IExcelService
         
         try
         {
-            IWorkbook workbook;
+            await using FileStream fileStream = File.OpenRead(filePath);
+            await using Stream decryptedStream = await decryptionService.DecryptDocumentAsync(fileStream, password);
+            
             string fileExtension = Path.GetExtension(filePath).ToLowerInvariant();
             
-            // Use NPOI for password-protected files or as fallback
-            if (!string.IsNullOrEmpty(password) || fileExtension == ".xls")
+            if (fileExtension is ".xlsx" or ".xlsm")
             {
-                workbook = await LoadWithNpoiAsync(filePath, password);
+                try
+                {
+                    using var xlWorkbook = new XLWorkbook(decryptedStream);
+                    return await ConvertFromClosedXmlAsync(xlWorkbook);
+                }
+                catch (Exception e)
+                {
+                    logger.LogWarning(e, "ClosedXML failed, falling back to NPOI for: {FilePath}", filePath);
+                    decryptedStream.Position = 0;
+                    IWorkbook workbook = await LoadWithNpoiAsync(decryptedStream, fileExtension);
+                    return await ConvertFromNpoiAsync(workbook);
+                }
             }
             else
             {
-                // Try ClosedXML first for .xlsx files without passwords (faster)
-                try
-                {
-                    using var xlWorkbook = new XLWorkbook(filePath);
-                    return await ConvertFromClosedXmlAsync(xlWorkbook);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "ClosedXML failed, falling back to NPOI for: {FilePath}", filePath);
-                    workbook = await LoadWithNpoiAsync(filePath, password);
-                }
+                // Use NPOI for .xls files
+                IWorkbook workbook = await LoadWithNpoiAsync(decryptedStream, fileExtension);
+                return await ConvertFromNpoiAsync(workbook);
             }
-            
-            return await ConvertFromNpoiAsync(workbook);
         }
         catch (Exception ex)
         {
@@ -54,42 +55,15 @@ public class ExcelService(ILogger<ExcelService> logger) : IExcelService
         }
     }
 
-    private async Task<IWorkbook> LoadWithNpoiAsync(string filePath, string? password = null)
+    private static async Task<IWorkbook> LoadWithNpoiAsync(Stream documentStream, string fileExtension)
     {
         return await Task.Run<IWorkbook>(() =>
         {
-            using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-            string fileExtension = Path.GetExtension(filePath).ToLowerInvariant();
-            
             if (fileExtension is ".xlsx" or ".xlsm")
             {
-                var workbook = new XSSFWorkbook(fileStream);
-                
-                // NPOI doesn't directly support XLSX passwords in the constructor
-                // but we can try to access a protected sheet to trigger password requirement
-                if (!string.IsNullOrEmpty(password))
-                {
-                    // For XLSX, password protection is usually at sheet level
-                    // This is a limitation - NPOI has better .xls password support
-                    logger.LogWarning("XLSX password support is limited in NPOI");
-                }
-                
-                return workbook;
+                return new XSSFWorkbook(documentStream);
             }
-            if (!string.IsNullOrEmpty(password))
-            {
-                // NPOI has good support for .xls passwords
-                Biff8EncryptionKey.CurrentUserPassword = password;
-                try
-                {
-                    return new HSSFWorkbook(fileStream);
-                }
-                finally
-                {
-                    Biff8EncryptionKey.CurrentUserPassword = null; // Clear password
-                }
-            }
-            return new HSSFWorkbook(fileStream);
+            return new HSSFWorkbook(documentStream);
         });
     }
 

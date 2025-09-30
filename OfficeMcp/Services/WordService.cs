@@ -1,11 +1,8 @@
-﻿using System.ComponentModel;
-using System.Text;
+﻿using System.Text;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
-using GemBox.Document;
 using Microsoft.Extensions.Logging;
-using NPOI.HSSF.Record.Crypto;
 using NPOI.HWPF;
 using OfficeMcp.Models.Word;
 using Comment = DocumentFormat.OpenXml.Wordprocessing.Comment;
@@ -20,31 +17,26 @@ public interface IWordService
     Task<WordContent> LoadWordContentAsync(string filePath, string? password = null);
 }
 
-public class WordService(ILogger<WordService> logger) : IWordService
+public class WordService(IDocumentDecryptionService decryptionService, ILogger<WordService> logger) : IWordService
 {
-    static WordService()
-    {
-        ComponentInfo.SetLicense("FREE-LIMITED-KEY");
-    }
-    
     public async Task<WordContent> LoadWordContentAsync(string filePath, string? password)
     {
         var wordContent = new WordContent();
         
         try
         {
-            string fileExtension = Path.GetExtension(filePath).ToLowerInvariant();
+            // Get decrypted stream first, then determine processing method
+            await using FileStream fileStream = File.OpenRead(filePath);
+            await using Stream decryptedStream = await decryptionService.DecryptDocumentAsync(fileStream, password);
             
-            if (fileExtension == ".docx")
+            string fileExtension = Path.GetExtension(filePath).ToLowerInvariant();
+
+            return fileExtension switch
             {
-                return await LoadDocxContentAsync(filePath, password);
-            }
-            if (fileExtension == ".doc")
-            {
-                // Use NPOI.HWPF for .doc files (supports passwords)
-                return await LoadWordWithNpoiAsync(filePath, password);
-            }
-            throw new NotSupportedException($"Unsupported Word format: {fileExtension}");
+                ".docx" => await LoadDocxContentAsync(decryptedStream),
+                ".doc" => await LoadDocContentAsync(decryptedStream),
+                _ => throw new NotSupportedException($"Unsupported Word format: {fileExtension}")
+            };
         }
         catch (Exception ex)
         {
@@ -54,16 +46,8 @@ public class WordService(ILogger<WordService> logger) : IWordService
         }
     }
 
-    private static async Task<WordContent> LoadDocxContentAsync(string filePath, string? password)
+    private static async Task<WordContent> LoadDocxContentAsync(Stream documentStream)
     {
-        using var unencryptedStream = new MemoryStream();
-        if (!string.IsNullOrEmpty(password))
-        {
-            // Need to open the document using GemBox and pass the unencrypted stream to the Word processing engine
-            DocumentModel gemboxDoc = DocumentModel.Load(filePath, new DocxLoadOptions { Password = password });
-            gemboxDoc.Save(unencryptedStream, SaveOptions.DocxDefault);
-            unencryptedStream.Position = 0;
-        }
         return await Task.Run(() =>
         {
             var wordContent = new WordContent();
@@ -74,8 +58,7 @@ public class WordService(ILogger<WordService> logger) : IWordService
             
             try
             {
-                using WordprocessingDocument doc =
-                    WordprocessingDocument.Open(unencryptedStream.Length > 0 ? unencryptedStream : File.OpenRead(filePath), false);
+                using WordprocessingDocument doc = WordprocessingDocument.Open(documentStream, false);
                 Body? body = doc.MainDocumentPart?.Document?.Body;
                 
                 if (body == null)
@@ -140,7 +123,7 @@ public class WordService(ILogger<WordService> logger) : IWordService
         });
     }
     
-    private static async Task<WordContent> LoadWordWithNpoiAsync(string filePath, string? password = null)
+    private static async Task<WordContent> LoadDocContentAsync(Stream documentStream)
     {
         return await Task.Run(() =>
         {
@@ -150,26 +133,7 @@ public class WordService(ILogger<WordService> logger) : IWordService
             
             try
             {
-                using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-                
-                HWPFDocument doc;
-                if (!string.IsNullOrEmpty(password))
-                {
-                    // NPOI.HWPF supports password-protected .doc files using the same mechanism as Excel
-                    Biff8EncryptionKey.CurrentUserPassword = password;
-                    try
-                    {
-                        doc = new HWPFDocument(fileStream);
-                    }
-                    finally
-                    {
-                        Biff8EncryptionKey.CurrentUserPassword = null; // Clear password
-                    }
-                }
-                else
-                {
-                    doc = new HWPFDocument(fileStream);
-                }
+                var doc = new HWPFDocument(documentStream);
                 
                 Range? range = doc.GetRange();
                 
@@ -178,21 +142,19 @@ public class WordService(ILogger<WordService> logger) : IWordService
                 {
                     NPOI.HWPF.UserModel.Paragraph? paragraph = range.GetParagraph(i);
                     string? paragraphText = paragraph.Text;
-                    
-                    if (!string.IsNullOrWhiteSpace(paragraphText))
-                    {
-                        textBuilder.AppendLine(paragraphText);
+
+                    if (string.IsNullOrWhiteSpace(paragraphText)) continue;
+                    textBuilder.AppendLine(paragraphText);
                         
-                        // Simple heading detection for .doc files
-                        if (IsLikelyHeading(paragraphText))
+                    // Simple heading detection for .doc files
+                    if (IsLikelyHeading(paragraphText))
+                    {
+                        sections.Add(new WordSection
                         {
-                            sections.Add(new WordSection
-                            {
-                                Title = paragraphText.Trim(),
-                                Level = 1,
-                                Content = paragraphText.Trim()
-                            });
-                        }
+                            Title = paragraphText.Trim(),
+                            Level = 1,
+                            Content = paragraphText.Trim()
+                        });
                     }
                 }
                 
@@ -357,8 +319,6 @@ public class WordService(ILogger<WordService> logger) : IWordService
 
     private static void ProcessComments(WordprocessingCommentsPart commentsPart, List<WordComment> comments)
     {
-        if (commentsPart.Comments is null) return;
-        
         foreach (Comment comment in commentsPart.Comments.Elements<Comment>())
         {
             var commentText = new StringBuilder();

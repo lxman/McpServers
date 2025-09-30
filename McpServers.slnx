@@ -6,6 +6,8 @@
   <Project Path="McpCodeEditor\McpCodeEditor.csproj" Type="Classic C#" />
   <Project Path="McpUtilitiesServer\McpUtilitiesServer.csproj" Type="Classic C#" />
   <Project Path="MongoIntegration\MongoIntegration.csproj" Type="Classic C#" />
+  <Project Path="MsOfficeCryptoTest\MsOfficeCryptoTest.csproj" Type="Classic C#" />
+  <Project Path="MsOfficeCrypto\MsOfficeCrypto.csproj" Type="Classic C#" />
   <Project Path="OfficeMcp\OfficeMcp.csproj" Type="Classic C#" />
   <Project Path="PdfMcp\PdfMcp.csproj" Type="Classic C#" />
   <Project Path="PlaywrightTester\PlaywrightTester.csproj" Type="Classic C#" />
