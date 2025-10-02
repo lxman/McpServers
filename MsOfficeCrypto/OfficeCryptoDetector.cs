@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using MsOfficeCrypto.Exceptions;
 using MsOfficeCrypto.Structures;
-using MsOfficeCrypto.Utils;
 using OpenMcdf;
 
 namespace MsOfficeCrypto
@@ -178,17 +177,13 @@ namespace MsOfficeCrypto
             }
         }
         
-        #endregion
-        
-        #region Private methods
-
         /// <summary>
         /// Internal method to extract encrypted package data from an open compound file
         /// </summary>
         /// <param name="root">Open root storage</param>
         /// <param name="encryptionInfo"></param>
         /// <returns>Encrypted package data bytes</returns>
-        private static byte[] ExtractEncryptedPackageData(RootStorage root, EncryptionInfo encryptionInfo)
+        public static byte[] ExtractEncryptedPackageData(RootStorage root, EncryptionInfo encryptionInfo)
         {
             if (!TryOpenStream(root, "EncryptedPackage"))
             {
@@ -220,63 +215,54 @@ namespace MsOfficeCrypto
         /// </summary>
         /// <param name="root">Root storage of the compound file</param>
         /// <returns>True if encrypted</returns>
-        private static bool IsEncryptedOleDocument(RootStorage root)
+        public static bool IsEncryptedOleDocument(RootStorage root)
         {
             // Method 1: Check for EncryptionInfo stream (ECMA-376 Agile/Standard encryption)
-            if (TryOpenStream(root, "EncryptionInfo"))
-                return true;
-
-            // Method 2: Check for encrypted package (ECMA-376)
-            if (TryOpenStream(root, "EncryptedPackage"))
-                return true;
-
-            // Method 3: Check for legacy Office encryption indicators
-            return HasLegacyEncryption(root) ||
-                   // Method 4: Check for DataSpaces (used in some encryption scenarios)
-                   TryOpenStorage(root, "DataSpaces");
+            return TryOpenStream(root, "EncryptionInfo") ||
+                   // Method 2: Check for encrypted package (ECMA-376)
+                   TryOpenStream(root, "EncryptedPackage");
         }
 
         /// <summary>
-        /// Checks for legacy Office encryption (pre-2007)
+        /// Extracts detailed encryption information from the compound file
         /// </summary>
-        private static bool HasLegacyEncryption(RootStorage root)
+        public static EncryptionInfo ExtractEncryptionInfo(RootStorage root, string source)
         {
-            try
+            if (!IsEncryptedOleDocument(root))
+                throw new NotEncryptedException($"Document is not encrypted: {source}");
+
+            var encInfo = new EncryptionInfo
             {
-                // Check Word documents (.doc) for encryption
-                if (TryOpenStream(root, "WordDocument"))
-                {
-                    using CfbStream wordStream = root.OpenStream("WordDocument");
-                    return CheckWordDocumentEncryption(wordStream);
-                }
+                Source = source,
+                HasDataSpaces = TryOpenStorage(root, "DataSpaces"),
+                DetectedAt = DateTime.UtcNow
+            };
 
-                // Check Excel documents (.xls) for encryption - ENHANCED
-                if (TryOpenStream(root, "Workbook"))
-                {
-                    using CfbStream workbookStream = root.OpenStream("Workbook");
-                    return BiffParser.DetectExcelEncryption(workbookStream);
-                }
-
-                // Check PowerPoint documents (.ppt) for encryption - ENHANCED
-                if (TryOpenStream(root, "PowerPoint Document"))
-                {
-                    return PowerPointEncryptionDetector.DetectPowerPointEncryption(root);
-                }
-
-                // Check for alternative PowerPoint stream names
-                if (TryOpenStream(root, "PP40"))
-                {
-                    return PowerPointEncryptionDetector.DetectPowerPointEncryption(root);
-                }
-            }
-            catch (Exception)
+            // Extract EncryptionInfo stream data (ECMA-376)
+            if (TryOpenStream(root, "EncryptionInfo"))
             {
-                // If we can't read the streams, assume not encrypted
-                return false;
+                ExtractModernEncryptionInfo(root, encInfo);
             }
 
-            return false;
+            // Check for EncryptedPackage
+            if (TryOpenStream(root, "EncryptedPackage"))
+            {
+                using CfbStream encPackageStream = root.OpenStream("EncryptedPackage");
+                encInfo.EncryptedPackageSize = (int)encPackageStream.Length;
+            }
+
+            // Analyze DataSpaces if present
+            if (encInfo.HasDataSpaces)
+            {
+                AnalyzeDataSpaces(root, encInfo);
+            }
+
+            return encInfo;
         }
+
+        #endregion
+        
+        #region Private methods
 
         /// <summary>
         /// Helper method to safely check if a stream exists
@@ -311,48 +297,6 @@ namespace MsOfficeCrypto
         }
 
         /// <summary>
-        /// Extracts detailed encryption information from the compound file
-        /// </summary>
-        private static EncryptionInfo ExtractEncryptionInfo(RootStorage root, string source)
-        {
-            if (!IsEncryptedOleDocument(root))
-                throw new NotEncryptedException($"Document is not encrypted: {source}");
-
-            var encInfo = new EncryptionInfo
-            {
-                Source = source,
-                HasDataSpaces = TryOpenStorage(root, "DataSpaces"),
-                DetectedAt = DateTime.UtcNow
-            };
-
-            // Extract EncryptionInfo stream data (ECMA-376)
-            if (TryOpenStream(root, "EncryptionInfo"))
-            {
-                ExtractModernEncryptionInfo(root, encInfo);
-            }
-            // Extract legacy format encryption info
-            else
-            {
-                ExtractLegacyEncryptionInfo(root, encInfo);
-            }
-
-            // Check for EncryptedPackage
-            if (TryOpenStream(root, "EncryptedPackage"))
-            {
-                using CfbStream encPackageStream = root.OpenStream("EncryptedPackage");
-                encInfo.EncryptedPackageSize = (int)encPackageStream.Length;
-            }
-
-            // Analyze DataSpaces if present
-            if (encInfo.HasDataSpaces)
-            {
-                AnalyzeDataSpaces(root, encInfo);
-            }
-
-            return encInfo;
-        }
-
-        /// <summary>
         /// Checks Word document stream for encryption flags
         /// </summary>
         private static bool CheckWordDocumentEncryption(CfbStream stream)
@@ -368,14 +312,6 @@ namespace MsOfficeCrypto
             // This is a simplified check - full implementation would parse the complete FIB
             var fibFlags = BitConverter.ToUInt16(fibHeader, 10);
             return (fibFlags & 0x0100) != 0; // fEncrypted flag
-        }
-
-        /// <summary>
-        /// Checks Excel workbook stream for encryption
-        /// </summary>
-        private static bool CheckExcelWorkbookEncryption(CfbStream stream)
-        {
-            return BiffParser.DetectExcelEncryption(stream);
         }
 
         /// <summary>
@@ -480,49 +416,6 @@ namespace MsOfficeCrypto
                 Console.WriteLine($"Warning: Failed to parse EncryptionInfo structures: {ex.Message}");
                 // Keep the raw data available for manual inspection
             }
-        }
-
-        /// <summary>
-        /// Extracts legacy format encryption information
-        /// </summary>
-        private static void ExtractLegacyEncryptionInfo(RootStorage root, EncryptionInfo encInfo)
-        {
-            // Check for Excel encryption details
-            if (TryOpenStream(root, "Workbook"))
-            {
-                using CfbStream workbookStream = root.OpenStream("Workbook");
-                FilePassRecord? filePassRecord = BiffParser.ExtractFilePassRecord(workbookStream);
-                if (filePassRecord != null)
-                {
-                    encInfo.LegacyEncryptionType = "Excel BIFF";
-                    encInfo.LegacyEncryptionMethod = filePassRecord.EncryptionMethod;
-                    encInfo.LegacyEncryptionDetails = $"FilePass Record: {filePassRecord.EncryptionMethod}";
-                    encInfo.ExcelFilePassRecord = filePassRecord;
-                    return;
-                }
-            }
-
-            // Check for PowerPoint encryption details
-            if (TryOpenStream(root, "PowerPoint Document"))
-            {
-                PowerPointEncryptionInfo? pptEncInfo = PowerPointEncryptionDetector.ExtractEncryptionInfo(root);
-                if (pptEncInfo != null)
-                {
-                    encInfo.LegacyEncryptionType = "PowerPoint Binary";
-                    encInfo.LegacyEncryptionMethod = pptEncInfo.EncryptionMethod;
-                    encInfo.LegacyEncryptionDetails = pptEncInfo.ToString();
-                    encInfo.PowerPointEncryptionInfo = pptEncInfo;
-                    return;
-                }
-            }
-
-            // Check for Word encryption details
-            if (!TryOpenStream(root, "WordDocument")) return;
-            using CfbStream wordStream = root.OpenStream("WordDocument");
-            if (!CheckWordDocumentEncryption(wordStream)) return;
-            encInfo.LegacyEncryptionType = "Word Binary";
-            encInfo.LegacyEncryptionMethod = "RC4/XOR";
-            encInfo.LegacyEncryptionDetails = "Word document with fEncrypted flag set";
         }
         
         #endregion

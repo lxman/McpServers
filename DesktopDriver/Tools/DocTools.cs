@@ -1,12 +1,9 @@
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using DesktopDriver.Services;
 using DesktopDriver.Services.DocumentSearching;
 using DesktopDriver.Services.DocumentSearching.Models;
-using iText.Kernel.Pdf;
-using iText.Kernel.Pdf.Canvas.Parser;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 // ReSharper disable InconsistentNaming

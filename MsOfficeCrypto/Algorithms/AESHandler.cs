@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Security.Cryptography;
 using MsOfficeCrypto.Exceptions;
 
@@ -90,50 +89,6 @@ namespace MsOfficeCrypto.Algorithms
             {
                 throw new DecryptionException($"AES decryption failed: {ex.Message}", ex);
             }
-        }
-
-        /// <summary>
-        /// Encrypts data using AES-128 (convenience method)
-        /// </summary>
-        /// <param name="data">Data to encrypt</param>
-        /// <param name="key">128-bit encryption key</param>
-        /// <returns>Encrypted data</returns>
-        public static byte[] EncryptAes128(byte[] data, byte[] key)
-        {
-            return Encrypt(data, key, 128);
-        }
-
-        /// <summary>
-        /// Decrypts data using AES-128 (convenience method)
-        /// </summary>
-        /// <param name="encryptedData">Data to decrypt</param>
-        /// <param name="key">128-bit decryption key</param>
-        /// <returns>Decrypted data</returns>
-        public static byte[] DecryptAes128(byte[] encryptedData, byte[] key)
-        {
-            return Decrypt(encryptedData, key, 128);
-        }
-
-        /// <summary>
-        /// Encrypts data using AES-256 (convenience method)
-        /// </summary>
-        /// <param name="data">Data to encrypt</param>
-        /// <param name="key">256-bit encryption key</param>
-        /// <returns>Encrypted data</returns>
-        public static byte[] EncryptAes256(byte[] data, byte[] key)
-        {
-            return Encrypt(data, key, 256);
-        }
-
-        /// <summary>
-        /// Decrypts data using AES-256 (convenience method)
-        /// </summary>
-        /// <param name="encryptedData">Data to decrypt</param>
-        /// <param name="key">256-bit decryption key</param>
-        /// <returns>Decrypted data</returns>
-        public static byte[] DecryptAes256(byte[] encryptedData, byte[] key)
-        {
-            return Decrypt(encryptedData, key, 256);
         }
 
         /// <summary>
@@ -256,38 +211,6 @@ namespace MsOfficeCrypto.Algorithms
             
             if (!IsKeySizeSupported(keySize))
                 throw new UnsupportedEncryptionException($"Unsupported AES key size: {keySize} bits");
-        }
-
-        /// <summary>
-        /// Tests AES functionality with a known test vector
-        /// </summary>
-        /// <returns>True if AES implementation works correctly</returns>
-        public static bool TestAesImplementation()
-        {
-            try
-            {
-                // Test with standard PKCS7 padding first
-                var testKey = new byte[16]; // All zeros
-                var testData = new byte[16]; // All zeros
-                
-                // Use the standard AES provider for testing
-                using Aes aes = CreateAesProvider(testKey, 128);
-                using ICryptoTransform encryptor = aes.CreateEncryptor();
-                using ICryptoTransform decryptor = aes.CreateDecryptor();
-                
-                byte[] encrypted = encryptor.TransformFinalBlock(testData, 0, testData.Length);
-                byte[] decrypted = decryptor.TransformFinalBlock(encrypted, 0, encrypted.Length);
-                
-                // Verify round-trip works
-                if (decrypted.Length != testData.Length)
-                    return false;
-
-                return !testData.Where((t, i) => t != decrypted[i]).Any();
-            }
-            catch
-            {
-                return false;
-            }
         }
     }
 }

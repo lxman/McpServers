@@ -8,9 +8,6 @@ namespace MsOfficeCrypto.Exceptions
     public class OfficeCryptoException : Exception
     {
         /// <inheritdoc />
-        public OfficeCryptoException() : base() { }
-
-        /// <inheritdoc />
         public OfficeCryptoException(string message) : base(message) { }
 
         /// <inheritdoc />

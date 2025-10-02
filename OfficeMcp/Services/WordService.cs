@@ -3,11 +3,9 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.Extensions.Logging;
-using NPOI.HWPF;
 using OfficeMcp.Models.Word;
 using Comment = DocumentFormat.OpenXml.Wordprocessing.Comment;
 using Paragraph = DocumentFormat.OpenXml.Wordprocessing.Paragraph;
-using Range = NPOI.HWPF.UserModel.Range;
 using Run = DocumentFormat.OpenXml.Wordprocessing.Run;
 
 namespace OfficeMcp.Services;
@@ -34,7 +32,6 @@ public class WordService(IDocumentDecryptionService decryptionService, ILogger<W
             return fileExtension switch
             {
                 ".docx" => await LoadDocxContentAsync(decryptedStream),
-                ".doc" => await LoadDocContentAsync(decryptedStream),
                 _ => throw new NotSupportedException($"Unsupported Word format: {fileExtension}")
             };
         }
@@ -123,104 +120,6 @@ public class WordService(IDocumentDecryptionService decryptionService, ILogger<W
         });
     }
     
-    private static async Task<WordContent> LoadDocContentAsync(Stream documentStream)
-    {
-        return await Task.Run(() =>
-        {
-            var wordContent = new WordContent();
-            var textBuilder = new StringBuilder();
-            var sections = new List<WordSection>();
-            
-            try
-            {
-                var doc = new HWPFDocument(documentStream);
-                
-                Range? range = doc.GetRange();
-                
-                // Extract text content
-                for (var i = 0; i < range.NumParagraphs; i++)
-                {
-                    NPOI.HWPF.UserModel.Paragraph? paragraph = range.GetParagraph(i);
-                    string? paragraphText = paragraph.Text;
-
-                    if (string.IsNullOrWhiteSpace(paragraphText)) continue;
-                    textBuilder.AppendLine(paragraphText);
-                        
-                    // Simple heading detection for .doc files
-                    if (IsLikelyHeading(paragraphText))
-                    {
-                        sections.Add(new WordSection
-                        {
-                            Title = paragraphText.Trim(),
-                            Level = 1,
-                            Content = paragraphText.Trim()
-                        });
-                    }
-                }
-                
-                // Extract tables if present
-                var tables = new List<WordTable>();
-                var tableBuilder = new StringBuilder();
-                var inTable = false;
-
-                for (var i = 0; i < range.NumParagraphs; i++)
-                {
-                    NPOI.HWPF.UserModel.Paragraph? paragraph = range.GetParagraph(i);
-    
-                    if (paragraph.IsInTable())
-                    {
-                        if (!inTable)
-                        {
-                            // Starting a new table
-                            inTable = true;
-                            tableBuilder.Clear();
-                            tableBuilder.AppendLine("[TABLE]");
-                        }
-        
-                        // Add table row content
-                        tableBuilder.AppendLine(paragraph.Text);
-                    }
-                    else if (inTable)
-                    {
-                        // End of table
-                        inTable = false;
-                        tableBuilder.AppendLine("[/TABLE]");
-        
-                        tables.Add(new WordTable { Content = tableBuilder.ToString().Trim() });
-                        tableBuilder.Clear();
-                    }
-                }
-
-                // Handle table that ends at document end
-                if (inTable && tableBuilder.Length > 0)
-                {
-                    tableBuilder.AppendLine("[/TABLE]");
-                    tables.Add(new WordTable { Content = tableBuilder.ToString().Trim() });
-                }
-                
-                wordContent.PlainText = textBuilder.ToString();
-                wordContent.Sections = sections;
-                wordContent.Tables = tables;
-            }
-            catch (Exception ex)
-            {
-                textBuilder.AppendLine($"Error reading .doc file: {ex.Message}");
-                wordContent.PlainText = textBuilder.ToString();
-            }
-            
-            return wordContent;
-        });
-    }
-    
-    private static bool IsLikelyHeading(string text)
-    {
-        string trimmed = text.Trim();
-        return trimmed.Length < 100 && 
-               (trimmed.Contains("CHAPTER") || trimmed.Contains("SECTION") || 
-                trimmed.StartsWith("1.") || trimmed.StartsWith("2.") || 
-                trimmed.All(c => char.IsUpper(c) || char.IsWhiteSpace(c) || char.IsDigit(c) || c == '.'));
-    }
-
     private static void ProcessParagraph(Paragraph paragraph, StringBuilder textBuilder, 
         List<WordSection> sections, ref WordSection currentSection, ref StringBuilder currentSectionContent)
     {

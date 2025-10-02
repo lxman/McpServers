@@ -51,32 +51,6 @@
         }
 
         /// <summary>
-        /// Indicates if this is a modern, secure encryption method
-        /// </summary>
-        public bool IsModernEncryption()
-        {
-            return GetEncryptionType() switch
-            {
-                "ECMA-376 Agile" => true,
-                "ECMA-376 Standard" => true,
-                _ => false
-            };
-        }
-
-        /// <summary>
-        /// Indicates if this uses legacy/weak encryption
-        /// </summary>
-        public bool IsLegacyEncryption()
-        {
-            return GetEncryptionType() switch
-            {
-                "RC4 40-bit" => true,
-                "RC4 CryptoAPI" => true, // Still considered legacy
-                _ => false
-            };
-        }
-
-        /// <summary>
         /// Gets the expected key length in bits for this encryption type
         /// </summary>
         public int GetKeyLengthBits()
@@ -104,15 +78,6 @@
                 "RC4 40-bit" => "RC4",
                 _ => "Unknown"
             };
-        }
-
-        /// <summary>
-        /// Indicates if this encryption supports password verification without decryption
-        /// </summary>
-        public bool SupportsPasswordVerification()
-        {
-            // All MS-OFFCRYPTO formats support password verification
-            return !GetEncryptionType().StartsWith("Unknown");
         }
 
         /// <summary>

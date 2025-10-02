@@ -30,8 +30,6 @@ namespace MsOfficeCrypto.Structures
             {
                 "ECMA-376 Standard" => ParseEcma376Standard(encryptionInfoData, versionInfo),
                 "ECMA-376 Agile" => ParseEcma376Agile(encryptionInfoData, versionInfo),
-                "RC4 CryptoAPI" => ParseRc4CryptoApi(encryptionInfoData, versionInfo),
-                "RC4 40-bit" => ParseRc40Bit(encryptionInfoData, versionInfo),
                 _ => throw new UnsupportedEncryptionException(versionInfo.GetEncryptionType(), 
                     $"Parsing not implemented for {versionInfo.GetEncryptionType()}")
             };
@@ -191,26 +189,6 @@ namespace MsOfficeCrypto.Structures
         }
 
         /// <summary>
-        /// Placeholder for RC4 CryptoAPI encryption parsing
-        /// </summary>
-        private static (EncryptionHeader header, EncryptionVerifier verifier) ParseRc4CryptoApi(
-            byte[] data, VersionInfo versionInfo)
-        {
-            // Phase 2c: Implement RC4 CryptoAPI parsing
-            throw new NotImplementedException("RC4 CryptoAPI parsing will be implemented in Phase 2c");
-        }
-
-        /// <summary>
-        /// Placeholder for RC4 40-bit encryption parsing
-        /// </summary>
-        private static (EncryptionHeader header, EncryptionVerifier verifier) ParseRc40Bit(
-            byte[] data, VersionInfo versionInfo)
-        {
-            // Phase 2d: Implement RC4 40-bit parsing
-            throw new NotImplementedException("RC4 40-bit parsing will be implemented in Phase 2d");
-        }
-
-        /// <summary>
         /// Validates parsed encryption header for consistency
         /// </summary>
         public static void ValidateHeader(EncryptionHeader header, VersionInfo versionInfo)
@@ -253,45 +231,6 @@ namespace MsOfficeCrypto.Structures
             {
                 Console.WriteLine($"Warning: Unexpected verifier length: {verifier.EncryptedVerifier.Length} (expected 16)");
             }
-        }
-
-        /// <summary>
-        /// Debug helper: Creates a hex dump of the encryption info data
-        /// </summary>
-        public static string CreateHexDump(byte[] data, int maxBytes = 256)
-        {
-            var sb = new StringBuilder();
-            int bytesToDump = Math.Min(data.Length, maxBytes);
-            
-            for (var i = 0; i < bytesToDump; i += 16)
-            {
-                sb.AppendFormat("{0:X8}: ", i);
-                
-                // Hex bytes
-                for (var j = 0; j < 16; j++)
-                {
-                    if (i + j < bytesToDump)
-                        sb.AppendFormat("{0:X2} ", data[i + j]);
-                    else
-                        sb.Append("   ");
-                }
-                
-                sb.Append(" ");
-                
-                // ASCII representation
-                for (var j = 0; j < 16 && i + j < bytesToDump; j++)
-                {
-                    byte b = data[i + j];
-                    sb.Append(b >= 32 && b <= 126 ? (char)b : '.');
-                }
-                
-                sb.AppendLine();
-            }
-            
-            if (data.Length > maxBytes)
-                sb.AppendLine($"... ({data.Length - maxBytes} more bytes)");
-                
-            return sb.ToString();
         }
     }
 }

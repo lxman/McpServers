@@ -273,49 +273,5 @@ namespace MsOfficeCrypto.Algorithms
 
             return adjustedKey;
         }
-
-        /// <summary>
-        /// Gets the hash algorithm size in bytes
-        /// </summary>
-        public static int GetHashSize(HashAlgorithmName hashAlgorithm)
-        {
-            return hashAlgorithm.Name switch
-            {
-                "SHA1" => 20,
-                "SHA256" => 32,
-                "SHA384" => 48,
-                "SHA512" => 64,
-                "MD5" => 16,
-                _ => throw new UnsupportedEncryptionException($"Unknown hash algorithm: {hashAlgorithm.Name}")
-            };
-        }
-
-        /// <summary>
-        /// Validates Agile encryption parameters
-        /// </summary>
-        public static void ValidateAgileParameters(byte[] keyData, HashAlgorithmName hashAlgorithm, 
-            int keyBits, string cipherAlgorithm)
-        {
-            if (keyData == null || keyData.Length < 16)
-                throw new ArgumentException("Invalid keyData for Agile encryption");
-
-            if (keyBits != 128 && keyBits != 192 && keyBits != 256)
-                throw new UnsupportedEncryptionException($"Unsupported key size: {keyBits}");
-
-            if (string.IsNullOrEmpty(cipherAlgorithm))
-                throw new ArgumentException("Cipher algorithm cannot be null or empty");
-
-            // Validate hash algorithm
-            try
-            {
-                using var hasher = HashAlgorithm.Create(hashAlgorithm.Name);
-                if (hasher == null)
-                    throw new UnsupportedEncryptionException($"Unsupported hash algorithm: {hashAlgorithm.Name}");
-            }
-            catch (Exception ex)
-            {
-                throw new UnsupportedEncryptionException("Hash algorithm", $"Hash algorithm validation failed: {ex.Message}", ex);
-            }
-        }
     }
 }

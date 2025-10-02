@@ -15,11 +15,6 @@ namespace MsOfficeCrypto.Decryption
     public class StreamingDocumentDecryptor : IDisposable
     {
         /// <summary>
-        /// Progress reporting event
-        /// </summary>
-        public event EventHandler<DecryptionProgressEventArgs>? ProgressChanged;
-
-        /// <summary>
         /// The buffer size to use for decryption
         /// </summary>
         public int BufferSize { get; set; } = DEFAULT_BUFFER_SIZE;
@@ -229,9 +224,6 @@ namespace MsOfficeCrypto.Decryption
                 }
 
                 BytesDecrypted += bytesRead;
-                
-                // Report progress
-                ReportProgress();
             }
 
             await outputStream.FlushAsync(cancellationToken);
@@ -280,19 +272,6 @@ namespace MsOfficeCrypto.Decryption
             var adjustedKey = new byte[requiredBytes];
             Array.Copy(key, 0, adjustedKey, 0, Math.Min(key.Length, requiredBytes));
             return adjustedKey;
-        }
-
-        /// <summary>
-        /// Reports decryption progress
-        /// </summary>
-        private void ReportProgress()
-        {
-            if (ProgressChanged == null || TotalBytesToDecrypt <= 0)
-                return;
-
-            double progressPercentage = (double)BytesDecrypted / TotalBytesToDecrypt * 100;
-            var args = new DecryptionProgressEventArgs(BytesDecrypted, TotalBytesToDecrypt, progressPercentage);
-            ProgressChanged.Invoke(this, args);
         }
 
         /// <summary>

@@ -8,9 +8,6 @@ namespace MsOfficeCrypto.Exceptions
     public class CorruptedEncryptionInfoException : OfficeCryptoException
     {
         /// <inheritdoc />
-        public CorruptedEncryptionInfoException() : base("EncryptionInfo data is corrupted or invalid") { }
-
-        /// <inheritdoc />
         public CorruptedEncryptionInfoException(string message) : base(message) { }
 
         /// <inheritdoc />

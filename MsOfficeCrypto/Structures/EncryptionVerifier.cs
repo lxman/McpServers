@@ -1,5 +1,4 @@
 ﻿using System;
-using MsOfficeCrypto.Utils;
 
 namespace MsOfficeCrypto.Structures
 {
@@ -107,42 +106,6 @@ namespace MsOfficeCrypto.Structures
                 return "Minimal Security";
             }
             return "Weak Security";
-        }
-
-        /// <summary>
-        /// Gets detailed information about the verifier data
-        /// </summary>
-        public string GetDetailedInfo()
-        {
-            var details = new System.Text.StringBuilder();
-            details.AppendLine($"Salt Size: {SaltSize} bytes");
-            if (Salt != null)
-                details.AppendLine($"Salt: {HexUtils.ToHexString(Salt)}");
-            if (EncryptedVerifier != null)
-                details.AppendLine($"Encrypted Verifier: {HexUtils.ToHexString(EncryptedVerifier)}");
-            details.AppendLine($"Verifier Hash Size: {VerifierHashSize} bytes");
-            if (EncryptedVerifierHash != null)
-                details.AppendLine($"Encrypted Verifier Hash: {HexUtils.ToHexString(EncryptedVerifierHash)}");
-            details.AppendLine($"Security Level: {GetSecurityLevel()}");
-            details.AppendLine($"Structure Valid: {IsValid()}");
-            return details.ToString();
-        }
-
-        /// <summary>
-        /// Creates a copy of this verifier with raw data cleared (for security)
-        /// </summary>
-        /// <returns>Sanitized copy of verifier</returns>
-        public EncryptionVerifier CreateSanitizedCopy()
-        {
-            return new EncryptionVerifier
-            {
-                SaltSize = SaltSize,
-                Salt = Salt?.Length > 0 ? new byte[Salt.Length] : null, // Zero out actual salt
-                EncryptedVerifier = null, // Remove encrypted data
-                VerifierHashSize = VerifierHashSize,
-                EncryptedVerifierHash = null, // Remove encrypted hash
-                RawData = null // Remove raw data
-            };
         }
 
         /// <inheritdoc />

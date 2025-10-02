@@ -36,15 +36,12 @@
     <ItemGroup>
         <PackageReference Include="OpenMcdf" Version="3.0.3" />
         <PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
-        <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
-        <PackageReference Include="System.Memory" Version="4.6.0" />
+        <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
+        <PackageReference Include="System.Memory" Version="4.6.3" />
     </ItemGroup>
 
     <!-- Include README and documentation -->
     <ItemGroup>
-        <None Include="README.md" Pack="true" PackagePath="\" />
-        <None Include="CHANGELOG.md" Pack="true" PackagePath="\" />
-        <None Include="ROADMAP.md" Pack="true" PackagePath="\" />
         <None Include="docs\**\*" Pack="true" PackagePath="docs\" />
     </ItemGroup>
 

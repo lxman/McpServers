@@ -19,7 +19,7 @@
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
       <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
       <PackageReference Include="ModelContextProtocol" Version="0.4.0-preview.1" />
-      <PackageReference Include="PdfPig" Version="0.1.12-alpha-20250922-b2f4c" />
+      <PackageReference Include="PdfPig" Version="0.1.12-alpha-20251002-c28d1" />
       <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
     </ItemGroup>
 

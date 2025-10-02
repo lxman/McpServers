@@ -28,10 +28,7 @@ public class PowerPointService(
 
             return fileExtension switch
             {
-                ".pptx" => await LoadPptxContentAsync(decryptedStream),
-                ".ppt" => throw new NotSupportedException(
-                    "Legacy .ppt format is not supported. Please convert to .pptx format first. " +
-                    "You can convert using PowerPoint: File > Save As > PowerPoint Presentation (.pptx)"),
+                ".pptx" => await LoadPptxContentAsync(decryptedStream, logger),
                 _ => throw new NotSupportedException($"Unsupported PowerPoint format: {fileExtension}")
             };
         }
@@ -48,7 +45,7 @@ public class PowerPointService(
         }
     }
 
-    private static async Task<PowerPointContent> LoadPptxContentAsync(Stream documentStream)
+    private static async Task<PowerPointContent> LoadPptxContentAsync(Stream documentStream, ILogger logger)
     {
         return await Task.Run(() =>
         {
@@ -58,13 +55,50 @@ public class PowerPointService(
             
             try
             {
+                logger.LogInformation("Stream position: {Position}, CanSeek: {CanSeek}, Length: {Length}", 
+                    documentStream.Position, documentStream.CanSeek, 
+                    documentStream.CanSeek ? documentStream.Length : -1);
+
+                // Ensure stream is at position 0
+                if (documentStream.CanSeek)
+                {
+                    documentStream.Position = 0;
+                }
+
+                // ShapeCrawler might need the stream to be copied to a new MemoryStream
+                MemoryStream memStream;
+                if (documentStream is MemoryStream ms)
+                {
+                    memStream = ms;
+                }
+                else
+                {
+                    memStream = new MemoryStream();
+                    documentStream.CopyTo(memStream);
+                    memStream.Position = 0;
+                }
+
+                logger.LogInformation("About to create Presentation object from stream");
+
                 // ShapeCrawler provides a much simpler API than raw OpenXML
-                using var presentation = new Presentation(documentStream);
+                using var presentation = new Presentation(memStream);
                 
+                logger.LogInformation("Presentation created. Slide count: {Count}", presentation.Slides.Count);
+
+                if (presentation.Slides.Count == 0)
+                {
+                    textBuilder.AppendLine("PowerPoint presentation contains no slides.");
+                    powerPointContent.PlainText = textBuilder.ToString();
+                    return powerPointContent;
+                }
+
                 var slideNumber = 1;
                 foreach (ISlide slide in presentation.Slides)
                 {
-                    PowerPointSlide slideModel = ProcessSlide(slide, slideNumber, textBuilder);
+                    logger.LogInformation("Processing slide {Number}, Shapes count: {ShapeCount}", 
+                        slideNumber, slide.Shapes.Count);
+
+                    PowerPointSlide slideModel = ProcessSlide(slide, slideNumber, textBuilder, logger);
                     slides.Add(slideModel);
                     slideNumber++;
                 }
@@ -72,10 +106,15 @@ public class PowerPointService(
                 powerPointContent.PlainText = textBuilder.ToString();
                 powerPointContent.Slides = slides;
                 powerPointContent.SlideCount = slides.Count;
+
+                logger.LogInformation("Successfully extracted {SlideCount} slides, total text length: {TextLength}", 
+                    slides.Count, textBuilder.Length);
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Error reading PowerPoint document");
                 textBuilder.AppendLine($"Error reading PowerPoint document: {ex.Message}");
+                textBuilder.AppendLine($"Stack trace: {ex.StackTrace}");
                 powerPointContent.PlainText = textBuilder.ToString();
             }
             
@@ -83,7 +122,7 @@ public class PowerPointService(
         });
     }
 
-    private static PowerPointSlide ProcessSlide(ISlide slide, int slideNumber, StringBuilder textBuilder)
+    private static PowerPointSlide ProcessSlide(ISlide slide, int slideNumber, StringBuilder textBuilder, ILogger logger)
     {
         var slideModel = new PowerPointSlide
         {
@@ -99,10 +138,20 @@ public class PowerPointService(
         var isFirstShape = true;
         foreach (IShape shape in slide.Shapes)
         {
-            // Try to get text from the shape
-            string? shapeText = GetShapeText(shape);
+            logger.LogDebug("Shape type: {ShapeType}, HasTextBox: {HasTextBox}", 
+                shape.GetType().Name, shape.TextBox != null);
 
-            if (string.IsNullOrWhiteSpace(shapeText)) continue;
+            // Try to get text from the shape
+            string? shapeText = GetShapeText(shape, logger);
+
+            if (string.IsNullOrWhiteSpace(shapeText))
+            {
+                logger.LogDebug("Shape has no text content");
+                continue;
+            }
+
+            logger.LogDebug("Shape text extracted: {Text}", shapeText.Substring(0, Math.Min(50, shapeText.Length)));
+
             // The first non-empty text is typically the title
             if (isFirstShape && string.IsNullOrEmpty(slideModel.Title))
             {
@@ -118,7 +167,7 @@ public class PowerPointService(
         if (slide.Notes != null && !string.IsNullOrWhiteSpace(slide.Notes.Text))
         {
             slideModel.Notes = slide.Notes.Text.Trim();
-            textBuilder.AppendLine($"\n[Speaker Notes]\n{slide.Notes}");
+            textBuilder.AppendLine($"\n[Speaker Notes]\n{slide.Notes.Text}");
         }
 
         slideModel.Content = slideTextBuilder.ToString().Trim();
@@ -132,12 +181,20 @@ public class PowerPointService(
         return slideModel;
     }
 
-    private static string? GetShapeText(IShape shape)
+    private static string? GetShapeText(IShape shape, ILogger logger)
     {
         try
         {
             // Check for the table first using the Table property
-            if (shape.Table is null) return shape.TextBox?.Text;
+            if (shape.Table is null)
+            {
+                string? text = shape.TextBox?.Text;
+                logger.LogDebug("TextBox content: {HasText}, Length: {Length}", 
+                    !string.IsNullOrEmpty(text), text?.Length ?? 0);
+                return text;
+            }
+
+            logger.LogDebug("Processing table with {RowCount} rows", shape.Table.Rows.Count);
             var tableText = new StringBuilder();
             foreach (ITableRow row in shape.Table.Rows)
             {
@@ -151,8 +208,9 @@ public class PowerPointService(
             }
             return tableText.ToString();
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "Error extracting shape text");
             return null;
         }
     }

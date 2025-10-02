@@ -7,4 +7,5 @@ public class ExcelTable
     public string WorksheetName { get; set; } = "";
     public List<string> Headers { get; set; } = [];
     public int RowCount { get; set; }
+    public int ColumnCount { get; set; }
 }

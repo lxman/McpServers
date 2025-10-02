@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using DesktopDriver.Services;
 using DesktopDriver.Services.AdvancedFileEditing;
@@ -37,6 +37,7 @@ builder.Services
     .AddSingleton<LineBasedEditor>()
     .AddSingleton<FileEditor>()
     .AddSingleton<LineBasedEditor>()
+    .AddSingleton<HexAnalysisService>()
     
     // Tools
     .AddSingleton<AdvancedFileEditingTools>()
@@ -47,6 +48,7 @@ builder.Services
     .AddSingleton<DocTools>()
     .AddSingleton<ConfigurationTools>()
     .AddSingleton<DocTools>()
+    .AddSingleton<HexAnalysisTools>()
     
     .AddLogging(logging =>
     {
@@ -64,7 +66,8 @@ builder.Services
     .WithTools<FileSystemTools>()
     .WithTools<ProcessTools>()
     .WithTools<ConfigurationTools>()
-    .WithTools<DocTools>();
+    .WithTools<DocTools>()
+    .WithTools<HexAnalysisTools>();
 
 IHost host = builder.Build();
 await host.RunAsync();

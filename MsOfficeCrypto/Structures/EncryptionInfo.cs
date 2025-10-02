@@ -89,35 +89,6 @@ namespace MsOfficeCrypto.Structures
 
         #endregion
 
-        #region Legacy Format Encryption Properties
-
-        /// <summary>
-        /// Type of legacy encryption detected (e.g., "Excel BIFF", "Word Binary", "PowerPoint Binary")
-        /// </summary>
-        public string? LegacyEncryptionType { get; set; }
-
-        /// <summary>
-        /// Legacy encryption method (e.g., "RC4 Encryption", "XOR Obfuscation", "RC4 CryptoAPI")
-        /// </summary>
-        public string? LegacyEncryptionMethod { get; set; }
-
-        /// <summary>
-        /// Detailed legacy encryption information
-        /// </summary>
-        public string? LegacyEncryptionDetails { get; set; }
-
-        /// <summary>
-        /// Excel FilePass record information (if applicable)
-        /// </summary>
-        public FilePassRecord? ExcelFilePassRecord { get; set; }
-
-        /// <summary>
-        /// PowerPoint encryption information (if applicable)
-        /// </summary>
-        public PowerPointEncryptionInfo? PowerPointEncryptionInfo { get; set; }
-
-        #endregion
-
         #region Metadata Properties
 
         /// <summary>
@@ -128,11 +99,6 @@ namespace MsOfficeCrypto.Structures
         #endregion
 
         #region Computed Properties
-
-        /// <summary>
-        /// Indicates if this is a legacy Office format
-        /// </summary>
-        public bool IsLegacyFormat => !string.IsNullOrEmpty(LegacyEncryptionType);
 
         /// <summary>
         /// Indicates if this is a modern OOXML format
@@ -146,9 +112,6 @@ namespace MsOfficeCrypto.Structures
         {
             get
             {
-                if (IsLegacyFormat)
-                    return LegacyEncryptionMethod ?? "Unknown Legacy";
-                
                 if (Header != null)
                 {
                     return Header.AlgId switch
@@ -172,9 +135,6 @@ namespace MsOfficeCrypto.Structures
         {
             get
             {
-                if (IsLegacyFormat)
-                    return LegacyEncryptionType ?? "Legacy Format";
-
                 if (VersionInfo != null)
                 {
                     return VersionInfo.VersionMajor switch
@@ -197,11 +157,6 @@ namespace MsOfficeCrypto.Structures
         {
             get
             {
-                if (IsLegacyFormat)
-                {
-                    return LegacyEncryptionMethod?.Contains("RC4 CryptoAPI") == true;
-                }
-
                 return Header?.AlgId switch
                 {
                     0x0000660E => true, // AES-128
@@ -215,24 +170,7 @@ namespace MsOfficeCrypto.Structures
         /// <summary>
         /// Gets the key size in bits (if available)
         /// </summary>
-        public int? KeySizeBits
-        {
-            get
-            {
-                if (IsLegacyFormat)
-                {
-                    return LegacyEncryptionMethod switch
-                    {
-                        "RC4 Encryption" => 40,
-                        "RC4 CryptoAPI" => Convert.ToInt32(Header?.KeySize ?? null),
-                        "XOR Obfuscation" => 16,
-                        _ => null
-                    };
-                }
-
-                return Convert.ToInt32(Header?.KeySize);
-            }
-        }
+        public int? KeySizeBits => Convert.ToInt32(Header?.KeySize);
 
         #endregion
 
@@ -244,7 +182,11 @@ namespace MsOfficeCrypto.Structures
         /// <returns></returns>
         public string GetEncryptionTypeName()
         {
-            return EncryptionMethod;
+            string type = EncryptionType;
+
+            return type.StartsWith("ECMA-376")
+                ? type[9..]
+                : type;
         }
 
         /// <summary>
@@ -260,9 +202,6 @@ namespace MsOfficeCrypto.Structures
                 summary += $"Key Size: {KeySizeBits} bits\n";
             
             summary += $"Strong Encryption: {(HasStrongEncryption ? "Yes" : "No")}\n";
-            
-            if (IsLegacyFormat && !string.IsNullOrEmpty(LegacyEncryptionDetails))
-                summary += $"Details: {LegacyEncryptionDetails}\n";
             
             if (HasDataSpaces)
                 summary += "DataSpaces: Present\n";
@@ -293,23 +232,6 @@ namespace MsOfficeCrypto.Structures
                 details += $"Flags: 0x{Header.Flags:X8}\n";
             }
             
-            if (IsLegacyFormat)
-            {
-                if (ExcelFilePassRecord != null)
-                {
-                    details += $"FilePass Encryption Type: 0x{ExcelFilePassRecord.EncryptionType:X4}\n";
-                    details += $"FilePass Record Length: {ExcelFilePassRecord.RecordLength} bytes\n";
-                }
-                
-                if (PowerPointEncryptionInfo != null)
-                {
-                    details += $"PowerPoint Encryption Details:\n";
-                    details += $"  - Encrypted Current User: {PowerPointEncryptionInfo.HasEncryptedCurrentUser}\n";
-                    details += $"  - CryptSession Container: {PowerPointEncryptionInfo.HasCryptSessionContainer}\n";
-                    details += $"  - Encrypted Summary Info: {PowerPointEncryptionInfo.HasEncryptedSummaryInfo}\n";
-                }
-            }
-            
             if (UnencryptedPackageSize > 0)
                 details += $"Unencrypted Package Size: {UnencryptedPackageSize:N0} bytes\n";
             
@@ -329,8 +251,6 @@ namespace MsOfficeCrypto.Structures
                 return VersionInfo.GetSecurityAssessment();
             }
             
-            // Legacy binary formats - assess based on the encryption type
-            if (!IsLegacyFormat) return "Unknown security level";
             // Check encryption method from EncryptionType property
             string encType = EncryptionType.ToLowerInvariant() ?? "";
             string encMethod = EncryptionMethod.ToLowerInvariant() ?? "";
@@ -350,39 +270,6 @@ namespace MsOfficeCrypto.Structures
             // Generic legacy assessment
             return "Weak - Legacy binary format encryption (deprecated)";
 
-        }
-
-        /// <summary>
-        /// Gets whether this encryption is considered secure by modern standards
-        /// </summary>
-        /// <returns>True if encryption meets modern security standards</returns>
-        public bool IsSecureEncryption()
-        {
-            return VersionInfo != null && VersionInfo.IsModernEncryption();
-            // All legacy formats are considered insecure
-        }
-
-        /// <summary>
-        /// Gets recommended action for this encryption type
-        /// </summary>
-        /// <returns>Recommendation string</returns>
-        public string GetSecurityRecommendation()
-        {
-            string strength = GetEncryptionStrength();
-            
-            if (strength.StartsWith("Strong") || strength.StartsWith("Good"))
-            {
-                return "Encryption meets modern security standards";
-            }
-            
-            if (strength.StartsWith("Weak"))
-            {
-                return "⚠️ RECOMMENDATION: Re-encrypt with modern OOXML format (AES-256)";
-            }
-            
-            return strength.StartsWith("Very Weak")
-                ? "🚨 CRITICAL: This encryption is trivially broken - re-encrypt immediately!"
-                : "Unable to assess security";
         }
 
         /// <summary>

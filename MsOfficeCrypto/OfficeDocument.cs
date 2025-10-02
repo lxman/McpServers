@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MsOfficeCrypto.Decryption;
 using MsOfficeCrypto.Exceptions;
 using MsOfficeCrypto.Structures;
+using OpenMcdf;
 
 namespace MsOfficeCrypto
 {
@@ -30,34 +31,63 @@ namespace MsOfficeCrypto
             if (!inputStream.CanRead)
                 throw new ArgumentException("Input stream must be readable", nameof(inputStream));
 
-            // Check if the stream contains an encrypted document
-            bool isEncrypted = OfficeCryptoDetector.IsEncryptedOfficeDocument(inputStream);
-            
-            if (!isEncrypted)
+            // Copy the input stream to memory so we can work with it multiple times if needed
+            var memoryStream = new MemoryStream();
+            inputStream.Position = 0;
+            await inputStream.CopyToAsync(memoryStream, cancellationToken);
+            memoryStream.Position = 0;
+
+            // Try to open as a compound file and check if encrypted
+            RootStorage? root = null;
+            try
             {
-                // Document is not encrypted - return copy of original content
-                if (!string.IsNullOrEmpty(password))
-                    throw new NotEncryptedException("Password provided but document is not encrypted");
+                try
+                {
+                    root = RootStorage.Open(memoryStream);
+                }
+                catch
+                {
+                    // Not a compound file - return original content
+                    if (!string.IsNullOrEmpty(password))
+                        throw new NotEncryptedException("Password provided but document is not encrypted");
+                    
+                    memoryStream.Position = 0;
+                    return memoryStream;
+                }
+
+                // Check if it's encrypted
+                if (!OfficeCryptoDetector.IsEncryptedOleDocument(root))
+                {
+                    // Not encrypted
+                    if (!string.IsNullOrEmpty(password))
+                        throw new NotEncryptedException("Password provided but document is not encrypted");
+                    
+                    memoryStream.Position = 0;
+                    return memoryStream;
+                }
+
+                // Document IS encrypted - password required
+                if (string.IsNullOrEmpty(password))
+                    throw new InvalidPasswordException("Password required for encrypted document");
+
+                // Extract encryption info and encrypted data from the SAME RootStorage
+                EncryptionInfo encryptionInfo = OfficeCryptoDetector.ExtractEncryptionInfo(root, "<stream>");
+
+                byte[] encryptedPackageData;
+                // Extract the EncryptedPackage stream
+                encryptedPackageData = OfficeCryptoDetector.ExtractEncryptedPackageData(root, encryptionInfo);
+
+                // Decrypt the data
+                using var decryptor = new DocumentDecryptor(encryptionInfo, encryptedPackageData);
+                byte[] decryptedData = await decryptor.DecryptDocumentAsync(password, cancellationToken);
                 
-                var outputStream = new MemoryStream();
-                inputStream.Position = 0;
-                await inputStream.CopyToAsync(outputStream, cancellationToken);
-                outputStream.Position = 0;
-                return outputStream;
+                return new MemoryStream(decryptedData);
             }
-
-            // Document is encrypted - password required
-            if (string.IsNullOrEmpty(password))
-                throw new InvalidPasswordException("Password required for encrypted document");
-
-            // Get encryption info and decrypt
-            EncryptionInfo encryptionInfo = OfficeCryptoDetector.GetEncryptionInfo(inputStream);
-            byte[] encryptedPackageData = OfficeCryptoDetector.ExtractEncryptedPackageData(inputStream, encryptionInfo);
-            
-            using var decryptor = new DocumentDecryptor(encryptionInfo, encryptedPackageData);
-            byte[] decryptedData = await decryptor.DecryptDocumentAsync(password, cancellationToken);
-            
-            return new MemoryStream(decryptedData);
+            finally
+            {
+                // Dispose RootStorage if we opened it
+                root?.Dispose();
+            }
         }
 
         /// <summary>

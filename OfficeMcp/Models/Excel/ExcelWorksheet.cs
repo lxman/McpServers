@@ -7,5 +7,6 @@ public class ExcelWorksheet
     public int RowCount { get; set; }
     public int ColumnCount { get; set; }
     public List<ExcelCell> Cells { get; set; } = [];
+    public List<ExcelTable> Tables { get; set; } = [];
     public bool IsVisible { get; set; } = true;
 }

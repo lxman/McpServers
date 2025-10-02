@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace MsOfficeCrypto.Exceptions
+﻿namespace MsOfficeCrypto.Exceptions
 {
     /// <summary>
     /// Thrown when the encryption format is not supported
@@ -13,9 +11,6 @@ namespace MsOfficeCrypto.Exceptions
         public string? EncryptionType { get; }
 
         /// <inheritdoc />
-        public UnsupportedEncryptionException() : base("Unsupported encryption format") { }
-
-        /// <inheritdoc />
         public UnsupportedEncryptionException(string encryptionType) 
             : base($"Unsupported encryption format: {encryptionType}")
         {
@@ -25,13 +20,6 @@ namespace MsOfficeCrypto.Exceptions
         /// <inheritdoc />
         public UnsupportedEncryptionException(string encryptionType, string message) 
             : base(message)
-        {
-            EncryptionType = encryptionType;
-        }
-
-        /// <inheritdoc />
-        public UnsupportedEncryptionException(string encryptionType, string message, Exception innerException) 
-            : base(message, innerException)
         {
             EncryptionType = encryptionType;
         }

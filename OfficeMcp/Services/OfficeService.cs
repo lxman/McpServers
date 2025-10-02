@@ -5,6 +5,7 @@ using OfficeMcp.Models.Results;
 using OfficeMcp.Models.Excel;
 using System.Collections.Concurrent;
 using System.Text;
+using OfficeMcp.Models.PowerPoint;
 
 namespace OfficeMcp.Services;
 
@@ -249,7 +250,25 @@ public class OfficeService
                     }
                     break;
                 case DocumentType.PowerPoint:
-                    content.AppendLine($"PowerPoint presentation: {document.FileName}");
+                    if (document.PowerPointContent != null)
+                    {
+                        content.AppendLine($"=== PowerPoint Presentation: {document.FileName} ===");
+                        content.AppendLine($"Total Slides: {document.PowerPointContent.SlideCount}\n");
+        
+                        foreach (PowerPointSlide slide in document.PowerPointContent.Slides)
+                        {
+                            content.AppendLine($"\n=== Slide {slide.SlideNumber}: {slide.Title} ===");
+            
+                            if (!string.IsNullOrWhiteSpace(slide.Content))
+                            {
+                                content.AppendLine(slide.Content);
+                            }
+
+                            if (string.IsNullOrWhiteSpace(slide.Notes)) continue;
+                            content.AppendLine($"\n[Speaker Notes]");
+                            content.AppendLine(slide.Notes);
+                        }
+                    }
                     break;
                 case DocumentType.Unknown:
                     break;

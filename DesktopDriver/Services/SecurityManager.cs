@@ -3,6 +3,13 @@ using Microsoft.Extensions.Logging;
 
 namespace DesktopDriver.Services;
 
+public enum FileAccessType
+{
+    Read,
+    Write,
+    Delete
+}
+
 public class SecurityManager
 {
     private readonly List<string> _allowedDirectories = [];
@@ -26,6 +33,32 @@ public class SecurityManager
         return _allowedDirectories.Any(allowed => 
             normalizedPath.StartsWith(Path.GetFullPath(allowed), StringComparison.OrdinalIgnoreCase));
     }
+    
+    public void ValidateFileAccess(string filePath, FileAccessType accessType)
+    {
+        string directory = Path.GetDirectoryName(filePath) ?? throw new ArgumentException("Invalid file path", nameof(filePath));
+    
+        if (!IsDirectoryAllowed(directory))
+        {
+            throw new UnauthorizedAccessException($"Access denied to file: {filePath}. Directory not in allowed list.");
+        }
+    
+        // Optional: Additional validation based on access type
+        switch (accessType)
+        {
+            case FileAccessType.Read:
+                // Could check if the file exists and is readable
+                break;
+            case FileAccessType.Write:
+                // Could check if the directory is writable
+                break;
+            case FileAccessType.Delete:
+                // Could add extra protection for critical files
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null);
+        }
+    }
 
     public bool IsCommandBlocked(string command)
     {
@@ -35,11 +68,9 @@ public class SecurityManager
 
     public void AddAllowedDirectory(string directory)
     {
-        if (!_allowedDirectories.Contains(directory))
-        {
-            _allowedDirectories.Add(directory);
-            SaveConfiguration();
-        }
+        if (_allowedDirectories.Contains(directory)) return;
+        _allowedDirectories.Add(directory);
+        SaveConfiguration();
     }
 
     public void AddBlockedCommand(string command)
@@ -59,13 +90,11 @@ public class SecurityManager
             {
                 string json = File.ReadAllText(_configPath);
                 var config = JsonSerializer.Deserialize<SecurityConfig>(json);
-                if (config != null)
+                if (config is null) return;
+                _allowedDirectories.AddRange(config.AllowedDirectories ?? []);
+                foreach (string cmd in config.BlockedCommands ?? [])
                 {
-                    _allowedDirectories.AddRange(config.AllowedDirectories ?? []);
-                    foreach (string cmd in config.BlockedCommands ?? [])
-                    {
-                        _blockedCommands.Add(cmd.ToLowerInvariant());
-                    }
+                    _blockedCommands.Add(cmd.ToLowerInvariant());
                 }
             }
             else
@@ -83,7 +112,7 @@ public class SecurityManager
 
     private void SetDefaultSecuritySettings()
     {
-        // Add current user directory as default allowed
+        // Add the current user directory as default allowed
         _allowedDirectories.Add(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
         
         // Add default blocked commands for security

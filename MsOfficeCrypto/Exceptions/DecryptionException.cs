@@ -8,9 +8,6 @@ namespace MsOfficeCrypto.Exceptions
     public class DecryptionException : OfficeCryptoException
     {
         /// <inheritdoc />
-        public DecryptionException() : base("Document decryption failed") { }
-
-        /// <inheritdoc />
         public DecryptionException(string message) : base(message) { }
 
         /// <inheritdoc />
