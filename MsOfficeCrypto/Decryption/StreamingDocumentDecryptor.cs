@@ -299,7 +299,7 @@ namespace MsOfficeCrypto.Decryption
                 BufferSize = MAX_BUFFER_SIZE;
             
             // Ensure the buffer size is multiple of 16 for AES block alignment
-            BufferSize = (BufferSize / 16) * 16;
+            BufferSize = BufferSize / 16 * 16;
             if (BufferSize == 0)
                 BufferSize = 16;
         }

@@ -190,15 +190,28 @@ namespace MsOfficeCrypto.Decryption
                 if (_encryptionInfo.AgileKeyData == null)
                     throw new CorruptedEncryptionInfoException("Agile encryption KeyData not available");
 
-                // Use AgileEncryptionHandler for decryption
+                // Map hash algorithm string to HashAlgorithmName
+                HashAlgorithmName hashAlgorithm = _encryptionInfo.AgileHashAlgorithm?.ToUpper() switch
+                {
+                    "SHA1" => HashAlgorithmName.SHA1,
+                    "SHA256" => HashAlgorithmName.SHA256,
+                    "SHA384" => HashAlgorithmName.SHA384,
+                    "SHA512" => HashAlgorithmName.SHA512,
+                    _ => HashAlgorithmName.SHA512 // Default to SHA512 for Agile
+                };
+
                 return AgileEncryptionHandler.DecryptAgileDocument(
                     _encryptedPackageData,
                     password,
-                    _encryptionInfo.AgileKeyData,
-                    HashAlgorithmName.SHA1, // Default - should be read from EncryptionInfo
-                    (int)(_encryptionInfo.Header?.KeySize ?? 128),
-                    "AES", // Default - should be read from EncryptionInfo
-                    "CBC" // Default - should be read from EncryptionInfo
+                    _encryptionInfo.AgilePasswordSalt ?? Array.Empty<byte>(),
+                    _encryptionInfo.AgileSpinCount,
+                    _encryptionInfo.AgileEncryptedKeyValue ?? Array.Empty<byte>(),
+                    _encryptionInfo.AgileKeyData ?? Array.Empty<byte>(),
+                    Convert.ToInt64(_encryptionInfo.UnencryptedPackageSize),
+                    hashAlgorithm,
+                    (int)(_encryptionInfo.Header?.KeySize ?? 256),
+                    _encryptionInfo.AgileCipherAlgorithm ?? "AES",
+                    _encryptionInfo.AgileCipherChaining ?? "ChainingModeCBC"
                 );
             }, cancellationToken);
         }
@@ -223,19 +236,32 @@ namespace MsOfficeCrypto.Decryption
         /// </summary>
         private bool VerifyAgilePassword(string password)
         {
-            if (_encryptionInfo.AgileKeyData == null)
+            // CRITICAL: Use AgilePasswordSalt for password verification, not AgileKeyData!
+            if (_encryptionInfo.AgilePasswordSalt == null)
                 return false;
 
             try
             {
+                // Map hash algorithm string to HashAlgorithmName
+                HashAlgorithmName hashAlgorithm = _encryptionInfo.AgileHashAlgorithm?.ToUpper() switch
+                {
+                    "SHA1" => HashAlgorithmName.SHA1,
+                    "SHA256" => HashAlgorithmName.SHA256,
+                    "SHA384" => HashAlgorithmName.SHA384,
+                    "SHA512" => HashAlgorithmName.SHA512,
+                    _ => HashAlgorithmName.SHA512
+                };
+
+                // Pass the spinCount from EncryptionInfo!
                 return AgileEncryptionHandler.VerifyAgilePassword(
                     password,
-                    _encryptionInfo.AgileKeyData!,
+                    _encryptionInfo.AgilePasswordSalt!,
+                    _encryptionInfo.AgileSpinCount,
                     _encryptionInfo.AgileVerifierHashInput ?? Array.Empty<byte>(),
                     _encryptionInfo.AgileVerifierHashValue ?? Array.Empty<byte>(),
                     _encryptionInfo.AgileEncryptedKeyValue ?? Array.Empty<byte>(),
-                    HashAlgorithmName.SHA1,
-                    (int)(_encryptionInfo.Header?.KeySize ?? 128)
+                    hashAlgorithm,
+                    (int)(_encryptionInfo.Header?.KeySize ?? 256)
                 );
             }
             catch

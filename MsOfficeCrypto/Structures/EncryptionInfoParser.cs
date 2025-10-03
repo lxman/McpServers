@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Xml.Linq;
 using MsOfficeCrypto.Exceptions;
 
 namespace MsOfficeCrypto.Structures
@@ -178,14 +180,115 @@ namespace MsOfficeCrypto.Structures
         }
 
         /// <summary>
-        /// Placeholder for ECMA-376 Agile encryption parsing
+        /// Parses ECMA-376 Agile encryption (version 4.x)
+        /// Per MS-OFFCRYPTO section 2.3.4.10 through 2.3.4.14
         /// </summary>
         private static (EncryptionHeader header, EncryptionVerifier verifier) ParseEcma376Agile(
             byte[] data, VersionInfo versionInfo)
         {
-            // Phase 2b: Implement Agile encryption parsing
-            // This uses XML-based encryption info instead of binary
-            throw new NotImplementedException("ECMA-376 Agile parsing will be implemented in Phase 2b");
+            try
+            {
+                // Agile uses XML after the 8-byte version header
+                if (data.Length < 8)
+                    throw new CorruptedEncryptionInfoException("Agile encryption data too short");
+
+                // Extract XML (skip 8-byte header)
+                var xmlData = new byte[data.Length - 8];
+                Array.Copy(data, 8, xmlData, 0, xmlData.Length);
+                
+                string xmlString = System.Text.Encoding.UTF8.GetString(xmlData);
+                XDocument doc = XDocument.Parse(xmlString);
+
+                // Define namespaces
+                XNamespace encNs = "http://schemas.microsoft.com/office/2006/encryption";
+                XNamespace keyEncNs = "http://schemas.microsoft.com/office/2006/keyEncryptor/password";
+
+                // Parse <keyData> element
+                XElement keyDataElem = doc.Root?.Element(encNs + "keyData")
+                                       ?? throw new CorruptedEncryptionInfoException("Missing keyData element");
+
+                int saltSize = int.Parse(keyDataElem.Attribute("saltSize")?.Value ?? "16");
+                int blockSize = int.Parse(keyDataElem.Attribute("blockSize")?.Value ?? "16");
+                int keyBits = int.Parse(keyDataElem.Attribute("keyBits")?.Value ?? "256");
+                int hashSize = int.Parse(keyDataElem.Attribute("hashSize")?.Value ?? "64");
+                string cipherAlgorithm = keyDataElem.Attribute("cipherAlgorithm")?.Value ?? "AES";
+                string cipherChaining = keyDataElem.Attribute("cipherChaining")?.Value ?? "ChainingModeCBC";
+                string hashAlgorithm = keyDataElem.Attribute("hashAlgorithm")?.Value ?? "SHA512";
+                string saltValue = keyDataElem.Attribute("saltValue")?.Value 
+                    ?? throw new CorruptedEncryptionInfoException("Missing saltValue");
+
+                byte[] keyDataSalt = Convert.FromBase64String(saltValue);
+
+                Console.WriteLine($"Debug: Agile keyData parsed - keyBits={keyBits}, hash={hashAlgorithm}, cipher={cipherAlgorithm}");
+
+                // Parse <encryptedKey> element (password-based encryption)
+                XElement encryptedKeyElem = doc.Root?
+                                                .Element(encNs + "keyEncryptors")?
+                                                .Elements(encNs + "keyEncryptor")
+                                                .FirstOrDefault(e => e.Attribute("uri")?.Value?.Contains("password") == true)?
+                                                .Element(keyEncNs + "encryptedKey")
+                                            ?? throw new CorruptedEncryptionInfoException("Missing encryptedKey element");
+
+                int spinCount = int.Parse(encryptedKeyElem.Attribute("spinCount")?.Value ?? "100000");
+                int keySaltSize = int.Parse(encryptedKeyElem.Attribute("saltSize")?.Value ?? "16");
+                int keyBlockSize = int.Parse(encryptedKeyElem.Attribute("blockSize")?.Value ?? "16");
+                int keyKeyBits = int.Parse(encryptedKeyElem.Attribute("keyBits")?.Value ?? "256");
+                string keyHashAlgorithm = encryptedKeyElem.Attribute("hashAlgorithm")?.Value ?? "SHA512";
+                string keySaltValue = encryptedKeyElem.Attribute("saltValue")?.Value
+                    ?? throw new CorruptedEncryptionInfoException("Missing encryptedKey saltValue");
+
+                string encryptedVerifierHashInput = encryptedKeyElem.Attribute("encryptedVerifierHashInput")?.Value
+                    ?? throw new CorruptedEncryptionInfoException("Missing encryptedVerifierHashInput");
+                string encryptedVerifierHashValue = encryptedKeyElem.Attribute("encryptedVerifierHashValue")?.Value
+                    ?? throw new CorruptedEncryptionInfoException("Missing encryptedVerifierHashValue");
+                string encryptedKeyValueStr = encryptedKeyElem.Attribute("encryptedKeyValue")?.Value
+                    ?? throw new CorruptedEncryptionInfoException("Missing encryptedKeyValue");
+
+                Console.WriteLine($"Debug: Agile encryptedKey parsed - spinCount={spinCount}, keyBits={keyKeyBits}");
+
+                // Create EncryptionHeader with Agile parameters
+                var header = new EncryptionHeader
+                {
+                    AlgId = Convert.ToUInt32(cipherAlgorithm == "AES" ? 0x0000660E : 0), // AES-128 as default
+                    AlgIdHash = MapHashAlgorithmToId(keyHashAlgorithm),
+                    KeySize = (uint)keyKeyBits,
+                    Flags = 0x40, // Agile flag
+                    CspName = "Microsoft Enhanced RSA and AES Cryptographic Provider"
+                };
+
+                // Create EncryptionVerifier with Agile data
+                var verifier = new EncryptionVerifier
+                {
+                    SaltSize = (uint)keySaltSize,
+                    Salt = Convert.FromBase64String(keySaltValue),
+                    EncryptedVerifier = Convert.FromBase64String(encryptedVerifierHashInput),
+                    VerifierHashSize = (uint)hashSize,
+                    EncryptedVerifierHash = Convert.FromBase64String(encryptedVerifierHashValue)
+                };
+
+                Console.WriteLine($"Debug: Agile parsing complete");
+
+                return (header, verifier);
+            }
+            catch (Exception ex)
+            {
+                throw new CorruptedEncryptionInfoException($"Failed to parse Agile encryption: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Maps hash algorithm name to algorithm ID
+        /// </summary>
+        private static uint MapHashAlgorithmToId(string hashAlgorithm)
+        {
+            return hashAlgorithm?.ToUpper() switch
+            {
+                "SHA1" => 0x00008004,
+                "SHA256" => 0x0000800C,
+                "SHA384" => 0x0000800D,
+                "SHA512" => 0x0000800E,
+                _ => 0x00008004 // Default to SHA1
+            };
         }
 
         /// <summary>

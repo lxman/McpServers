@@ -86,6 +86,36 @@ namespace MsOfficeCrypto.Structures
         /// Agile encrypted key value (if applicable)
         /// </summary>
         public byte[]? AgileEncryptedKeyValue { get; set; }
+        
+        /// <summary>
+        /// Agile hash algorithm name (SHA1, SHA256, SHA384, SHA512)
+        /// </summary>
+        public string? AgileHashAlgorithm { get; set; }
+
+        /// <summary>
+        /// Agile cipher algorithm name (AES)
+        /// </summary>
+        public string? AgileCipherAlgorithm { get; set; }
+
+        /// <summary>
+        /// Agile cipher chaining mode (ChainingModeCBC, ChainingModeCFB)
+        /// </summary>
+        public string? AgileCipherChaining { get; set; }
+
+        /// <summary>
+        /// Agile spin count (iterations for key derivation)
+        /// </summary>
+        public int AgileSpinCount { get; set; } = 100000;
+
+        /// <summary>
+        /// Agile block size in bytes
+        /// </summary>
+        public int AgileBlockSize { get; set; } = 16;
+
+        /// <summary>
+        /// Agile password salt (from encryptedKey element) - used for password verification
+        /// </summary>
+        public byte[]? AgilePasswordSalt { get; set; }
 
         #endregion
 

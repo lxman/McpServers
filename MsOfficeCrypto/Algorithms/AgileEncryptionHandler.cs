@@ -2,6 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using MsOfficeCrypto.Exceptions;
+// ReSharper disable InconsistentNaming
 
 namespace MsOfficeCrypto.Algorithms
 {
@@ -11,48 +12,51 @@ namespace MsOfficeCrypto.Algorithms
     /// </summary>
     public static class AgileEncryptionHandler
     {
-        private const int AGILE_ITERATION_COUNT = 100000;
-        private const int KEY_DATA_BLOCK_SIZE = 4096;
-
+        // MS-OFFCRYPTO defined block key constants (section 2.3.4.7)
+        private static readonly byte[] BlockKeyVerifierHashInput = 
+            { 0xFE, 0xA7, 0xD2, 0x76, 0x3B, 0x4B, 0x9E, 0x79 };
+    
+        private static readonly byte[] BlockKeyEncryptedVerifierHashValue = 
+            { 0xD7, 0xAA, 0x0F, 0x6D, 0x30, 0x61, 0x34, 0x4E };
+    
+        private static readonly byte[] BlockKeyEncryptedKeyValue = 
+            { 0x14, 0x6E, 0x0B, 0xE7, 0xAB, 0xAC, 0xD0, 0xD6 };
+        
         /// <summary>
         /// Derives encryption key using Agile encryption key derivation
-        /// Per MS-OFFCRYPTO Agile encryption specification
+        /// Per MS-OFFCRYPTO section 2.3.4.7
         /// </summary>
-        /// <param name="password">User password</param>
-        /// <param name="keyData">KeyData from EncryptionInfo</param>
-        /// <param name="hashAlgorithm">Hash algorithm to use</param>
-        /// <param name="keyBits">Key size in bits</param>
-        /// <param name="blockKey">Block key for key derivation</param>
-        /// <returns>Derived encryption key</returns>
-        public static byte[] DeriveAgileKey(string password, byte[] keyData, HashAlgorithmName hashAlgorithm, 
-            int keyBits, byte[] blockKey)
+        public static byte[] DeriveAgileKey(string password, byte[] salt, int spinCount,
+            HashAlgorithmName hashAlgorithm, int keyBits, byte[] blockKey)
         {
             if (string.IsNullOrEmpty(password))
                 throw new ArgumentException("Password cannot be null or empty", nameof(password));
-            
-            if (keyData == null || keyData.Length == 0)
-                throw new ArgumentException("KeyData cannot be null or empty", nameof(keyData));
+    
+            if (salt == null || salt.Length == 0)
+                throw new ArgumentException("Salt cannot be null or empty", nameof(salt));
 
             try
             {
                 // Step 1: Convert password to UTF-16LE
                 byte[] passwordBytes = Encoding.Unicode.GetBytes(password);
 
-                // Step 2: Extract salt from keyData (first 16 bytes)
-                if (keyData.Length < 16)
-                    throw new CorruptedEncryptionInfoException("KeyData too short for salt extraction");
+                // Step 2: Derive key using Agile algorithm - returns FULL hash
+                byte[] derivedKey = DeriveAgileKeyInternal(passwordBytes, salt, spinCount, hashAlgorithm);
 
-                var salt = new byte[16];
-                Array.Copy(keyData, 0, salt, 0, 16);
-
-                // Step 3: Perform PBKDF2-like derivation
-                byte[] derivedKey = DeriveKeyPbKdf2(passwordBytes, salt, AGILE_ITERATION_COUNT, 
-                    keyBits / 8, hashAlgorithm);
-
-                // Step 4: Apply block key if provided
+                // Step 3: Apply block key if provided
+                // H_final = H(derivedKey || blockKey), then truncate
                 if (blockKey.Length > 0)
                 {
-                    derivedKey = ApplyBlockKey(derivedKey, blockKey, hashAlgorithm);
+                    derivedKey = ApplyBlockKey(derivedKey, blockKey, hashAlgorithm, keyBits);
+                }
+                else
+                {
+                    // No block key, just truncate
+                    int keyLength = keyBits / 8;
+                    if (derivedKey.Length <= keyLength) return derivedKey;
+                    var truncated = new byte[keyLength];
+                    Array.Copy(derivedKey, 0, truncated, 0, keyLength);
+                    derivedKey = truncated;
                 }
 
                 return derivedKey;
@@ -64,38 +68,69 @@ namespace MsOfficeCrypto.Algorithms
         }
 
         /// <summary>
+        /// Performs Agile key derivation per MS-OFFCRYPTO section 2.3.4.7
+        /// Returns the FULL hash digest (NOT truncated!)
+        /// </summary>
+        private static byte[] DeriveAgileKeyInternal(byte[] password, byte[] salt, int spinCount, 
+            HashAlgorithmName hashAlgorithm)
+        {
+            using HashAlgorithm hasher = HashAlgorithm.Create(hashAlgorithm.Name) ??
+                                         throw new UnsupportedEncryptionException($"Hash algorithm not supported: {hashAlgorithm.Name}");
+
+            // Step 1: H_0 = H(salt || password)
+            var combined = new byte[salt.Length + password.Length];
+            Array.Copy(salt, 0, combined, 0, salt.Length);
+            Array.Copy(password, 0, combined, salt.Length, password.Length);
+    
+            byte[] hash = hasher.ComputeHash(combined);
+
+            // Step 2: Iterate spinCount times
+            // H_i = H(iterator || H_{i-1}) where iterator is 32-bit little-endian integer
+            for (var i = 0; i < spinCount; i++)
+            {
+                byte[] iterator = BitConverter.GetBytes(i);
+                if (!BitConverter.IsLittleEndian)
+                    Array.Reverse(iterator);
+        
+                combined = new byte[iterator.Length + hash.Length];
+                Array.Copy(iterator, 0, combined, 0, iterator.Length);
+                Array.Copy(hash, 0, combined, iterator.Length, hash.Length);
+        
+                hash = hasher.ComputeHash(combined);
+            }
+
+            // Step 3: Return FULL hash digest (e.g., 64 bytes for SHA512)
+            // DO NOT truncate here!
+            return hash;
+        }
+
+        /// <summary>
         /// Verifies password using Agile encryption verification
         /// </summary>
-        /// <param name="password">Password to verify</param>
-        /// <param name="keyData">KeyData from EncryptionInfo</param>
-        /// <param name="encryptedVerifierHashInput">Encrypted verifier hash input</param>
-        /// <param name="encryptedVerifierHashValue">Encrypted verifier hash value</param>
-        /// <param name="encryptedKeyValue">Encrypted key value</param>
-        /// <param name="hashAlgorithm">Hash algorithm</param>
-        /// <param name="keyBits">Key size in bits</param>
-        /// <returns>True if the password is correct</returns>
-        public static bool VerifyAgilePassword(string password, byte[] keyData,
+        public static bool VerifyAgilePassword(string password, byte[] passwordSalt, int spinCount,
             byte[] encryptedVerifierHashInput, byte[] encryptedVerifierHashValue,
             byte[] encryptedKeyValue, HashAlgorithmName hashAlgorithm, int keyBits)
         {
             try
             {
                 // Derive the password verification key
-                byte[] pwdVerifierKey = DeriveAgileKey(password, keyData, hashAlgorithm, keyBits, 
-                    CreateBlockKey("verifierHashInput"));
+                byte[] pwdVerifierKey = DeriveAgileKey(password, passwordSalt, spinCount, 
+                    hashAlgorithm, keyBits, GetBlockKey("verifierHashInput"));
 
-                // Decrypt the verifier hash input
-                byte[] verifierHashInput = DecryptAgileData(encryptedVerifierHashInput, pwdVerifierKey);
+                // FIXED: Use salt as IV for verifier data (not extracted from data)
+                byte[] verifierHashInput = DecryptVerifierData(encryptedVerifierHashInput, 
+                    pwdVerifierKey, passwordSalt);
 
                 // Calculate hash of the decrypted input
                 byte[] computedHash = ComputeHash(verifierHashInput, hashAlgorithm);
 
                 // Derive key for verifier hash value
-                byte[] hashVerifierKey = DeriveAgileKey(password, keyData, hashAlgorithm, keyBits,
-                    CreateBlockKey("verifierHashValue"));
+                byte[] hashVerifierKey = DeriveAgileKey(password, passwordSalt, spinCount,
+                    hashAlgorithm, keyBits, GetBlockKey("verifierHashValue"));
 
-                // Decrypt the expected hash
-                byte[] expectedHash = DecryptAgileData(encryptedVerifierHashValue, hashVerifierKey);
+                // FIXED: Use salt as IV for verifier data (not extracted from data)
+                byte[] expectedHash = DecryptVerifierData(encryptedVerifierHashValue, 
+                    hashVerifierKey, passwordSalt);
 
                 // Compare hashes
                 return CompareHashes(computedHash, expectedHash);
@@ -109,28 +144,27 @@ namespace MsOfficeCrypto.Algorithms
         /// <summary>
         /// Decrypts document data using Agile encryption
         /// </summary>
-        /// <param name="encryptedData">Encrypted document data</param>
-        /// <param name="password">Decryption password</param>
-        /// <param name="keyData">KeyData from EncryptionInfo</param>
-        /// <param name="hashAlgorithm">Hash algorithm</param>
-        /// <param name="keyBits">Key size in bits</param>
-        /// <param name="cipherAlgorithm">Cipher algorithm</param>
-        /// <param name="cipherChaining">Cipher chaining mode</param>
-        /// <returns>Decrypted data</returns>
         public static byte[] DecryptAgileDocument(byte[] encryptedData, string password,
-            byte[] keyData, HashAlgorithmName hashAlgorithm, int keyBits,
-            string cipherAlgorithm, string cipherChaining)
+            byte[] passwordSalt, int spinCount, byte[] encryptedKeyValue, 
+            byte[] keyDataSalt, long totalSize, HashAlgorithmName hashAlgorithm, 
+            int keyBits, string cipherAlgorithm, string cipherChaining)
         {
             try
             {
-                // Derive the document encryption key
-                byte[] documentKey = DeriveAgileKey(password, keyData, hashAlgorithm, keyBits,
-                    CreateBlockKey("encryptedPackage"));
+                // Step 1: Derive the password key to decrypt the encryptedKeyValue
+                byte[] passwordKey = DeriveAgileKey(password, passwordSalt, spinCount, 
+                    hashAlgorithm, keyBits, GetBlockKey("encryptedKey"));
 
-                // Decrypt based on cipher algorithm and chaining mode
+                // Step 2: FIXED - Use salt as IV for encrypted key value
+                byte[] documentEncryptionKey = DecryptVerifierData(encryptedKeyValue, 
+                    passwordKey, passwordSalt);
+
+                // Step 3: Use the document encryption key to decrypt the package
+                // Pass totalSize to handle proper truncation of decrypted data
                 return cipherAlgorithm.ToUpper() switch
                 {
-                    "AES" => DecryptAesAgile(encryptedData, documentKey, cipherChaining, keyBits),
+                    "AES" => DecryptAesAgile(encryptedData, documentEncryptionKey, 
+                        keyDataSalt, totalSize, hashAlgorithm, cipherChaining, keyBits),
                     _ => throw new UnsupportedEncryptionException($"Unsupported cipher algorithm: {cipherAlgorithm}")
                 };
             }
@@ -139,100 +173,156 @@ namespace MsOfficeCrypto.Algorithms
                 throw new DecryptionException($"Agile document decryption failed: {ex.Message}", ex);
             }
         }
-
-        /// <summary>
-        /// Performs PBKDF2-like key derivation for Agile encryption
-        /// </summary>
-        private static byte[] DeriveKeyPbKdf2(byte[] password, byte[] salt, int iterations, 
-            int keyLength, HashAlgorithmName hashAlgorithm)
-        {
-            using var pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, hashAlgorithm);
-            return pbkdf2.GetBytes(keyLength);
-        }
-
+        
         /// <summary>
         /// Applies block key transformation to derived key
         /// </summary>
-        private static byte[] ApplyBlockKey(byte[] derivedKey, byte[] blockKey, HashAlgorithmName hashAlgorithm)
+        private static byte[] ApplyBlockKey(byte[] derivedKey, byte[] blockKey, 
+            HashAlgorithmName hashAlgorithm, int keyBits)
         {
             var combined = new byte[derivedKey.Length + blockKey.Length];
             Array.Copy(derivedKey, 0, combined, 0, derivedKey.Length);
             Array.Copy(blockKey, 0, combined, derivedKey.Length, blockKey.Length);
 
-            return ComputeHash(combined, hashAlgorithm);
+            byte[] hash = ComputeHash(combined, hashAlgorithm);
+    
+            // Truncate to keyBits/8
+            int keyLength = keyBits / 8;
+            if (hash.Length <= keyLength)
+                return hash;
+    
+            var truncated = new byte[keyLength];
+            Array.Copy(hash, 0, truncated, 0, keyLength);
+            return truncated;
         }
 
         /// <summary>
         /// Creates a block key from a string identifier
         /// </summary>
-        private static byte[] CreateBlockKey(string identifier)
+        private static byte[] GetBlockKey(string keyType)
         {
-            return Encoding.UTF8.GetBytes(identifier);
+            return keyType switch
+            {
+                "verifierHashInput" => BlockKeyVerifierHashInput,
+                "verifierHashValue" => BlockKeyEncryptedVerifierHashValue,
+                "encryptedKey" => BlockKeyEncryptedKeyValue,
+                _ => throw new ArgumentException($"Unknown block key type: {keyType}", nameof(keyType))
+            };
         }
 
         /// <summary>
-        /// Decrypts data using Agile encryption
+        /// For verifier data, the passwordSalt is used directly as the IV (NOT extracted from data)
         /// </summary>
-        private static byte[] DecryptAgileData(byte[] encryptedData, byte[] key)
+        private static byte[] DecryptVerifierData(byte[] encryptedData, byte[] key, byte[] salt)
         {
-            if (encryptedData.Length < 16)
-                throw new DecryptionException("Encrypted data too short for Agile decryption");
-
-            // Extract IV from first 16 bytes
-            var iv = new byte[16];
-            Array.Copy(encryptedData, 0, iv, 0, 16);
-
-            // Extract actual encrypted data
-            var actualData = new byte[encryptedData.Length - 16];
-            Array.Copy(encryptedData, 16, actualData, 0, actualData.Length);
-
             using var aes = Aes.Create();
             aes.Mode = CipherMode.CBC;
-            aes.Padding = PaddingMode.PKCS7;
-            aes.Key = EnsureKeyLength(key, 128);
-            aes.IV = iv;
+            aes.Padding = PaddingMode.None;  // CRITICAL: No padding (data is already block-aligned)
+            aes.Key = EnsureKeyLength(key, key.Length * 8);
+            aes.IV = EnsureKeyLength(salt, 128);  // Use salt as IV directly
 
             using ICryptoTransform decryptor = aes.CreateDecryptor();
-            return decryptor.TransformFinalBlock(actualData, 0, actualData.Length);
+            return decryptor.TransformFinalBlock(encryptedData, 0, encryptedData.Length);
         }
 
         /// <summary>
-        /// Decrypts AES data with Agile encryption
+        /// Decrypts AES data with Agile encryption (for document payload)
+        /// Per MS-OFFCRYPTO section 2.3.4.14 - decrypts in 4096-byte segments with computed IVs
         /// </summary>
-        private static byte[] DecryptAesAgile(byte[] encryptedData, byte[] key, string chainingMode, int keyBits)
+        private static byte[] DecryptAesAgile(byte[] encryptedData, byte[] key, 
+            byte[] keyDataSalt, long totalSize, HashAlgorithmName hashAlgorithm, string chainingMode, int keyBits)
         {
-            using var aes = Aes.Create();
-            aes.KeySize = keyBits;
-            aes.Key = EnsureKeyLength(key, keyBits);
-
-            aes.Mode = chainingMode.ToUpper() switch
+            // Validate chaining mode
+            CipherMode mode = chainingMode.ToUpper() switch
             {
-                "CBC"  => CipherMode.CBC,
+                "CBC" => CipherMode.CBC,
                 "CHAININGMODECBC" => CipherMode.CBC,
                 "CFB" => CipherMode.CFB,
-                "CHAINGNIMODECFB" => CipherMode.CFB,
+                "CHAININGMODECFB" => CipherMode.CFB,
                 _ => throw new UnsupportedEncryptionException($"Unsupported chaining mode: {chainingMode}")
             };
 
-            aes.Padding = PaddingMode.PKCS7;
+            // Step 1: Process the document in 4096-byte segments
+            const int SEGMENT_LENGTH = 4096;
+            var output = new System.IO.MemoryStream();
+            long remaining = totalSize;
+            var offset = 0;  // Start at the beginning - NO 8-byte header to skip
+            var blockNumber = 0;
 
-            // For Agile encryption, IV is typically the first 16 bytes
-            if (encryptedData.Length < 16)
-                throw new DecryptionException("Encrypted data too short for IV extraction");
+            while (offset < encryptedData.Length && remaining > 0)
+            {
+                // Calculate segment size - read up to SEGMENT_LENGTH bytes
+                // Encrypted data is already block-aligned from encryption
+                int segmentSize = Math.Min(SEGMENT_LENGTH, encryptedData.Length - offset);
+        
+                // Extract segment
+                var segment = new byte[segmentSize];
+                Array.Copy(encryptedData, offset, segment, 0, segmentSize);
 
-            var iv = new byte[16];
-            Array.Copy(encryptedData, 0, iv, 0, 16);
-            aes.IV = iv;
+                // Step 2: Compute IV for this segment
+                // IV = H(keyDataSalt || blockNumber)[0:16]
+                byte[] iv = ComputeSegmentIV(keyDataSalt, blockNumber, hashAlgorithm);
 
-            var cipherData = new byte[encryptedData.Length - 16];
-            Array.Copy(encryptedData, 16, cipherData, 0, cipherData.Length);
+                // Step 3: Decrypt segment
+                byte[] decrypted = DecryptSegment(segment, key, iv, mode, keyBits);
+        
+                // Write to output (truncate based on the remaining plaintext size)
+                var writeLength = (int)Math.Min(decrypted.Length, remaining);
+                output.Write(decrypted, 0, writeLength);
+        
+                remaining -= writeLength;
+                offset += segmentSize;
+                blockNumber++;
+        
+                if (remaining <= 0)
+                    break;
+            }
 
-            using ICryptoTransform decryptor = aes.CreateDecryptor();
-            return decryptor.TransformFinalBlock(cipherData, 0, cipherData.Length);
+            return output.ToArray();
         }
 
         /// <summary>
-        /// Computes hash using specified algorithm
+        /// Computes the IV for a specific segment
+        /// IV = H(keyDataSalt || blockNumber)[0:16]
+        /// </summary>
+        private static byte[] ComputeSegmentIV(byte[] keyDataSalt, int blockNumber, HashAlgorithmName hashAlgorithm)
+        {
+            // Create: keyDataSalt || blockNumber (as 32-bit LE)
+            byte[] blockBytes = BitConverter.GetBytes(blockNumber);
+            if (!BitConverter.IsLittleEndian)
+                Array.Reverse(blockBytes);
+            
+            var combined = new byte[keyDataSalt.Length + blockBytes.Length];
+            Array.Copy(keyDataSalt, 0, combined, 0, keyDataSalt.Length);
+            Array.Copy(blockBytes, 0, combined, keyDataSalt.Length, blockBytes.Length);
+            
+            // Hash it
+            byte[] hash = ComputeHash(combined, hashAlgorithm);
+            
+            // Take the first 16 bytes as IV
+            var iv = new byte[16];
+            Array.Copy(hash, 0, iv, 0, 16);
+            return iv;
+        }
+
+        /// <summary>
+        /// Decrypts a single segment with the provided IV
+        /// </summary>
+        private static byte[] DecryptSegment(byte[] segment, byte[] key, byte[] iv, CipherMode mode, int keyBits)
+        {
+            using var aes = Aes.Create();
+            aes.KeySize = keyBits;  // Explicitly set key size for validation
+            aes.Key = EnsureKeyLength(key, keyBits);  // Ensure key matches expected size
+            aes.Mode = mode;
+            aes.Padding = PaddingMode.None;  // CRITICAL: No padding
+            aes.IV = iv;
+            
+            using ICryptoTransform decryptor = aes.CreateDecryptor();
+            return decryptor.TransformFinalBlock(segment, 0, segment.Length);
+        }
+
+        /// <summary>
+        /// Computes hash using the specified algorithm
         /// </summary>
         private static byte[] ComputeHash(byte[] data, HashAlgorithmName hashAlgorithm)
         {

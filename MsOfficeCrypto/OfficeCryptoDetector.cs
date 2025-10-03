@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Xml.Linq;
 using MsOfficeCrypto.Exceptions;
 using MsOfficeCrypto.Structures;
 using OpenMcdf;
@@ -47,10 +49,14 @@ namespace MsOfficeCrypto
                 return false;
 
             long originalPosition = stream.Position;
+            var memoryStream = new MemoryStream();
             try
             {
                 stream.Position = 0;
-                using RootStorage root = RootStorage.Open(stream);
+                stream.CopyTo(memoryStream);
+                memoryStream.Position = 0;
+        
+                using RootStorage root = RootStorage.Open(memoryStream);
                 return IsEncryptedOleDocument(root);
             }
             catch (Exception)
@@ -59,8 +65,12 @@ namespace MsOfficeCrypto
             }
             finally
             {
+                // Restore the original stream position
                 if (stream.CanSeek)
                     stream.Position = originalPosition;
+        
+                // Clean up our memory stream
+                memoryStream.Dispose();
             }
         }
 
@@ -97,11 +107,16 @@ namespace MsOfficeCrypto
             if (stream == null)
                 throw new ArgumentNullException(nameof(stream));
 
+            // Copy to MemoryStream to avoid RootStorage disposing the original stream
+            var memoryStream = new MemoryStream();
             long originalPosition = stream.Position;
             try
             {
                 stream.Position = 0;
-                using RootStorage root = RootStorage.Open(stream);
+                stream.CopyTo(memoryStream);
+                memoryStream.Position = 0;
+        
+                using RootStorage root = RootStorage.Open(memoryStream);
                 return ExtractEncryptionInfo(root, "<stream>");
             }
             catch (Exception ex)
@@ -110,8 +125,12 @@ namespace MsOfficeCrypto
             }
             finally
             {
+                // Restore the original stream position
                 if (stream.CanSeek)
                     stream.Position = originalPosition;
+        
+                // Clean up our memory stream
+                memoryStream.Dispose();
             }
         }
 
@@ -159,11 +178,16 @@ namespace MsOfficeCrypto
             if (!IsEncryptedOfficeDocument(stream))
                 throw new NotEncryptedException("Stream does not contain an encrypted document");
 
+            // Copy to MemoryStream to avoid RootStorage disposing the original stream
+            var memoryStream = new MemoryStream();
             long originalPosition = stream.Position;
             try
             {
                 stream.Position = 0;
-                using RootStorage root = RootStorage.Open(stream);
+                stream.CopyTo(memoryStream);
+                memoryStream.Position = 0;
+        
+                using RootStorage root = RootStorage.Open(memoryStream);
                 return ExtractEncryptedPackageData(root, encryptionInfo);
             }
             catch (Exception ex)
@@ -172,11 +196,14 @@ namespace MsOfficeCrypto
             }
             finally
             {
+                // Restore original stream position
                 if (stream.CanSeek)
                     stream.Position = originalPosition;
-            }
-        }
         
+                // Clean up our memory stream
+                memoryStream.Dispose();
+            }
+        }        
         /// <summary>
         /// Internal method to extract encrypted package data from an open compound file
         /// </summary>
@@ -297,35 +324,6 @@ namespace MsOfficeCrypto
         }
 
         /// <summary>
-        /// Checks Word document stream for encryption flags
-        /// </summary>
-        private static bool CheckWordDocumentEncryption(CfbStream stream)
-        {
-            if (stream.Length < 12)
-                return false;
-
-            // Read the FIB (File Information Block) header
-            var fibHeader = new byte[12];
-            _ = stream.Read(fibHeader, 0, 12);
-
-            // Check the fEncrypted flag in the FIB
-            // This is a simplified check - full implementation would parse the complete FIB
-            var fibFlags = BitConverter.ToUInt16(fibHeader, 10);
-            return (fibFlags & 0x0100) != 0; // fEncrypted flag
-        }
-
-        /// <summary>
-        /// Checks PowerPoint document stream for encryption
-        /// </summary>
-        private static bool CheckPowerPointEncryption(CfbStream stream)
-        {
-            // PowerPoint encryption detection would require parsing the document structure
-            // This is a placeholder for the full implementation
-            // For now, return false - rely on EncryptionInfo stream detection
-            return false;
-        }
-
-        /// <summary>
         /// Parses version information from EncryptionInfo data
         /// </summary>
         private static VersionInfo ParseVersionInfo(byte[] data)
@@ -415,6 +413,75 @@ namespace MsOfficeCrypto
                 // Parsing failed - log but don't fail the detection
                 Console.WriteLine($"Warning: Failed to parse EncryptionInfo structures: {ex.Message}");
                 // Keep the raw data available for manual inspection
+            }
+
+            // For Agile encryption, extract additional metadata
+            if (encInfo.GetEncryptionTypeName() != "Agile") return;
+            try
+            {
+                // Re-parse XML to extract Agile-specific metadata
+                var xmlData = new byte[encInfo.EncryptionInfoData.Length - 8];
+                Array.Copy(encInfo.EncryptionInfoData, 8, xmlData, 0, xmlData.Length);
+                
+                string xmlString = System.Text.Encoding.UTF8.GetString(xmlData);
+                XDocument doc = XDocument.Parse(xmlString);
+                
+                XNamespace encNs = "http://schemas.microsoft.com/office/2006/encryption";
+                XNamespace keyEncNs = "http://schemas.microsoft.com/office/2006/keyEncryptor/password";
+                
+                // Extract keyData
+                XElement? keyDataElem = doc.Root?.Element(encNs + "keyData");
+                if (keyDataElem != null)
+                {
+                    encInfo.AgileHashAlgorithm = keyDataElem.Attribute("hashAlgorithm")?.Value;
+                    encInfo.AgileCipherAlgorithm = keyDataElem.Attribute("cipherAlgorithm")?.Value;
+                    encInfo.AgileCipherChaining = keyDataElem.Attribute("cipherChaining")?.Value;
+                    encInfo.AgileBlockSize = int.Parse(keyDataElem.Attribute("blockSize")?.Value ?? "16");
+                    
+                    string saltValue = keyDataElem.Attribute("saltValue")?.Value ?? string.Empty;
+                    if (!string.IsNullOrEmpty(saltValue))
+                    {
+                        encInfo.AgileKeyData = Convert.FromBase64String(saltValue);
+                    }
+                }
+                
+                // Extract encryptedKey
+                XElement? encryptedKeyElem = doc.Root?
+                    .Element(encNs + "keyEncryptors")?
+                    .Elements(encNs + "keyEncryptor")
+                    .FirstOrDefault(e => e.Attribute("uri")?.Value?.Contains("password") == true)?
+                    .Element(keyEncNs + "encryptedKey");
+
+                if (encryptedKeyElem == null) return;
+                encInfo.AgileSpinCount = int.Parse(encryptedKeyElem.Attribute("spinCount")?.Value ?? "100000");
+                
+                string passwordSaltValue = encryptedKeyElem.Attribute("saltValue")?.Value ?? string.Empty;
+                if (!string.IsNullOrEmpty(passwordSaltValue))
+                {
+                    encInfo.AgilePasswordSalt = Convert.FromBase64String(passwordSaltValue);
+                }
+                    
+                string verifierHashInput = encryptedKeyElem.Attribute("encryptedVerifierHashInput")?.Value ?? string.Empty;
+                if (!string.IsNullOrEmpty(verifierHashInput))
+                {
+                    encInfo.AgileVerifierHashInput = Convert.FromBase64String(verifierHashInput);
+                }
+                    
+                string verifierHashValue = encryptedKeyElem.Attribute("encryptedVerifierHashValue")?.Value ?? string.Empty;
+                if (!string.IsNullOrEmpty(verifierHashValue))
+                {
+                    encInfo.AgileVerifierHashValue = Convert.FromBase64String(verifierHashValue);
+                }
+                    
+                string encryptedKeyValue = encryptedKeyElem.Attribute("encryptedKeyValue")?.Value ?? string.Empty;
+                if (!string.IsNullOrEmpty(encryptedKeyValue))
+                {
+                    encInfo.AgileEncryptedKeyValue = Convert.FromBase64String(encryptedKeyValue);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Could not extract Agile metadata: {ex.Message}");
             }
         }
         
