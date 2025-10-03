@@ -64,6 +64,7 @@ builder.Services
     .AddMcpServer()
     .WithStdioServerTransport()
     .WithTools<AdvancedFileEditingTools>()
+    .WithTools<AdvancedFileReadingTools>()
     .WithTools<TerminalTools>()
     .WithTools<FileSystemTools>()
     .WithTools<ProcessTools>()
