@@ -12,21 +12,21 @@ public class AdvancedFileEditingTools(
     SecurityManager securityManager, 
     AuditLogger auditLogger,
     FileEditor fileEditor,
-    FileVersionService versionService)
+    FileVersionService versionService,
+    EditApprovalService approvalService)
 {
     [McpServerTool]
     [Description("""
-                 Replace a range of lines in a file with new content.
-
-                 ⚠️ CRITICAL SAFETY PROTOCOL:
-                 1. MUST read the target area first using read_file or advanced_file_read_range
-                 2. MUST provide the version_token from that read operation
-                 3. VERIFY line numbers and content before editing
-                 4. If edit fails with FILE_CONFLICT: STOP, re-read the file, do NOT attempt blind fixes
-                 5. File may have been modified by user - always read before editing
-                 6. Blind edits cause cascading failures that make the problem worse
-
-                 The version_token ensures the file hasn't changed since you last read it.
+                 PHASE 1: Prepare to replace a range of lines in a file with new content.
+                 
+                 ⚠️ TWO-PHASE EDIT PROTOCOL:
+                 1. Read the file first using read_file or advanced_file_read_range to get version_token
+                 2. Call this tool with the version_token - it will prepare the edit and show FULL FILE PREVIEW
+                 3. Review the complete file preview that is returned
+                 4. Call approve_file_edit with the approval_token to apply the changes
+                 
+                 CRITICAL: The edit is NOT applied until you call approve_file_edit!
+                 You will receive the complete file content with edits applied for review.
                  """)]
     public async Task<string> ReplaceFileLines(
         [Description("Path to the file to edit - must be canonical")] string filePath,
@@ -42,54 +42,48 @@ public class AdvancedFileEditingTools(
             if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
-                auditLogger.LogFileOperation("ReplaceLines", fullPath, false, error);
+                auditLogger.LogFileOperation("PrepareReplaceLines", fullPath, false, error);
                 return error;
             }
 
-            // CRITICAL: Validate version token (optimistic locking)
+            // Validate version token
             try
             {
                 versionService.ValidateVersionTokenOrThrow(fullPath, versionToken);
             }
             catch (FileConflictException ex)
             {
-                auditLogger.LogFileOperation("ReplaceLines", fullPath, false, "FILE_CONFLICT");
+                auditLogger.LogFileOperation("PrepareReplaceLines", fullPath, false, "FILE_CONFLICT");
                 return $"❌ {ex.Message}";
             }
 
-            EditResult result = await fileEditor.ReplaceFileLines(fullPath, startLine, endLine, newContent, createBackup);
+            EditResult result = await fileEditor.PrepareReplaceFileLines(
+                fullPath, startLine, endLine, newContent, versionToken, createBackup);
             
-            // Add new version token to result
-            if (result.Success)
-            {
-                result.NewVersionToken = versionService.ComputeVersionToken(fullPath);
-            }
-            
-            auditLogger.LogFileOperation("ReplaceLines", fullPath, result.Success, 
-                result.Success ? null : result.ErrorDetails);
+            auditLogger.LogFileOperation("PrepareReplaceLines", fullPath, result.Success, 
+                result.Success ? "Preview created" : result.ErrorDetails);
             
             return result.FormatForUser();
         }
         catch (Exception ex)
         {
-            auditLogger.LogFileOperation("ReplaceLines", filePath, false, ex.Message);
-            return $"Error replacing lines: {ex.Message}";
+            auditLogger.LogFileOperation("PrepareReplaceLines", filePath, false, ex.Message);
+            return $"Error preparing edit: {ex.Message}";
         }
     }
 
     [McpServerTool]
     [Description("""
-                 Insert content after a specific line in a file.
-
-                 ⚠️ CRITICAL SAFETY PROTOCOL:
-                 1. MUST read the file first using read_file or advanced_file_read_range
-                 2. MUST provide the version_token from that read operation
-                 3. VERIFY the target line number and surrounding content before editing
-                 4. If edit fails with FILE_CONFLICT: STOP, re-read the file, do NOT attempt blind fixes
-                 5. File may have been modified by user - always read before editing
-                 6. Blind edits cause cascading failures that make the problem worse
-
-                 The version_token ensures the file hasn't changed since you last read it.
+                 PHASE 1: Prepare to insert content after a specific line in a file.
+                 
+                 ⚠️ TWO-PHASE EDIT PROTOCOL:
+                 1. Read the file first using read_file or advanced_file_read_range to get version_token
+                 2. Call this tool with the version_token - it will prepare the edit and show FULL FILE PREVIEW
+                 3. Review the complete file preview that is returned
+                 4. Call approve_file_edit with the approval_token to apply the changes
+                 
+                 CRITICAL: The edit is NOT applied until you call approve_file_edit!
+                 You will receive the complete file content with edits applied for review.
                  """)]
     public async Task<string> InsertAfterLine(
         [Description("Path to the file to edit - must be canonical")] string filePath,
@@ -105,54 +99,48 @@ public class AdvancedFileEditingTools(
             if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
-                auditLogger.LogFileOperation("InsertAfterLine", fullPath, false, error);
+                auditLogger.LogFileOperation("PrepareInsertAfterLine", fullPath, false, error);
                 return error;
             }
 
-            // CRITICAL: Validate version token
+            // Validate version token
             try
             {
                 versionService.ValidateVersionTokenOrThrow(fullPath, versionToken);
             }
             catch (FileConflictException ex)
             {
-                auditLogger.LogFileOperation("InsertAfterLine", fullPath, false, "FILE_CONFLICT");
+                auditLogger.LogFileOperation("PrepareInsertAfterLine", fullPath, false, "FILE_CONFLICT");
                 return $"❌ {ex.Message}";
             }
 
-            EditResult result = await fileEditor.InsertAfterLine(fullPath, afterLine, content, maintainIndentation, createBackup);
+            EditResult result = await fileEditor.PrepareInsertAfterLine(
+                fullPath, afterLine, content, versionToken, maintainIndentation, createBackup);
             
-            // Add new version token to result
-            if (result.Success)
-            {
-                result.NewVersionToken = versionService.ComputeVersionToken(fullPath);
-            }
-            
-            auditLogger.LogFileOperation("InsertAfterLine", fullPath, result.Success, 
-                result.Success ? null : result.ErrorDetails);
+            auditLogger.LogFileOperation("PrepareInsertAfterLine", fullPath, result.Success, 
+                result.Success ? "Preview created" : result.ErrorDetails);
             
             return result.FormatForUser();
         }
         catch (Exception ex)
         {
-            auditLogger.LogFileOperation("InsertAfterLine", filePath, false, ex.Message);
-            return $"Error inserting content: {ex.Message}";
+            auditLogger.LogFileOperation("PrepareInsertAfterLine", filePath, false, ex.Message);
+            return $"Error preparing edit: {ex.Message}";
         }
     }
 
     [McpServerTool]
     [Description("""
-                 Delete a range of lines from a file.
-
-                 ⚠️ CRITICAL SAFETY PROTOCOL:
-                 1. MUST read the target area first using read_file or advanced_file_read_range
-                 2. MUST provide the version_token from that read operation
-                 3. VERIFY the lines to be deleted before executing
-                 4. If edit fails with FILE_CONFLICT: STOP, re-read the file, do NOT attempt blind fixes
-                 5. File may have been modified by user - always read before editing
-                 6. Blind edits cause cascading failures that make the problem worse
-
-                 The version_token ensures the file hasn't changed since you last read it.
+                 PHASE 1: Prepare to delete a range of lines from a file.
+                 
+                 ⚠️ TWO-PHASE EDIT PROTOCOL:
+                 1. Read the file first using read_file or advanced_file_read_range to get version_token
+                 2. Call this tool with the version_token - it will prepare the edit and show FULL FILE PREVIEW
+                 3. Review the complete file preview that is returned
+                 4. Call approve_file_edit with the approval_token to apply the changes
+                 
+                 CRITICAL: The edit is NOT applied until you call approve_file_edit!
+                 You will receive the complete file content with edits applied for review.
                  """)]
     public async Task<string> DeleteFileLines(
         [Description("Path to the file to edit - must be canonical")] string filePath,
@@ -167,54 +155,49 @@ public class AdvancedFileEditingTools(
             if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
-                auditLogger.LogFileOperation("DeleteLines", fullPath, false, error);
+                auditLogger.LogFileOperation("PrepareDeleteLines", fullPath, false, error);
                 return error;
             }
 
-            // CRITICAL: Validate version token
+            // Validate version token
             try
             {
                 versionService.ValidateVersionTokenOrThrow(fullPath, versionToken);
             }
             catch (FileConflictException ex)
             {
-                auditLogger.LogFileOperation("DeleteLines", fullPath, false, "FILE_CONFLICT");
+                auditLogger.LogFileOperation("PrepareDeleteLines", fullPath, false, "FILE_CONFLICT");
                 return $"❌ {ex.Message}";
             }
 
-            EditResult result = await fileEditor.DeleteLines(fullPath, startLine, endLine, createBackup);
+            EditResult result = await fileEditor.PrepareDeleteLines(
+                fullPath, startLine, endLine, versionToken, createBackup);
             
-            // Add new version token to result
-            if (result.Success)
-            {
-                result.NewVersionToken = versionService.ComputeVersionToken(fullPath);
-            }
-            
-            auditLogger.LogFileOperation("DeleteLines", fullPath, result.Success, 
-                result.Success ? null : result.ErrorDetails);
+            auditLogger.LogFileOperation("PrepareDeleteLines", fullPath, result.Success, 
+                result.Success ? "Preview created" : result.ErrorDetails);
             
             return result.FormatForUser();
         }
         catch (Exception ex)
         {
-            auditLogger.LogFileOperation("DeleteLines", filePath, false, ex.Message);
-            return $"Error deleting lines: {ex.Message}";
+            auditLogger.LogFileOperation("PrepareDeleteLines", filePath, false, ex.Message);
+            return $"Error preparing edit: {ex.Message}";
         }
     }
 
     [McpServerTool]
     [Description("""
-                 Replace text patterns within a file using string matching or regular expressions.
-
-                 ⚠️ CRITICAL SAFETY PROTOCOL:
-                 1. MUST read the file first to verify the search pattern exists
+                 PHASE 1: Prepare to replace text patterns within a file.
+                 
+                 ⚠️ TWO-PHASE EDIT PROTOCOL:
+                 1. Read the file first to verify the search pattern exists and get version_token
                  2. Use find_in_file to locate exact matches before replacing
-                 3. MUST provide the version_token from the read operation
-                 4. If edit fails with FILE_CONFLICT: STOP, re-read the file, check pattern
-                 5. File may have been modified by user - always verify current state
-                 6. Blind edits cause cascading failures that make the problem worse
-
-                 The version_token ensures the file hasn't changed since you last read it.
+                 3. Call this tool with the version_token - it will prepare the edit and show FULL FILE PREVIEW
+                 4. Review the complete file preview that is returned
+                 5. Call approve_file_edit with the approval_token to apply the changes
+                 
+                 CRITICAL: The edit is NOT applied until you call approve_file_edit!
+                 You will receive the complete file content with edits applied for review.
                  """)]
     public async Task<string> ReplaceInFile(
         [Description("Path to the file to edit - must be canonical")] string filePath,
@@ -231,79 +214,153 @@ public class AdvancedFileEditingTools(
             if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
-                auditLogger.LogFileOperation("ReplaceInFile", fullPath, false, error);
+                auditLogger.LogFileOperation("PrepareReplaceInFile", fullPath, false, error);
                 return error;
             }
 
-            // CRITICAL: Validate version token
+            // Validate version token
             try
             {
                 versionService.ValidateVersionTokenOrThrow(fullPath, versionToken);
             }
             catch (FileConflictException ex)
             {
-                auditLogger.LogFileOperation("ReplaceInFile", fullPath, false, "FILE_CONFLICT");
+                auditLogger.LogFileOperation("PrepareReplaceInFile", fullPath, false, "FILE_CONFLICT");
                 return $"❌ {ex.Message}";
             }
 
-            EditResult result = await fileEditor.ReplaceInFile(fullPath, searchPattern, replaceWith, useRegex, caseSensitive, createBackup);
+            EditResult result = await fileEditor.PrepareReplaceInFile(
+                fullPath, searchPattern, replaceWith, versionToken, useRegex, caseSensitive, createBackup);
             
-            // Add new version token to result
-            if (result.Success)
-            {
-                result.NewVersionToken = versionService.ComputeVersionToken(fullPath);
-            }
-            
-            auditLogger.LogFileOperation("ReplaceInFile", fullPath, result.Success, 
-                result.Success ? null : result.ErrorDetails);
+            auditLogger.LogFileOperation("PrepareReplaceInFile", fullPath, result.Success, 
+                result.Success ? "Preview created" : result.ErrorDetails);
             
             return result.FormatForUser();
         }
         catch (Exception ex)
         {
-            auditLogger.LogFileOperation("ReplaceInFile", filePath, false, ex.Message);
-            return $"Error replacing text: {ex.Message}";
+            auditLogger.LogFileOperation("PrepareReplaceInFile", filePath, false, ex.Message);
+            return $"Error preparing edit: {ex.Message}";
         }
     }
 
     [McpServerTool]
-    [Description("Preview what changes would be made without actually modifying the file")]
-    public async Task<string> PreviewFileEdit(
-        [Description("Path to the file to preview - must be canonical")] string filePath,
-        [Description("Type of operation: Replace, Insert, or Delete")] string operationType,
-        [Description("Starting line number (1-based)")] int startLine,
-        [Description("Ending line number (1-based, for Replace/Delete) or unused for Insert")] int endLine,
-        [Description("Content for Replace/Insert operations")] string content = "")
+    [Description("""
+                 PHASE 2: Apply a pending edit after reviewing the preview.
+                 
+                 ⚠️ CRITICAL - THIS APPLIES THE EDIT TO THE FILE:
+                 1. You must have called one of the edit preparation tools (replace_file_lines, insert_after_line, etc.)
+                 2. You must have reviewed the FULL FILE PREVIEW that was returned
+                 3. You must pass the approval_token from the preview
+                 4. You must pass confirmation="APPROVE" to confirm you reviewed the preview
+                 5. This will ACTUALLY MODIFY THE FILE
+                 
+                 After approval, you'll receive a new version_token for subsequent edits.
+                 """)]
+    public async Task<string> ApproveFileEdit(
+        [Description("Approval token from the preview operation (REQUIRED)")] string approvalToken,
+        [Description("Must be exactly 'APPROVE' to confirm you reviewed the preview (REQUIRED)")] string confirmation)
     {
         try
         {
-            string fullPath = Path.GetFullPath(filePath);
+            // Require explicit confirmation
+            if (confirmation != "APPROVE")
+            {
+                return "❌ Edit approval denied: You must pass confirmation='APPROVE' to confirm you reviewed the preview.";
+            }
+
+            // Get the pending edit (this consumes it)
+            IReadOnlyList<PendingEdit> pendingEdits = approvalService.GetAllPendingEdits();
+            PendingEdit? pendingEdit = pendingEdits.FirstOrDefault(pe => pe.ApprovalToken == approvalToken);
+            
+            if (pendingEdit == null)
+            {
+                auditLogger.LogFileOperation("ApproveEdit", "unknown", false, "Invalid or expired approval token");
+                return "❌ Invalid or expired approval token. Approval tokens expire after 5 minutes.";
+            }
+
+            string fullPath = Path.GetFullPath(pendingEdit.FilePath);
             if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
             {
                 var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
-                auditLogger.LogFileOperation("PreviewEdit", fullPath, false, error);
+                auditLogger.LogFileOperation("ApproveEdit", fullPath, false, error);
                 return error;
             }
 
-            EditOperation operation = operationType.ToLowerInvariant() switch
-            {
-                "replace" => EditOperation.Replace(startLine, endLine, content, $"Replace lines {startLine}-{endLine}"),
-                "insert" => EditOperation.Insert(startLine, content, $"Insert after line {startLine}"),
-                "delete" => EditOperation.Delete(startLine, endLine, $"Delete lines {startLine}-{endLine}"),
-                _ => throw new ArgumentException($"Invalid operation type: {operationType}")
-            };
-
-            EditResult result = await fileEditor.PreviewEdit(fullPath, operation);
+            // Get current version token to validate file hasn't changed
+            string currentVersionToken = versionService.ComputeVersionToken(fullPath);
             
-            auditLogger.LogFileOperation("PreviewEdit", fullPath, result.Success, 
-                result.Success ? null : result.ErrorDetails);
+            EditResult result = await fileEditor.ApplyPendingEdit(approvalToken, currentVersionToken);
+            
+            auditLogger.LogFileOperation("ApproveEdit", fullPath, result.Success, 
+                result.Success ? "Edit applied successfully" : result.ErrorDetails);
             
             return result.FormatForUser();
         }
         catch (Exception ex)
         {
-            auditLogger.LogFileOperation("PreviewEdit", filePath, false, ex.Message);
-            return $"Error previewing edit: {ex.Message}";
+            auditLogger.LogFileOperation("ApproveEdit", "unknown", false, ex.Message);
+            return $"Error applying edit: {ex.Message}";
+        }
+    }
+
+    [McpServerTool]
+    [Description("List all pending edits awaiting approval")]
+    public string ListPendingEdits()
+    {
+        try
+        {
+            IReadOnlyList<PendingEdit> pendingEdits = approvalService.GetAllPendingEdits();
+            
+            if (pendingEdits.Count == 0)
+            {
+                return "✅ No pending edits awaiting approval.";
+            }
+
+            var result = $"📋 {pendingEdits.Count} Pending Edit(s) Awaiting Approval:\n\n";
+            
+            foreach (PendingEdit edit in pendingEdits)
+            {
+                result += $"🔐 Approval Token: {edit.ApprovalToken}\n";
+                result += $"   File: {edit.FilePath}\n";
+                result += $"   Operation: {edit.Operation.Description}\n";
+                result += $"   Lines Affected: {edit.LinesAffected}\n";
+                result += $"   Expires: {edit.ExpiresAt:yyyy-MM-dd HH:mm:ss} UTC\n";
+                result += $"   Backup: {(edit.CreateBackup ? "Yes" : "No")}\n\n";
+            }
+            
+            result += "⚠️ Use approve_file_edit with the approval token to apply changes.";
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return $"Error listing pending edits: {ex.Message}";
+        }
+    }
+
+    [McpServerTool]
+    [Description("Cancel a pending edit by approval token")]
+    public string CancelPendingEdit(
+        [Description("Approval token of the edit to cancel")] string approvalToken)
+    {
+        try
+        {
+            bool cancelled = approvalService.CancelPendingEdit(approvalToken);
+            
+            if (cancelled)
+            {
+                auditLogger.LogFileOperation("CancelEdit", "unknown", true, "Edit cancelled");
+                return $"✅ Pending edit cancelled successfully: {approvalToken}";
+            }
+            else
+            {
+                return $"❌ Approval token not found or already expired: {approvalToken}";
+            }
+        }
+        catch (Exception ex)
+        {
+            return $"Error cancelling edit: {ex.Message}";
         }
     }
 
@@ -404,13 +461,11 @@ public class AdvancedFileEditingTools(
             foreach (string backupFile in backupFiles)
             {
                 var fileInfo = new FileInfo(backupFile);
-                
-                if (olderThanHours == 0 || fileInfo.LastWriteTime < cutoffTime)
-                {
-                    totalSize += fileInfo.Length;
-                    File.Delete(backupFile);
-                    deletedCount++;
-                }
+
+                if (olderThanHours != 0 && fileInfo.LastWriteTime >= cutoffTime) continue;
+                totalSize += fileInfo.Length;
+                File.Delete(backupFile);
+                deletedCount++;
             }
 
             string sizeText = totalSize > 1024 * 1024 

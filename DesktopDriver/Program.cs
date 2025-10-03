@@ -25,10 +25,11 @@ builder.Services.Configure<JsonSerializerOptions>(options =>
 
 builder.Services
     // Services
-    .AddSingleton<FileVersionService>()
     .AddSingleton<SecurityManager>()
     .AddSingleton<AuditLogger>()
     .AddSingleton<ProcessManager>()
+    .AddSingleton<HexAnalysisService>()
+    .AddSingleton<FileVersionService>()
     .AddSingleton<PasswordManager>()
     .AddSingleton<OcrService>()
     .AddSingleton<DocumentProcessor>()
@@ -36,21 +37,19 @@ builder.Services
     .AddSingleton<DiffPatchService>()
     .AddSingleton<IndentationManager>()
     .AddSingleton<LineBasedEditor>()
+    .AddSingleton<EditApprovalService>()
     .AddSingleton<FileEditor>()
     .AddSingleton<LineBasedEditor>()
-    .AddSingleton<HexAnalysisService>()
     
     // Tools
     .AddSingleton<AdvancedFileEditingTools>()
     .AddSingleton<AdvancedFileReadingTools>()
-    .AddSingleton<TerminalTools>()
+    .AddSingleton<ConfigurationTools>()
+    .AddSingleton<DocTools>()
     .AddSingleton<FileSystemTools>()
-    .AddSingleton<ProcessTools>()
-    .AddSingleton<ConfigurationTools>()
-    .AddSingleton<DocTools>()
-    .AddSingleton<ConfigurationTools>()
-    .AddSingleton<DocTools>()
     .AddSingleton<HexAnalysisTools>()
+    .AddSingleton<ProcessTools>()
+    .AddSingleton<TerminalTools>()
     
     .AddLogging(logging =>
     {

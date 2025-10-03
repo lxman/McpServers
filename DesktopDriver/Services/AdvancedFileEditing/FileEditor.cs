@@ -5,14 +5,22 @@ namespace DesktopDriver.Services.AdvancedFileEditing;
 public class FileEditor(
     LineBasedEditor lineBasedEditor,
     DiffPatchService diffPatchService,
-    IndentationManager indentationManager)
+    IndentationManager indentationManager,
+    EditApprovalService approvalService,
+    FileVersionService versionService)
 {
     private readonly HashSet<string> _backedUpFilesThisSession = [];
     
     /// <summary>
-    /// Replaces a range of lines in a file with new content
+    /// PHASE 1: Prepares a replace operation and returns preview with approval token
     /// </summary>
-    public async Task<EditResult> ReplaceFileLines(string filePath, int startLine, int endLine, string newContent, bool createBackup = false)
+    public async Task<EditResult> PrepareReplaceFileLines(
+        string filePath, 
+        int startLine, 
+        int endLine, 
+        string newContent,
+        string originalVersionToken,
+        bool createBackup = false)
     {
         try
         {
@@ -22,31 +30,53 @@ public class FileEditor(
             string[] originalLines = await File.ReadAllLinesAsync(filePath);
             string originalContent = string.Join('\n', originalLines);
             
-            (bool success, string[] newLines, string? errorMessage) = lineBasedEditor.ReplaceLines(originalLines, startLine, endLine, newContent);
+            (bool success, string[] newLines, string? errorMessage) = 
+                lineBasedEditor.ReplaceLines(originalLines, startLine, endLine, newContent);
             
             if (!success)
                 return EditResult.CreateFailure(filePath, errorMessage ?? "Unknown error occurred");
             
-            if (createBackup) CreateBackupIfNeeded(filePath, createBackup);
-            
-            await File.WriteAllLinesAsync(filePath, newLines);
-            
-            string diff = diffPatchService.GenerateUnifiedDiff(originalContent, string.Join('\n', newLines), filePath);
+            string previewContent = string.Join('\n', newLines);
+            string diff = diffPatchService.GenerateUnifiedDiff(originalContent, previewContent, filePath);
             int linesAffected = Math.Abs(newLines.Length - originalLines.Length) + (endLine - startLine + 1);
             
-            return EditResult.CreateSuccess(filePath, linesAffected, 
-                $"Successfully replaced lines {startLine}-{endLine}", diff);
+            EditOperation operation = EditOperation.Replace(startLine, endLine, newContent, 
+                $"Replace lines {startLine}-{endLine}");
+            
+            PendingEdit pendingEdit = approvalService.CreatePendingEdit(
+                filePath,
+                operation,
+                originalVersionToken,
+                previewContent,
+                diff,
+                linesAffected,
+                createBackup);
+            
+            return EditResult.CreatePreview(
+                filePath,
+                linesAffected,
+                $"Prepared replacement of lines {startLine}-{endLine}",
+                pendingEdit.ApprovalToken,
+                pendingEdit.ExpiresAt,
+                previewContent,
+                diff);
         }
         catch (Exception ex)
         {
-            return EditResult.CreateFailure(filePath, "File operation failed", ex.Message);
+            return EditResult.CreateFailure(filePath, "Failed to prepare edit", ex.Message);
         }
     }
     
     /// <summary>
-    /// Inserts content after the specified line in a file
+    /// PHASE 1: Prepares an insert operation and returns preview with approval token
     /// </summary>
-    public async Task<EditResult> InsertAfterLine(string filePath, int afterLine, string content, bool maintainIndentation = true, bool createBackup = false)
+    public async Task<EditResult> PrepareInsertAfterLine(
+        string filePath, 
+        int afterLine, 
+        string content,
+        string originalVersionToken,
+        bool maintainIndentation = true, 
+        bool createBackup = false)
     {
         try
         {
@@ -63,26 +93,52 @@ public class FileEditor(
             if (!success)
                 return EditResult.CreateFailure(filePath, errorMessage ?? "Unknown error occurred");
             
-            if (createBackup) CreateBackupIfNeeded(filePath, createBackup);
-            
-            await File.WriteAllLinesAsync(filePath, newLines);
-            
-            string diff = diffPatchService.GenerateUnifiedDiff(originalContent, string.Join('\n', newLines), filePath);
+            string previewContent = string.Join('\n', newLines);
+            string diff = diffPatchService.GenerateUnifiedDiff(originalContent, previewContent, filePath);
             int linesInserted = newLines.Length - originalLines.Length;
             
-            return EditResult.CreateSuccess(filePath, linesInserted, 
-                $"Successfully inserted {linesInserted} lines after line {afterLine}", diff);
+            EditOperation operation = EditOperation.Insert(afterLine, content, 
+                $"Insert after line {afterLine}");
+            
+            var metadata = new Dictionary<string, object>
+            {
+                ["maintainIndentation"] = maintainIndentation
+            };
+            
+            PendingEdit pendingEdit = approvalService.CreatePendingEdit(
+                filePath,
+                operation,
+                originalVersionToken,
+                previewContent,
+                diff,
+                linesInserted,
+                createBackup,
+                metadata);
+            
+            return EditResult.CreatePreview(
+                filePath,
+                linesInserted,
+                $"Prepared insertion of {linesInserted} lines after line {afterLine}",
+                pendingEdit.ApprovalToken,
+                pendingEdit.ExpiresAt,
+                previewContent,
+                diff);
         }
         catch (Exception ex)
         {
-            return EditResult.CreateFailure(filePath, "File operation failed", ex.Message);
+            return EditResult.CreateFailure(filePath, "Failed to prepare edit", ex.Message);
         }
     }
     
     /// <summary>
-    /// Deletes a range of lines from a file
+    /// PHASE 1: Prepares a delete operation and returns preview with approval token
     /// </summary>
-    public async Task<EditResult> DeleteLines(string filePath, int startLine, int endLine, bool createBackup = false)
+    public async Task<EditResult> PrepareDeleteLines(
+        string filePath, 
+        int startLine, 
+        int endLine,
+        string originalVersionToken,
+        bool createBackup = false)
     {
         try
         {
@@ -92,32 +148,54 @@ public class FileEditor(
             string[] originalLines = await File.ReadAllLinesAsync(filePath);
             string originalContent = string.Join('\n', originalLines);
             
-            (bool success, string[] newLines, string? errorMessage) = lineBasedEditor.DeleteLines(originalLines, startLine, endLine);
+            (bool success, string[] newLines, string? errorMessage) = 
+                lineBasedEditor.DeleteLines(originalLines, startLine, endLine);
             
             if (!success)
                 return EditResult.CreateFailure(filePath, errorMessage ?? "Unknown error occurred");
             
-            if (createBackup) CreateBackupIfNeeded(filePath, createBackup);
-            
-            await File.WriteAllLinesAsync(filePath, newLines);
-            
-            string diff = diffPatchService.GenerateUnifiedDiff(originalContent, string.Join('\n', newLines), filePath);
+            string previewContent = string.Join('\n', newLines);
+            string diff = diffPatchService.GenerateUnifiedDiff(originalContent, previewContent, filePath);
             int linesDeleted = originalLines.Length - newLines.Length;
             
-            return EditResult.CreateSuccess(filePath, linesDeleted, 
-                $"Successfully deleted lines {startLine}-{endLine} ({linesDeleted} lines)", diff);
+            EditOperation operation = EditOperation.Delete(startLine, endLine, 
+                $"Delete lines {startLine}-{endLine}");
+            
+            PendingEdit pendingEdit = approvalService.CreatePendingEdit(
+                filePath,
+                operation,
+                originalVersionToken,
+                previewContent,
+                diff,
+                linesDeleted,
+                createBackup);
+            
+            return EditResult.CreatePreview(
+                filePath,
+                linesDeleted,
+                $"Prepared deletion of lines {startLine}-{endLine} ({linesDeleted} lines)",
+                pendingEdit.ApprovalToken,
+                pendingEdit.ExpiresAt,
+                previewContent,
+                diff);
         }
         catch (Exception ex)
         {
-            return EditResult.CreateFailure(filePath, "File operation failed", ex.Message);
+            return EditResult.CreateFailure(filePath, "Failed to prepare edit", ex.Message);
         }
     }
     
     /// <summary>
-    /// Replaces text patterns within a file
+    /// PHASE 1: Prepares a replace-in-file operation and returns preview with approval token
     /// </summary>
-    public async Task<EditResult> ReplaceInFile(string filePath, string searchPattern, string replaceWith, 
-        bool useRegex = false, bool caseSensitive = false, bool createBackup = false)
+    public async Task<EditResult> PrepareReplaceInFile(
+        string filePath, 
+        string searchPattern, 
+        string replaceWith,
+        string originalVersionToken,
+        bool useRegex = false, 
+        bool caseSensitive = false, 
+        bool createBackup = false)
     {
         try
         {
@@ -133,46 +211,96 @@ public class FileEditor(
             if (!success)
                 return EditResult.CreateFailure(filePath, errorMessage ?? "No replacements made");
             
-            if (createBackup) CreateBackupIfNeeded(filePath, createBackup);
-            
-            await File.WriteAllLinesAsync(filePath, newLines);
-            
-            string diff = diffPatchService.GenerateUnifiedDiff(originalContent, string.Join('\n', newLines), filePath);
+            string previewContent = string.Join('\n', newLines);
+            string diff = diffPatchService.GenerateUnifiedDiff(originalContent, previewContent, filePath);
             int changedLines = CountChangedLines(originalLines, newLines);
             
-            return EditResult.CreateSuccess(filePath, changedLines, 
-                $"Successfully replaced '{searchPattern}' with '{replaceWith}' on {changedLines} lines", diff);
+            // Create a pseudo-operation for replace-in-file
+            EditOperation operation = EditOperation.Replace(0, 0, replaceWith, 
+                $"Replace '{searchPattern}' with '{replaceWith}'");
+            
+            var metadata = new Dictionary<string, object>
+            {
+                ["searchPattern"] = searchPattern,
+                ["replaceWith"] = replaceWith,
+                ["useRegex"] = useRegex,
+                ["caseSensitive"] = caseSensitive
+            };
+            
+            PendingEdit pendingEdit = approvalService.CreatePendingEdit(
+                filePath,
+                operation,
+                originalVersionToken,
+                previewContent,
+                diff,
+                changedLines,
+                createBackup,
+                metadata);
+            
+            return EditResult.CreatePreview(
+                filePath,
+                changedLines,
+                $"Prepared replacement of '{searchPattern}' with '{replaceWith}' on {changedLines} lines",
+                pendingEdit.ApprovalToken,
+                pendingEdit.ExpiresAt,
+                previewContent,
+                diff);
         }
         catch (Exception ex)
         {
-            return EditResult.CreateFailure(filePath, "File operation failed", ex.Message);
+            return EditResult.CreateFailure(filePath, "Failed to prepare edit", ex.Message);
         }
     }
     
     /// <summary>
-    /// Previews what changes would be made without actually modifying the file
+    /// PHASE 2: Applies a pending edit after approval
     /// </summary>
-    public async Task<EditResult> PreviewEdit(string filePath, EditOperation operation)
+    public async Task<EditResult> ApplyPendingEdit(string approvalToken, string currentVersionToken)
     {
+        PendingEdit? pendingEdit = approvalService.ConsumePendingEdit(approvalToken);
+        
+        if (pendingEdit == null)
+        {
+            return EditResult.CreateFailure(
+                "unknown",
+                "Invalid or expired approval token",
+                "The approval token may have expired (tokens expire after 5 minutes) or been already used.");
+        }
+        
         try
         {
-            if (!File.Exists(filePath))
-                return EditResult.CreateFailure(filePath, "File not found");
+            // Validate that file hasn't changed since the preview was created
+            if (!versionService.ValidateVersionToken(pendingEdit.FilePath, pendingEdit.OriginalVersionToken))
+            {
+                return EditResult.CreateFailure(
+                    pendingEdit.FilePath,
+                    "FILE_CONFLICT: File was modified after preview was generated",
+                    $"The file has changed since the preview was created. You must re-read the file and create a new preview. " +
+                    $"Expected version: {pendingEdit.OriginalVersionToken}, Current version: {currentVersionToken}");
+            }
             
-            string[] originalLines = await File.ReadAllLinesAsync(filePath);
-            (bool isValid, string? errorMessage) = diffPatchService.ValidateEdit(originalLines, operation);
+            // Create backup if requested
+            if (pendingEdit.CreateBackup)
+            {
+                CreateBackupIfNeeded(pendingEdit.FilePath, true);
+            }
             
-            if (!isValid)
-                return EditResult.CreateFailure(filePath, errorMessage ?? "Invalid operation");
+            // Write the previewed content to file
+            await File.WriteAllTextAsync(pendingEdit.FilePath, pendingEdit.PreviewContent);
             
-            string diff = diffPatchService.CreateEditPreview(originalLines, operation);
+            // Compute new version token
+            string newVersionToken = versionService.ComputeVersionToken(pendingEdit.FilePath);
             
-            return EditResult.CreateSuccess(filePath, 0, 
-                $"Preview of {operation.Type} operation on {operation.Description}", diff);
+            return EditResult.CreateSuccess(
+                pendingEdit.FilePath,
+                pendingEdit.LinesAffected,
+                $"Successfully applied {pendingEdit.Operation.Type} operation: {pendingEdit.Operation.Description}",
+                newVersionToken,
+                pendingEdit.DiffPreview);
         }
         catch (Exception ex)
         {
-            return EditResult.CreateFailure(filePath, "Preview failed", ex.Message);
+            return EditResult.CreateFailure(pendingEdit.FilePath, "Failed to apply edit", ex.Message);
         }
     }
     

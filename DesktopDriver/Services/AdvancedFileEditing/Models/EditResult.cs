@@ -11,21 +11,76 @@ public class EditResult
     
     /// <summary>
     /// Version token after the edit was applied.
-    /// Use this token for subsequent edits on the same file.
+    /// Only present when edit is actually applied (not in preview mode).
     /// </summary>
     public string? NewVersionToken { get; set; }
     
     /// <summary>
-    /// Creates a successful edit result
+    /// Approval token for the pending edit.
+    /// Only present in preview mode - required to apply the edit.
     /// </summary>
-    public static EditResult CreateSuccess(string filePath, int linesAffected, string message, string? diffPreview = null)
+    public string? ApprovalToken { get; set; }
+    
+    /// <summary>
+    /// Full file content preview with edits applied.
+    /// Only present in preview mode.
+    /// </summary>
+    public string? PreviewContent { get; set; }
+    
+    /// <summary>
+    /// When the approval token expires (if in preview mode)
+    /// </summary>
+    public DateTime? ApprovalExpiresAt { get; set; }
+    
+    /// <summary>
+    /// Indicates whether this is a preview (pending approval) or applied edit
+    /// </summary>
+    public bool IsPreview { get; set; }
+    
+    /// <summary>
+    /// Creates a successful preview result (edit not yet applied)
+    /// </summary>
+    public static EditResult CreatePreview(
+        string filePath, 
+        int linesAffected, 
+        string message,
+        string approvalToken,
+        DateTime expiresAt,
+        string previewContent,
+        string? diffPreview = null)
     {
         return new EditResult
         {
             Success = true,
+            IsPreview = true,
             FilePath = filePath,
             LinesAffected = linesAffected,
             Message = message,
+            ApprovalToken = approvalToken,
+            ApprovalExpiresAt = expiresAt,
+            PreviewContent = previewContent,
+            DiffPreview = diffPreview
+        };
+    }
+    
+    /// <summary>
+    /// Creates a successful applied edit result
+    /// </summary>
+    public static EditResult CreateSuccess(
+        string filePath, 
+        int linesAffected, 
+        string message, 
+        string newVersionToken,
+        string? diffPreview = null)
+    {
+        return new EditResult
+        {
+            Success = true,
+            IsPreview = false,
+            FilePath = filePath,
+            LinesAffected = linesAffected,
+            Message = message,
+            NewVersionToken = newVersionToken,
             DiffPreview = diffPreview
         };
     }
@@ -38,6 +93,7 @@ public class EditResult
         return new EditResult
         {
             Success = false,
+            IsPreview = false,
             FilePath = filePath,
             Message = message,
             ErrorDetails = errorDetails,
@@ -50,33 +106,57 @@ public class EditResult
     /// </summary>
     public string FormatForUser()
     {
-        if (Success)
+        if (!Success)
         {
-            var result = $"✅ {Message}\n";
-            result += $"File: {FilePath}\n";
-            result += $"Lines affected: {LinesAffected}";
+            var errorResult = $"❌ {Message}\n";
+            errorResult += $"File: {FilePath}";
             
-            if (!string.IsNullOrEmpty(NewVersionToken))
+            if (!string.IsNullOrEmpty(ErrorDetails))
             {
-                result += $"\n🔐 New version token: {NewVersionToken}";
-                result += "\n💡 Use this token for your next edit on this file";
+                errorResult += $"\nDetails: {ErrorDetails}";
             }
+            
+            return errorResult;
+        }
+        
+        if (IsPreview)
+        {
+            var result = $"📋 PREVIEW - Edit NOT Yet Applied\n";
+            result += $"✅ {Message}\n";
+            result += $"File: {FilePath}\n";
+            result += $"Lines affected: {LinesAffected}\n";
+            result += $"\n⏰ Approval expires at: {ApprovalExpiresAt:yyyy-MM-dd HH:mm:ss} UTC";
+            result += $"\n\n🔐 Approval Token: {ApprovalToken}";
+            result += $"\n\n⚠️ CRITICAL: You MUST approve this edit before it will be applied!";
+            result += $"\n   Use the approve_file_edit tool with this approval token.";
+            result += $"\n\n📄 FULL FILE PREVIEW (with edits applied):";
+            result += $"\n{new string('=', 80)}\n";
+            result += PreviewContent;
+            result += $"\n{new string('=', 80)}";
             
             if (!string.IsNullOrEmpty(DiffPreview))
             {
-                result += $"\n\nPreview of changes:\n{DiffPreview}";
+                result += $"\n\n📊 CHANGES SUMMARY:\n{DiffPreview}";
             }
             
             return result;
         }
         else
         {
-            var result = $"❌ {Message}\n";
-            result += $"File: {FilePath}";
+            var result = $"✅ Edit Applied Successfully\n";
+            result += $"{Message}\n";
+            result += $"File: {FilePath}\n";
+            result += $"Lines affected: {LinesAffected}";
             
-            if (!string.IsNullOrEmpty(ErrorDetails))
+            if (!string.IsNullOrEmpty(NewVersionToken))
             {
-                result += $"\nDetails: {ErrorDetails}";
+                result += $"\n\n🔐 New version token: {NewVersionToken}";
+                result += "\n💡 Use this token for your next edit on this file";
+            }
+            
+            if (!string.IsNullOrEmpty(DiffPreview))
+            {
+                result += $"\n\n📊 Changes applied:\n{DiffPreview}";
             }
             
             return result;
