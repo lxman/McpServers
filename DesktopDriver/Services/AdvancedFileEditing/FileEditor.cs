@@ -288,14 +288,11 @@ public class FileEditor(
             // Write the previewed content to file
             await File.WriteAllTextAsync(pendingEdit.FilePath, pendingEdit.PreviewContent);
             
-            // Compute new version token
-            string newVersionToken = versionService.ComputeVersionToken(pendingEdit.FilePath);
-            
+            // CRITICAL: Do NOT return version token to force file re-read before next edit
             return EditResult.CreateSuccess(
                 pendingEdit.FilePath,
                 pendingEdit.LinesAffected,
                 $"Successfully applied {pendingEdit.Operation.Type} operation: {pendingEdit.Operation.Description}",
-                newVersionToken,
                 pendingEdit.DiffPreview);
         }
         catch (Exception ex)

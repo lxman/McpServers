@@ -65,12 +65,12 @@ public class EditResult
     
     /// <summary>
     /// Creates a successful applied edit result
+    /// NOTE: Does NOT include version token to force file re-read before next edit
     /// </summary>
     public static EditResult CreateSuccess(
         string filePath, 
         int linesAffected, 
         string message, 
-        string newVersionToken,
         string? diffPreview = null)
     {
         return new EditResult
@@ -80,7 +80,7 @@ public class EditResult
             FilePath = filePath,
             LinesAffected = linesAffected,
             Message = message,
-            NewVersionToken = newVersionToken,
+            NewVersionToken = null,
             DiffPreview = diffPreview
         };
     }
@@ -148,11 +148,10 @@ public class EditResult
             result += $"File: {FilePath}\n";
             result += $"Lines affected: {LinesAffected}";
             
-            if (!string.IsNullOrEmpty(NewVersionToken))
-            {
-                result += $"\n\n🔐 New version token: {NewVersionToken}";
-                result += "\n💡 Use this token for your next edit on this file";
-            }
+            result += $"\n\n⚠️ IMPORTANT: You must re-read the file before making another edit.";
+            result += $"\n   Use read_file or advanced_file_read_range to:";
+            result += $"\n   1. Verify the edit was applied correctly";
+            result += $"\n   2. Get the current version token for your next edit";
             
             if (!string.IsNullOrEmpty(DiffPreview))
             {
