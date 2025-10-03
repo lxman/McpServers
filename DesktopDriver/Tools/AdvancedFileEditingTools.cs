@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using DesktopDriver.Exceptions;
 using DesktopDriver.Services;
 using DesktopDriver.Services.AdvancedFileEditing;
 using DesktopDriver.Services.AdvancedFileEditing.Models;
@@ -10,15 +11,29 @@ namespace DesktopDriver.Tools;
 public class AdvancedFileEditingTools(
     SecurityManager securityManager, 
     AuditLogger auditLogger,
-    FileEditor fileEditor)
+    FileEditor fileEditor,
+    FileVersionService versionService)
 {
     [McpServerTool]
-    [Description("Replace a range of lines in a file with new content")]
+    [Description("""
+                 Replace a range of lines in a file with new content.
+
+                 ⚠️ CRITICAL SAFETY PROTOCOL:
+                 1. MUST read the target area first using read_file or advanced_file_read_range
+                 2. MUST provide the version_token from that read operation
+                 3. VERIFY line numbers and content before editing
+                 4. If edit fails with FILE_CONFLICT: STOP, re-read the file, do NOT attempt blind fixes
+                 5. File may have been modified by user - always read before editing
+                 6. Blind edits cause cascading failures that make the problem worse
+
+                 The version_token ensures the file hasn't changed since you last read it.
+                 """)]
     public async Task<string> ReplaceFileLines(
         [Description("Path to the file to edit - must be canonical")] string filePath,
         [Description("Starting line number (1-based)")] int startLine,
         [Description("Ending line number (1-based, inclusive)")] int endLine,
         [Description("New content to replace the lines with")] string newContent,
+        [Description("Version token from previous read operation (REQUIRED)")] string versionToken,
         [Description("Create backup before editing (default: false)")] bool createBackup = false)
     {
         try
@@ -31,7 +46,24 @@ public class AdvancedFileEditingTools(
                 return error;
             }
 
+            // CRITICAL: Validate version token (optimistic locking)
+            try
+            {
+                versionService.ValidateVersionTokenOrThrow(fullPath, versionToken);
+            }
+            catch (FileConflictException ex)
+            {
+                auditLogger.LogFileOperation("ReplaceLines", fullPath, false, "FILE_CONFLICT");
+                return $"❌ {ex.Message}";
+            }
+
             EditResult result = await fileEditor.ReplaceFileLines(fullPath, startLine, endLine, newContent, createBackup);
+            
+            // Add new version token to result
+            if (result.Success)
+            {
+                result.NewVersionToken = versionService.ComputeVersionToken(fullPath);
+            }
             
             auditLogger.LogFileOperation("ReplaceLines", fullPath, result.Success, 
                 result.Success ? null : result.ErrorDetails);
@@ -46,11 +78,24 @@ public class AdvancedFileEditingTools(
     }
 
     [McpServerTool]
-    [Description("Insert content after a specific line in a file")]
+    [Description("""
+                 Insert content after a specific line in a file.
+
+                 ⚠️ CRITICAL SAFETY PROTOCOL:
+                 1. MUST read the file first using read_file or advanced_file_read_range
+                 2. MUST provide the version_token from that read operation
+                 3. VERIFY the target line number and surrounding content before editing
+                 4. If edit fails with FILE_CONFLICT: STOP, re-read the file, do NOT attempt blind fixes
+                 5. File may have been modified by user - always read before editing
+                 6. Blind edits cause cascading failures that make the problem worse
+
+                 The version_token ensures the file hasn't changed since you last read it.
+                 """)]
     public async Task<string> InsertAfterLine(
         [Description("Path to the file to edit - must be canonical")] string filePath,
         [Description("Line number to insert after (0 = beginning of file)")] int afterLine,
         [Description("Content to insert")] string content,
+        [Description("Version token from previous read operation (REQUIRED)")] string versionToken,
         [Description("Automatically maintain proper indentation (default: true)")] bool maintainIndentation = true,
         [Description("Create backup before editing (default: false)")] bool createBackup = false)
     {
@@ -64,7 +109,24 @@ public class AdvancedFileEditingTools(
                 return error;
             }
 
+            // CRITICAL: Validate version token
+            try
+            {
+                versionService.ValidateVersionTokenOrThrow(fullPath, versionToken);
+            }
+            catch (FileConflictException ex)
+            {
+                auditLogger.LogFileOperation("InsertAfterLine", fullPath, false, "FILE_CONFLICT");
+                return $"❌ {ex.Message}";
+            }
+
             EditResult result = await fileEditor.InsertAfterLine(fullPath, afterLine, content, maintainIndentation, createBackup);
+            
+            // Add new version token to result
+            if (result.Success)
+            {
+                result.NewVersionToken = versionService.ComputeVersionToken(fullPath);
+            }
             
             auditLogger.LogFileOperation("InsertAfterLine", fullPath, result.Success, 
                 result.Success ? null : result.ErrorDetails);
@@ -79,11 +141,24 @@ public class AdvancedFileEditingTools(
     }
 
     [McpServerTool]
-    [Description("Delete a range of lines from a file")]
+    [Description("""
+                 Delete a range of lines from a file.
+
+                 ⚠️ CRITICAL SAFETY PROTOCOL:
+                 1. MUST read the target area first using read_file or advanced_file_read_range
+                 2. MUST provide the version_token from that read operation
+                 3. VERIFY the lines to be deleted before executing
+                 4. If edit fails with FILE_CONFLICT: STOP, re-read the file, do NOT attempt blind fixes
+                 5. File may have been modified by user - always read before editing
+                 6. Blind edits cause cascading failures that make the problem worse
+
+                 The version_token ensures the file hasn't changed since you last read it.
+                 """)]
     public async Task<string> DeleteFileLines(
         [Description("Path to the file to edit - must be canonical")] string filePath,
         [Description("Starting line number (1-based)")] int startLine,
         [Description("Ending line number (1-based, inclusive)")] int endLine,
+        [Description("Version token from previous read operation (REQUIRED)")] string versionToken,
         [Description("Create backup before editing (default: false)")] bool createBackup = false)
     {
         try
@@ -96,7 +171,24 @@ public class AdvancedFileEditingTools(
                 return error;
             }
 
+            // CRITICAL: Validate version token
+            try
+            {
+                versionService.ValidateVersionTokenOrThrow(fullPath, versionToken);
+            }
+            catch (FileConflictException ex)
+            {
+                auditLogger.LogFileOperation("DeleteLines", fullPath, false, "FILE_CONFLICT");
+                return $"❌ {ex.Message}";
+            }
+
             EditResult result = await fileEditor.DeleteLines(fullPath, startLine, endLine, createBackup);
+            
+            // Add new version token to result
+            if (result.Success)
+            {
+                result.NewVersionToken = versionService.ComputeVersionToken(fullPath);
+            }
             
             auditLogger.LogFileOperation("DeleteLines", fullPath, result.Success, 
                 result.Success ? null : result.ErrorDetails);
@@ -111,11 +203,24 @@ public class AdvancedFileEditingTools(
     }
 
     [McpServerTool]
-    [Description("Replace text patterns within a file using string matching or regular expressions")]
+    [Description("""
+                 Replace text patterns within a file using string matching or regular expressions.
+
+                 ⚠️ CRITICAL SAFETY PROTOCOL:
+                 1. MUST read the file first to verify the search pattern exists
+                 2. Use find_in_file to locate exact matches before replacing
+                 3. MUST provide the version_token from the read operation
+                 4. If edit fails with FILE_CONFLICT: STOP, re-read the file, check pattern
+                 5. File may have been modified by user - always verify current state
+                 6. Blind edits cause cascading failures that make the problem worse
+
+                 The version_token ensures the file hasn't changed since you last read it.
+                 """)]
     public async Task<string> ReplaceInFile(
         [Description("Path to the file to edit - must be canonical")] string filePath,
         [Description("Text pattern to search for")] string searchPattern,
         [Description("Replacement text")] string replaceWith,
+        [Description("Version token from previous read operation (REQUIRED)")] string versionToken,
         [Description("Use regular expressions for pattern matching")] bool useRegex = false,
         [Description("Case-sensitive matching")] bool caseSensitive = false,
         [Description("Create backup before editing (default: false)")] bool createBackup = false)
@@ -130,7 +235,24 @@ public class AdvancedFileEditingTools(
                 return error;
             }
 
+            // CRITICAL: Validate version token
+            try
+            {
+                versionService.ValidateVersionTokenOrThrow(fullPath, versionToken);
+            }
+            catch (FileConflictException ex)
+            {
+                auditLogger.LogFileOperation("ReplaceInFile", fullPath, false, "FILE_CONFLICT");
+                return $"❌ {ex.Message}";
+            }
+
             EditResult result = await fileEditor.ReplaceInFile(fullPath, searchPattern, replaceWith, useRegex, caseSensitive, createBackup);
+            
+            // Add new version token to result
+            if (result.Success)
+            {
+                result.NewVersionToken = versionService.ComputeVersionToken(fullPath);
+            }
             
             auditLogger.LogFileOperation("ReplaceInFile", fullPath, result.Success, 
                 result.Success ? null : result.ErrorDetails);
@@ -254,7 +376,7 @@ public class AdvancedFileEditingTools(
         }
     }
     
-        [McpServerTool]
+    [McpServerTool]
     [Description("Clean up backup files older than specified hours or all backups for a directory")]
     public string CleanupBackupFiles(
         [Description("Directory path to clean - must be canonical")] string directoryPath,

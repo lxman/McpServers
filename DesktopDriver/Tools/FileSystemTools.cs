@@ -1,15 +1,16 @@
 using System.ComponentModel;
 using System.Text;
+using DesktopDriver.Exceptions;
 using DesktopDriver.Services;
 using ModelContextProtocol.Server;
 
 namespace DesktopDriver.Tools;
 
 [McpServerToolType]
-public class FileSystemTools(SecurityManager securityManager, AuditLogger auditLogger)
+public class FileSystemTools(FileVersionService versionService, SecurityManager securityManager, AuditLogger auditLogger)
 {
     [McpServerTool]
-    [Description("Read the contents of a file with optional offset and length parameters")]
+    [Description("Read the contents of a file with optional offset and length parameters. Returns version token for safe editing.")]
     public async Task<string> ReadFile(
         [Description("Path to the file to read - must be canonical")] string path,
         [Description("Start line offset (0-based, negative for tail)")] int offset = 0,
@@ -35,8 +36,19 @@ public class FileSystemTools(SecurityManager securityManager, AuditLogger auditL
             string[] lines = await File.ReadAllLinesAsync(fullPath);
             string[] result = GetLinesWithOffset(lines, offset, length);
             
+            // Compute version token for optimistic locking
+            string versionToken = versionService.ComputeVersionToken(fullPath);
+            
             auditLogger.LogFileOperation("Read", fullPath, true);
-            return $"File: {fullPath}\nLines {offset} to {offset + result.Length - 1} of {lines.Length}:\n\n{string.Join('\n', result)}";
+            
+            var output = $"📄 File: {fullPath}\n";
+            output += $"📊 Lines {offset} to {offset + result.Length - 1} of {lines.Length}\n";
+            output += $"🔐 Version token: {versionToken}\n";
+            output += $"💡 Use this token if you need to edit this file\n";
+            output += $"\n--- Content ---\n\n";
+            output += string.Join('\n', result);
+            
+            return output;
         }
         catch (Exception ex)
         {
@@ -46,11 +58,15 @@ public class FileSystemTools(SecurityManager securityManager, AuditLogger auditL
     }
 
     [McpServerTool]
-    [Description("Write content to a file (overwrite or append)")]
+    [Description(@"Write content to a file (overwrite or append).
+
+    ⚠️ For overwriting existing files, version_token is REQUIRED to prevent conflicts.
+    For new files or append mode, version_token is optional.")]
     public async Task<string> WriteFile(
         [Description("Path to the file to write - must be canonical")] string path,
         [Description("Content to write")] string content,
-        [Description("Write mode: overwrite or append")] string mode = "overwrite")
+        [Description("Write mode: overwrite or append")] string mode = "overwrite",
+        [Description("Version token (REQUIRED for overwrite mode on existing files)")] string? versionToken = null)
     {
         try
         {
@@ -62,6 +78,22 @@ public class FileSystemTools(SecurityManager securityManager, AuditLogger auditL
                 return error;
             }
 
+            bool fileExists = File.Exists(fullPath);
+
+            // If overwriting an existing file, require version token
+            if (fileExists && mode.ToLowerInvariant() == "overwrite")
+            {
+                try
+                {
+                    versionService.ValidateVersionTokenOrThrow(fullPath, versionToken);
+                }
+                catch (FileConflictException ex)
+                {
+                    auditLogger.LogFileOperation("Write", fullPath, false, "FILE_CONFLICT");
+                    return $"❌ {ex.Message}";
+                }
+            }
+
             // Ensure directory exists
             Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
 
@@ -69,12 +101,16 @@ public class FileSystemTools(SecurityManager securityManager, AuditLogger auditL
             {
                 await File.AppendAllTextAsync(fullPath, content);
                 auditLogger.LogFileOperation("Append", fullPath, true);
-                return $"Content appended to file: {fullPath}";
+                
+                string newToken = versionService.ComputeVersionToken(fullPath);
+                return $"✅ Content appended to file: {fullPath}\n🔐 New version token: {newToken}";
             }
 
             await File.WriteAllTextAsync(fullPath, content);
             auditLogger.LogFileOperation("Write", fullPath, true);
-            return $"Content written to file: {fullPath}";
+            
+            string versionTokenResult = versionService.ComputeVersionToken(fullPath);
+            return $"✅ Content written to file: {fullPath}\n🔐 New version token: {versionTokenResult}";
         }
         catch (Exception ex)
         {

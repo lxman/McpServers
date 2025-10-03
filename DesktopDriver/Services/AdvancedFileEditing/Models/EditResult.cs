@@ -10,6 +10,12 @@ public class EditResult
     public string FilePath { get; set; } = string.Empty;
     
     /// <summary>
+    /// Version token after the edit was applied.
+    /// Use this token for subsequent edits on the same file.
+    /// </summary>
+    public string? NewVersionToken { get; set; }
+    
+    /// <summary>
     /// Creates a successful edit result
     /// </summary>
     public static EditResult CreateSuccess(string filePath, int linesAffected, string message, string? diffPreview = null)
@@ -49,6 +55,12 @@ public class EditResult
             var result = $"✅ {Message}\n";
             result += $"File: {FilePath}\n";
             result += $"Lines affected: {LinesAffected}";
+            
+            if (!string.IsNullOrEmpty(NewVersionToken))
+            {
+                result += $"\n🔐 New version token: {NewVersionToken}";
+                result += "\n💡 Use this token for your next edit on this file";
+            }
             
             if (!string.IsNullOrEmpty(DiffPreview))
             {

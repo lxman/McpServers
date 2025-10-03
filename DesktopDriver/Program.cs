@@ -25,6 +25,7 @@ builder.Services.Configure<JsonSerializerOptions>(options =>
 
 builder.Services
     // Services
+    .AddSingleton<FileVersionService>()
     .AddSingleton<SecurityManager>()
     .AddSingleton<AuditLogger>()
     .AddSingleton<ProcessManager>()
@@ -41,6 +42,7 @@ builder.Services
     
     // Tools
     .AddSingleton<AdvancedFileEditingTools>()
+    .AddSingleton<AdvancedFileReadingTools>()
     .AddSingleton<TerminalTools>()
     .AddSingleton<FileSystemTools>()
     .AddSingleton<ProcessTools>()
