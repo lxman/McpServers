@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using AzureMcp.Authentication;
+using AzureMcp.Common;
 using AzureMcp.Services.DevOps.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.Build.WebApi;
@@ -17,29 +18,21 @@ using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 
 namespace AzureMcp.Services.DevOps;
 
-public class DevOpsService : IDevOpsService
+public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<DevOpsService> logger)
+    : IDevOpsService
 {
-    private readonly DevOpsCredentialManager _credentialManager;
-    private readonly ILogger<DevOpsService> _logger;
-
-    public DevOpsService(DevOpsCredentialManager credentialManager, ILogger<DevOpsService> logger)
-    {
-        _credentialManager = credentialManager;
-        _logger = logger;
-    }
-
     public async Task<IEnumerable<ProjectDto>> GetProjectsAsync()
     {
         try
         {
-            var projectClient = _credentialManager.GetClient<ProjectHttpClient>();
+            var projectClient = credentialManager.GetClient<ProjectHttpClient>();
             IPagedList<TeamProjectReference>? projects = await projectClient.GetProjects();
 
             return projects.Select(MapToProjectDto);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving projects");
+            logger.LogError(ex, "Error retrieving projects");
             throw;
         }
     }
@@ -48,14 +41,14 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var projectClient = _credentialManager.GetClient<ProjectHttpClient>();
+            var projectClient = credentialManager.GetClient<ProjectHttpClient>();
             TeamProject? project = await projectClient.GetProject(projectName);
 
             return project != null ? MapToProjectDto(project) : null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving project {ProjectName}", projectName);
+            logger.LogError(ex, "Error retrieving project {ProjectName}", projectName);
             throw;
         }
     }
@@ -64,14 +57,14 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var workItemClient = _credentialManager.GetClient<WorkItemTrackingHttpClient>();
+            var workItemClient = credentialManager.GetClient<WorkItemTrackingHttpClient>();
             WorkItem? workItem = await workItemClient.GetWorkItemAsync(id, expand: WorkItemExpand.All);
 
             return workItem != null ? MapToWorkItemDto(workItem) : null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving work item {WorkItemId}", id);
+            logger.LogError(ex, "Error retrieving work item {WorkItemId}", id);
             throw;
         }
     }
@@ -80,7 +73,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var workItemClient = _credentialManager.GetClient<WorkItemTrackingHttpClient>();
+            var workItemClient = credentialManager.GetClient<WorkItemTrackingHttpClient>();
             
             // Default WIQL query if none provided
             wiql ??= $"SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '{projectName}' ORDER BY [System.Id] DESC";
@@ -98,7 +91,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving work items for project {ProjectName}", projectName);
+            logger.LogError(ex, "Error retrieving work items for project {ProjectName}", projectName);
             throw;
         }
     }
@@ -107,7 +100,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var workItemClient = _credentialManager.GetClient<WorkItemTrackingHttpClient>();
+            var workItemClient = credentialManager.GetClient<WorkItemTrackingHttpClient>();
 
             var patchDocument = new JsonPatchDocument
             {
@@ -138,7 +131,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating work item in project {ProjectName}", projectName);
+            logger.LogError(ex, "Error creating work item in project {ProjectName}", projectName);
             throw;
         }
     }
@@ -147,14 +140,14 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var gitClient = _credentialManager.GetClient<GitHttpClient>();
+            var gitClient = credentialManager.GetClient<GitHttpClient>();
             List<GitRepository>? repositories = await gitClient.GetRepositoriesAsync(projectName);
 
             return repositories.Select(MapToRepositoryDto);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving repositories for project {ProjectName}", projectName);
+            logger.LogError(ex, "Error retrieving repositories for project {ProjectName}", projectName);
             throw;
         }
     }
@@ -163,14 +156,14 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var gitClient = _credentialManager.GetClient<GitHttpClient>();
+            var gitClient = credentialManager.GetClient<GitHttpClient>();
             GitRepository? repository = await gitClient.GetRepositoryAsync(projectName, repositoryName);
 
             return repository != null ? MapToRepositoryDto(repository) : null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving repository {RepositoryName} in project {ProjectName}", repositoryName, projectName);
+            logger.LogError(ex, "Error retrieving repository {RepositoryName} in project {ProjectName}", repositoryName, projectName);
             throw;
         }
     }
@@ -273,7 +266,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var buildClient = credentialManager.GetClient<BuildHttpClient>();
             List<BuildDefinitionReference>? definitions = await buildClient.GetDefinitionsAsync(projectName);
             var fullDefinitions = new List<BuildDefinition>();
             foreach (BuildDefinitionReference defRef in definitions)
@@ -285,7 +278,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving build definitions for project {ProjectName}", projectName);
+            logger.LogError(ex, "Error retrieving build definitions for project {ProjectName}", projectName);
             throw;
         }
     }
@@ -294,14 +287,14 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var buildClient = credentialManager.GetClient<BuildHttpClient>();
             BuildDefinition? definition = await buildClient.GetDefinitionAsync(projectName, definitionId);
             
             return definition != null ? MapToBuildDefinitionDto(definition) : null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving build definition {DefinitionId} from project {ProjectName}", definitionId, projectName);
+            logger.LogError(ex, "Error retrieving build definition {DefinitionId} from project {ProjectName}", definitionId, projectName);
             throw;
         }
     }
@@ -310,7 +303,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var buildClient = credentialManager.GetClient<BuildHttpClient>();
             List<Build>? builds = await buildClient.GetBuildsAsync(
                 projectName, 
                 definitions: definitionId.HasValue ? new[] { definitionId.Value } : null,
@@ -320,7 +313,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving builds for project {ProjectName}", projectName);
+            logger.LogError(ex, "Error retrieving builds for project {ProjectName}", projectName);
             throw;
         }
     }
@@ -329,14 +322,14 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var buildClient = credentialManager.GetClient<BuildHttpClient>();
             Build? build = await buildClient.GetBuildAsync(projectName, buildId);
             
             return build != null ? MapToBuildDto(build) : null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving build {BuildId} from project {ProjectName}", buildId, projectName);
+            logger.LogError(ex, "Error retrieving build {BuildId} from project {ProjectName}", buildId, projectName);
             throw;
         }
     }
@@ -345,7 +338,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var buildClient = credentialManager.GetClient<BuildHttpClient>();
             
             var buildRequest = new Build
             {
@@ -363,7 +356,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error queuing build {DefinitionId} for project {ProjectName}", definitionId, projectName);
+            logger.LogError(ex, "Error queuing build {DefinitionId} for project {ProjectName}", definitionId, projectName);
             throw;
         }
     }
@@ -372,14 +365,14 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var releaseClient = _credentialManager.GetClient<ReleaseHttpClient>();
+            var releaseClient = credentialManager.GetClient<ReleaseHttpClient>();
             List<ReleaseDefinition>? definitions = await releaseClient.GetReleaseDefinitionsAsync(projectName);
             
             return definitions.Select(MapToReleaseDefinitionDto);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving release definitions for project {ProjectName}", projectName);
+            logger.LogError(ex, "Error retrieving release definitions for project {ProjectName}", projectName);
             throw;
         }
     }
@@ -388,14 +381,14 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var releaseClient = _credentialManager.GetClient<ReleaseHttpClient>();
+            var releaseClient = credentialManager.GetClient<ReleaseHttpClient>();
             ReleaseDefinition? definition = await releaseClient.GetReleaseDefinitionAsync(projectName, definitionId);
             
             return definition != null ? MapToReleaseDefinitionDto(definition) : null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving release definition {DefinitionId} from project {ProjectName}", definitionId, projectName);
+            logger.LogError(ex, "Error retrieving release definition {DefinitionId} from project {ProjectName}", definitionId, projectName);
             throw;
         }
     }
@@ -404,7 +397,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var releaseClient = _credentialManager.GetClient<ReleaseHttpClient>();
+            var releaseClient = credentialManager.GetClient<ReleaseHttpClient>();
             List<Release>? releases = await releaseClient.GetReleasesAsync(
                 projectName, 
                 definitionId: definitionId);
@@ -413,7 +406,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving releases for project {ProjectName}", projectName);
+            logger.LogError(ex, "Error retrieving releases for project {ProjectName}", projectName);
             throw;
         }
     }
@@ -426,7 +419,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var gitClient = _credentialManager.GetClient<GitHttpClient>();
+            var gitClient = credentialManager.GetClient<GitHttpClient>();
             
             GitItem? item = await gitClient.GetItemAsync(
                 project: projectName,
@@ -443,7 +436,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving file {FilePath} from repository {RepositoryName} in project {ProjectName}", 
+            logger.LogError(ex, "Error retrieving file {FilePath} from repository {RepositoryName} in project {ProjectName}", 
                 filePath, repositoryName, projectName);
             throw;
         }
@@ -454,7 +447,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var gitClient = _credentialManager.GetClient<GitHttpClient>();
+            var gitClient = credentialManager.GetClient<GitHttpClient>();
             
             // Get current item to get object ID for update
             GitItem? currentItem = null;
@@ -515,7 +508,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating file {FilePath} in repository {RepositoryName}", filePath, repositoryName);
+            logger.LogError(ex, "Error updating file {FilePath} in repository {RepositoryName}", filePath, repositoryName);
             return false;
         }
     }
@@ -524,7 +517,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var gitClient = _credentialManager.GetClient<GitHttpClient>();
+            var gitClient = credentialManager.GetClient<GitHttpClient>();
             
             // Search for YAML files in common pipeline locations
             var searchPaths = new[] { "/", "/.azure-pipelines", "/.github/workflows", "/pipelines", "/build" };
@@ -557,7 +550,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error finding YAML files in repository {RepositoryName}", repositoryName);
+            logger.LogError(ex, "Error finding YAML files in repository {RepositoryName}", repositoryName);
             throw;
         }
     }
@@ -566,12 +559,12 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var buildClient = credentialManager.GetClient<BuildHttpClient>();
             BuildDefinition? definition = await buildClient.GetDefinitionAsync(projectName, definitionId);
             
             if (definition?.Process is YamlProcess yamlProcess)
             {
-                var gitClient = _credentialManager.GetClient<GitHttpClient>();
+                var gitClient = credentialManager.GetClient<GitHttpClient>();
                 GitItem? yamlContent = await gitClient.GetItemAsync(
                     project: projectName,
                     definition.Repository.Id,
@@ -585,7 +578,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving YAML for pipeline {DefinitionId}", definitionId);
+            logger.LogError(ex, "Error retrieving YAML for pipeline {DefinitionId}", definitionId);
             throw;
         }
     }
@@ -594,7 +587,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var buildClient = credentialManager.GetClient<BuildHttpClient>();
             BuildDefinition? definition = await buildClient.GetDefinitionAsync(projectName, definitionId);
             
             if (definition?.Process is YamlProcess yamlProcess && definition.Repository != null)
@@ -611,7 +604,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating YAML for pipeline {DefinitionId}", definitionId);
+            logger.LogError(ex, "Error updating YAML for pipeline {DefinitionId}", definitionId);
             return false;
         }
     }
@@ -718,7 +711,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var buildClient = credentialManager.GetClient<BuildHttpClient>();
             List<BuildLog>? logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
             
             return logs.Select(log => new BuildLogDto
@@ -733,7 +726,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving build logs for build {BuildId} in project {ProjectName}", buildId, projectName);
+            logger.LogError(ex, "Error retrieving build logs for build {BuildId} in project {ProjectName}", buildId, projectName);
             throw;
         }
     }
@@ -742,7 +735,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var buildClient = credentialManager.GetClient<BuildHttpClient>();
             
             // Get the log content as a stream
             await using Stream? logStream = await buildClient.GetBuildLogAsync(projectName, buildId, logId);
@@ -762,7 +755,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving build log content for log {LogId} in build {BuildId}", logId, buildId);
+            logger.LogError(ex, "Error retrieving build log content for log {LogId} in build {BuildId}", logId, buildId);
             throw;
         }
     }
@@ -771,7 +764,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var buildClient = credentialManager.GetClient<BuildHttpClient>();
             Timeline? timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
             
             if (timeline?.Records == null)
@@ -793,7 +786,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving build timeline for build {BuildId} in project {ProjectName}", buildId, projectName);
+            logger.LogError(ex, "Error retrieving build timeline for build {BuildId} in project {ProjectName}", buildId, projectName);
             throw;
         }
     }
@@ -802,7 +795,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var buildClient = credentialManager.GetClient<BuildHttpClient>();
             Timeline? timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
             
             if (timeline?.Records == null)
@@ -835,7 +828,7 @@ public class DevOpsService : IDevOpsService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Could not retrieve log for step {StepName}", record.Name);
+                    logger.LogWarning(ex, "Could not retrieve log for step {StepName}", record.Name);
                 }
             }
             
@@ -843,7 +836,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving build step logs for build {BuildId}", buildId);
+            logger.LogError(ex, "Error retrieving build step logs for build {BuildId}", buildId);
             throw;
         }
     }
@@ -852,7 +845,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var buildClient = credentialManager.GetClient<BuildHttpClient>();
             List<BuildLog>? logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
             
             var combinedLog = new StringBuilder();
@@ -885,7 +878,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving complete build log for build {BuildId}", buildId);
+            logger.LogError(ex, "Error retrieving complete build log for build {BuildId}", buildId);
             throw;
         }
     }
@@ -894,7 +887,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var buildClient = credentialManager.GetClient<BuildHttpClient>();
             Timeline? timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
         
             TimelineRecord? taskRecord = timeline?.Records?.FirstOrDefault(r => r.Id.ToString() == taskId);
@@ -920,7 +913,7 @@ public class DevOpsService : IDevOpsService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving task log for task {TaskId} in build {BuildId}", taskId, buildId);
+            logger.LogError(ex, "Error retrieving task log for task {TaskId} in build {BuildId}", taskId, buildId);
             throw;
         }
     }
@@ -931,7 +924,7 @@ public class DevOpsService : IDevOpsService
     {
         try
         {
-            var buildClient = _credentialManager.GetClient<BuildHttpClient>();
+            var buildClient = credentialManager.GetClient<BuildHttpClient>();
             List<BuildLog>? logs = await buildClient.GetBuildLogsAsync(projectName, buildId);
             var matches = new List<object>();
             
@@ -975,7 +968,7 @@ public class DevOpsService : IDevOpsService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Could not search log {LogId}", log.Id);
+                    logger.LogWarning(ex, "Could not search log {LogId}", log.Id);
                 }
             }
             
@@ -989,11 +982,11 @@ public class DevOpsService : IDevOpsService
                 totalMatches = matches.Count,
                 summary = GenerateSearchSummary(matches, regexPattern),
                 matches = matches.ToArray()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error searching build logs with regex for build {BuildId}", buildId);
+            logger.LogError(ex, "Error searching build logs with regex for build {BuildId}", buildId);
             throw;
         }
     }

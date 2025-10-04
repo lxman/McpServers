@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
@@ -53,6 +53,9 @@ public class Program
             .AddMcpServer()
             .WithStdioServerTransport()
             .WithTools<DevOpsTools>()
+            .WithTools<ResourceManagementTools>()
+            .WithTools<CredentialManagementTools>()
+            .WithTools<CostManagementTools>()
             .WithResources<EmptyResourceProvider>()
             .WithPrompts<EmptyPromptProvider>();
 

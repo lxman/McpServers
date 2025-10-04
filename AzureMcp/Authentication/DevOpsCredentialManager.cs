@@ -1,4 +1,5 @@
-﻿using CredentialManagement;
+﻿using AzureMcp.Authentication.models;
+using CredentialManagement;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.WebApi;
@@ -46,13 +47,10 @@ public class DevOpsCredentialManager
         AzureDiscoveryResult result = await discovery.DiscoverAzureEnvironmentsAsync();
         
         DevOpsEnvironmentInfo? primaryEnvironment = result.DevOpsEnvironments.FirstOrDefault();
-        if (primaryEnvironment == null)
-        {
-            logger.LogWarning("No Azure DevOps environments discovered");
-            return null;
-        }
+        if (primaryEnvironment != null) return new DevOpsCredentialManager(primaryEnvironment, logger);
+        logger.LogWarning("No Azure DevOps environments discovered");
+        return null;
 
-        return new DevOpsCredentialManager(primaryEnvironment, logger);
     }
 
     /// <summary>
@@ -92,17 +90,15 @@ public class DevOpsCredentialManager
         pat = Environment.GetEnvironmentVariable("AZURE_DEVOPS_EXT_PAT") ?? 
               Environment.GetEnvironmentVariable("AZURE_DEVOPS_PAT") ??
               Environment.GetEnvironmentVariable("SYSTEM_ACCESSTOKEN");
-        if (!string.IsNullOrEmpty(pat))
-        {
-            logger.LogDebug("Retrieved PAT from environment variable");
-            return pat;
-        }
-        
-        throw new InvalidOperationException(
-            $"No Personal Access Token found for {organizationUrl}. Please:\n" +
-            "1. Store PAT in Windows Credential Manager (target: 'AzureDevOps'), OR\n" +
-            "2. Set AZURE_DEVOPS_PAT environment variable, OR\n" +
-            "3. Configure Azure CLI: az devops configure --defaults organization=your-org-url");
+        if (string.IsNullOrEmpty(pat))
+            throw new InvalidOperationException(
+                $"No Personal Access Token found for {organizationUrl}. Please:\n" +
+                "1. Store PAT in Windows Credential Manager (target: 'AzureDevOps'), OR\n" +
+                "2. Set AZURE_DEVOPS_PAT environment variable, OR\n" +
+                "3. Configure Azure CLI: az devops configure --defaults organization=your-org-url");
+        logger.LogDebug("Retrieved PAT from environment variable");
+        return pat;
+
     }
     
     private static string? TryGetFromCredentialManager(string target)

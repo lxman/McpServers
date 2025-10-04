@@ -2,29 +2,23 @@
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json;
+using AzureMcp.Common;
 using AzureMcp.Services.DevOps.Models;
 
 namespace AzureMcp.Tools;
 
 [McpServerToolType]
-public class DevOpsTools
+public class DevOpsTools(IDevOpsService devOpsService)
 {
-    private readonly IDevOpsService _devOpsService;
-
-    public DevOpsTools(IDevOpsService devOpsService)
-    {
-        _devOpsService = devOpsService;
-    }
-
     [McpServerTool]
     [Description("List all Azure DevOps projects")]
     public async Task<string> ListProjectsAsync()
     {
         try
         {
-            IEnumerable<ProjectDto> projects = await _devOpsService.GetProjectsAsync();
+            IEnumerable<ProjectDto> projects = await devOpsService.GetProjectsAsync();
             return JsonSerializer.Serialize(new { success = true, projects = projects.ToArray() }, 
-                new JsonSerializerOptions { WriteIndented = true });
+                SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -39,9 +33,9 @@ public class DevOpsTools
     {
         try
         {
-            ProjectDto? project = await _devOpsService.GetProjectAsync(projectName);
+            ProjectDto? project = await devOpsService.GetProjectAsync(projectName);
             return JsonSerializer.Serialize(new { success = true, project }, 
-                new JsonSerializerOptions { WriteIndented = true });
+                SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -56,9 +50,9 @@ public class DevOpsTools
     {
         try
         {
-            WorkItemDto? workItem = await _devOpsService.GetWorkItemAsync(id);
+            WorkItemDto? workItem = await devOpsService.GetWorkItemAsync(id);
             return JsonSerializer.Serialize(new { success = true, workItem }, 
-                new JsonSerializerOptions { WriteIndented = true });
+                SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -74,9 +68,9 @@ public class DevOpsTools
     {
         try
         {
-            IEnumerable<WorkItemDto> workItems = await _devOpsService.GetWorkItemsAsync(projectName, wiql);
+            IEnumerable<WorkItemDto> workItems = await devOpsService.GetWorkItemsAsync(projectName, wiql);
             return JsonSerializer.Serialize(new { success = true, workItems = workItems.ToArray() }, 
-                new JsonSerializerOptions { WriteIndented = true });
+                SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -107,9 +101,9 @@ public class DevOpsTools
             if (priority.HasValue)
                 fields["Microsoft.VSTS.Common.Priority"] = priority.Value;
 
-            WorkItemDto workItem = await _devOpsService.CreateWorkItemAsync(projectName, workItemType, title, fields);
+            WorkItemDto workItem = await devOpsService.CreateWorkItemAsync(projectName, workItemType, title, fields);
             return JsonSerializer.Serialize(new { success = true, workItem }, 
-                new JsonSerializerOptions { WriteIndented = true });
+                SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -124,9 +118,9 @@ public class DevOpsTools
     {
         try
         {
-            IEnumerable<RepositoryDto> repositories = await _devOpsService.GetRepositoriesAsync(projectName);
+            IEnumerable<RepositoryDto> repositories = await devOpsService.GetRepositoriesAsync(projectName);
             return JsonSerializer.Serialize(new { success = true, repositories = repositories.ToArray() }, 
-                new JsonSerializerOptions { WriteIndented = true });
+                SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -142,9 +136,9 @@ public class DevOpsTools
     {
         try
         {
-            RepositoryDto? repository = await _devOpsService.GetRepositoryAsync(projectName, repositoryName);
+            RepositoryDto? repository = await devOpsService.GetRepositoryAsync(projectName, repositoryName);
             return JsonSerializer.Serialize(new { success = true, repository }, 
-                new JsonSerializerOptions { WriteIndented = true });
+                SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -161,9 +155,9 @@ public class DevOpsTools
     {
         try
         {
-            IEnumerable<BuildDefinitionDto> definitions = await _devOpsService.GetBuildDefinitionsAsync(projectName);
+            IEnumerable<BuildDefinitionDto> definitions = await devOpsService.GetBuildDefinitionsAsync(projectName);
             return JsonSerializer.Serialize(new { success = true, buildDefinitions = definitions.ToArray() }, 
-                new JsonSerializerOptions { WriteIndented = true });
+                SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -179,9 +173,9 @@ public class DevOpsTools
     {
         try
         {
-            BuildDefinitionDto? definition = await _devOpsService.GetBuildDefinitionAsync(projectName, definitionId);
+            BuildDefinitionDto? definition = await devOpsService.GetBuildDefinitionAsync(projectName, definitionId);
             return JsonSerializer.Serialize(new { success = true, buildDefinition = definition }, 
-                new JsonSerializerOptions { WriteIndented = true });
+                SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -198,9 +192,9 @@ public class DevOpsTools
     {
         try
         {
-            IEnumerable<BuildDto> builds = await _devOpsService.GetBuildsAsync(projectName, definitionId, top);
+            IEnumerable<BuildDto> builds = await devOpsService.GetBuildsAsync(projectName, definitionId, top);
             return JsonSerializer.Serialize(new { success = true, builds = builds.ToArray() }, 
-                new JsonSerializerOptions { WriteIndented = true });
+                SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -216,9 +210,9 @@ public class DevOpsTools
     {
         try
         {
-            BuildDto? build = await _devOpsService.GetBuildAsync(projectName, buildId);
+            BuildDto? build = await devOpsService.GetBuildAsync(projectName, buildId);
             return JsonSerializer.Serialize(new { success = true, build }, 
-                new JsonSerializerOptions { WriteIndented = true });
+                SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -235,9 +229,9 @@ public class DevOpsTools
     {
         try
         {
-            BuildDto build = await _devOpsService.QueueBuildAsync(projectName, definitionId, branch);
+            BuildDto build = await devOpsService.QueueBuildAsync(projectName, definitionId, branch);
             return JsonSerializer.Serialize(new { success = true, queuedBuild = build }, 
-                new JsonSerializerOptions { WriteIndented = true });
+                SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -252,9 +246,9 @@ public class DevOpsTools
     {
         try
         {
-            IEnumerable<ReleaseDefinitionDto> definitions = await _devOpsService.GetReleaseDefinitionsAsync(projectName);
+            IEnumerable<ReleaseDefinitionDto> definitions = await devOpsService.GetReleaseDefinitionsAsync(projectName);
             return JsonSerializer.Serialize(new { success = true, releaseDefinitions = definitions.ToArray() }, 
-                new JsonSerializerOptions { WriteIndented = true });
+                SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -276,7 +270,7 @@ public class DevOpsTools
     {
         try
         {
-            string? content = await _devOpsService.GetRepositoryFileContentAsync(projectName, repositoryName, filePath, branch);
+            string? content = await devOpsService.GetRepositoryFileContentAsync(projectName, repositoryName, filePath, branch);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 filePath, 
@@ -284,7 +278,7 @@ public class DevOpsTools
                 branch = branch ?? "default",
                 repository = repositoryName,
                 project = projectName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -304,7 +298,7 @@ public class DevOpsTools
     {
         try
         {
-            bool success = await _devOpsService.UpdateRepositoryFileAsync(projectName, repositoryName, filePath, content, commitMessage, branch);
+            bool success = await devOpsService.UpdateRepositoryFileAsync(projectName, repositoryName, filePath, content, commitMessage, branch);
             return JsonSerializer.Serialize(new { 
                 success, 
                 message = success ? "File updated successfully" : "File update failed",
@@ -312,7 +306,7 @@ public class DevOpsTools
                 repository = repositoryName,
                 project = projectName,
                 commitMessage
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -328,13 +322,13 @@ public class DevOpsTools
     {
         try
         {
-            IEnumerable<string> yamlFiles = await _devOpsService.FindYamlPipelineFilesAsync(projectName, repositoryName);
+            IEnumerable<string> yamlFiles = await devOpsService.FindYamlPipelineFilesAsync(projectName, repositoryName);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 yamlFiles = yamlFiles.ToArray(),
                 repository = repositoryName,
                 project = projectName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -350,13 +344,13 @@ public class DevOpsTools
     {
         try
         {
-            string? yamlContent = await _devOpsService.GetPipelineYamlAsync(projectName, definitionId);
+            string? yamlContent = await devOpsService.GetPipelineYamlAsync(projectName, definitionId);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 definitionId,
                 yamlContent,
                 project = projectName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -374,14 +368,14 @@ public class DevOpsTools
     {
         try
         {
-            bool success = await _devOpsService.UpdatePipelineYamlAsync(projectName, definitionId, yamlContent, commitMessage);
+            bool success = await devOpsService.UpdatePipelineYamlAsync(projectName, definitionId, yamlContent, commitMessage);
             return JsonSerializer.Serialize(new { 
                 success, 
                 message = success ? "Pipeline YAML updated successfully" : "Pipeline YAML update failed",
                 definitionId,
                 project = projectName,
                 commitMessage
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -405,7 +399,7 @@ public class DevOpsTools
     {
         try
         {
-            string result = await _devOpsService.SearchBuildLogsWithRegexAsync(
+            string result = await devOpsService.SearchBuildLogsWithRegexAsync(
                 projectName, buildId, regexPattern, contextLines, caseSensitive, maxMatches);
             return result;
         }
@@ -423,13 +417,13 @@ public class DevOpsTools
     {
         try
         {
-            IEnumerable<BuildLogDto> logs = await _devOpsService.GetBuildLogsAsync(projectName, buildId);
+            IEnumerable<BuildLogDto> logs = await devOpsService.GetBuildLogsAsync(projectName, buildId);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 buildId,
                 project = projectName,
                 logs = logs.ToArray()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -445,13 +439,13 @@ public class DevOpsTools
     {
         try
         {
-            string logContent = await _devOpsService.GetCompleteBuildLogAsync(projectName, buildId);
+            string logContent = await devOpsService.GetCompleteBuildLogAsync(projectName, buildId);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 buildId,
                 project = projectName,
                 logContent
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -467,13 +461,13 @@ public class DevOpsTools
     {
         try
         {
-            BuildTimelineDto? timeline = await _devOpsService.GetBuildTimelineAsync(projectName, buildId);
+            BuildTimelineDto? timeline = await devOpsService.GetBuildTimelineAsync(projectName, buildId);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 buildId,
                 project = projectName,
                 timeline
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -489,7 +483,7 @@ public class DevOpsTools
     {
         try
         {
-            List<BuildStepLogDto> stepLogs = (await _devOpsService.GetBuildStepLogsAsync(projectName, buildId)).ToList();
+            List<BuildStepLogDto> stepLogs = (await devOpsService.GetBuildStepLogsAsync(projectName, buildId)).ToList();
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 buildId,
@@ -500,7 +494,7 @@ public class DevOpsTools
                     stepsWithErrors = stepLogs.Count(s => s.ErrorMessages.Count != 0),
                     stepsWithWarnings = stepLogs.Count(s => s.WarningMessages.Count != 0)
                 }
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -517,14 +511,14 @@ public class DevOpsTools
     {
         try
         {
-            BuildLogContentDto? logContent = await _devOpsService.GetBuildLogContentAsync(projectName, buildId, logId);
+            BuildLogContentDto? logContent = await devOpsService.GetBuildLogContentAsync(projectName, buildId, logId);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 buildId,
                 logId,
                 project = projectName,
                 logContent
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -541,14 +535,14 @@ public class DevOpsTools
     {
         try
         {
-            BuildLogContentDto? taskLog = await _devOpsService.GetBuildTaskLogAsync(projectName, buildId, taskId);
+            BuildLogContentDto? taskLog = await devOpsService.GetBuildTaskLogAsync(projectName, buildId, taskId);
             return JsonSerializer.Serialize(new { 
                 success = true, 
                 buildId,
                 taskId,
                 project = projectName,
                 taskLog
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -568,6 +562,6 @@ public class DevOpsTools
             errorType = ex.GetType().Name
         };
 
-        return JsonSerializer.Serialize(error, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(error, SerializerOptions.JsonOptionsIndented);
     }
 }

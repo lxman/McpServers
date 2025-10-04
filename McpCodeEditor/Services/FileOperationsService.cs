@@ -1,11 +1,20 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.FileSystemGlobbing;
 
 namespace McpCodeEditor.Services;
 
-public class FileOperationsService(CodeEditorConfigurationService config)
+public class FileOperationsService(
+    CodeEditorConfigurationService config,
+    TypeResearchAttestationService? attestationService = null)
 {
+    // Code file extensions that require research attestation
+    private static readonly string[] CodeFileExtensions = 
+    [
+        ".cs", ".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".go", ".rs",
+        ".cpp", ".c", ".h", ".hpp", ".kt", ".swift", ".rb", ".php", ".scala"
+    ];
+
     public async Task<object> ReadFileAsync(string path, string encoding = "utf-8")
     {
         try
@@ -47,11 +56,34 @@ public class FileOperationsService(CodeEditorConfigurationService config)
         }
     }
 
-    public async Task<object> WriteFileAsync(string path, string content, string encoding = "utf-8", bool createDirectories = true)
+    public async Task<object> WriteFileAsync(
+        string path, 
+        string content, 
+        string encoding = "utf-8", 
+        bool createDirectories = true,
+        string? researchToken = null)
     {
         try
         {
             string fullPath = ValidateAndResolvePath(path);
+
+            // Check if this is a code file that requires research attestation
+            if (attestationService != null && IsCodeFile(fullPath))
+            {
+                (bool isValid, string? error) = attestationService.ValidateAndConsumeToken(
+                    researchToken ?? string.Empty, fullPath);
+
+                if (!isValid)
+                {
+                    return new
+                    {
+                        success = false,
+                        error = error,
+                        hint = "Code files require research attestation. Call attest_code_file_research first to get a research token.",
+                        codeFileExtensions = CodeFileExtensions
+                    };
+                }
+            }
 
             if (createDirectories)
             {
@@ -312,6 +344,12 @@ public class FileOperationsService(CodeEditorConfigurationService config)
         {
             return new { success = false, error = ex.Message };
         }
+    }
+
+    private bool IsCodeFile(string path)
+    {
+        string extension = Path.GetExtension(path).ToLowerInvariant();
+        return CodeFileExtensions.Contains(extension);
     }
 
     private string ValidateAndResolvePath(string path)

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using Azure.Identity;
 using Azure.Core;
+using AzureMcp.Authentication.models;
 using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.VisualStudio.Services.WebApi;
 using Microsoft.VisualStudio.Services.Common;
@@ -14,15 +15,9 @@ namespace AzureMcp.Authentication;
 /// <summary>
 /// Pure environment discovery - no configuration files needed!
 /// </summary>
-public class AzureEnvironmentDiscovery
+public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger)
 {
-    private readonly ILogger<AzureEnvironmentDiscovery> _logger;
     private readonly string _logPath = Path.Combine(AppContext.BaseDirectory, "azure-discovery.log");
-
-    public AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger)
-    {
-        _logger = logger;
-    }
 
     /// <summary>
     /// Discovers Azure DevOps environments independently (no Azure RM required!)
@@ -37,7 +32,7 @@ public class AzureEnvironmentDiscovery
         try
         {
             // Focus ONLY on DevOps discovery - Azure RM is optional
-            _logger.LogInformation("🔍 Discovering Azure DevOps environments...");
+            logger.LogInformation("🔍 Discovering Azure DevOps environments...");
             await AddLogLine("Starting Azure DevOps discovery...");
             
             result.DevOpsEnvironments = await DiscoverDevOpsEnvironmentsAsync();
@@ -52,12 +47,12 @@ public class AzureEnvironmentDiscovery
             // Azure RM is optional - only try if user wants it
             if (result.DevOpsEnvironments.Count > 0)
             {
-                _logger.LogInformation("✅ Azure DevOps discovery successful");
+                logger.LogInformation("✅ Azure DevOps discovery successful");
                 await AddLogLine("DevOps discovery successful!");
             }
             else
             {
-                _logger.LogWarning("❌ No Azure DevOps environments found");
+                logger.LogWarning("❌ No Azure DevOps environments found");
                 await AddLogLine("No Azure DevOps environments found");
             }
             
@@ -118,7 +113,7 @@ public class AzureEnvironmentDiscovery
         }
         catch (Exception ex)
         {
-            _logger.LogDebug("No Azure credential available: {Error}", ex.Message);
+            logger.LogDebug("No Azure credential available: {Error}", ex.Message);
             return null;
         }
     }
@@ -148,7 +143,7 @@ public class AzureEnvironmentDiscovery
         return new AzureCliInfo { IsLoggedIn = false };
     }
 
-    private async Task<List<DevOpsEnvironmentInfo>> DiscoverDevOpsEnvironmentsAsync()
+    public async Task<List<DevOpsEnvironmentInfo>> DiscoverDevOpsEnvironmentsAsync()
     {
         var environments = new List<DevOpsEnvironmentInfo>();
         
@@ -259,28 +254,26 @@ public class AzureEnvironmentDiscovery
                 string[] lines = configResult.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
                 foreach (string line in lines)
                 {
-                    if (line.StartsWith("organization =", StringComparison.OrdinalIgnoreCase))
+                    if (!line.StartsWith("organization =", StringComparison.OrdinalIgnoreCase)) continue;
+                    string url = line.Split('=', 2)[1].Trim();
+                    await AddLogLine($"Found Azure CLI DevOps organization: {url}");
+
+                    // Try to get a PAT for this organization
+                    string? pat = await TryGetPatForAzureCliOrgAsync(url);
+
+                    return new DevOpsEnvironmentInfo
                     {
-                        string url = line.Split('=', 2)[1].Trim();
-                        await AddLogLine($"Found Azure CLI DevOps organization: {url}");
-
-                        // Try to get a PAT for this organization
-                        string? pat = await TryGetPatForAzureCliOrgAsync(url);
-
-                        return new DevOpsEnvironmentInfo
-                        {
-                            OrganizationUrl = url,
-                            PersonalAccessToken = pat,
-                            Source = "Azure CLI DevOps Extension",
-                            HasCredentials = !string.IsNullOrEmpty(pat)
-                        };
-                    }
+                        OrganizationUrl = url,
+                        PersonalAccessToken = pat,
+                        Source = "Azure CLI DevOps Extension",
+                        HasCredentials = !string.IsNullOrEmpty(pat)
+                    };
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogDebug("Azure CLI DevOps not configured: {Error}", ex.Message);
+            logger.LogDebug("Azure CLI DevOps not configured: {Error}", ex.Message);
         }
         return null;
     }
@@ -292,13 +285,13 @@ public class AzureEnvironmentDiscovery
         string? orgName = uri.Segments.LastOrDefault()?.Trim('/');
 
         // Try common credential patterns
-        string[] targets = new[]
-        {
+        string[] targets =
+        [
             "AzureDevOps",
             $"AzureDevOps-{orgName}",
             organizationUrl,
             "AZURE_DEVOPS_EXT_PAT"
-        };
+        ];
 
         foreach (string target in targets)
         {
@@ -359,7 +352,7 @@ public class AzureEnvironmentDiscovery
             }
             catch (Exception ex)
             {
-                _logger.LogDebug("Could not read credential {Target}: {Error}", target, ex.Message);
+                logger.LogDebug("Could not read credential {Target}: {Error}", target, ex.Message);
             }
         }
 
@@ -378,11 +371,9 @@ public class AzureEnvironmentDiscovery
             await AddLogLine($"Trying to get PAT from env var: {varName}");
             pat = Environment.GetEnvironmentVariable(varName);
             await AddLogLine($"Found PAT: {(string.IsNullOrEmpty(pat) ? "No" : "Yes")}");
-            if (!string.IsNullOrEmpty(pat))
-            {
-                patSource = varName;
-                break;
-            }
+            if (string.IsNullOrEmpty(pat)) continue;
+            patSource = varName;
+            break;
         }
 
         string? orgUrl = null;
@@ -429,7 +420,7 @@ public class AzureEnvironmentDiscovery
     private static string? ExtractOrgUrlFromCredential(Credential credential)
     {
         // Smart extraction from credential fields
-        string[] possibleSources = new[] { credential.Username, credential.Target, credential.Description };
+        string[] possibleSources = [credential.Username, credential.Target, credential.Description];
 
         foreach (string source in possibleSources)
         {
@@ -443,14 +434,13 @@ public class AzureEnvironmentDiscovery
             }
 
             // Organization name pattern
-            if (source.Contains('/') && (source.Contains("dev.azure.com") || source.Contains("visualstudio.com")))
+            if (!source.Contains('/') ||
+                (!source.Contains("dev.azure.com") && !source.Contains("visualstudio.com"))) continue;
+            string[] parts = source.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            string? orgName = parts.LastOrDefault();
+            if (!string.IsNullOrEmpty(orgName) && !orgName.Contains(".com"))
             {
-                string[] parts = source.Split('/', StringSplitOptions.RemoveEmptyEntries);
-                string? orgName = parts.LastOrDefault();
-                if (!string.IsNullOrEmpty(orgName) && !orgName.Contains(".com"))
-                {
-                    return $"https://dev.azure.com/{orgName}";
-                }
+                return $"https://dev.azure.com/{orgName}";
             }
         }
 
@@ -475,7 +465,7 @@ public class AzureEnvironmentDiscovery
         }
         catch (Exception ex)
         {
-            _logger.LogDebug("Environment validation failed for {Org}: {Error}",
+            logger.LogDebug("Environment validation failed for {Org}: {Error}",
                 environment.OrganizationUrl, ex.Message);
             return false;
         }
@@ -527,29 +517,4 @@ public class AzureEnvironmentDiscovery
             return (false, string.Empty);
         }
     }
-}
-
-// Data classes
-public class AzureDiscoveryResult
-{
-    public TokenCredential? AzureCredential { get; set; }
-    public List<DevOpsEnvironmentInfo> DevOpsEnvironments { get; set; } = [];
-    public AzureCliInfo AzureCliInfo { get; set; } = new();
-}
-
-public class DevOpsEnvironmentInfo
-{
-    public string OrganizationUrl { get; set; } = string.Empty;
-    public string? PersonalAccessToken { get; set; }
-    public string Source { get; set; } = string.Empty;
-    public bool HasCredentials { get; set; }
-    public string? CredentialTarget { get; set; }
-}
-
-public class AzureCliInfo
-{
-    public bool IsLoggedIn { get; set; }
-    public string? CurrentSubscription { get; set; }
-    public string? TenantId { get; set; }
-    public string? UserName { get; set; }
 }

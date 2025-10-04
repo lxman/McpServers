@@ -1,6 +1,9 @@
-﻿using AzureMcp.Authentication;
+using AzureMcp.Authentication;
+using AzureMcp.Authentication.models;
 using AzureMcp.Services.DevOps;
 using AzureMcp.Services.DevOps.Models;
+using AzureMcp.Services.ResourceManagement;
+using AzureMcp.Services.CostManagement;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -19,46 +22,67 @@ public static class ServiceCollectionExtensions
         ILoggerFactory loggerFactory = tempProvider.GetService<ILoggerFactory>() ?? 
                                        LoggerFactory.Create(builder => builder.AddDebug());
 
+        // Register credential discovery and selection services
+        services.AddSingleton<CredentialDiscoveryService>(provider =>
+        {
+            ILogger<CredentialDiscoveryService> logger = provider.GetService<ILogger<CredentialDiscoveryService>>() ??
+                            loggerFactory.CreateLogger<CredentialDiscoveryService>();
+            return new CredentialDiscoveryService(logger);
+        });
+
+        services.AddSingleton<CredentialSelectionService>(provider =>
+        {
+            ILogger<CredentialSelectionService> logger = provider.GetService<ILogger<CredentialSelectionService>>() ??
+                            loggerFactory.CreateLogger<CredentialSelectionService>();
+            var discoveryService = provider.GetRequiredService<CredentialDiscoveryService>();
+            return new CredentialSelectionService(logger, discoveryService);
+        });
+
+
+        // Discover Azure DevOps environments only (ARM credentials now handled by CredentialSelectionService)
         ILogger<AzureEnvironmentDiscovery> discoveryLogger = loggerFactory.CreateLogger<AzureEnvironmentDiscovery>();
         var discovery = new AzureEnvironmentDiscovery(discoveryLogger);
+        List<DevOpsEnvironmentInfo> devOpsEnvironments = await discovery.DiscoverDevOpsEnvironmentsAsync();
 
-        // Discover all Azure environments
-        AzureDiscoveryResult discoveryResult = await discovery.DiscoverAzureEnvironmentsAsync();
-
-        // Register discovery result for tools to access
-        services.AddSingleton(discoveryResult);
-
-        // Configure Azure Resource Manager credentials
-        if (discoveryResult.AzureCredential != null)
+        // Configure Azure Resource Management service using CredentialSelectionService
+        services.AddScoped<IResourceManagementService>(provider =>
         {
-            services.AddSingleton<ICredentialManager>(provider =>
-            {
-                ILogger<AzureCredentialManager> logger = provider.GetService<ILogger<AzureCredentialManager>>() ??
-                                                         loggerFactory.CreateLogger<AzureCredentialManager>();
-                return new AzureCredentialManager(logger);
-            });
-        }
+            ILogger<ResourceManagementService> logger = provider.GetService<ILogger<ResourceManagementService>>() ??
+                                                        loggerFactory.CreateLogger<ResourceManagementService>();
+            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
+            return new ResourceManagementService(credentialService, logger);
+        });
+
+        // Configure Azure Cost Management service using CredentialSelectionService
+        services.AddScoped<ICostManagementService>(provider =>
+        {
+            ILogger<CostManagementService> logger = provider.GetService<ILogger<CostManagementService>>() ??
+                                                    loggerFactory.CreateLogger<CostManagementService>();
+            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
+            return new CostManagementService(credentialService, logger);
+        });
+
 
         // Configure Azure DevOps services
-        if (discoveryResult.DevOpsEnvironments.Count > 0)
+        if (devOpsEnvironments.Count > 0)
         {
             // Register DevOps credential manager for primary organization
             services.AddSingleton<DevOpsCredentialManager>(provider =>
             {
                 ILogger<DevOpsCredentialManager> logger = provider.GetService<ILogger<DevOpsCredentialManager>>() ??
                                                           loggerFactory.CreateLogger<DevOpsCredentialManager>();
-                DevOpsEnvironmentInfo primaryEnv = discoveryResult.DevOpsEnvironments.First();
+                DevOpsEnvironmentInfo primaryEnv = devOpsEnvironments.First();
                 return new DevOpsCredentialManager(primaryEnv, logger);
             });
 
             // Register multi-organization factory if multiple orgs found
-            if (discoveryResult.DevOpsEnvironments.Count > 1)
+            if (devOpsEnvironments.Count > 1)
             {
                 services.AddSingleton<IMultiOrgDevOpsFactory>(provider =>
                 {
                     ILogger<MultiOrgDevOpsFactory> logger = provider.GetService<ILogger<MultiOrgDevOpsFactory>>() ??
                                                             loggerFactory.CreateLogger<MultiOrgDevOpsFactory>();
-                    return new MultiOrgDevOpsFactory(discoveryResult.DevOpsEnvironments, logger);
+                    return new MultiOrgDevOpsFactory(devOpsEnvironments, logger);
                 });
             }
 
@@ -82,6 +106,7 @@ public static class ServiceCollectionExtensions
             });
         }
 
+
         services.AddHttpClient();
         return services;
     }
@@ -97,23 +122,17 @@ public interface IMultiOrgDevOpsFactory
     DevOpsCredentialManager CreateManagerForOrganization(string organizationUrl);
 }
 
-public class MultiOrgDevOpsFactory : IMultiOrgDevOpsFactory
+public class MultiOrgDevOpsFactory(
+    List<DevOpsEnvironmentInfo> environments,
+    ILogger<MultiOrgDevOpsFactory> logger)
+    : IMultiOrgDevOpsFactory
 {
-    private readonly List<DevOpsEnvironmentInfo> _environments;
-    private readonly ILogger<MultiOrgDevOpsFactory> _logger;
+    private readonly ILogger<MultiOrgDevOpsFactory> _logger = logger;
     private readonly Dictionary<string, DevOpsCredentialManager> _managerCache = new();
-
-    public MultiOrgDevOpsFactory(
-        List<DevOpsEnvironmentInfo> environments,
-        ILogger<MultiOrgDevOpsFactory> logger)
-    {
-        _environments = environments;
-        _logger = logger;
-    }
 
     public List<string> GetDiscoveredOrganizations()
     {
-        return _environments.Select(e => e.OrganizationUrl).ToList();
+        return environments.Select(e => e.OrganizationUrl).ToList();
     }
 
     public IDevOpsService CreateServiceForOrganization(string organizationUrl)
@@ -128,12 +147,12 @@ public class MultiOrgDevOpsFactory : IMultiOrgDevOpsFactory
         if (_managerCache.TryGetValue(organizationUrl, out DevOpsCredentialManager? cached))
             return cached;
 
-        DevOpsEnvironmentInfo? environment = _environments.FirstOrDefault(e => 
+        DevOpsEnvironmentInfo? environment = environments.FirstOrDefault(e => 
             e.OrganizationUrl.Equals(organizationUrl, StringComparison.OrdinalIgnoreCase));
         
         if (environment == null)
         {
-            string available = string.Join(", ", _environments.Select(e => e.OrganizationUrl));
+            string available = string.Join(", ", environments.Select(e => e.OrganizationUrl));
             throw new InvalidOperationException(
                 $"Organization '{organizationUrl}' not found in discovered environments. " +
                 $"Available: {available}");
@@ -150,14 +169,9 @@ public class MultiOrgDevOpsFactory : IMultiOrgDevOpsFactory
 /// <summary>
 /// Service that provides helpful guidance when no credentials are found
 /// </summary>
-public class NoCredentialsDevOpsService : IDevOpsService
+public class NoCredentialsDevOpsService(ILogger<DevOpsService> logger) : IDevOpsService
 {
-    private readonly ILogger<DevOpsService> _logger;
-
-    public NoCredentialsDevOpsService(ILogger<DevOpsService> logger)
-    {
-        _logger = logger;
-    }
+    private readonly ILogger<DevOpsService> _logger = logger;
 
     public Task<IEnumerable<ProjectDto>> GetProjectsAsync()
     {
