@@ -1,13 +1,13 @@
+using System.Diagnostics;
 using System.Text.Json;
+using Azure.Core;
+using Azure.Identity;
+using AzureMcp.Authentication.models;
 using CredentialManagement;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
-using Azure.Identity;
-using Azure.Core;
-using AzureMcp.Authentication.models;
 using Microsoft.TeamFoundation.Core.WebApi;
-using Microsoft.VisualStudio.Services.WebApi;
 using Microsoft.VisualStudio.Services.Common;
+using Microsoft.VisualStudio.Services.WebApi;
 using Process = System.Diagnostics.Process;
 
 namespace AzureMcp.Authentication;
@@ -303,10 +303,8 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
                 await AddLogLine($"Recovered PAT from {target} - {pat}");
                 return pat;
             }
-            else
-            {
-                await AddLogLine("No PAT found in this source");
-            }
+
+            await AddLogLine("No PAT found in this source");
         }
 
         return Environment.GetEnvironmentVariable("AZURE_DEVOPS_EXT_PAT") ??

@@ -1,9 +1,11 @@
 using AzureMcp.Authentication;
 using AzureMcp.Authentication.models;
+using AzureMcp.Services.CostManagement;
 using AzureMcp.Services.DevOps;
 using AzureMcp.Services.DevOps.Models;
+using AzureMcp.Services.KeyVault;
 using AzureMcp.Services.ResourceManagement;
-using AzureMcp.Services.CostManagement;
+using AzureMcp.Services.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -61,6 +63,36 @@ public static class ServiceCollectionExtensions
             var credentialService = provider.GetRequiredService<CredentialSelectionService>();
             return new CostManagementService(credentialService, logger);
         });
+
+        // Configure Azure Storage service using CredentialSelectionService
+        services.AddScoped<IStorageService>(provider =>
+        {
+            ILogger<StorageService> logger = provider.GetService<ILogger<StorageService>>() ??
+                                             loggerFactory.CreateLogger<StorageService>();
+            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
+            return new StorageService(credentialService, logger);
+        });
+
+        // Configure Azure File Storage service using CredentialSelectionService
+        services.AddScoped<IFileStorageService>(provider =>
+        {
+            ILogger<FileStorageService> logger = provider.GetService<ILogger<FileStorageService>>() ??
+                                                 loggerFactory.CreateLogger<FileStorageService>();
+            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
+            return new FileStorageService(credentialService, logger);
+        });
+
+        // Configure Azure Key Vault service using CredentialSelectionService
+        services.AddScoped<IKeyVaultService>(provider =>
+        {
+            ILogger<KeyVaultService> logger = provider.GetService<ILogger<KeyVaultService>>() ??
+                      loggerFactory.CreateLogger<KeyVaultService>();
+            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
+            return new KeyVaultService(credentialService, logger);
+        });
+
+
+
 
 
         // Configure Azure DevOps services

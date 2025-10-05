@@ -1,11 +1,11 @@
+using AzureMcp.Configuration;
+using AzureMcp.Prompts;
+using AzureMcp.Resources;
+using AzureMcp.Tools;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
-using AzureMcp.Configuration;
-using AzureMcp.Tools;
-using AzureMcp.Resources;
-using AzureMcp.Prompts;
 
 namespace AzureMcp;
 
@@ -56,8 +56,12 @@ public class Program
             .WithTools<ResourceManagementTools>()
             .WithTools<CredentialManagementTools>()
             .WithTools<CostManagementTools>()
+            .WithTools<FileStorageTools>()
+            .WithTools<StorageTools>()
+            .WithTools<KeyVaultTools>()
             .WithResources<EmptyResourceProvider>()
             .WithPrompts<EmptyPromptProvider>();
+
 
         IHost host = builder.Build();
         await host.RunAsync();

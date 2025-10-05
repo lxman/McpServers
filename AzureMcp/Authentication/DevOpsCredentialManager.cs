@@ -1,6 +1,7 @@
 ﻿using AzureMcp.Authentication.models;
 using CredentialManagement;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.WebApi;
 
@@ -124,7 +125,7 @@ public class DevOpsCredentialManager
     {
         try
         {
-            var client = _connection.GetClient<Microsoft.TeamFoundation.Core.WebApi.ProjectHttpClient>();
+            var client = _connection.GetClient<ProjectHttpClient>();
             await client.GetProjects();
             return true;
         }

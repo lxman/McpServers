@@ -1,9 +1,9 @@
-using AzureMcp.Services.ResourceManagement;
-using AzureMcp.Services.ResourceManagement.Models;
-using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json;
 using AzureMcp.Common;
+using AzureMcp.Services.ResourceManagement;
+using AzureMcp.Services.ResourceManagement.Models;
+using ModelContextProtocol.Server;
 
 namespace AzureMcp.Tools;
 

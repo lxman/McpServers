@@ -1,6 +1,8 @@
-﻿# AzureMcp - Azure DevOps MCP Server
 
-An MCP (Model Context Protocol) server that provides seamless Azure DevOps integration, allowing Claude to interact with Azure DevOps projects, work items, repositories, pipelines, and YAML files with zero configuration.
+# AzureMcp - Comprehensive Azure MCP Server
+
+An MCP (Model Context Protocol) server that provides seamless Azure integration, allowing Claude to interact with Azure DevOps, Azure Storage, Resource Management, and Cost Management with zero configuration.
+
 
 ## 🚀 Zero Configuration Experience
 
@@ -15,6 +17,14 @@ An MCP (Model Context Protocol) server that provides seamless Azure DevOps integ
 - **Build Pipelines**: Access build definitions, build history, and trigger builds
 - **YAML Files**: Retrieve and edit pipeline YAML files directly
 - **Release Pipelines**: Access release definitions and deployment history
+
+
+### Azure Storage Integration
+- **Storage Accounts**: List and retrieve storage accounts across subscriptions
+- **Blob Containers**: Create, list, and manage blob containers
+- **Blob Operations**: Upload, download, copy, and delete blobs
+- **Blob Metadata**: Get and set custom metadata on blobs
+- **SAS Tokens**: Generate temporary access URLs for secure sharing
 
 ### Authentication
 - **Local Configuration**: Simple JSON file in executable directory
@@ -110,6 +120,39 @@ AzureMcp/bin/Release/net9.0/
 ### Release Pipeline Operations
 - `list_release_definitions`: List release pipelines
 - `get_release_definition`: Get release pipeline details
+- `get_releases`: Get releases for a project (optionally filtered by definition)
+
+
+
+### Azure Storage Operations
+
+#### Storage Account Management
+- `list_storage_accounts`: List all storage accounts (optionally filtered by subscription)
+- `get_storage_account`: Get details of a specific storage account
+
+#### Container Management
+- `list_containers`: List all containers in a storage account
+- `get_container`: Get details of a specific container
+- `create_container`: Create a new container with optional metadata
+- `delete_container`: Delete a container
+- `container_exists`: Check if a container exists
+
+#### Blob Operations
+- `list_blobs`: List blobs in a container (with optional prefix filter)
+- `get_blob_properties`: Get properties and metadata of a blob
+- `download_blob_as_text`: Download blob content as text
+- `upload_blob_from_text`: Upload text content as a blob
+- `delete_blob`: Delete a blob
+- `blob_exists`: Check if a blob exists
+- `copy_blob`: Copy a blob between containers or accounts
+
+#### Blob Metadata
+- `get_blob_metadata`: Get custom metadata for a blob
+- `set_blob_metadata`: Set custom metadata on a blob
+
+#### SAS (Shared Access Signature) Tokens
+- `generate_blob_sas_url`: Generate temporary access URL for a blob
+- `generate_container_sas_url`: Generate temporary access URL for a container
 
 ## 💬 Usage Examples
 
@@ -134,6 +177,19 @@ AzureMcp/bin/Release/net9.0/
 "Create a new bug for the login issue"
 "Get details of work item 95608"
 ```
+
+### Azure Storage Management
+```
+"List all my storage accounts"
+"Show me the containers in mystorageaccount"
+"List all blobs in the backups container"
+"Upload this configuration data to settings/config.json in mystorageaccount"
+"Download the content of data.json from the files container"
+"Copy backup.zip from container-a to container-b in mystorageaccount"
+"Generate a 2-hour download link for report.pdf in the reports container"
+"Create a new container called archives with metadata"
+```
+
 
 ## 🔧 Architecture
 

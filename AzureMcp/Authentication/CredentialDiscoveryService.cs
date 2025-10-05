@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Azure.Core;
 using Azure.Identity;
 using Azure.ResourceManager;
@@ -258,9 +259,9 @@ public class CredentialDiscoveryService(ILogger<CredentialDiscoveryService> logg
     {
         try
         {
-            var process = new System.Diagnostics.Process
+            var process = new Process
             {
-                StartInfo = new System.Diagnostics.ProcessStartInfo
+                StartInfo = new ProcessStartInfo
                 {
                     FileName = command,
                     Arguments = arguments,

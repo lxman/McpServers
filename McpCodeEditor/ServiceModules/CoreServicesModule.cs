@@ -1,4 +1,4 @@
-﻿using McpCodeEditor.Interfaces;
+using McpCodeEditor.Interfaces;
 using McpCodeEditor.Services;
 using McpCodeEditor.Services.Security;
 using Microsoft.Extensions.DependencyInjection;
@@ -67,6 +67,9 @@ public static class CoreServicesModule
         services.AddSingleton<IPathValidationService, PathValidationService>();
         
         // File and code services
+        
+        // Type Research Attestation Service - Required for code file creation safety
+        services.AddSingleton<TypeResearchAttestationService>();
         services.AddSingleton<FileOperationsService>();
         services.AddSingleton<CodeAnalysisService>();
         services.AddSingleton<ConversionService>();

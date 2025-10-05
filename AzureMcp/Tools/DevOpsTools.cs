@@ -1,9 +1,9 @@
-﻿using AzureMcp.Services.DevOps;
-using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json;
 using AzureMcp.Common;
+using AzureMcp.Services.DevOps;
 using AzureMcp.Services.DevOps.Models;
+using ModelContextProtocol.Server;
 
 namespace AzureMcp.Tools;
 
@@ -255,6 +255,43 @@ public class DevOpsTools(IDevOpsService devOpsService)
             return HandleError(ex, "ListReleaseDefinitions");
         }
     }
+
+    [McpServerTool]
+    [Description("Get details of a specific release definition")]
+    public async Task<string> GetReleaseDefinitionAsync(
+        [Description("Project name")] string projectName,
+        [Description("Release definition ID")] int definitionId)
+    {
+        try
+        {
+            ReleaseDefinitionDto? definition = await devOpsService.GetReleaseDefinitionAsync(projectName, definitionId);
+            return JsonSerializer.Serialize(new { success = true, releaseDefinition = definition }, 
+                SerializerOptions.JsonOptionsIndented);
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "GetReleaseDefinition");
+        }
+    }
+
+    [McpServerTool]
+    [Description("Get releases for a project, optionally filtered by release definition")]
+    public async Task<string> GetReleasesAsync(
+        [Description("Project name")] string projectName,
+        [Description("Optional release definition ID to filter")] int? definitionId = null)
+    {
+        try
+        {
+            IEnumerable<ReleaseDto> releases = await devOpsService.GetReleasesAsync(projectName, definitionId);
+            return JsonSerializer.Serialize(new { success = true, releases = releases.ToArray() }, 
+                SerializerOptions.JsonOptionsIndented);
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "GetReleases");
+        }
+    }
+
 
     #endregion
 

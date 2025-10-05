@@ -5,7 +5,7 @@
 /// </summary>
 public class AzureException : Exception
 {
-    public AzureException() : base()
+    public AzureException()
     {
     }
 
