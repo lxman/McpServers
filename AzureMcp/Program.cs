@@ -1,4 +1,4 @@
-using AzureMcp.Configuration;
+﻿using AzureMcp.Configuration;
 using AzureMcp.Prompts;
 using AzureMcp.Resources;
 using AzureMcp.Tools;
@@ -59,6 +59,7 @@ public class Program
             .WithTools<FileStorageTools>()
             .WithTools<StorageTools>()
             .WithTools<KeyVaultTools>()
+            .WithTools<SqlTools>()
             .WithResources<EmptyResourceProvider>()
             .WithPrompts<EmptyPromptProvider>();
 

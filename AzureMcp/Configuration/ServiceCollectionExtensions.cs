@@ -1,10 +1,12 @@
-using AzureMcp.Authentication;
+﻿using AzureMcp.Authentication;
 using AzureMcp.Authentication.models;
 using AzureMcp.Services.CostManagement;
 using AzureMcp.Services.DevOps;
 using AzureMcp.Services.DevOps.Models;
 using AzureMcp.Services.KeyVault;
 using AzureMcp.Services.ResourceManagement;
+using AzureMcp.Services.Sql.DbManagement;
+using AzureMcp.Services.Sql.QueryExecution;
 using AzureMcp.Services.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -91,8 +93,23 @@ public static class ServiceCollectionExtensions
             return new KeyVaultService(credentialService, logger);
         });
 
+        // Configure Azure SQL Database Management service using CredentialSelectionService
+        services.AddScoped<ISqlDatabaseService>(provider =>
+        {
+            ILogger<SqlDatabaseService> logger = provider.GetService<ILogger<SqlDatabaseService>>() ??
+                      loggerFactory.CreateLogger<SqlDatabaseService>();
+            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
+            return new SqlDatabaseService(credentialService, logger);
+        });
 
-
+        // Configure SQL Query Execution service using CredentialSelectionService
+        services.AddScoped<ISqlQueryService>(provider =>
+        {
+            ILogger<SqlQueryService> logger = provider.GetService<ILogger<SqlQueryService>>() ??
+                      loggerFactory.CreateLogger<SqlQueryService>();
+            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
+            return new SqlQueryService(credentialService, logger);
+        });
 
 
         // Configure Azure DevOps services
