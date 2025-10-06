@@ -793,17 +793,34 @@ public class SqlDatabaseService(
 
             SubscriptionResource subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
-            MySqlServerResource server = await resourceGroup.GetMySqlServers().GetAsync(serverName);
 
-            await server.DeleteAsync(WaitUntil.Completed);
+            // Try Flexible Server first (newer deployment model)
+            try
+            {
+                MySqlFlexibleServerResource flexibleServer = await resourceGroup.GetMySqlFlexibleServers().GetAsync(serverName);
+                await flexibleServer.DeleteAsync(WaitUntil.Completed);
+                logger.LogInformation("Deleted MySQL Flexible Server {ServerName}", serverName);
+                return true;
+            }
+            catch (RequestFailedException ex) when (ex.Status == 404)
+            {
+                // Not a Flexible Server, try Single Server
+                logger.LogDebug("MySQL Flexible Server {ServerName} not found, trying Single Server", serverName);
+            }
 
-            logger.LogInformation("Deleted MySQL server {ServerName}", serverName);
-            return true;
-        }
-        catch (RequestFailedException ex) when (ex.Status == 404)
-        {
-            logger.LogWarning("MySQL server {ServerName} not found", serverName);
-            return false;
+            // Try Single Server (older deployment model)
+            try
+            {
+                MySqlServerResource server = await resourceGroup.GetMySqlServers().GetAsync(serverName);
+                await server.DeleteAsync(WaitUntil.Completed);
+                logger.LogInformation("Deleted MySQL Single Server {ServerName}", serverName);
+                return true;
+            }
+            catch (RequestFailedException ex) when (ex.Status == 404)
+            {
+                logger.LogWarning("MySQL server {ServerName} not found (neither Flexible nor Single Server)", serverName);
+                return false;
+            }
         }
         catch (Exception ex)
         {
@@ -811,6 +828,62 @@ public class SqlDatabaseService(
             throw;
         }
     }
+
+
+    public async Task<IEnumerable<ServerDto>> ListMySqlFlexibleServersAsync(string? subscriptionId = null, string? resourceGroupName = null)
+    {
+        try
+        {
+            ArmClient client = await GetArmClientAsync();
+            var servers = new List<ServerDto>();
+
+            if (!string.IsNullOrEmpty(subscriptionId))
+            {
+                SubscriptionResource subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+
+                if (!string.IsNullOrEmpty(resourceGroupName))
+                {
+                    ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
+                    await foreach (MySqlFlexibleServerResource server in resourceGroup.GetMySqlFlexibleServers().GetAllAsync())
+                    {
+                        servers.Add(MapMySqlFlexibleServer(server));
+                    }
+                }
+                else
+                {
+                    await foreach (ResourceGroupResource resourceGroup in subscription.GetResourceGroups().GetAllAsync())
+                    {
+                        await foreach (MySqlFlexibleServerResource server in resourceGroup.GetMySqlFlexibleServers().GetAllAsync())
+                        {
+                            servers.Add(MapMySqlFlexibleServer(server));
+                        }
+                    }
+                }
+            }
+            else
+            {
+                await foreach (SubscriptionResource subscription in client.GetSubscriptions().GetAllAsync())
+                {
+                    await foreach (ResourceGroupResource resourceGroup in subscription.GetResourceGroups().GetAllAsync())
+                    {
+                        await foreach (MySqlFlexibleServerResource server in resourceGroup.GetMySqlFlexibleServers().GetAllAsync())
+                        {
+                            servers.Add(MapMySqlFlexibleServer(server));
+                        }
+                    }
+                }
+            }
+
+            logger.LogInformation("Retrieved {Count} MySQL Flexible servers", servers.Count);
+            return servers;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error listing MySQL Flexible servers");
+            throw;
+        }
+    }
+
 
 
     #endregion
@@ -968,6 +1041,26 @@ public class SqlDatabaseService(
             DatabaseType = "MySQL"
         };
     }
+
+
+    private static ServerDto MapMySqlFlexibleServer(MySqlFlexibleServerResource server)
+    {
+        return new ServerDto
+        {
+            Name = server.Data.Name,
+            ResourceGroupName = server.Id.ResourceGroupName ?? string.Empty,
+            Location = server.Data.Location.Name,
+            Version = server.Data.Version?.ToString() ?? string.Empty,
+            State = server.Data.State?.ToString() ?? "Unknown",
+            FullyQualifiedDomainName = server.Data.FullyQualifiedDomainName,
+            AdministratorLogin = server.Data.AdministratorLogin,
+            PublicNetworkAccess = server.Data.Network?.PublicNetworkAccess?.ToString()?.Equals("Enabled", StringComparison.OrdinalIgnoreCase) ?? false,
+            MinimalTlsVersion = null, // Flexible Server doesn't expose MinimalTlsVersion in the same way
+            Tags = server.Data.Tags?.ToDictionary(t => t.Key, t => t.Value),
+            ServerType = "MySQL-Flexible"
+        };
+    }
+
 
     #endregion
 }

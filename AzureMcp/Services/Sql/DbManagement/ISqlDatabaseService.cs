@@ -44,4 +44,8 @@ public interface ISqlDatabaseService
     Task<IEnumerable<ServerDto>> ListMySqlServersAsync(string? subscriptionId = null, string? resourceGroupName = null);
     Task<IEnumerable<DatabaseDto>> ListMySqlDatabasesAsync(string serverName, string resourceGroupName, string? subscriptionId = null);
     Task<bool> DeleteMySqlServerAsync(string serverName, string resourceGroupName, string? subscriptionId = null);
+    
+    // MySQL Flexible Server Specific
+    Task<IEnumerable<ServerDto>> ListMySqlFlexibleServersAsync(string? subscriptionId = null, string? resourceGroupName = null);
+
 }

@@ -405,6 +405,25 @@ public class SqlTools(ISqlDatabaseService databaseService, ISqlQueryService quer
         }
     }
 
+    [McpServerTool]
+    [Description("List Azure MySQL Flexible servers")]
+    public async Task<string> ListMySqlFlexibleServersAsync(
+        [Description("Optional subscription ID")] string? subscriptionId = null,
+        [Description("Optional resource group name")] string? resourceGroupName = null)
+    {
+        try
+        {
+            IEnumerable<ServerDto> servers = await databaseService.ListMySqlFlexibleServersAsync(subscriptionId, resourceGroupName);
+            return JsonSerializer.Serialize(new { success = true, servers = servers.ToArray() },
+                SerializerOptions.JsonOptionsIndented);
+        }
+        catch (Exception ex)
+        {
+            return HandleError(ex, "ListMySqlFlexibleServers");
+        }
+    }
+
+
 
     #endregion
 

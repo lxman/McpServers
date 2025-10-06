@@ -72,11 +72,11 @@ public class AdvancedFileReadingTools(
     }
 
     [McpServerTool]
-    [Description("Read lines around a specific line number with context and version token for editing")]
+    [Description("Read lines around a specific line number with context and version token for editing. Use find_in_file first to locate code, then read with minimal context")]
     public async Task<string> AdvancedFileReadAroundLine(
         [Description("Path to the file - must be canonical")] string filePath,
         [Description("Target line number (1-based)")] int lineNumber,
-        [Description("Number of context lines before and after")] int contextLines = 10)
+        [Description("Number of context lines before and after (default: 10). Larger values increase token consumption")] int contextLines = 10)
     {
         try
         {
