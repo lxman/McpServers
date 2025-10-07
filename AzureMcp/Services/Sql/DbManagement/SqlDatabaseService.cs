@@ -8,7 +8,7 @@ using Azure.ResourceManager.PostgreSql.FlexibleServers;
 using Azure.ResourceManager.Resources;
 using Azure.ResourceManager.Sql;
 using Azure.ResourceManager.Sql.Models;
-using AzureMcp.Authentication;
+using AzureMcp.Services.Core;
 using AzureMcp.Services.Sql.DbManagement.Models;
 using Microsoft.Extensions.Logging;
 
@@ -16,35 +16,16 @@ using Microsoft.Extensions.Logging;
 namespace AzureMcp.Services.Sql.DbManagement;
 
 public class SqlDatabaseService(
-    CredentialSelectionService credentialService,
+    ArmClientFactory armClientFactory,
     ILogger<SqlDatabaseService> logger) : ISqlDatabaseService
 {
-    private ArmClient? _armClient;
-
-    private async Task<ArmClient> GetArmClientAsync()
-    {
-        if (_armClient != null)
-            return _armClient;
-
-        (TokenCredential? credential, CredentialSelectionResult result) = await credentialService.GetCredentialAsync();
-
-        if (result.Status == SelectionStatus.NoCredentialsFound)
-        {
-            throw new InvalidOperationException(
-                "No Azure credentials found. Please authenticate using Azure CLI, Visual Studio, or environment variables.");
-        }
-
-        _armClient = new ArmClient(credential);
-        return _armClient;
-    }
-
     #region Server Management
 
     public async Task<IEnumerable<ServerDto>> ListServersAsync(string? subscriptionId = null, string? resourceGroupName = null)
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var servers = new List<ServerDto>();
 
             if (!string.IsNullOrEmpty(subscriptionId))
@@ -97,7 +78,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -129,7 +110,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -165,7 +146,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -200,7 +181,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -234,7 +215,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -251,7 +232,7 @@ public class SqlDatabaseService(
                 MaxSizeBytes = maxSizeBytes
             };
 
-            if (tags != null)
+            if (tags is not null)
             {
                 foreach (KeyValuePair<string, string> tag in tags)
                 {
@@ -278,7 +259,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -315,7 +296,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -346,7 +327,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -379,7 +360,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -415,7 +396,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -452,7 +433,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -483,7 +464,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -519,7 +500,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var servers = new List<ServerDto>();
 
             if (!string.IsNullOrEmpty(subscriptionId))
@@ -567,7 +548,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -598,7 +579,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -647,7 +628,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var servers = new List<ServerDto>();
 
             if (!string.IsNullOrEmpty(subscriptionId))
@@ -705,7 +686,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var servers = new List<ServerDto>();
 
             if (!string.IsNullOrEmpty(subscriptionId))
@@ -753,7 +734,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -784,7 +765,7 @@ public class SqlDatabaseService(
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
@@ -829,12 +810,11 @@ public class SqlDatabaseService(
         }
     }
 
-
     public async Task<IEnumerable<ServerDto>> ListMySqlFlexibleServersAsync(string? subscriptionId = null, string? resourceGroupName = null)
     {
         try
         {
-            ArmClient client = await GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var servers = new List<ServerDto>();
 
             if (!string.IsNullOrEmpty(subscriptionId))
@@ -883,8 +863,6 @@ public class SqlDatabaseService(
             throw;
         }
     }
-
-
 
     #endregion
 
@@ -954,9 +932,9 @@ public class SqlDatabaseService(
             CreationDate = pool.Data.CreatedOn?.DateTime,
             Edition = pool.Data.Sku?.Tier,
             Dtu = pool.Data.Sku?.Capacity,
-            DatabaseDtuMax = pool.Data.PerDatabaseSettings?.MaxCapacity != null
+            DatabaseDtuMax = pool.Data.PerDatabaseSettings?.MaxCapacity is not null
                 ? (int?)pool.Data.PerDatabaseSettings.MaxCapacity.Value : null,
-            DatabaseDtuMin = pool.Data.PerDatabaseSettings?.MinCapacity != null
+            DatabaseDtuMin = pool.Data.PerDatabaseSettings?.MinCapacity is not null
                 ? (int?)pool.Data.PerDatabaseSettings.MinCapacity.Value : null,
             StorageMB = pool.Data.MaxSizeBytes / (1024 * 1024),
             Tags = pool.Data.Tags?.ToDictionary(t => t.Key, t => t.Value)

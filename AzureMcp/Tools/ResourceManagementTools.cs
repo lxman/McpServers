@@ -34,7 +34,7 @@ public class ResourceManagementTools(IResourceManagementService resourceService)
         try
         {
             SubscriptionDto? subscription = await resourceService.GetSubscriptionAsync(subscriptionId);
-            if (subscription == null)
+            if (subscription is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Subscription {subscriptionId} not found" },
                     SerializerOptions.JsonOptionsIndented);
@@ -76,7 +76,7 @@ public class ResourceManagementTools(IResourceManagementService resourceService)
         try
         {
             ResourceGroupDto? resourceGroup = await resourceService.GetResourceGroupAsync(subscriptionId, resourceGroupName);
-            if (resourceGroup == null)
+            if (resourceGroup is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Resource group {resourceGroupName} not found" },
                     SerializerOptions.JsonOptionsIndented);
@@ -136,7 +136,7 @@ public class ResourceManagementTools(IResourceManagementService resourceService)
         try
         {
             GenericResourceDto? resource = await resourceService.GetResourceAsync(resourceId);
-            if (resource == null)
+            if (resource is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Resource {resourceId} not found" },
                     SerializerOptions.JsonOptionsIndented);

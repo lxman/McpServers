@@ -1,10 +1,9 @@
 using System.Text;
 using Azure;
-using Azure.Core;
 using Azure.Storage.Files.Shares;
 using Azure.Storage.Files.Shares.Models;
 using Azure.Storage.Sas;
-using AzureMcp.Authentication;
+using AzureMcp.Services.Core;
 using AzureMcp.Services.Storage.Models;
 using Microsoft.Extensions.Logging;
 
@@ -13,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace AzureMcp.Services.Storage;
 
 public class FileStorageService(
-    CredentialSelectionService credentialService,
+    ArmClientFactory armClientFactory,
     ILogger<FileStorageService> logger) : IFileStorageService
 {
     private readonly Dictionary<string, ShareServiceClient> _shareServiceClients = new();
@@ -23,16 +22,8 @@ public class FileStorageService(
         if (_shareServiceClients.TryGetValue(accountName, out ShareServiceClient? existingClient))
             return existingClient;
 
-        (TokenCredential? credential, CredentialSelectionResult result) = await credentialService.GetCredentialAsync();
-
-        if (result.Status == SelectionStatus.NoCredentialsFound)
-        {
-            throw new InvalidOperationException(
-                "No Azure credentials found. Please authenticate using Azure CLI, Visual Studio, or environment variables.");
-        }
-
         var serviceUri = new Uri($"https://{accountName}.file.core.windows.net");
-        var client = new ShareServiceClient(serviceUri, credential);
+        var client = new ShareServiceClient(serviceUri, await armClientFactory.GetCredentialAsync());
         _shareServiceClients[accountName] = client;
 
         return client;
@@ -166,7 +157,7 @@ public class FileStorageService(
             ShareDirectoryClient directoryClient = shareClient.GetDirectoryClient(directoryPath);
 
             Response<ShareDirectoryInfo> response = await directoryClient.CreateIfNotExistsAsync();
-            bool created = response != null;
+            bool created = response is not null;
 
             if (created)
                 logger.LogInformation("Created directory {DirectoryPath} in {ShareName}/{AccountName}", directoryPath, shareName, accountName);
@@ -674,8 +665,8 @@ public class FileStorageService(
             Path = filePath,
             ContentLength = properties.ContentLength,
             ContentType = properties.ContentType,
-            ContentEncoding = properties.ContentEncoding != null ? string.Join(", ", properties.ContentEncoding) : null,
-            ContentLanguage = properties.ContentLanguage != null ? string.Join(", ", properties.ContentLanguage) : null,
+            ContentEncoding = properties.ContentEncoding is not null ? string.Join(", ", properties.ContentEncoding) : null,
+            ContentLanguage = properties.ContentLanguage is not null ? string.Join(", ", properties.ContentLanguage) : null,
             ContentDisposition = properties.ContentDisposition,
             CacheControl = properties.CacheControl,
             ContentHash = properties.ContentHash,

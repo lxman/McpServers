@@ -36,7 +36,7 @@ public class CredentialManagementTools(
             }
 
             List<CredentialInfo> credentials = result.AvailableCredentials ?? 
-                                               (result.SelectedCredential != null ? [result.SelectedCredential] : []);
+                                               (result.SelectedCredential is not null ? [result.SelectedCredential] : []);
 
             if (credentials.Count == 0)
             {
@@ -56,7 +56,7 @@ public class CredentialManagementTools(
             }
 
             CredentialInfo? selected = selectionService.GetSelectedCredential();
-            if (selected != null)
+            if (selected is not null)
             {
                 output.Add($"✅ Currently using: {selected.Source}");
             }
@@ -92,7 +92,7 @@ public class CredentialManagementTools(
                 return $"❌ Error: {result.ErrorMessage}";
             }
 
-            if (result.Status != SelectionStatus.Selected || result.SelectedCredential == null)
+            if (result.Status != SelectionStatus.Selected || result.SelectedCredential is null)
                 return "❌ Failed to select credential";
             CredentialInfo? info = result.SelectedCredential;
             return $"✅ Selected {info.Source} credential\n\n" +
@@ -120,7 +120,7 @@ public class CredentialManagementTools(
         {
             CredentialInfo? selected = selectionService.GetSelectedCredential();
             
-            if (selected == null)
+            if (selected is null)
             {
                 return "❌ No credential selected.\n\n" +
                        "Use azure:list_credentials to see available credentials, then azure:select_credential to choose one.";

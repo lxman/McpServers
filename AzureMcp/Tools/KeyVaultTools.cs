@@ -39,7 +39,7 @@ public class KeyVaultTools(IKeyVaultService keyVaultService)
         try
         {
             SecretDto? secret = await keyVaultService.GetSecretAsync(vaultName, secretName, version);
-            if (secret == null)
+            if (secret is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Secret {secretName} not found in vault {vaultName}" },
                     SerializerOptions.JsonOptionsIndented);
@@ -153,7 +153,7 @@ public class KeyVaultTools(IKeyVaultService keyVaultService)
         try
         {
             DeletedSecretDto? deletedSecret = await keyVaultService.GetDeletedSecretAsync(vaultName, secretName);
-            if (deletedSecret == null)
+            if (deletedSecret is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Deleted secret {secretName} not found in vault {vaultName}" },
                     SerializerOptions.JsonOptionsIndented);

@@ -177,7 +177,7 @@ public class CostManagementTools(ICostManagementService costService)
         try
         {
             BudgetDto? budget = await costService.GetBudgetAsync(budgetName, subscriptionId);
-            if (budget == null)
+            if (budget is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Budget {budgetName} not found" },
                     SerializerOptions.JsonOptionsIndented);

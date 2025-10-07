@@ -39,7 +39,7 @@ public class StorageTools(IStorageService storageService)
         try
         {
             StorageAccountDto? account = await storageService.GetStorageAccountAsync(subscriptionId, resourceGroupName, accountName);
-            if (account == null)
+            if (account is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Storage account {accountName} not found" },
                     SerializerOptions.JsonOptionsIndented);
@@ -85,7 +85,7 @@ public class StorageTools(IStorageService storageService)
         try
         {
             BlobContainerDto? container = await storageService.GetContainerAsync(accountName, containerName);
-            if (container == null)
+            if (container is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Container {containerName} not found" },
                     SerializerOptions.JsonOptionsIndented);
@@ -199,7 +199,7 @@ public class StorageTools(IStorageService storageService)
         try
         {
             BlobPropertiesDto? properties = await storageService.GetBlobPropertiesAsync(accountName, containerName, blobName);
-            if (properties == null)
+            if (properties is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Blob {blobName} not found" },
                     SerializerOptions.JsonOptionsIndented);

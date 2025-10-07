@@ -1,5 +1,6 @@
 ﻿using AzureMcp.Authentication;
 using AzureMcp.Authentication.models;
+using AzureMcp.Services.Core;
 using AzureMcp.Services.CostManagement;
 using AzureMcp.Services.DevOps;
 using AzureMcp.Services.DevOps.Models;
@@ -8,6 +9,8 @@ using AzureMcp.Services.ResourceManagement;
 using AzureMcp.Services.Sql.DbManagement;
 using AzureMcp.Services.Sql.QueryExecution;
 using AzureMcp.Services.Storage;
+using AzureMcp.Services.AppService;
+using AzureMcp.Services.Monitor;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -42,19 +45,27 @@ public static class ServiceCollectionExtensions
             return new CredentialSelectionService(logger, discoveryService);
         });
 
+        // Register ArmClientFactory as a singleton for managing ArmClient instances
+        services.AddSingleton<ArmClientFactory>(provider =>
+        {
+            ILogger<ArmClientFactory> logger = provider.GetService<ILogger<ArmClientFactory>>() ??
+                            loggerFactory.CreateLogger<ArmClientFactory>();
+            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
+            return new ArmClientFactory(credentialService, logger);
+        });
 
         // Discover Azure DevOps environments only (ARM credentials now handled by CredentialSelectionService)
         ILogger<AzureEnvironmentDiscovery> discoveryLogger = loggerFactory.CreateLogger<AzureEnvironmentDiscovery>();
         var discovery = new AzureEnvironmentDiscovery(discoveryLogger);
         List<DevOpsEnvironmentInfo> devOpsEnvironments = await discovery.DiscoverDevOpsEnvironmentsAsync();
 
-        // Configure Azure Resource Management service using CredentialSelectionService
+        // Configure Azure Resource Management service using ArmClientFactory
         services.AddScoped<IResourceManagementService>(provider =>
         {
             ILogger<ResourceManagementService> logger = provider.GetService<ILogger<ResourceManagementService>>() ??
                                                         loggerFactory.CreateLogger<ResourceManagementService>();
-            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
-            return new ResourceManagementService(credentialService, logger);
+            var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
+            return new ResourceManagementService(armClientFactory, logger);
         });
 
         // Configure Azure Cost Management service using CredentialSelectionService
@@ -62,8 +73,8 @@ public static class ServiceCollectionExtensions
         {
             ILogger<CostManagementService> logger = provider.GetService<ILogger<CostManagementService>>() ??
                                                     loggerFactory.CreateLogger<CostManagementService>();
-            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
-            return new CostManagementService(credentialService, logger);
+            var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
+            return new CostManagementService(armClientFactory, logger);
         });
 
         // Configure Azure Storage service using CredentialSelectionService
@@ -71,26 +82,26 @@ public static class ServiceCollectionExtensions
         {
             ILogger<StorageService> logger = provider.GetService<ILogger<StorageService>>() ??
                                              loggerFactory.CreateLogger<StorageService>();
-            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
-            return new StorageService(credentialService, logger);
+            var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
+            return new StorageService(armClientFactory, logger);
         });
 
-        // Configure Azure File Storage service using CredentialSelectionService
+        // Configure Azure File Storage service using CredentialSelectionService (doesn't use ArmClient)
         services.AddScoped<IFileStorageService>(provider =>
         {
             ILogger<FileStorageService> logger = provider.GetService<ILogger<FileStorageService>>() ??
                                                  loggerFactory.CreateLogger<FileStorageService>();
-            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
-            return new FileStorageService(credentialService, logger);
+            var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
+            return new FileStorageService(armClientFactory, logger);
         });
 
-        // Configure Azure Key Vault service using CredentialSelectionService
+        // Configure Azure Key Vault service using CredentialSelectionService (doesn't use ArmClient)
         services.AddScoped<IKeyVaultService>(provider =>
         {
             ILogger<KeyVaultService> logger = provider.GetService<ILogger<KeyVaultService>>() ??
                       loggerFactory.CreateLogger<KeyVaultService>();
-            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
-            return new KeyVaultService(credentialService, logger);
+            var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
+            return new KeyVaultService(armClientFactory, logger);
         });
 
         // Configure Azure SQL Database Management service using CredentialSelectionService
@@ -98,19 +109,38 @@ public static class ServiceCollectionExtensions
         {
             ILogger<SqlDatabaseService> logger = provider.GetService<ILogger<SqlDatabaseService>>() ??
                       loggerFactory.CreateLogger<SqlDatabaseService>();
-            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
-            return new SqlDatabaseService(credentialService, logger);
+            var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
+            return new SqlDatabaseService(armClientFactory, logger);
         });
 
-        // Configure SQL Query Execution service using CredentialSelectionService
+        // Configure SQL Query Execution service using CredentialSelectionService (doesn't use ArmClient)
         services.AddScoped<ISqlQueryService>(provider =>
         {
             ILogger<SqlQueryService> logger = provider.GetService<ILogger<SqlQueryService>>() ??
                       loggerFactory.CreateLogger<SqlQueryService>();
-            var credentialService = provider.GetRequiredService<CredentialSelectionService>();
-            return new SqlQueryService(credentialService, logger);
+            var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
+            return new SqlQueryService(armClientFactory, logger);
+        });
+        
+        // Configure Azure App Service using ArmClientFactory
+        services.AddScoped<IAppServiceService>(provider =>
+        {
+            ILogger<AppServiceService> logger = provider.GetService<ILogger<AppServiceService>>() ??
+                      loggerFactory.CreateLogger<AppServiceService>();
+            var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
+            return new AppServiceService(armClientFactory, logger);
         });
 
+        // Configure Azure Monitor service using ArmClientFactory
+        services.AddScoped<IMonitorService>(provider =>
+        {
+            ILogger<MonitorService> logger = provider.GetService<ILogger<MonitorService>>() ??
+                      loggerFactory.CreateLogger<MonitorService>();
+            var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
+            return new MonitorService(armClientFactory, logger);
+        });
+
+        services.AddNetworkingServices(loggerFactory);
 
         // Configure Azure DevOps services
         if (devOpsEnvironments.Count > 0)
@@ -155,7 +185,6 @@ public static class ServiceCollectionExtensions
             });
         }
 
-
         services.AddHttpClient();
         return services;
     }
@@ -199,7 +228,7 @@ public class MultiOrgDevOpsFactory(
         DevOpsEnvironmentInfo? environment = environments.FirstOrDefault(e => 
             e.OrganizationUrl.Equals(organizationUrl, StringComparison.OrdinalIgnoreCase));
         
-        if (environment == null)
+        if (environment is null)
         {
             string available = string.Join(", ", environments.Select(e => e.OrganizationUrl));
             throw new InvalidOperationException(

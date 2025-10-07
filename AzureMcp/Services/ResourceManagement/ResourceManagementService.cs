@@ -1,46 +1,23 @@
-using Azure;
+﻿using Azure;
 using Azure.Core;
 using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
-using AzureMcp.Authentication;
+using AzureMcp.Services.Core;
 using AzureMcp.Services.ResourceManagement.Models;
 using Microsoft.Extensions.Logging;
 
 namespace AzureMcp.Services.ResourceManagement;
 
 public class ResourceManagementService(
-    CredentialSelectionService credentialService,
+    ArmClientFactory armClientFactory,
     ILogger<ResourceManagementService> logger)
     : IResourceManagementService
 {
-    private ArmClient? _armClient;
-
-    private async Task<ArmClient> GetArmClientAsync()
-    {
-        if (_armClient != null)
-            return _armClient;
-
-        (TokenCredential? credential, CredentialSelectionResult result) = await credentialService.GetCredentialAsync();
-        
-        if (result.Status == SelectionStatus.NoCredentialsFound)
-        {
-            throw new InvalidOperationException(
-                "No Azure credentials found. Please authenticate using:\n" +
-                "1. Azure CLI: Run 'az login'\n" +
-                "2. Visual Studio: Sign in to Visual Studio\n" +
-                "3. Environment Variables: Set AZURE_CLIENT_ID, AZURE_TENANT_ID, and AZURE_CLIENT_SECRET\n" +
-                "4. Azure PowerShell: Run 'Connect-AzAccount'");
-        }
-
-        _armClient = new ArmClient(credential);
-        return _armClient;
-    }
-
     public async Task<IEnumerable<SubscriptionDto>> GetSubscriptionsAsync()
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var subscriptions = new List<SubscriptionDto>();
             
             await foreach (SubscriptionResource subscription in armClient.GetSubscriptions().GetAllAsync())
@@ -62,7 +39,7 @@ public class ResourceManagementService(
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             SubscriptionResource subscription = await armClient.GetSubscriptionResource(
                 new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             
@@ -84,7 +61,7 @@ public class ResourceManagementService(
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var resourceGroups = new List<ResourceGroupDto>();
 
             if (string.IsNullOrEmpty(subscriptionId))
@@ -124,7 +101,7 @@ public class ResourceManagementService(
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             SubscriptionResource subscription = armClient.GetSubscriptionResource(
                 new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             
@@ -150,7 +127,7 @@ public class ResourceManagementService(
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var resources = new List<GenericResourceDto>();
 
             switch (string.IsNullOrEmpty(subscriptionId))
@@ -202,7 +179,7 @@ public class ResourceManagementService(
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var resources = new List<GenericResourceDto>();
 
             if (!string.IsNullOrEmpty(subscriptionId))
@@ -234,7 +211,7 @@ public class ResourceManagementService(
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var id = new ResourceIdentifier(resourceId);
             GenericResource resource = await armClient.GetGenericResource(id).GetAsync();
             

@@ -8,50 +8,25 @@ using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using AzureMcp.Authentication;
+using AzureMcp.Services.Core;
 using AzureMcp.Services.Storage.Models;
 using Microsoft.Extensions.Logging;
 
 namespace AzureMcp.Services.Storage;
 
 public class StorageService(
-    CredentialSelectionService credentialService,
+    ArmClientFactory armClientFactory,
     ILogger<StorageService> logger) : IStorageService
 {
-    private ArmClient? _armClient;
     private readonly Dictionary<string, BlobServiceClient> _blobServiceClients = new();
-
-    private async Task<ArmClient> GetArmClientAsync()
-    {
-        if (_armClient != null)
-            return _armClient;
-
-        (TokenCredential? credential, CredentialSelectionResult result) = await credentialService.GetCredentialAsync();
-
-        if (result.Status == SelectionStatus.NoCredentialsFound)
-        {
-            throw new InvalidOperationException(
-                "No Azure credentials found. Please authenticate using Azure CLI, Visual Studio, or environment variables.");
-        }
-
-        _armClient = new ArmClient(credential);
-        return _armClient;
-    }
 
     private async Task<BlobServiceClient> GetBlobServiceClientAsync(string accountName)
     {
         if (_blobServiceClients.TryGetValue(accountName, out BlobServiceClient? existingClient))
             return existingClient;
 
-        (TokenCredential? credential, CredentialSelectionResult result) = await credentialService.GetCredentialAsync();
-
-        if (result.Status == SelectionStatus.NoCredentialsFound)
-        {
-            throw new InvalidOperationException(
-                "No Azure credentials found. Please authenticate using Azure CLI, Visual Studio, or environment variables.");
-        }
-
         var serviceUri = new Uri($"https://{accountName}.blob.core.windows.net");
-        var client = new BlobServiceClient(serviceUri, credential);
+        var client = new BlobServiceClient(serviceUri, await armClientFactory.GetCredentialAsync());
         _blobServiceClients[accountName] = client;
 
         return client;
@@ -63,7 +38,7 @@ public class StorageService(
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var accounts = new List<StorageAccountDto>();
 
             if (string.IsNullOrEmpty(subscriptionId))
@@ -95,7 +70,7 @@ public class StorageService(
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             ResourceGroupResource resourceGroup = armClient.GetResourceGroupResource(
                 new ResourceIdentifier($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}"));
 
@@ -723,7 +698,7 @@ public class StorageService(
             ContentType = blob.Properties.ContentType,
             ContentEncoding = blob.Properties.ContentEncoding,
             ContentLanguage = blob.Properties.ContentLanguage,
-            ContentMd5 = blob.Properties.ContentHash != null ? Convert.ToBase64String(blob.Properties.ContentHash) : null,
+            ContentMd5 = blob.Properties.ContentHash is not null ? Convert.ToBase64String(blob.Properties.ContentHash) : null,
             CacheControl = blob.Properties.CacheControl,
             CreatedOn = blob.Properties.CreatedOn?.DateTime,
             LastModified = blob.Properties.LastModified?.DateTime,

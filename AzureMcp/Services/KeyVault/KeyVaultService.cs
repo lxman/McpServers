@@ -1,14 +1,13 @@
 ﻿using Azure;
-using Azure.Core;
 using Azure.Security.KeyVault.Secrets;
-using AzureMcp.Authentication;
+using AzureMcp.Services.Core;
 using AzureMcp.Services.KeyVault.Models;
 using Microsoft.Extensions.Logging;
 
 namespace AzureMcp.Services.KeyVault;
 
 public class KeyVaultService(
-    CredentialSelectionService credentialService,
+    ArmClientFactory armClientFactory,
     ILogger<KeyVaultService> logger) : IKeyVaultService
 {
     private readonly Dictionary<string, SecretClient> _secretClients = new();
@@ -18,16 +17,8 @@ public class KeyVaultService(
         if (_secretClients.TryGetValue(vaultName, out SecretClient? existingClient))
             return existingClient;
 
-        (TokenCredential? credential, CredentialSelectionResult result) = await credentialService.GetCredentialAsync();
-
-        if (result.Status == SelectionStatus.NoCredentialsFound)
-        {
-            throw new InvalidOperationException(
-                "No Azure credentials found. Please authenticate using Azure CLI, Visual Studio, or environment variables.");
-        }
-
         var vaultUri = new Uri($"https://{vaultName}.vault.azure.net");
-        var client = new SecretClient(vaultUri, credential);
+        var client = new SecretClient(vaultUri, await armClientFactory.GetCredentialAsync());
         _secretClients[vaultName] = client;
 
         return client;
@@ -100,9 +91,9 @@ public class KeyVaultService(
             if (notBefore.HasValue)
                 secret.Properties.NotBefore = notBefore.Value;
 
-            if (tags != null)
+            if (tags is not null)
             {
-                foreach (var tag in tags)
+                foreach (KeyValuePair<string, string> tag in tags)
                 {
                     secret.Properties.Tags[tag.Key] = tag.Value;
                 }
@@ -271,10 +262,10 @@ public class KeyVaultService(
             if (!string.IsNullOrEmpty(contentType))
                 properties.ContentType = contentType;
 
-            if (tags != null)
+            if (tags is not null)
             {
                 properties.Tags.Clear();
-                foreach (var tag in tags)
+                foreach (KeyValuePair<string, string> tag in tags)
                 {
                     properties.Tags[tag.Key] = tag.Value;
                 }
@@ -313,7 +304,7 @@ public class KeyVaultService(
             NotBefore = secret.Properties.NotBefore?.DateTime,
             Version = secret.Properties.Version,
             Tags = secret.Properties.Tags?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-            RecoveryLevel = secret.Properties.RecoveryLevel != null,
+            RecoveryLevel = secret.Properties.RecoveryLevel is not null,
             RecoverableDays = secret.Properties.RecoverableDays
         };
     }

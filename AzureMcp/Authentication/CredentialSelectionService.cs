@@ -22,7 +22,7 @@ public class CredentialSelectionService(
     public async Task<(TokenCredential? Credential, CredentialSelectionResult Result)> GetCredentialAsync()
     {
         // If we already have a selected credential for this session, return it
-        if (_selectedTokenCredential != null && _selectedCredential != null)
+        if (_selectedTokenCredential is not null && _selectedCredential is not null)
         {
             return (_selectedTokenCredential, new CredentialSelectionResult
             {
@@ -73,7 +73,7 @@ public class CredentialSelectionService(
     /// </summary>
     public (TokenCredential? Credential, CredentialSelectionResult Result) SelectCredential(string credentialId)
     {
-        if (_availableCredentials == null || _availableCredentials.Count == 0)
+        if (_availableCredentials is null || _availableCredentials.Count == 0)
         {
             return (null, new CredentialSelectionResult
             {
@@ -83,7 +83,7 @@ public class CredentialSelectionService(
         }
 
         CredentialInfo? credential = _availableCredentials.FirstOrDefault(c => c.Id == credentialId);
-        if (credential == null)
+        if (credential is null)
         {
             return (null, new CredentialSelectionResult
             {

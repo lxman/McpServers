@@ -60,7 +60,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
             try
             {
                 result.AzureCredential = await DiscoverAzureCredentialAsync();
-                if (result.AzureCredential != null)
+                if (result.AzureCredential is not null)
                 {
                     await AddLogLine("Azure RM credentials available");
                 }
@@ -150,7 +150,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
         // 0: Local config file (bypass all process context issues)
         await AddLogLine("Trying local config file...");
         DevOpsEnvironmentInfo? fileEnv = await DiscoverFromLocalConfigFile();
-        if (fileEnv != null) 
+        if (fileEnv is not null) 
         {
             await AddLogLine($"Found config file environment: {fileEnv.OrganizationUrl}");
             environments.Add(fileEnv);
@@ -165,7 +165,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
         // 1. Azure CLI DevOps extension
         DevOpsEnvironmentInfo? cliEnv = await DiscoverFromAzureCliDevOpsAsync();
         await AddLogLine($"{(cliEnv is not null ? "Found" : "No")} Azure CLI DevOps environment");
-        if (cliEnv != null) environments.Add(cliEnv);
+        if (cliEnv is not null) environments.Add(cliEnv);
 
         int envLength = environments.Count;
         await AddLogLine("Calling DiscoverFromCredentialManager...");
@@ -177,13 +177,13 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
         // 3. Environment variables
         DevOpsEnvironmentInfo? envEnv = await DiscoverFromEnvironmentVariables();
         await AddLogLine($"{(envEnv is not null ? "Found" : "No")} environment variable DevOps environment");
-        if (envEnv != null) environments.Add(envEnv);
+        if (envEnv is not null) environments.Add(envEnv);
 
         await AddLogLine("Calling DiscoverFromAzurePipelines...");
         // 4. Azure Pipelines context (if running in pipeline)
         DevOpsEnvironmentInfo? pipelineEnv = DiscoverFromAzurePipelines();
         await AddLogLine($"{(pipelineEnv is not null ? "Found" : "No")} Azure Pipelines DevOps environment");
-        if (pipelineEnv != null) environments.Add(pipelineEnv);
+        if (pipelineEnv is not null) environments.Add(pipelineEnv);
 
         // Remove duplicates and validate
         var validEnvironments = new List<DevOpsEnvironmentInfo>();

@@ -1,4 +1,4 @@
-﻿using AzureMcp.Configuration;
+using AzureMcp.Configuration;
 using AzureMcp.Prompts;
 using AzureMcp.Resources;
 using AzureMcp.Tools;
@@ -31,7 +31,7 @@ public class Program
             logging.ClearProviders();
             logging.AddDebug();
     
-            // Add file logging to project directory (not blocked)
+            // Add file logging to the project directory (not blocked)
             string logPath = Path.Combine(AppContext.BaseDirectory, "azure-discovery.log");
             logging.AddFile(logPath, LogLevel.Debug);
     
@@ -60,6 +60,9 @@ public class Program
             .WithTools<StorageTools>()
             .WithTools<KeyVaultTools>()
             .WithTools<SqlTools>()
+            .WithTools<AppServiceTools>()
+            .WithTools<MonitorTools>()
+            .WithTools<NetworkingTools>()
             .WithResources<EmptyResourceProvider>()
             .WithPrompts<EmptyPromptProvider>();
 

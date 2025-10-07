@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Text.Json;
 using AzureMcp.Common;
 using AzureMcp.Services.Sql.DbManagement;
@@ -42,7 +42,7 @@ public class SqlTools(ISqlDatabaseService databaseService, ISqlQueryService quer
         try
         {
             ServerDto? server = await databaseService.GetServerAsync(serverName, resourceGroupName, subscriptionId);
-            if (server == null)
+            if (server is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Server {serverName} not found" },
                     SerializerOptions.JsonOptionsIndented);
@@ -110,7 +110,7 @@ public class SqlTools(ISqlDatabaseService databaseService, ISqlQueryService quer
         try
         {
             DatabaseDto? database = await databaseService.GetDatabaseAsync(databaseName, serverName, resourceGroupName, subscriptionId);
-            if (database == null)
+            if (database is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Database {databaseName} not found" },
                     SerializerOptions.JsonOptionsIndented);
@@ -440,7 +440,7 @@ public class SqlTools(ISqlDatabaseService databaseService, ISqlQueryService quer
         try
         {
             ConnectionInfoDto? connectionInfo = JsonSerializer.Deserialize<ConnectionInfoDto>(connectionInfoJson);
-            if (connectionInfo == null)
+            if (connectionInfo is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = "Invalid connection info" },
                     SerializerOptions.JsonOptionsIndented);
@@ -465,7 +465,7 @@ public class SqlTools(ISqlDatabaseService databaseService, ISqlQueryService quer
         try
         {
             ConnectionInfoDto? connectionInfo = JsonSerializer.Deserialize<ConnectionInfoDto>(connectionInfoJson);
-            if (connectionInfo == null)
+            if (connectionInfo is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = "Invalid connection info" },
                     SerializerOptions.JsonOptionsIndented);
@@ -488,7 +488,7 @@ public class SqlTools(ISqlDatabaseService databaseService, ISqlQueryService quer
         try
         {
             ConnectionInfoDto? connectionInfo = JsonSerializer.Deserialize<ConnectionInfoDto>(connectionInfoJson);
-            if (connectionInfo == null)
+            if (connectionInfo is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = "Invalid connection info" },
                     SerializerOptions.JsonOptionsIndented);
@@ -516,7 +516,7 @@ public class SqlTools(ISqlDatabaseService databaseService, ISqlQueryService quer
         try
         {
             ConnectionInfoDto? connectionInfo = JsonSerializer.Deserialize<ConnectionInfoDto>(connectionInfoJson);
-            if (connectionInfo == null)
+            if (connectionInfo is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = "Invalid connection info" },
                     SerializerOptions.JsonOptionsIndented);
@@ -541,14 +541,14 @@ public class SqlTools(ISqlDatabaseService databaseService, ISqlQueryService quer
         try
         {
             ConnectionInfoDto? connectionInfo = JsonSerializer.Deserialize<ConnectionInfoDto>(connectionInfoJson);
-            if (connectionInfo == null)
+            if (connectionInfo is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = "Invalid connection info" },
                     SerializerOptions.JsonOptionsIndented);
             }
 
             List<string>? commands = JsonSerializer.Deserialize<List<string>>(commandsJson);
-            if (commands == null || commands.Count == 0)
+            if (commands is null || commands.Count == 0)
             {
                 return JsonSerializer.Serialize(new { success = false, error = "No commands provided" },
                     SerializerOptions.JsonOptionsIndented);

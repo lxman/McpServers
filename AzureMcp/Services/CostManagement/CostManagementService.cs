@@ -6,6 +6,7 @@ using Azure.ResourceManager.CostManagement;
 using Azure.ResourceManager.CostManagement.Models;
 using Azure.ResourceManager.Resources;
 using AzureMcp.Authentication;
+using AzureMcp.Services.Core;
 using AzureMcp.Services.CostManagement.Models;
 using Microsoft.Extensions.Logging;
 
@@ -15,17 +16,15 @@ namespace AzureMcp.Services.CostManagement;
 /// Service for Azure Cost Management operations using the official SDK
 /// </summary>
 public class CostManagementService(
-    CredentialSelectionService credentialService,
+    ArmClientFactory armClientFactory,
     ILogger<CostManagementService> logger)
     : ICostManagementService
 {
-    private ArmClient? _armClient;
-
     public async Task<CostQueryResult> GetCurrentMonthCostsAsync(string? subscriptionId = null)
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
             var dataset = new QueryDataset { Granularity = GranularityType.Daily };
@@ -47,7 +46,7 @@ public class CostManagementService(
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
             var dataset = new QueryDataset { Granularity = GranularityType.Daily };
@@ -72,7 +71,7 @@ public class CostManagementService(
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
             var dataset = new QueryDataset { Granularity = null };  // No granularity for grouping
@@ -98,7 +97,7 @@ public class CostManagementService(
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
             var dataset = new QueryDataset { Granularity = null };  // No granularity for grouping
@@ -124,7 +123,7 @@ public class CostManagementService(
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
             var dataset = new QueryDataset { Granularity = GranularityType.Daily };
@@ -149,7 +148,7 @@ public class CostManagementService(
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
             DateTime startDate = DateTime.UtcNow.Date;
@@ -181,15 +180,14 @@ public class CostManagementService(
         }
     }
 
-
     public async Task<IEnumerable<BudgetDto>> GetBudgetsAsync(string? subscriptionId = null)
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
-            var budgets = armClient.GetConsumptionBudgets(subscription.Id);
+            ConsumptionBudgetCollection? budgets = armClient.GetConsumptionBudgets(subscription.Id);
             var result = new List<BudgetDto>();
             
             await foreach (ConsumptionBudgetResource budget in budgets)
@@ -211,10 +209,10 @@ public class CostManagementService(
     {
         try
         {
-            ArmClient armClient = await GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
-            var budgets = armClient.GetConsumptionBudgets(subscription.Id);
+            ConsumptionBudgetCollection? budgets = armClient.GetConsumptionBudgets(subscription.Id);
             
             try
             {
@@ -239,7 +237,7 @@ public class CostManagementService(
     {
         var costResult = new CostQueryResult { TimeFrame = timeFrame };
 
-        if (result.Columns == null || result.Rows == null)
+        if (result.Columns is null || result.Rows is null)
         {
             logger.LogWarning("Query result has no columns or rows");
             return costResult;
@@ -332,7 +330,7 @@ public class CostManagementService(
     {
         var costResult = new CostQueryResult { TimeFrame = timeFrame };
 
-        if (result.Columns == null || result.Rows == null)
+        if (result.Columns is null || result.Rows is null)
         {
             logger.LogWarning("Forecast result has no columns or rows");
             return costResult;
@@ -367,37 +365,21 @@ public class CostManagementService(
             if (currIdx >= 0 && currIdx < row.Count)
                 currency = row[currIdx].ToString() ?? "USD";
 
-            if (dateIdx >= 0 && dateIdx < row.Count)
-            {
-                var dateStr = row[dateIdx].ToString();
-                DateTime date;
+            if (dateIdx < 0 || dateIdx >= row.Count) continue;
+            var dateStr = row[dateIdx].ToString();
+            DateTime date;
                 
-                if (int.TryParse(dateStr, out int dateInt) && dateStr?.Length == 8)
-                    date = ParseDateInt(dateInt);
-                else if (!DateTime.TryParse(dateStr, out date))
-                    date = DateTime.UtcNow;
+            if (int.TryParse(dateStr, out int dateInt) && dateStr?.Length == 8)
+                date = ParseDateInt(dateInt);
+            else if (!DateTime.TryParse(dateStr, out date))
+                date = DateTime.UtcNow;
 
-                costResult.CostsByDate.Add(new CostByDate { Date = date, Cost = cost });
-            }
+            costResult.CostsByDate.Add(new CostByDate { Date = date, Cost = cost });
         }
 
         costResult.TotalCost = totalCost;
         costResult.Currency = currency;
         return costResult;
-    }
-
-
-    private async Task<ArmClient> GetArmClientAsync()
-    {
-        if (_armClient != null) return _armClient;
-
-        (TokenCredential? credential, CredentialSelectionResult result) = await credentialService.GetCredentialAsync();
-
-        if (result.Status == SelectionStatus.NoCredentialsFound)
-            throw new InvalidOperationException("No Azure credentials found. Please authenticate first.");
-
-        _armClient = new ArmClient(credential);
-        return _armClient;
     }
 
     private async Task<SubscriptionResource> GetSubscriptionAsync(ArmClient armClient, string? subscriptionId)

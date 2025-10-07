@@ -48,7 +48,7 @@ public class DevOpsCredentialManager
         AzureDiscoveryResult result = await discovery.DiscoverAzureEnvironmentsAsync();
         
         DevOpsEnvironmentInfo? primaryEnvironment = result.DevOpsEnvironments.FirstOrDefault();
-        if (primaryEnvironment != null) return new DevOpsCredentialManager(primaryEnvironment, logger);
+        if (primaryEnvironment is not null) return new DevOpsCredentialManager(primaryEnvironment, logger);
         logger.LogWarning("No Azure DevOps environments discovered");
         return null;
 

@@ -3,7 +3,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Text;
 using Azure.Core;
-using AzureMcp.Authentication;
+using AzureMcp.Services.Core;
 using AzureMcp.Services.Sql.QueryExecution.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -13,7 +13,7 @@ using Npgsql;
 namespace AzureMcp.Services.Sql.QueryExecution;
 
 public class SqlQueryService(
-    CredentialSelectionService credentialService,
+    ArmClientFactory armClientFactory,
     ILogger<SqlQueryService> logger) : ISqlQueryService
 {
     public async Task<QueryResultDto> ExecuteQueryAsync(ConnectionInfoDto connectionInfo, string query, int maxRows = 1000, int timeoutSeconds = 30)
@@ -284,16 +284,10 @@ public class SqlQueryService(
                 if (connectionInfo.UseAzureAD)
                 {
                     // Use Azure AD authentication
-                    (TokenCredential? credential, CredentialSelectionResult result) = await credentialService.GetCredentialAsync();
-                    
-                    if (result.Status == SelectionStatus.NoCredentialsFound)
-                    {
-                        throw new InvalidOperationException(
-                            "No Azure credentials found for Azure AD authentication. Please authenticate using Azure CLI, Visual Studio, or environment variables.");
-                    }
+                    TokenCredential credential = await armClientFactory.GetCredentialAsync();
 
                     // Get an access token for Azure SQL
-                    AccessToken token = await credential!.GetTokenAsync(
+                    AccessToken token = await credential.GetTokenAsync(
                         new TokenRequestContext(["https://database.windows.net/.default"]), 
                         CancellationToken.None);
                     
@@ -358,7 +352,7 @@ public class SqlQueryService(
         }
 
         // Add any additional parameters
-        if (connectionInfo.AdditionalParameters == null) return builder.ToString();
+        if (connectionInfo.AdditionalParameters is null) return builder.ToString();
         foreach (KeyValuePair<string, string> param in connectionInfo.AdditionalParameters)
         {
             builder.Append($"{param.Key}={param.Value};");

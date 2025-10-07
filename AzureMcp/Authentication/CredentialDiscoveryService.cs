@@ -199,7 +199,7 @@ public class CredentialDiscoveryService(ILogger<CredentialDiscoveryService> logg
             {
                 TenantCollection? tenants = armClient.GetTenants();
                 TenantResource? tenant = tenants.FirstOrDefault();
-                if (tenant != null)
+                if (tenant is not null)
                 {
                     info.TenantId = tenant.Data.TenantId?.ToString();
                     info.TenantName = tenant.Data.DisplayName;

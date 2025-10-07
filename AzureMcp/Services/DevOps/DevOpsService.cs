@@ -44,7 +44,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             var projectClient = credentialManager.GetClient<ProjectHttpClient>();
             TeamProject? project = await projectClient.GetProject(projectName);
 
-            return project != null ? MapToProjectDto(project) : null;
+            return project is not null ? MapToProjectDto(project) : null;
         }
         catch (Exception ex)
         {
@@ -60,7 +60,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             var workItemClient = credentialManager.GetClient<WorkItemTrackingHttpClient>();
             WorkItem? workItem = await workItemClient.GetWorkItemAsync(id, expand: WorkItemExpand.All);
 
-            return workItem != null ? MapToWorkItemDto(workItem) : null;
+            return workItem is not null ? MapToWorkItemDto(workItem) : null;
         }
         catch (Exception ex)
         {
@@ -81,7 +81,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             var query = new Wiql { Query = wiql };
             WorkItemQueryResult? result = await workItemClient.QueryByWiqlAsync(query);
 
-            if (result?.WorkItems == null || !result.WorkItems.Any())
+            if (result?.WorkItems is null || !result.WorkItems.Any())
                 return [];
 
             int[] ids = result.WorkItems.Select(wi => wi.Id).ToArray();
@@ -113,7 +113,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             };
 
             // Add additional fields if provided
-            if (fields != null)
+            if (fields is not null)
             {
                 foreach (KeyValuePair<string, object> field in fields)
                 {
@@ -159,7 +159,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             var gitClient = credentialManager.GetClient<GitHttpClient>();
             GitRepository? repository = await gitClient.GetRepositoryAsync(projectName, repositoryName);
 
-            return repository != null ? MapToRepositoryDto(repository) : null;
+            return repository is not null ? MapToRepositoryDto(repository) : null;
         }
         catch (Exception ex)
         {
@@ -272,7 +272,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             foreach (BuildDefinitionReference defRef in definitions)
             {
                 BuildDefinition? fullDef = await buildClient.GetDefinitionAsync(projectName, defRef.Id);
-                if (fullDef != null) fullDefinitions.Add(fullDef);
+                if (fullDef is not null) fullDefinitions.Add(fullDef);
             }
             return fullDefinitions.Select(MapToBuildDefinitionDto);
         }
@@ -290,7 +290,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             var buildClient = credentialManager.GetClient<BuildHttpClient>();
             BuildDefinition? definition = await buildClient.GetDefinitionAsync(projectName, definitionId);
             
-            return definition != null ? MapToBuildDefinitionDto(definition) : null;
+            return definition is not null ? MapToBuildDefinitionDto(definition) : null;
         }
         catch (Exception ex)
         {
@@ -325,7 +325,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             var buildClient = credentialManager.GetClient<BuildHttpClient>();
             Build? build = await buildClient.GetBuildAsync(projectName, buildId);
             
-            return build != null ? MapToBuildDto(build) : null;
+            return build is not null ? MapToBuildDto(build) : null;
         }
         catch (Exception ex)
         {
@@ -384,7 +384,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             var releaseClient = credentialManager.GetClient<ReleaseHttpClient>();
             ReleaseDefinition? definition = await releaseClient.GetReleaseDefinitionAsync(projectName, definitionId);
             
-            return definition != null ? MapToReleaseDefinitionDto(definition) : null;
+            return definition is not null ? MapToReleaseDefinitionDto(definition) : null;
         }
         catch (Exception ex)
         {
@@ -425,7 +425,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
                 project: projectName,
                 repositoryId: repositoryName,
                 filePath,
-                versionDescriptor: branch != null ? new GitVersionDescriptor 
+                versionDescriptor: branch is not null ? new GitVersionDescriptor 
                 { 
                     Version = branch, 
                     VersionType = GitVersionType.Branch 
@@ -457,7 +457,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
                     repositoryId: repositoryName,
                     path: filePath,
                     project: projectName,
-                    versionDescriptor: branch != null ? new GitVersionDescriptor 
+                    versionDescriptor: branch is not null ? new GitVersionDescriptor 
                     { 
                         Version = branch, 
                         VersionType = GitVersionType.Branch 
@@ -470,7 +470,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             }
 
             string targetBranch = branch ?? "refs/heads/main";
-            VersionControlChangeType changeType = currentItem != null ? VersionControlChangeType.Edit : VersionControlChangeType.Add;
+            VersionControlChangeType changeType = currentItem is not null ? VersionControlChangeType.Edit : VersionControlChangeType.Add;
             
             var commit = new GitCommitRef
             {
@@ -590,7 +590,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             var buildClient = credentialManager.GetClient<BuildHttpClient>();
             BuildDefinition? definition = await buildClient.GetDefinitionAsync(projectName, definitionId);
             
-            if (definition?.Process is YamlProcess yamlProcess && definition.Repository != null)
+            if (definition is { Process: YamlProcess yamlProcess, Repository: not null })
             {
                 return await UpdateRepositoryFileAsync(
                     projectName,
@@ -623,7 +623,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             Type = definition.Type.ToString(),
             QueueStatus = definition.QueueStatus.ToString(),
             Description = definition.Description,
-            Repository = definition.Repository != null ? new RepositoryDto
+            Repository = definition.Repository is not null ? new RepositoryDto
             {
                 Id = definition.Repository.Id,
                 Name = definition.Repository.Name ?? "",
@@ -651,7 +651,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             FinishTime = build.FinishTime,
             RequestedFor = build.RequestedFor?.DisplayName,
             RequestedBy = build.RequestedBy?.DisplayName,
-            Definition = build.Definition != null ? new BuildDefinitionDto
+            Definition = build.Definition is not null ? new BuildDefinitionDto
             {
                 Id = build.Definition.Id,
                 Name = build.Definition.Name,
@@ -693,7 +693,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             Status = release.Status.ToString(),
             CreatedOn = release.CreatedOn,
             CreatedBy = release.CreatedBy?.DisplayName,
-            ReleaseDefinition = release.ReleaseDefinitionReference != null ? new ReleaseDefinitionDto
+            ReleaseDefinition = release.ReleaseDefinitionReference is not null ? new ReleaseDefinitionDto
             {
                 Id = release.ReleaseDefinitionReference.Id,
                 Name = release.ReleaseDefinitionReference.Name,
@@ -767,7 +767,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             var buildClient = credentialManager.GetClient<BuildHttpClient>();
             Timeline? timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
             
-            if (timeline?.Records == null)
+            if (timeline?.Records is null)
                 return null;
 
             // Build a hierarchical structure from timeline records
@@ -798,12 +798,12 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             var buildClient = credentialManager.GetClient<BuildHttpClient>();
             Timeline? timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
             
-            if (timeline?.Records == null)
+            if (timeline?.Records is null)
                 return [];
 
             var stepLogs = new List<BuildStepLogDto>();
             
-            foreach (TimelineRecord? record in timeline.Records.Where(r => r.Log != null))
+            foreach (TimelineRecord? record in timeline.Records.Where(r => r.Log is not null))
             {
                 try
                 {
@@ -891,7 +891,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             Timeline? timeline = await buildClient.GetBuildTimelineAsync(projectName, buildId);
         
             TimelineRecord? taskRecord = timeline?.Records?.FirstOrDefault(r => r.Id.ToString() == taskId);
-            if (taskRecord?.Log == null)
+            if (taskRecord?.Log is null)
                 return null;
             
             // Get the actual content
@@ -1015,7 +1015,7 @@ public class DevOpsService(DevOpsCredentialManager credentialManager, ILogger<De
             Result = record.Result?.ToString() ?? string.Empty,
             ResultCode = Convert.ToInt32(record.ResultCode),
             Order = record.Order ?? 0,
-            Log = record.Log != null ? new BuildLogDto
+            Log = record.Log is not null ? new BuildLogDto
             {
                 Id = record.Log.Id,
                 Type = record.Log.Type ?? string.Empty,

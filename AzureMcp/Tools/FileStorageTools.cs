@@ -39,7 +39,7 @@ public class FileStorageTools(IFileStorageService fileStorageService)
         try
         {
             FileShareDto? share = await fileStorageService.GetFileShareAsync(accountName, shareName);
-            if (share == null)
+            if (share is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"File share {shareName} not found" },
                     SerializerOptions.JsonOptionsIndented);
@@ -211,7 +211,7 @@ public class FileStorageTools(IFileStorageService fileStorageService)
         try
         {
             FilePropertiesDto? properties = await fileStorageService.GetFilePropertiesAsync(accountName, shareName, filePath);
-            if (properties == null)
+            if (properties is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"File {filePath} not found" },
                     SerializerOptions.JsonOptionsIndented);
@@ -338,7 +338,7 @@ public class FileStorageTools(IFileStorageService fileStorageService)
         try
         {
             Dictionary<string, string>? metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(metadataJson);
-            if (metadata == null)
+            if (metadata is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = "Invalid metadata JSON" },
                     SerializerOptions.JsonOptionsIndented);
