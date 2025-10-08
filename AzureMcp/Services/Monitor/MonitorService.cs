@@ -8,10 +8,10 @@ using Azure.ResourceManager.ApplicationInsights;
 using Azure.ResourceManager.Monitor;
 using Azure.ResourceManager.OperationalInsights;
 using Azure.ResourceManager.Resources;
-using AzureMcp.Authentication;
 using AzureMcp.Services.Core;
 using AzureMcp.Services.Monitor.Models;
 using Microsoft.Extensions.Logging;
+using MetricValue = Azure.Monitor.Query.Models.MetricValue;
 
 namespace AzureMcp.Services.Monitor;
 
@@ -92,13 +92,11 @@ public class MonitorService(
 
                 return result;
             }
-            else
+
+            return new LogQueryResult
             {
-                return new LogQueryResult
-                {
-                    Error = $"Query failed with status: {response.Value.Status}"
-                };
-            }
+                Error = $"Query failed with status: {response.Value.Status}"
+            };
         }
         catch (Exception ex)
         {
@@ -327,7 +325,7 @@ public class MonitorService(
                     // Note: MetadataValues property doesn't exist in current SDK
                     // Skip metadata collection
 
-                    foreach (Azure.Monitor.Query.Models.MetricValue value in timeSeries.Values)
+                    foreach (MetricValue value in timeSeries.Values)
                     {
                         timeSeriesData.Data.Add(new Models.MetricValue
                         {

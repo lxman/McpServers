@@ -1,5 +1,6 @@
 ﻿using Azure.ResourceManager.ContainerRegistry.Models;
 using AzureMcp.Services.Container.Models;
+
 // ReSharper disable InconsistentNaming
 
 namespace AzureMcp.Services.Container;

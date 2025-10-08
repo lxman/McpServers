@@ -269,7 +269,7 @@ internal static class MappingService
         };
     }
 
-    internal static ExpressRouteCircuitDto MapToExpressRouteCircuitDto(Azure.ResourceManager.Network.ExpressRouteCircuitData data)
+    internal static ExpressRouteCircuitDto MapToExpressRouteCircuitDto(ExpressRouteCircuitData data)
     {
         return new ExpressRouteCircuitDto
         {
@@ -291,7 +291,7 @@ internal static class MappingService
         };
     }
 
-    internal static ExpressRoutePeeringDto MapToExpressRoutePeeringDto(Azure.ResourceManager.Network.ExpressRouteCircuitPeeringData data)
+    internal static ExpressRoutePeeringDto MapToExpressRoutePeeringDto(ExpressRouteCircuitPeeringData data)
     {
         return new ExpressRoutePeeringDto
         {

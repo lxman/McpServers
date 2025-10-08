@@ -2,6 +2,7 @@
 using Azure;
 using Azure.Containers.ContainerRegistry;
 using Azure.Core;
+using Azure.Identity;
 using Azure.ResourceManager;
 using Azure.ResourceManager.ContainerInstance;
 using Azure.ResourceManager.ContainerInstance.Models;
@@ -514,7 +515,7 @@ public class ContainerService(
             // Create a ContainerRegistryClient
             var containerRegistryClient = new ContainerRegistryClient(
                 new Uri($"https://{loginServer}"),
-                new Azure.Identity.DefaultAzureCredential());
+                new DefaultAzureCredential());
 
             var repositories = new List<ContainerRepositoryDto>();
         
@@ -550,7 +551,7 @@ public class ContainerService(
             
             var containerRegistryClient = new ContainerRegistryClient(
                 new Uri($"https://{loginServer}"),
-                new Azure.Identity.DefaultAzureCredential());
+                new DefaultAzureCredential());
 
             var images = new List<ContainerImageDto>();
 
@@ -615,7 +616,7 @@ public class ContainerService(
         
             var containerRegistryClient = new ContainerRegistryClient(
                 new Uri($"https://{loginServer}"),
-                new Azure.Identity.DefaultAzureCredential());
+                new DefaultAzureCredential());
 
             ContainerRepository repository = containerRegistryClient.GetRepository(repositoryName);
             RegistryArtifact artifact = repository.GetArtifact(tag);
@@ -658,7 +659,7 @@ public class ContainerService(
         
             var containerRegistryClient = new ContainerRegistryClient(
                 new Uri($"https://{loginServer}"),
-                new Azure.Identity.DefaultAzureCredential());
+                new DefaultAzureCredential());
 
             ContainerRepository repository = containerRegistryClient.GetRepository(repositoryName);
             RegistryArtifact artifact = repository.GetArtifact(tag);
@@ -686,7 +687,7 @@ public class ContainerService(
         
             var containerRegistryClient = new ContainerRegistryClient(
                 new Uri($"https://{loginServer}"),
-                new Azure.Identity.DefaultAzureCredential());
+                new DefaultAzureCredential());
 
             ContainerRepository repository = containerRegistryClient.GetRepository(repositoryName);
             await repository.DeleteAsync();
@@ -1150,7 +1151,7 @@ public class ContainerService(
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerServiceManagedClusterResource>? cluster = await resourceGroup.Value.GetContainerServiceManagedClusterAsync(clusterName);
 
-            var data = new ContainerServiceAgentPoolData()
+            var data = new ContainerServiceAgentPoolData
             {
                 Count = request.Count,
                 VmSize = request.VmSize,

@@ -2,11 +2,14 @@ using Azure;
 using Azure.Core;
 using Azure.ResourceManager;
 using Azure.ResourceManager.Network;
+using Azure.ResourceManager.Network.Models;
 using Azure.ResourceManager.Resources;
 using AzureMcp.Services.Core;
 using AzureMcp.Services.Networking.Interfaces;
 using AzureMcp.Services.Networking.Models;
 using Microsoft.Extensions.Logging;
+using NextHopResult = AzureMcp.Services.Networking.Models.NextHopResult;
+using SecurityGroupViewResult = AzureMcp.Services.Networking.Models.SecurityGroupViewResult;
 
 namespace AzureMcp.Services.Networking;
 
@@ -137,8 +140,7 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
 
             var watcherData = new NetworkWatcherData
             {
-                Location = new AzureLocation(request.Location),
-                Tags = { }
+                Location = new AzureLocation(request.Location)
             };
 
             // Add tags if provided
@@ -227,12 +229,12 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
             NetworkWatcherResource watcher = armClient.GetNetworkWatcherResource(watcherId);
 
             // Build connectivity parameters
-            var parameters = new Azure.ResourceManager.Network.Models.ConnectivityContent(
-                new Azure.ResourceManager.Network.Models.ConnectivitySource(new ResourceIdentifier(request.SourceResourceId))
+            var parameters = new ConnectivityContent(
+                new ConnectivitySource(new ResourceIdentifier(request.SourceResourceId))
                 {
                     Port = request.SourcePort != null ? int.Parse(request.SourcePort) : null
                 },
-                new Azure.ResourceManager.Network.Models.ConnectivityDestination
+                new ConnectivityDestination
                 {
                     ResourceId = new ResourceIdentifier(request.DestinationResourceId),
                     Address = request.DestinationAddress,
@@ -242,19 +244,19 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
             {
                 Protocol = request.Protocol?.ToLowerInvariant() switch
                 {
-                    "tcp" => Azure.ResourceManager.Network.Models.NetworkWatcherProtocol.Tcp,
-                    "http" => Azure.ResourceManager.Network.Models.NetworkWatcherProtocol.Http,
-                    "https" => Azure.ResourceManager.Network.Models.NetworkWatcherProtocol.Https,
-                    "icmp" => Azure.ResourceManager.Network.Models.NetworkWatcherProtocol.Icmp,
-                    _ => Azure.ResourceManager.Network.Models.NetworkWatcherProtocol.Tcp
+                    "tcp" => NetworkWatcherProtocol.Tcp,
+                    "http" => NetworkWatcherProtocol.Http,
+                    "https" => NetworkWatcherProtocol.Https,
+                    "icmp" => NetworkWatcherProtocol.Icmp,
+                    _ => NetworkWatcherProtocol.Tcp
                 }
             };
 
             // Execute connectivity check
-            ArmOperation<Azure.ResourceManager.Network.Models.ConnectivityInformation> operation = 
+            ArmOperation<ConnectivityInformation> operation = 
                 await watcher.CheckConnectivityAsync(WaitUntil.Completed, parameters);
 
-            Azure.ResourceManager.Network.Models.ConnectivityInformation result = operation.Value;
+            ConnectivityInformation result = operation.Value;
 
             logger.LogInformation("Completed connectivity check from {Source} to {Destination}", 
                 request.SourceResourceId, request.DestinationResourceId);
@@ -297,7 +299,7 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
             NetworkWatcherResource watcher = armClient.GetNetworkWatcherResource(watcherId);
 
             // Build next hop parameters
-            var parameters = new Azure.ResourceManager.Network.Models.NextHopContent(
+            var parameters = new NextHopContent(
                 new ResourceIdentifier(request.TargetVirtualMachineId),
                 request.SourceIPAddress,
                 request.DestinationIPAddress);

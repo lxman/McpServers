@@ -7,7 +7,6 @@ using Azure.ResourceManager.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
-using AzureMcp.Authentication;
 using AzureMcp.Services.Core;
 using AzureMcp.Services.Storage.Models;
 using Microsoft.Extensions.Logging;

@@ -4,8 +4,8 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.AppService;
 using Azure.ResourceManager.AppService.Models;
 using Azure.ResourceManager.Resources;
-using AzureMcp.Services.Core;
 using AzureMcp.Services.AppService.Models;
+using AzureMcp.Services.Core;
 using Microsoft.Extensions.Logging;
 
 namespace AzureMcp.Services.AppService;
@@ -87,7 +87,6 @@ public class AppServiceService(
                     }
                     catch (RequestFailedException ex) when (ex.Status == 404)
                     {
-                        continue;
                     }
                 }
                 return null;
@@ -500,7 +499,6 @@ public class AppServiceService(
                     }
                     catch (RequestFailedException ex) when (ex.Status == 404)
                     {
-                        continue;
                     }
                 }
                 return null;
@@ -568,7 +566,6 @@ public class AppServiceService(
                     }
                     catch (RequestFailedException ex) when (ex.Status == 404)
                     {
-                        continue;
                     }
                 }
                 return null;

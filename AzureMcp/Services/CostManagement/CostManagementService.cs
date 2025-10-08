@@ -5,7 +5,6 @@ using Azure.ResourceManager.Consumption;
 using Azure.ResourceManager.CostManagement;
 using Azure.ResourceManager.CostManagement.Models;
 using Azure.ResourceManager.Resources;
-using AzureMcp.Authentication;
 using AzureMcp.Services.Core;
 using AzureMcp.Services.CostManagement.Models;
 using Microsoft.Extensions.Logging;

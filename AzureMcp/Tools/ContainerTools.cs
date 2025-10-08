@@ -4,6 +4,7 @@ using AzureMcp.Common;
 using AzureMcp.Services.Container;
 using AzureMcp.Services.Container.Models;
 using ModelContextProtocol.Server;
+
 // ReSharper disable InconsistentNaming
 
 namespace AzureMcp.Tools;

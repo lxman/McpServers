@@ -1,4 +1,5 @@
 using Azure;
+using Azure.Core;
 using Azure.ResourceManager;
 using Azure.ResourceManager.Network;
 using Azure.ResourceManager.Network.Models;
@@ -19,7 +20,7 @@ public class ExpressRouteService(ArmClientFactory armClientFactory, ILogger<Expr
             ArmClient armClient = await armClientFactory.GetArmClientAsync();
             SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await armClient.GetDefaultSubscriptionAsync()
-                : armClient.GetSubscriptionResource(new Azure.Core.ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+                : armClient.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
             var circuits = new List<ExpressRouteCircuitDto>();
 
@@ -56,7 +57,7 @@ public class ExpressRouteService(ArmClientFactory armClientFactory, ILogger<Expr
         try
         {
             ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource? subscription = armClient.GetSubscriptionResource(new Azure.Core.ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = armClient.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             Response<ResourceGroupResource>? resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             
             Response<ExpressRouteCircuitResource>? circuit = await resourceGroup.Value.GetExpressRouteCircuits().GetAsync(circuitName);
@@ -81,12 +82,12 @@ public class ExpressRouteService(ArmClientFactory armClientFactory, ILogger<Expr
         try
         {
             ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource? subscription = armClient.GetSubscriptionResource(new Azure.Core.ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = armClient.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             Response<ResourceGroupResource>? resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
 
             var circuitData = new ExpressRouteCircuitData
             {
-                Location = new Azure.Core.AzureLocation(request.Location),
+                Location = new AzureLocation(request.Location),
                 Sku = new ExpressRouteCircuitSku
                 {
                     Name = $"{request.SkuTier}_{request.SkuFamily}",
@@ -128,7 +129,7 @@ public class ExpressRouteService(ArmClientFactory armClientFactory, ILogger<Expr
         try
         {
             ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource? subscription = armClient.GetSubscriptionResource(new Azure.Core.ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = armClient.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             Response<ResourceGroupResource>? resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
 
             Response<ExpressRouteCircuitResource>? circuit = await resourceGroup.Value.GetExpressRouteCircuits().GetAsync(circuitName);

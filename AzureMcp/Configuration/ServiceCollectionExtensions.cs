@@ -1,16 +1,18 @@
 using AzureMcp.Authentication;
 using AzureMcp.Authentication.models;
+using AzureMcp.Services.AppService;
 using AzureMcp.Services.Core;
 using AzureMcp.Services.CostManagement;
 using AzureMcp.Services.DevOps;
 using AzureMcp.Services.DevOps.Models;
+using AzureMcp.Services.EventHubs;
 using AzureMcp.Services.KeyVault;
+using AzureMcp.Services.Monitor;
 using AzureMcp.Services.ResourceManagement;
+using AzureMcp.Services.ServiceBus;
 using AzureMcp.Services.Sql.DbManagement;
 using AzureMcp.Services.Sql.QueryExecution;
 using AzureMcp.Services.Storage;
-using AzureMcp.Services.AppService;
-using AzureMcp.Services.Monitor;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -162,6 +164,25 @@ public static class ServiceCollectionExtensions
             var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
             return new MonitorService(armClientFactory, logger);
         });
+
+        // Configure Azure Service Bus service using ArmClientFactory
+        services.AddScoped<IServiceBusService>(provider =>
+        {
+            ILogger<ServiceBusService> logger = provider.GetService<ILogger<ServiceBusService>>() ??
+                      loggerFactory.CreateLogger<ServiceBusService>();
+            var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
+            return new ServiceBusService(armClientFactory, logger);
+        });
+
+        // Configure Azure Event Hubs service using ArmClientFactory
+        services.AddScoped<IEventHubsService>(provider =>
+        {
+            ILogger<EventHubsService> logger = provider.GetService<ILogger<EventHubsService>>() ??
+                      loggerFactory.CreateLogger<EventHubsService>();
+            var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
+            return new EventHubsService(armClientFactory, logger);
+        });
+
 
         services.AddNetworkingServices(loggerFactory);
 

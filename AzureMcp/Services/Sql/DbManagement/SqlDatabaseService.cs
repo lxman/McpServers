@@ -12,7 +12,6 @@ using AzureMcp.Services.Core;
 using AzureMcp.Services.Sql.DbManagement.Models;
 using Microsoft.Extensions.Logging;
 
-
 namespace AzureMcp.Services.Sql.DbManagement;
 
 public class SqlDatabaseService(

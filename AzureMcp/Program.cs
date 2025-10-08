@@ -63,6 +63,9 @@ public class Program
             .WithTools<AppServiceTools>()
             .WithTools<MonitorTools>()
             .WithTools<NetworkingTools>()
+            .WithTools<ServiceBusTools>()
+            .WithTools<EventHubsTools>()
+
             .WithResources<EmptyResourceProvider>()
             .WithTools<EntraAuthTools>()
             .WithPrompts<EmptyPromptProvider>();
