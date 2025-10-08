@@ -45,7 +45,7 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
                 {
                     // List watchers in specific subscription
                     SubscriptionResource subscription = armClient.GetSubscriptionResource(
-                        SubscriptionResource.CreateResourceIdentifier(subscriptionId));
+                        new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
                     await foreach (NetworkWatcherResource watcher in subscription.GetNetworkWatchersAsync())
                     {

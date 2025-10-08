@@ -4,5 +4,5 @@ namespace AzureMcp.Common;
 
 public static class SerializerOptions
 {
-    public static JsonSerializerOptions JsonOptionsIndented => new JsonSerializerOptions { WriteIndented = true };
+    public static JsonSerializerOptions JsonOptionsIndented => new() { WriteIndented = true };
 }

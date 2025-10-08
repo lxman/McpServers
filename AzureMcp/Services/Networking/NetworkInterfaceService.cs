@@ -1,4 +1,4 @@
-﻿using Azure;
+using Azure;
 using Azure.Core;
 using Azure.ResourceManager;
 using Azure.ResourceManager.Network;
@@ -36,8 +36,8 @@ public class NetworkInterfaceService(ArmClientFactory armClientFactory, ILogger<
                 }
                 case false:
                 {
-                    SubscriptionResource? subscription = armClient.GetSubscriptionResource(
-                        SubscriptionResource.CreateResourceIdentifier(subscriptionId));
+                    SubscriptionResource subscription = armClient.GetSubscriptionResource(
+                        new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
                     await foreach (NetworkInterfaceResource? nic in subscription.GetNetworkInterfacesAsync())
                     {

@@ -38,7 +38,7 @@ public class LoadBalancerService(ArmClientFactory armClientFactory, ILogger<Load
                 case false:
                 {
                     SubscriptionResource? subscription = armClient.GetSubscriptionResource(
-                        SubscriptionResource.CreateResourceIdentifier(subscriptionId));
+                        new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
                     await foreach (LoadBalancerResource? loadBalancer in subscription.GetLoadBalancersAsync())
                     {

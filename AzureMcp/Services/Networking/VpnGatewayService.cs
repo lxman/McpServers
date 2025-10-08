@@ -37,7 +37,7 @@ public class VpnGatewayService(ArmClientFactory armClientFactory, ILogger<VpnGat
                 case false:
                 {
                     SubscriptionResource? subscription = armClient.GetSubscriptionResource(
-                        SubscriptionResource.CreateResourceIdentifier(subscriptionId));
+                        new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
                     await foreach (ResourceGroupResource? resourceGroup in subscription.GetResourceGroups())
                     {

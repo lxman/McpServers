@@ -37,7 +37,7 @@ public class ApplicationGatewayService(ArmClientFactory armClientFactory, ILogge
                 case false:
                 {
                     SubscriptionResource? subscription = armClient.GetSubscriptionResource(
-                        SubscriptionResource.CreateResourceIdentifier(subscriptionId));
+                        new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
                     await foreach (ApplicationGatewayResource? appGateway in subscription.GetApplicationGatewaysAsync())
                     {

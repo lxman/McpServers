@@ -37,7 +37,7 @@ public class PublicIpAddressService(ArmClientFactory armClientFactory, ILogger<P
                 case false:
                 {
                     SubscriptionResource? subscription = armClient.GetSubscriptionResource(
-                        SubscriptionResource.CreateResourceIdentifier(subscriptionId));
+                        new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
                     await foreach (PublicIPAddressResource? pip in subscription.GetPublicIPAddressesAsync())
                     {

@@ -1,4 +1,4 @@
-﻿using Azure;
+using Azure;
 using Azure.Core;
 using Azure.ResourceManager;
 using Azure.ResourceManager.Network;
@@ -37,8 +37,8 @@ public class VirtualNetworkService(ArmClientFactory armClientFactory, ILogger<Vi
                 }
                 case false:
                 {
-                    SubscriptionResource? subscription = armClient.GetSubscriptionResource(
-                        SubscriptionResource.CreateResourceIdentifier(subscriptionId));
+                    SubscriptionResource subscription = armClient.GetSubscriptionResource(
+                        new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
                     await foreach (VirtualNetworkResource? vnet in subscription.GetVirtualNetworksAsync())
                     {
