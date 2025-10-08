@@ -33,6 +33,127 @@ An MCP (Model Context Protocol) server that provides seamless Azure integration,
 
 ## 📋 Quick Start
 
+## 🔐 Azure AD/Entra Authentication
+
+### Multiple Authentication Methods Supported
+
+AzureMcp now supports **5 different authentication methods** to suit any scenario:
+
+#### 1. **Auto-Discovered Credentials** (Default - Zero Config)
+- Azure CLI (`az login`)
+- Visual Studio
+- Environment Variables
+- Azure PowerShell
+- Shared Token Cache
+
+Just run `az login` and you're ready to go! No configuration needed.
+
+#### 2. **Interactive Browser Authentication**
+```
+Tool: entra:authenticate_interactive
+```
+- Opens your browser for Azure AD sign-in
+- Supports multi-factor authentication (MFA)
+- Tokens are cached for future use
+- Works with personal and organizational accounts
+- **Requires user confirmation** before opening browser
+
+**Example Usage:**
+```
+User: "I need to authenticate with Azure interactively"
+Claude: "Would you like me to open a browser window to sign in to Azure?"
+User: "Yes"
+Claude: [calls entra:authenticate_interactive with userConfirmed=true]
+```
+
+#### 3. **Device Code Flow**
+```
+Tools: entra:authenticate_device_code_start + entra:authenticate_device_code_complete
+```
+- Perfect for SSH/remote scenarios where browser can't open
+- User enters code at https://microsoft.com/devicelogin from any device
+- No browser popup needed
+- Great for headless environments
+
+#### 4. **Service Principal (Client Secret)**
+```
+Tool: entra:authenticate_service_principal
+```
+- Non-interactive authentication
+- Perfect for automation, CI/CD, and production services
+- Requires Azure AD app registration
+
+**Required:**
+- Tenant ID
+- Client ID (Application ID)
+- Client Secret
+
+#### 5. **Certificate-Based Authentication**
+```
+Tool: entra:authenticate_certificate
+```
+- More secure than client secrets
+- Uses X.509 certificates (.pfx or .p12)
+- Recommended for high-security production scenarios
+
+**Required:**
+- Tenant ID
+- Client ID
+- Certificate file path
+- Certificate password (if encrypted)
+
+#### 6. **Managed Identity**
+```
+Tool: entra:authenticate_managed_identity
+```
+- Only works on Azure infrastructure (VMs, App Service, Container Apps, etc.)
+- No credentials needed - Azure provides identity automatically
+- Most secure option for Azure-hosted applications
+
+### Configuration File (Optional)
+
+Create `entra-auth.json` in the executable directory for advanced scenarios:
+
+```json
+{
+  "TenantId": "your-tenant-id-or-common",
+  "ClientId": "your-client-id-or-null",
+  "EnableInteractiveBrowser": true,
+  "EnableDeviceCode": true,
+  "ClientSecret": "your-secret-for-service-principal",
+  "CertificatePath": "path/to/cert.pfx",
+  "EnableManagedIdentity": false,
+  "EnableTokenCache": true,
+  "TokenCacheName": "azure-mcp-cache"
+}
+```
+
+See `entra-auth.example.json` for full configuration options.
+
+### Authentication Tools Summary
+
+| Tool | Use Case | Interactive | Requires Config |
+|------|----------|-------------|-----------------|
+| `entra:authenticate_interactive` | Development, testing | Yes (browser) | No |
+| `entra:authenticate_device_code_start` | Remote/SSH sessions | Yes (code entry) | No |
+| `entra:authenticate_service_principal` | Automation, CI/CD | No | Yes |
+| `entra:authenticate_certificate` | High-security production | No | Yes |
+| `entra:authenticate_managed_identity` | Azure infrastructure | No | No |
+| `entra:get_auth_info` | View available methods | No | No |
+| `entra:clear_credential_cache` | Force re-authentication | No | No |
+
+### Why Multiple Methods?
+
+Different scenarios require different authentication approaches:
+
+- **Development**: Interactive browser - quick and easy
+- **Remote/SSH**: Device code - works without local browser
+- **Automation**: Service principal - no user interaction needed
+- **Production**: Certificate or Managed Identity - most secure
+- **Azure VMs**: Managed Identity - no credentials to manage
+
+
+
 ### 1. Build the Server
 ```bash
 cd path/to/AzureMcp

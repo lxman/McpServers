@@ -1,0 +1,19 @@
+{
+  "TenantId": "common",
+  "ClientId": null,
+  "EnableInteractiveBrowser": true,
+  "RedirectUri": "http://localhost:8400",
+  "BrowserTimeoutSeconds": 300,
+  "EnableDeviceCode": true,
+  "DeviceCodeTimeoutSeconds": 300,
+  "ClientSecret": null,
+  "CertificatePath": null,
+  "CertificatePassword": null,
+  "CertificateThumbprint": null,
+  "EnableManagedIdentity": false,
+  "ManagedIdentityClientId": null,
+  "EnableTokenCache": true,
+  "TokenCacheName": "azure-mcp-cache",
+  "AuthorityHost": null,
+  "AdditionalScopes": []
+}

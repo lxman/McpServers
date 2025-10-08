@@ -64,6 +64,7 @@ public class Program
             .WithTools<MonitorTools>()
             .WithTools<NetworkingTools>()
             .WithResources<EmptyResourceProvider>()
+            .WithTools<EntraAuthTools>()
             .WithPrompts<EmptyPromptProvider>();
 
 

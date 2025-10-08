@@ -16,6 +16,11 @@ public class CredentialInfo
     public string Source { get; set; } = string.Empty;
     
     /// <summary>
+    /// Authentication method used (auto-discovered, interactive-browser, device-code, client-secret, certificate, managed-identity)
+    /// </summary>
+    public string? AuthenticationMethod { get; set; }
+    
+    /// <summary>
     /// User account name/email if available
     /// </summary>
     public string? AccountName { get; set; }
@@ -46,6 +51,16 @@ public class CredentialInfo
     public DateTime? LastModified { get; set; }
     
     /// <summary>
+    /// Token expiration time (if applicable)
+    /// </summary>
+    public DateTimeOffset? TokenExpiresOn { get; set; }
+    
+    /// <summary>
+    /// Whether this credential supports token refresh
+    /// </summary>
+    public bool SupportsRefresh { get; set; }
+    
+    /// <summary>
     /// Whether this credential was successfully validated
     /// </summary>
     public bool IsValid { get; set; }
@@ -54,6 +69,16 @@ public class CredentialInfo
     /// Error message if credential validation failed
     /// </summary>
     public string? ErrorMessage { get; set; }
+    
+    /// <summary>
+    /// Client ID used for authentication (if applicable)
+    /// </summary>
+    public string? ClientId { get; set; }
+    
+    /// <summary>
+    /// Whether this is an interactive credential (required user interaction)
+    /// </summary>
+    public bool IsInteractive { get; set; }
     
     /// <summary>
     /// Additional metadata about the credential
@@ -70,6 +95,9 @@ public class CredentialInfo
             $"{index}. {Source}"
         };
 
+        if (!string.IsNullOrEmpty(AuthenticationMethod))
+            lines.Add($"   Method: {AuthenticationMethod}");
+
         if (!string.IsNullOrEmpty(AccountName))
             lines.Add($"   Account: {AccountName}");
 
@@ -79,6 +107,15 @@ public class CredentialInfo
             lines.Add($"   Tenant ID: {TenantId}");
 
         lines.Add($"   Subscriptions: {SubscriptionCount} available");
+
+        if (TokenExpiresOn.HasValue)
+        {
+            TimeSpan timeToExpiry = TokenExpiresOn.Value - DateTimeOffset.UtcNow;
+            if (timeToExpiry.TotalMinutes > 0)
+                lines.Add($"   Token expires: {timeToExpiry.TotalHours:F1} hours");
+            else
+                lines.Add($"   Token expired: {Math.Abs(timeToExpiry.TotalHours):F1} hours ago");
+        }
 
         if (LastModified.HasValue)
             lines.Add($"   Last used: {LastModified.Value:MMM d, yyyy h:mm tt}");

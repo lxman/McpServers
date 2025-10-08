@@ -4,6 +4,7 @@ using AzureMcp.Common;
 using AzureMcp.Services.Storage;
 using AzureMcp.Services.Storage.Models;
 using ModelContextProtocol.Server;
+// ReSharper disable InconsistentNaming
 
 namespace AzureMcp.Tools;
 

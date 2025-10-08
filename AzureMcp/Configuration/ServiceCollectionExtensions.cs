@@ -1,4 +1,4 @@
-﻿using AzureMcp.Authentication;
+using AzureMcp.Authentication;
 using AzureMcp.Authentication.models;
 using AzureMcp.Services.Core;
 using AzureMcp.Services.CostManagement;
@@ -52,6 +52,29 @@ public static class ServiceCollectionExtensions
                             loggerFactory.CreateLogger<ArmClientFactory>();
             var credentialService = provider.GetRequiredService<CredentialSelectionService>();
             return new ArmClientFactory(credentialService, logger);
+        });
+
+
+        // Register Entra authentication services
+        services.AddSingleton<EntraAuthConfigLoader>(provider =>
+        {
+            ILogger<EntraAuthConfigLoader> logger = provider.GetService<ILogger<EntraAuthConfigLoader>>() ??
+                            loggerFactory.CreateLogger<EntraAuthConfigLoader>();
+            return new EntraAuthConfigLoader(logger);
+        });
+
+        services.AddSingleton<EntraAuthConfig>(provider =>
+        {
+            var configLoader = provider.GetRequiredService<EntraAuthConfigLoader>();
+            return configLoader.LoadConfiguration();
+        });
+
+        services.AddSingleton<EntraCredentialService>(provider =>
+        {
+            ILogger<EntraCredentialService> logger = provider.GetService<ILogger<EntraCredentialService>>() ??
+                            loggerFactory.CreateLogger<EntraCredentialService>();
+            var config = provider.GetRequiredService<EntraAuthConfig>();
+            return new EntraCredentialService(logger, config);
         });
 
         // Discover Azure DevOps environments only (ARM credentials now handled by CredentialSelectionService)
