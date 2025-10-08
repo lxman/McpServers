@@ -2,8 +2,6 @@
   <Project Path="AwsMcp\AwsMcp.csproj" Type="Classic C#" />
   <Project Path="AzureMcp\AzureMcp.csproj" Type="Classic C#" />
   <Project Path="DesktopDriver\DesktopDriver.csproj" Type="Classic C#" />
-  <Project Path="McpCodeEditorTests\McpCodeEditorTests.csproj" Type="Classic C#" />
-  <Project Path="McpCodeEditor\McpCodeEditor.csproj" Type="Classic C#" />
   <Project Path="McpUtilitiesServer\McpUtilitiesServer.csproj" Type="Classic C#" />
   <Project Path="MongoIntegration\MongoIntegration.csproj" Type="Classic C#" />
   <Project Path="MsOfficeCrypto\MsOfficeCrypto.csproj" Type="Classic C#" />
