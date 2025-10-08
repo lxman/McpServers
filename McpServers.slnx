@@ -1,6 +1,7 @@
 ﻿<Solution>
   <Project Path="AwsMcp\AwsMcp.csproj" Type="Classic C#" />
   <Project Path="AzureMcp\AzureMcp.csproj" Type="Classic C#" />
+  <Project Path="CSharpAnalyzerMcp\CSharpAnalyzerMcp.csproj" Type="Classic C#" />
   <Project Path="DesktopDriver\DesktopDriver.csproj" Type="Classic C#" />
   <Project Path="McpUtilitiesServer\McpUtilitiesServer.csproj" Type="Classic C#" />
   <Project Path="MongoIntegration\MongoIntegration.csproj" Type="Classic C#" />
