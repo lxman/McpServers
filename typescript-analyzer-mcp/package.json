@@ -1,0 +1,33 @@
+{
+  "name": "typescript-analyzer-mcp",
+  "version": "1.0.0",
+  "description": "MCP server that exposes TypeScript Compiler API capabilities for code analysis",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "typescript-analyzer-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "dev": "npm run build && node dist/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "typescript",
+    "analyzer",
+    "compiler-api"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "typescript": "^5.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
