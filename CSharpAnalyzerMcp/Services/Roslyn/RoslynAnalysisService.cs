@@ -12,7 +12,8 @@ namespace CSharpAnalyzerMcp.Services.Roslyn;
 
 public class RoslynAnalysisService
 {
-    public static async Task<AnalyzeCodeResponse> AnalyzeCodeAsync(string code, string? filePath = null)
+    public static AnalyzeCodeResponse AnalyzeCodeAsync(string code, string? filePath = null)
+
     {
         var response = new AnalyzeCodeResponse { Success = true };
 
@@ -76,7 +77,7 @@ public class RoslynAnalysisService
         return response;
     }
 
-    public async Task<GetSymbolsResponse> GetSymbolsAsync(string code, string? filePath = null, string? filter = null)
+    public static async Task<GetSymbolsResponse> GetSymbolsAsync(string code, string? filePath = null, string? filter = null)
     {
         var response = new GetSymbolsResponse();
 
@@ -275,7 +276,7 @@ public class RoslynAnalysisService
     private static int CalculateCyclomaticComplexity(MethodDeclarationSyntax method)
     {
         // Start with 1 for the method itself
-        int complexity = 1;
+        var complexity = 1;
 
         // Add 1 for each decision point
         IEnumerable<SyntaxNode> decisionPoints = method.DescendantNodes().Where(node =>
@@ -336,4 +337,281 @@ public class RoslynAnalysisService
             .Where(a => !string.IsNullOrEmpty(a.Location))
             .Select(a => MetadataReference.CreateFromFile(a.Location));
     }
+
+    public static async Task<RemoveUnusedUsingsResponse> RemoveUnusedUsingsAsync(string code, string? filePath = null)
+    {
+        var response = new RemoveUnusedUsingsResponse { Success = true };
+
+        try
+        {
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
+            SyntaxNode root = await syntaxTree.GetRootAsync();
+
+            var compilation = CSharpCompilation.Create(
+                "TempAssembly",
+                [syntaxTree],
+                GetBasicReferences(),
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+            );
+
+            SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
+
+            // Get all using directives
+            List<UsingDirectiveSyntax> usings = root.DescendantNodes().OfType<UsingDirectiveSyntax>().ToList();
+            var unusedUsings = new List<UsingDirectiveSyntax>();
+
+            foreach (UsingDirectiveSyntax usingDirective in usings)
+            {
+                var isUsed = false;
+                var usingName = usingDirective.Name?.ToString();
+
+                if (string.IsNullOrEmpty(usingName))
+                    continue;
+
+                // Check if any symbols from this namespace are used
+                IEnumerable<SyntaxNode> allNodes = root.DescendantNodes().Where(n => n != usingDirective);
+                
+                foreach (SyntaxNode node in allNodes)
+                {
+                    RoslynSymbolInfo symbolInfo = semanticModel.GetSymbolInfo(node);
+                    string? symbolNamespace = symbolInfo.Symbol?.ContainingNamespace?.ToDisplayString();
+                    if (symbolNamespace == null ||
+                        (symbolNamespace != usingName && !symbolNamespace.StartsWith(usingName + "."))) continue;
+                    isUsed = true;
+                    break;
+                }
+
+                if (isUsed) continue;
+                unusedUsings.Add(usingDirective);
+                response.RemovedUsings.Add(usingName);
+            }
+
+            // Remove unused usings
+            root = root.RemoveNodes(unusedUsings, SyntaxRemoveOptions.KeepNoTrivia)!;
+            response.CleanedCode = root.ToFullString();
+            response.RemovedCount = unusedUsings.Count;
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Error = $"Failed to remove unused usings: {ex.Message}";
+            response.CleanedCode = code;
+        }
+
+        return response;
+    }
+
+    public static async Task<FindDeadCodeResponse> FindDeadCodeAsync(string code, string? filePath = null)
+    {
+        var response = new FindDeadCodeResponse { Success = true };
+
+        try
+        {
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
+            SyntaxNode root = await syntaxTree.GetRootAsync();
+
+            var compilation = CSharpCompilation.Create(
+                "TempAssembly",
+                [syntaxTree],
+                GetBasicReferences(),
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+            );
+
+            SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
+
+            // Find unreachable code from diagnostics
+            List<Diagnostic> diagnostics = compilation.GetDiagnostics()
+                .Where(d => d.Id == "CS0162") // Unreachable code detected
+                .ToList();
+
+            foreach (Diagnostic diagnostic in diagnostics)
+            {
+                FileLinePositionSpan lineSpan = diagnostic.Location.GetLineSpan();
+                response.DeadCode.Add(new DeadCodeInfo
+                {
+                    Kind = "UnreachableCode",
+                    Name = "Unreachable code",
+                    Line = lineSpan.StartLinePosition.Line + 1,
+                    Column = lineSpan.StartLinePosition.Character + 1,
+                    Message = diagnostic.GetMessage(),
+                    Suggestion = "Remove this unreachable code"
+                });
+            }
+
+            // Find unused private members
+            List<SyntaxNode> privateMembers = root.DescendantNodes()
+                .Where(n => n is MethodDeclarationSyntax || n is FieldDeclarationSyntax || n is PropertyDeclarationSyntax)
+                .ToList();
+
+            foreach (SyntaxNode member in privateMembers)
+            {
+                bool isPrivate = member.ChildTokens().Any(t => t.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.PrivateKeyword)) ||
+                                 !member.ChildTokens().Any(t => 
+                                     t.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.PublicKeyword) ||
+                                     t.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.ProtectedKeyword) ||
+                                     t.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.InternalKeyword));
+
+                if (!isPrivate)
+                    continue;
+
+                ISymbol? symbol = semanticModel.GetDeclaredSymbol(member);
+                if (symbol == null)
+                    continue;
+
+                // Simple check if the symbol is referenced anywhere
+                bool hasReferences = FindSymbolReferences(root, symbol, semanticModel);
+
+                if (hasReferences) continue;
+                FileLinePositionSpan location = member.GetLocation().GetLineSpan();
+                string memberName = symbol.Name;
+                string kind = symbol.Kind == SymbolKind.Method ? "UnusedMethod" :
+                    symbol.Kind == SymbolKind.Field ? "UnusedField" :
+                    "UnusedProperty";
+
+                response.DeadCode.Add(new DeadCodeInfo
+                {
+                    Kind = kind,
+                    Name = memberName,
+                    Line = location.StartLinePosition.Line + 1,
+                    Column = location.StartLinePosition.Character + 1,
+                    Message = $"Private {symbol.Kind.ToString().ToLower()} '{memberName}' is never used",
+                    Suggestion = $"Consider removing this unused {symbol.Kind.ToString().ToLower()}"
+                });
+            }
+
+
+            response.TotalCount = response.DeadCode.Count;
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Error = $"Dead code analysis failed: {ex.Message}";
+        }
+
+        return response;
+    }
+
+    public static async Task<GetCodeFixesResponse> GetCodeFixesAsync(string code, string? filePath = null)
+    {
+        var response = new GetCodeFixesResponse { Success = true };
+
+        try
+        {
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
+            SyntaxNode root = await syntaxTree.GetRootAsync();
+
+            var compilation = CSharpCompilation.Create(
+                "TempAssembly",
+                [syntaxTree],
+                GetBasicReferences(),
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+            );
+
+            SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
+
+            // Get diagnostics that have potential fixes
+            List<Diagnostic> diagnostics = compilation.GetDiagnostics()
+                .Where(d => d.Severity == DiagnosticSeverity.Error || d.Severity == DiagnosticSeverity.Warning)
+                .ToList();
+
+            foreach (Diagnostic diagnostic in diagnostics)
+            {
+                FileLinePositionSpan lineSpan = diagnostic.Location.GetLineSpan();
+                string fixDescription = GetFixDescription(diagnostic.Id);
+                string? fixedCode = TryApplySimpleFix(diagnostic, root, semanticModel);
+
+                response.CodeFixes.Add(new CodeFixInfo
+                {
+                    DiagnosticId = diagnostic.Id,
+                    DiagnosticMessage = diagnostic.GetMessage(),
+                    Line = lineSpan.StartLinePosition.Line + 1,
+                    Column = lineSpan.StartLinePosition.Character + 1,
+                    FixDescription = fixDescription,
+                    FixedCode = fixedCode
+                });
+            }
+
+            response.TotalCount = response.CodeFixes.Count;
+        }
+        catch (Exception ex)
+        {
+            response.Success = false;
+            response.Error = $"Code fixes analysis failed: {ex.Message}";
+        }
+
+        return response;
+    }
+
+    private static string GetFixDescription(string diagnosticId)
+    {
+        return diagnosticId switch
+        {
+            "CS0103" => "Add missing using directive or assembly reference",
+            "CS0246" => "Add missing using directive or fix type name",
+            "CS1002" => "Add missing semicolon",
+            "CS1513" => "Add missing closing brace",
+            "CS0029" => "Cast or convert the type to match",
+            "CS0161" => "Add return statement",
+            "CS0101" => "Rename to avoid name conflict",
+            "CS0219" => "Remove unused variable or use it",
+            "CS0168" => "Remove unused variable or use it",
+            _ => "Refer to documentation for fix suggestions"
+        };
+    }
+
+    private static string? TryApplySimpleFix(Diagnostic diagnostic, SyntaxNode root, SemanticModel semanticModel)
+    {
+        try
+        {
+            // For now, we'll return null - full code fixing requires the CodeFixProvider infrastructure
+            // which is more complex. This is a placeholder for future enhancement.
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+
+private static bool FindSymbolReferences(SyntaxNode root, ISymbol targetSymbol, SemanticModel semanticModel)
+{
+    // Search for any references to the target symbol in the syntax tree
+    foreach (SyntaxNode node in root.DescendantNodes())
+    {
+        // Skip the declaration itself
+        ISymbol? declaredSymbol = semanticModel.GetDeclaredSymbol(node);
+        if (SymbolEqualityComparer.Default.Equals(declaredSymbol, targetSymbol))
+            continue;
+
+        switch (node)
+        {
+            // Check identifiers
+            case IdentifierNameSyntax identifier:
+            {
+                RoslynSymbolInfo symbolInfo = semanticModel.GetSymbolInfo(identifier);
+                if (SymbolEqualityComparer.Default.Equals(symbolInfo.Symbol, targetSymbol))
+                {
+                    return true;
+                }
+
+                break;
+            }
+            // Check member access (e.g., this.MyMethod)
+            case MemberAccessExpressionSyntax memberAccess:
+            {
+                RoslynSymbolInfo symbolInfo = semanticModel.GetSymbolInfo(memberAccess);
+                if (SymbolEqualityComparer.Default.Equals(symbolInfo.Symbol, targetSymbol))
+                {
+                    return true;
+                }
+
+                break;
+            }
+        }
+    }
+
+    return false;
+}
+
 }

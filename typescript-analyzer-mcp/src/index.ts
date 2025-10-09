@@ -116,6 +116,24 @@ const tools: Tool[] = [
       required: ['code'],
     },
   },
+{
+  name: 'remove_unused_imports',
+  description: 'Remove unused import statements from TypeScript code',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      code: {
+        type: 'string',
+        description: 'TypeScript code to clean',
+      },
+      filePath: {
+        type: 'string',
+        description: 'Optional file path for context',
+      },
+    },
+    required: ['code'],
+  },
+},
 ];
 
 // Create the MCP server
@@ -225,6 +243,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           ],
         };
       }
+
+
+      case 'remove_unused_imports': {
+        const result = tsTools.removeUnusedImports({
+          code: args.code as string,
+          fileName: args.filePath as string | undefined,
+        });
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
 
       default:
         throw new Error(`Unknown tool: ${name}`);

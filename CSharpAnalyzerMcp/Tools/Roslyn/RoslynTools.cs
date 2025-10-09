@@ -12,16 +12,15 @@ namespace CSharpAnalyzerMcp.Tools.Roslyn;
 /// Provides Roslyn-based C# code analysis tools through MCP.
 /// </summary>
 [McpServerToolType]
-public class RoslynTools(
-    RoslynAnalysisService analysisService,
-    ILogger<RoslynTools> logger)
+public class RoslynTools(ILogger<RoslynTools> logger)
+
 {
     /// <summary>
     /// Analyze C# code for errors, warnings, and diagnostics using Roslyn.
     /// </summary>
     [McpServerTool]
     [Description("Analyze C# code for errors, warnings, and diagnostics using Roslyn")]
-    public async Task<string> AnalyzeCode(
+    public Task<string> AnalyzeCode(
         [Description("C# code to analyze")] string code,
         [Description("Optional file path for context")] string? filePath = null)
     {
@@ -29,19 +28,20 @@ public class RoslynTools(
 
         try
         {
-            AnalyzeCodeResponse result = await RoslynAnalysisService.AnalyzeCodeAsync(code, filePath);
-            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
+            AnalyzeCodeResponse result = RoslynAnalysisService.AnalyzeCodeAsync(code, filePath);
+            return Task.FromResult(JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error analyzing code");
-            return JsonSerializer.Serialize(new
+            return Task.FromResult(JsonSerializer.Serialize(new
             {
                 error = ex.Message,
                 success = false
-            }, SerializerOptions.JsonOptionsIndented);
+            }, SerializerOptions.JsonOptionsIndented));
         }
     }
+
 
     /// <summary>
     /// Get all symbols (classes, methods, properties, etc.) from C# code.
@@ -58,7 +58,7 @@ public class RoslynTools(
 
         try
         {
-            GetSymbolsResponse result = await analysisService.GetSymbolsAsync(code, filePath, filter);
+            GetSymbolsResponse result = await RoslynAnalysisService.GetSymbolsAsync(code, filePath, filter);
             return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
@@ -156,4 +156,87 @@ public class RoslynTools(
             }, SerializerOptions.JsonOptionsIndented);
         }
     }
+
+    /// <summary>
+    /// Remove unused using directives from C# code.
+    /// </summary>
+    [McpServerTool]
+    [Description("Remove unused using directives from C# code")]
+    public async Task<string> RemoveUnusedUsings(
+        [Description("C# code to process")] string code,
+        [Description("Optional file path for context")] string? filePath = null)
+    {
+        logger.LogInformation("RemoveUnusedUsings called with code length: {Length}", code.Length);
+
+        try
+        {
+            RemoveUnusedUsingsResponse result = await RoslynAnalysisService.RemoveUnusedUsingsAsync(code, filePath);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error removing unused usings");
+            return JsonSerializer.Serialize(new
+            {
+                error = ex.Message,
+                success = false,
+                cleanedCode = code
+            }, SerializerOptions.JsonOptionsIndented);
+        }
+    }
+
+    /// <summary>
+    /// Find dead code including unreachable code and unused private members.
+    /// </summary>
+    [McpServerTool]
+    [Description("Find dead code including unreachable code and unused private members")]
+    public async Task<string> FindDeadCode(
+        [Description("C# code to analyze")] string code,
+        [Description("Optional file path for context")] string? filePath = null)
+    {
+        logger.LogInformation("FindDeadCode called with code length: {Length}", code.Length);
+
+        try
+        {
+            FindDeadCodeResponse result = await RoslynAnalysisService.FindDeadCodeAsync(code, filePath);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error finding dead code");
+            return JsonSerializer.Serialize(new
+            {
+                error = ex.Message,
+                success = false
+            }, SerializerOptions.JsonOptionsIndented);
+        }
+    }
+
+    /// <summary>
+    /// Get code fix suggestions for diagnostics (errors and warnings).
+    /// </summary>
+    [McpServerTool]
+    [Description("Get code fix suggestions for diagnostics (errors and warnings)")]
+    public async Task<string> GetCodeFixes(
+        [Description("C# code to analyze")] string code,
+        [Description("Optional file path for context")] string? filePath = null)
+    {
+        logger.LogInformation("GetCodeFixes called with code length: {Length}", code.Length);
+
+        try
+        {
+            GetCodeFixesResponse result = await RoslynAnalysisService.GetCodeFixesAsync(code, filePath);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting code fixes");
+            return JsonSerializer.Serialize(new
+            {
+                error = ex.Message,
+                success = false
+            }, SerializerOptions.JsonOptionsIndented);
+        }
+    }
+
 }

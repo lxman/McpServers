@@ -45,7 +45,7 @@ public class AssemblyAnalysisService(AssemblyLoaderService loaderService)
             response.Location = assemblyPath;
 
             // Get target framework from attribute using CustomAttributeData
-            var targetFrameworkAttr = assembly.CustomAttributes
+            CustomAttributeData? targetFrameworkAttr = assembly.CustomAttributes
                 .FirstOrDefault(a => a.AttributeType.Name == "TargetFrameworkAttribute");
             
             if (targetFrameworkAttr != null && targetFrameworkAttr.ConstructorArguments.Count > 0)

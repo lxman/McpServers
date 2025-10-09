@@ -142,4 +142,27 @@ export class TypeScriptTools {
       };
     }
   }
+
+
+    /**
+  * Remove unused imports from TypeScript code
+  */
+    removeUnusedImports(request: FormatCodeRequest): FormatCodeResponse {
+      try {
+        const cleanedCode = this.analyzer.removeUnusedImports(
+          request.code,
+          request.fileName || 'temp.ts'
+        );
+
+        return {
+          success: true,
+          formattedCode: cleanedCode,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred',
+        };
+      }
+    }
 }

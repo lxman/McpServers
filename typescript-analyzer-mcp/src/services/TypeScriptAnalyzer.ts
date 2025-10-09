@@ -2,25 +2,69 @@ import ts from 'typescript';
 import { DiagnosticInfo } from '../models/DiagnosticInfo.js';
 import { SymbolInfo } from '../models/SymbolInfo.js';
 import { CodeMetrics } from '../models/CodeMetrics.js';
+import * as path from 'path';
+import * as fs from 'fs';
 
 export class TypeScriptAnalyzer {
   private compilerOptions: ts.CompilerOptions;
 
   constructor() {
     this.compilerOptions = {
-      target: ts.ScriptTarget.Latest,
+      target: ts.ScriptTarget.ES2020,
       module: ts.ModuleKind.ESNext,
+      lib: ['es2020', 'dom'], // Include both ES2020 and DOM libraries
       strict: true,
       esModuleInterop: true,
-      skipLibCheck: true,
+      skipLibCheck: false,
       forceConsistentCasingInFileNames: true,
-      moduleResolution: ts.ModuleResolutionKind.NodeNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler, // Changed from NodeNext
+      noUnusedLocals: true, // Enable unused variable detection
+      noUnusedParameters: true, // Enable unused parameter detection
     };
   }
+
 
   /**
    * Analyze TypeScript code and return diagnostics
    */
+
+  /**
+* Helper method to resolve lib file paths
+* Handles cases like "dom" -> "lib.dom.d.ts"
+*/
+  private resolveLibFilePath(name: string): string {
+    let resolvedPath = name;
+    
+    
+    // Normalize path separators to handle both / and \
+    const normalizedName = name.replace(/\\/g, '/');
+    
+    // Check if this is a lib file path (contains node_modules/typescript/lib)
+    if (normalizedName.includes('node_modules/typescript/lib')) {
+      const baseName = path.basename(name);
+      // If the basename doesn't start with 'lib.', add it
+      if (!baseName.startsWith('lib.')) {
+        const libFileName = baseName.endsWith('.d.ts') 
+          ? `lib.${baseName}` 
+          : `lib.${baseName}.d.ts`;
+        resolvedPath = path.join(path.dirname(name), libFileName);
+      }
+    } else if (!name.includes(path.sep) && !name.includes('/') && !name.startsWith('lib.') && !name.endsWith('.d.ts')) {
+      // This is a short name like "dom" or "es2020"
+      const libFileName = `lib.${name}.d.ts`;
+      const tsLibPath = path.join(
+        path.dirname(ts.getDefaultLibFilePath(this.compilerOptions)),
+        libFileName
+      );
+      
+      if (fs.existsSync(tsLibPath)) {
+        resolvedPath = tsLibPath;
+      }
+    }
+    
+    return resolvedPath;
+  }
+
   analyzeCode(code: string, fileName: string = 'temp.ts'): DiagnosticInfo[] {
     const sourceFile = ts.createSourceFile(
       fileName,
@@ -29,46 +73,50 @@ export class TypeScriptAnalyzer {
       true
     );
 
-    // Get syntactic diagnostics from the source file
-    const syntacticDiagnostics = ts.getPreEmitDiagnostics(
-      ts.createProgram([fileName], this.compilerOptions, {
-        getSourceFile: (name) => (name === fileName ? sourceFile : undefined),
-        writeFile: () => {},
-        getCurrentDirectory: () => '',
-        getDirectories: () => [],
-        fileExists: (name) => name === fileName,
-        readFile: (name) => (name === fileName ? code : undefined),
-        getCanonicalFileName: (name) => name,
-        useCaseSensitiveFileNames: () => true,
-        getNewLine: () => '\n',
-        getDefaultLibFileName: () => 'lib.d.ts',
-      }),
-      sourceFile
-    );
-
-
-    // Create a program for semantic diagnostics
+    // Create a compiler host that can access lib files
     const host: ts.CompilerHost = {
-      getSourceFile: (name) => (name === fileName ? sourceFile : undefined),
+      getSourceFile: (name, languageVersion) => {
+        if (name === fileName) {
+          return sourceFile;
+        }
+        
+        // Resolve lib file paths
+        const resolvedPath = this.resolveLibFilePath(name);
+        
+        // Try to read the file
+        try {
+          const libContent = ts.sys.readFile(resolvedPath);
+          if (libContent) {
+            return ts.createSourceFile(resolvedPath, libContent, languageVersion, true);
+          }
+        } catch (e) {
+          // Ignore errors for lib files
+        }
+        return undefined;
+      },
       writeFile: () => {},
-      getCurrentDirectory: () => '',
-      getDirectories: () => [],
-      fileExists: (name) => name === fileName,
-      readFile: (name) => (name === fileName ? code : undefined),
+      getCurrentDirectory: () => process.cwd(),
+      getDirectories: ts.sys.getDirectories,
+      fileExists: (name) => {
+        const resolvedPath = this.resolveLibFilePath(name);
+        return ts.sys.fileExists(resolvedPath);
+      },
+      readFile: (name) => {
+        const resolvedPath = this.resolveLibFilePath(name);
+        return ts.sys.readFile(resolvedPath);
+      },
       getCanonicalFileName: (name) => name,
       useCaseSensitiveFileNames: () => true,
       getNewLine: () => '\n',
-      getDefaultLibFileName: () => 'lib.d.ts',
+      getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
     };
 
     const program = ts.createProgram([fileName], this.compilerOptions, host);
-    const semanticDiagnostics = program.getSemanticDiagnostics(sourceFile);
-
-    // Combine all diagnostics
-    const allDiagnostics = [...syntacticDiagnostics, ...semanticDiagnostics];
+    const allDiagnostics = ts.getPreEmitDiagnostics(program, sourceFile);
 
     return allDiagnostics.map((diagnostic) => this.formatDiagnostic(diagnostic, sourceFile));
   }
+
 
   /**
    * Get all symbols (classes, interfaces, functions, etc.) from the code
@@ -319,6 +367,146 @@ export class TypeScriptAnalyzer {
 
     return metrics;
   }
+
+
+    /**
+  * Remove unused imports from TypeScript code
+  */
+    removeUnusedImports(code: string, fileName: string = 'temp.ts'): string {
+      const sourceFile = ts.createSourceFile(
+        fileName,
+        code,
+        ts.ScriptTarget.Latest,
+        true
+      );
+
+      // Get TypeScript lib directory path
+      const typeScriptLibPath = path.dirname(ts.getDefaultLibFilePath(this.compilerOptions));
+
+      const host: ts.LanguageServiceHost = {
+        getCompilationSettings: () => this.compilerOptions,
+        getScriptFileNames: () => [fileName],
+        getScriptVersion: () => '0',
+        getScriptSnapshot: (name) => {
+          if (name === fileName) {
+            return ts.ScriptSnapshot.fromString(code);
+          }
+          
+          // Handle lib file references - TypeScript may request them by short name
+          let resolvedPath = name;
+          
+          // Check if this is a lib file reference without the full path
+          if (!name.includes(path.sep) && !name.startsWith('lib.') && !name.endsWith('.d.ts')) {
+            // This might be a lib reference like "dom" or "es2020"
+            const libFileName = `lib.${name}.d.ts`;
+            resolvedPath = path.join(typeScriptLibPath, libFileName);
+          } else if (name.includes('lib.') && name.endsWith('.d.ts')) {
+            // Already has lib. prefix, just get the basename
+            resolvedPath = path.join(typeScriptLibPath, path.basename(name));
+          }
+          
+          // Try to read the file
+          try {
+            const content = ts.sys.readFile(resolvedPath);
+            if (content) {
+              return ts.ScriptSnapshot.fromString(content);
+            }
+          } catch (e) {
+            // File not found, return undefined
+          }
+          return undefined;
+        },
+        getCurrentDirectory: () => process.cwd(),
+        getDefaultLibFileName: (options) => {
+          return path.join(typeScriptLibPath, ts.getDefaultLibFileName(options));
+        },
+        fileExists: (name) => {
+          if (name === fileName) return true;
+          
+          // Handle lib file references - TypeScript may request them by short name
+          let resolvedPath = name;
+          
+          // Check if this is a lib file reference without the full path
+          if (!name.includes(path.sep) && !name.startsWith('lib.') && !name.endsWith('.d.ts')) {
+            // This might be a lib reference like "dom" or "es2020"
+            const libFileName = `lib.${name}.d.ts`;
+            resolvedPath = path.join(typeScriptLibPath, libFileName);
+          } else if (name.includes('lib.') && name.endsWith('.d.ts')) {
+            // Already has lib. prefix, just get the basename
+            resolvedPath = path.join(typeScriptLibPath, path.basename(name));
+          }
+          
+          return ts.sys.fileExists(resolvedPath);
+        },
+        readFile: (name) => {
+          if (name === fileName) return code;
+          
+          // Handle lib file references - TypeScript may request them by short name
+          let resolvedPath = name;
+          
+          // Check if this is a lib file reference without the full path
+          if (!name.includes(path.sep) && !name.startsWith('lib.') && !name.endsWith('.d.ts')) {
+            // This might be a lib reference like "dom" or "es2020"
+            const libFileName = `lib.${name}.d.ts`;
+            resolvedPath = path.join(typeScriptLibPath, libFileName);
+          } else if (name.includes('lib.') && name.endsWith('.d.ts')) {
+            // Already has lib. prefix, just get the basename
+            resolvedPath = path.join(typeScriptLibPath, path.basename(name));
+          }
+          
+          return ts.sys.readFile(resolvedPath);
+        },
+        readDirectory: ts.sys.readDirectory,
+        directoryExists: ts.sys.directoryExists,
+        getDirectories: ts.sys.getDirectories,
+      };
+
+      const languageService = ts.createLanguageService(host);
+    
+      // Get semantic diagnostics which include unused import information
+      const diagnostics = languageService.getSemanticDiagnostics(fileName);
+    
+      // Filter for unused import diagnostics (code 6133)
+      const unusedImports = diagnostics.filter(d => 
+        d.code === 6133 && // unused variable/import
+        d.file?.fileName === fileName &&
+        d.start !== undefined
+      );
+
+      if (unusedImports.length === 0) {
+        return code;
+      }
+
+      // Apply changes in reverse order to maintain positions
+      let modifiedCode = code;
+      const edits: { start: number; end: number }[] = [];
+
+      unusedImports.forEach(diagnostic => {
+        if (diagnostic.start !== undefined && diagnostic.length !== undefined) {
+          const start = diagnostic.start;
+          const end = start + diagnostic.length;
+        
+          // Find the full import statement
+          const lineStart = modifiedCode.lastIndexOf('\n', start) + 1;
+          const lineEnd = modifiedCode.indexOf('\n', end);
+          const line = modifiedCode.substring(lineStart, lineEnd === -1 ? undefined : lineEnd);
+        
+          // If this is part of an import statement, mark the entire line for removal
+          if (line.trim().startsWith('import ')) {
+            edits.push({ start: lineStart, end: lineEnd === -1 ? modifiedCode.length : lineEnd + 1 });
+          }
+        }
+      });
+
+      // Sort edits in reverse order and apply
+      edits
+        .sort((a, b) => b.start - a.start)
+        .forEach(edit => {
+          modifiedCode = modifiedCode.substring(0, edit.start) + modifiedCode.substring(edit.end);
+        });
+
+      return modifiedCode;
+    }
 
   // Helper methods
 
