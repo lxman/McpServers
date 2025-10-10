@@ -3,6 +3,7 @@ using Amazon.ECR.Model;
 using Amazon.Runtime;
 using AwsMcp.Configuration;
 using AwsMcp.Configuration.Models;
+using AwsMcp.ECR.Models;
 using Microsoft.Extensions.Logging;
 
 namespace AwsMcp.ECR;
@@ -142,15 +143,55 @@ public class EcrService
     }
     
     /// <summary>
-    /// List images in a repository
+    /// List images in a repository with pagination support.
+    /// Returns one page of results at a time to avoid timeouts with repositories containing many image tags.
     /// </summary>
-    public async Task<ListImagesResponse> ListImagesAsync(string repositoryName)
+    /// <param name="repositoryName">Name of the ECR repository</param>
+    /// <param name="maxResults">Maximum number of images to return per page (1-1000, default: 100)</param>
+    /// <param name="nextToken">Continuation token from previous response (for pagination)</param>
+    /// <returns>Paginated result containing image identifiers and pagination metadata</returns>
+    public async Task<ListImagesResult> ListImagesAsync(
+        string repositoryName,
+        int maxResults = 100,
+        string? nextToken = null)
     {
         await EnsureInitializedAsync();
-        return await _ecrClient!.ListImagesAsync(new ListImagesRequest 
-        { 
-            RepositoryName = repositoryName 
-        });
+
+        // Clamp maxResults to AWS allowed range (1-1000)
+        maxResults = Math.Clamp(maxResults, 1, 1000);
+
+        var request = new ListImagesRequest
+        {
+            RepositoryName = repositoryName,
+            MaxResults = maxResults
+        };
+
+        // Add the continuation token for pagination
+        if (!string.IsNullOrEmpty(nextToken))
+        {
+            request.NextToken = nextToken;
+        }
+
+        // Execute the API call (fast - single page only)
+        ListImagesResponse response = await _ecrClient!.ListImagesAsync(request);
+
+        // Build paginated result
+        var result = new ListImagesResult
+        {
+            ImageIds = response.ImageIds ?? [],
+            ImageCount = response.ImageIds?.Count ?? 0,
+            HasMoreResults = !string.IsNullOrEmpty(response.NextToken),
+            NextToken = response.NextToken,
+            RepositoryName = repositoryName
+        };
+
+        // Create a helpful summary message
+        result.Summary =
+            result.HasMoreResults
+                ? $"Retrieved {result.ImageCount} images from repository '{repositoryName}'. More results available - use NextToken to continue pagination."
+                : $"Retrieved {result.ImageCount} images from repository '{repositoryName}'. No more results available.";
+
+        return result;
     }
     
     /// <summary>
@@ -390,7 +431,7 @@ public class EcrService
     }
     
     /// <summary>
-    /// Ensure service is initialized (wait if auto-initialization is still running)
+    /// Ensure the service is initialized (wait if auto-initialization is still running)
     /// </summary>
     private async Task EnsureInitializedAsync()
     {

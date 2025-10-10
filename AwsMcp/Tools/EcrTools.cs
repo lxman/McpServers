@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
 using Amazon.ECR.Model;
+using AwsMcp.Common;
 using AwsMcp.Configuration;
 using AwsMcp.ECR;
+using AwsMcp.ECR.Models;
 using ModelContextProtocol.Server;
 
 namespace AwsMcp.Tools;
@@ -227,35 +229,45 @@ public class EcrTools(EcrService ecrService)
     }
 
     [McpServerTool]
-    [Description("List images in an ECR repository")]
+    [Description("List images in an ECR repository with pagination support. Returns one page of results at a time to avoid timeouts with repositories containing many image tags.")]
     public async Task<string> ListImages(
         [Description("Name of the repository")]
-        string repositoryName)
+        string repositoryName,
+        [Description("Maximum number of images to return per page (1-1000, default: 100)")]
+        int maxResults = 100,
+        [Description("Continuation token from previous response (for pagination). Leave empty for first request.")]
+        string? nextToken = null)
     {
         try
         {
-            ListImagesResponse response = await ecrService.ListImagesAsync(repositoryName);
-            
-            var images = response.ImageIds.Select(image => new
-            {
-                image.ImageDigest, image.ImageTag
-            });
+            ListImagesResult result = await ecrService.ListImagesAsync(
+                repositoryName,
+                maxResults,
+                nextToken);
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
-                images,
-                count = response.ImageIds.Count,
-                repositoryName
-            });
+                repositoryName = result.RepositoryName,
+                imageCount = result.ImageCount,
+                hasMoreResults = result.HasMoreResults,
+                nextToken = result.NextToken,
+                summary = result.Summary,
+                imageIds = result.ImageIds.Select(img => new
+                {
+                    imageDigest = img.ImageDigest,
+                    imageTag = img.ImageTag
+                }).ToList()
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             return JsonSerializer.Serialize(new
             {
                 success = false,
-                error = ex.Message
-            });
+                error = $"Error listing ECR images: {ex.Message}",
+                repositoryName
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 

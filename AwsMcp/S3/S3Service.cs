@@ -3,6 +3,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using AwsMcp.Configuration;
 using AwsMcp.Configuration.Models;
+using AwsMcp.S3.Models;
 using Microsoft.Extensions.Logging;
 
 namespace AwsMcp.S3;
@@ -88,25 +89,68 @@ public class S3Service
     }
     
     /// <summary>
-    /// List objects in a bucket
+    /// List objects in a bucket with pagination support.
+    /// Returns one page of results at a time to avoid timeouts with large buckets.
     /// </summary>
-    public async Task<List<S3Object>> ListObjectsAsync(string bucketName, string? prefix = null, int maxKeys = 1000)
+    /// <param name="bucketName">Name of the S3 bucket</param>
+    /// <param name="prefix">Optional prefix to filter objects</param>
+    /// <param name="maxKeys">Maximum number of objects to return per page (1-1000, default: 1000)</param>
+    /// <param name="continuationToken">Continuation token from previous response (for pagination)</param>
+    /// <returns>Paginated result containing objects and pagination metadata</returns>
+    public async Task<ListObjectsResult> ListObjectsAsync(
+        string bucketName, 
+        string? prefix = null, 
+        int maxKeys = 1000,
+        string? continuationToken = null)
     {
         await EnsureInitializedAsync();
-    
+
+        // Clamp maxKeys to AWS allowed range (1-1000)
+        maxKeys = Math.Clamp(maxKeys, 1, 1000);
+
         var request = new ListObjectsV2Request
         {
             BucketName = bucketName,
             MaxKeys = maxKeys
         };
-    
+
         if (!string.IsNullOrEmpty(prefix))
         {
             request.Prefix = prefix;
         }
-    
-        ListObjectsV2Response? response = await _s3Client!.ListObjectsV2Async(request);
-        return response.S3Objects ?? [];
+
+        // Add the continuation token for pagination
+        if (!string.IsNullOrEmpty(continuationToken))
+        {
+            request.ContinuationToken = continuationToken;
+        }
+
+        // Execute the API call (fast - single page only)
+        ListObjectsV2Response response = await _s3Client!.ListObjectsV2Async(request);
+
+        // Build paginated result
+        var result = new ListObjectsResult
+        {
+            Objects = response.S3Objects ?? [],
+            ObjectCount = response.S3Objects?.Count ?? 0,
+            HasMoreResults = response.IsTruncated ?? false,
+            ContinuationToken = response.NextContinuationToken,
+            BucketName = bucketName,
+            Prefix = prefix
+        };
+
+        // Create a helpful summary message
+        result.Summary =
+            result.HasMoreResults
+                ? $"Retrieved {result.ObjectCount} objects from bucket '{bucketName}'. More results available - use ContinuationToken to continue pagination."
+                : $"Retrieved {result.ObjectCount} objects from bucket '{bucketName}'. No more results available.";
+
+        if (!string.IsNullOrEmpty(prefix))
+        {
+            result.Summary += $" (filtered by prefix: '{prefix}')";
+        }
+
+        return result;
     }
     
     /// <summary>

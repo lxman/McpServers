@@ -5,6 +5,7 @@ using Amazon.S3.Model;
 using AwsMcp.Common;
 using AwsMcp.Configuration;
 using AwsMcp.S3;
+using AwsMcp.S3.Models;
 using ModelContextProtocol.Server;
 
 namespace AwsMcp.Tools;
@@ -83,38 +84,47 @@ public class S3Tools(S3Service s3Service)
     }
 
     [McpServerTool]
-    [Description("List objects in an S3 bucket")]
+    [Description("List objects in an S3 bucket with pagination support. Returns one page of results at a time to avoid timeouts with large buckets.")]
     public async Task<string> ListObjects(
         [Description("Name of the S3 bucket")]
         string bucketName,
-        [Description("Prefix to filter objects (optional)")]
+        [Description("Optional prefix to filter objects")]
         string? prefix = null,
-        [Description("Maximum number of objects to return (default: 1000)")]
-        int maxKeys = 1000)
+        [Description("Maximum number of objects to return per page (1-1000, default: 1000)")]
+        int maxKeys = 1000,
+        [Description("Continuation token from previous response (for pagination). Leave empty for first request.")]
+        string? continuationToken = null)
     {
         try
         {
-            List<S3Object> objects = await s3Service.ListObjectsAsync(bucketName, prefix, maxKeys);
-            
+            ListObjectsResult result = await s3Service.ListObjectsAsync(
+                bucketName,
+                prefix,
+                maxKeys,
+                continuationToken);
+
             return JsonSerializer.Serialize(new
             {
                 success = true,
-                bucketName,
-                prefix,
-                objectCount = objects.Count,
-                objects = objects.Select(o => new
+                bucketName = result.BucketName,
+                prefix = result.Prefix,
+                objectCount = result.ObjectCount,
+                hasMoreResults = result.HasMoreResults,
+                continuationToken = result.ContinuationToken,
+                summary = result.Summary,
+                objects = result.Objects.Select(obj => new
                 {
-                    key = o.Key ?? "",
-                    size = o.Size ?? 0,
-                    lastModified = o.LastModified ?? DateTime.MinValue,
-                    storageClass = o.StorageClass?.Value ?? "STANDARD",
-                    etag = o.ETag ?? ""
+                    key = obj.Key,
+                    size = obj.Size,
+                    lastModified = obj.LastModified,
+                    eTag = obj.ETag,
+                    storageClass = obj.StorageClass?.Value
                 }).ToList()
             }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
-            return HandleError(ex, "ListObjects");
+            return HandleError(ex, "listing S3 objects");
         }
     }
 

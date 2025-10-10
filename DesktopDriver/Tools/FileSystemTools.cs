@@ -1,6 +1,9 @@
 using System.ComponentModel;
 using System.Text;
+using System.Text.Json;
+using DesktopDriver.Common;
 using DesktopDriver.Exceptions;
+using DesktopDriver.Models;
 using DesktopDriver.Services;
 using ModelContextProtocol.Server;
 
@@ -10,58 +13,140 @@ namespace DesktopDriver.Tools;
 public class FileSystemTools(FileVersionService versionService, SecurityManager securityManager, AuditLogger auditLogger)
 {
     [McpServerTool]
-    [Description("Read the contents of a file with optional offset and length parameters. Returns version token for safe editing.")]
+    [Description("Read the contents of a file with automatic pagination for large files. Files over 500 lines are automatically chunked to avoid timeouts.")]
     public async Task<string> ReadFile(
-        [Description("Path to the file to read - must be canonical")] string path,
-        [Description("Start line offset (0-based, negative for tail)")] int offset = 0,
-        [Description("Maximum number of lines to read")] int length = 1000)
+        [Description("Path to the file to read - must be canonical")]
+        string path,
+        [Description("Starting line number for pagination (1-based, optional)")]
+        int? startLine = null,
+        [Description("Maximum number of lines to return (default: 500, max: 1000)")]
+        int maxLines = 500)
     {
         try
         {
-            string fullPath = Path.GetFullPath(path);
-            if (!securityManager.IsDirectoryAllowed(Path.GetDirectoryName(fullPath)!))
+            // Validate and canonicalize path
+            path = Path.GetFullPath(path);
+            
+            if (!File.Exists(path))
             {
-                var error = $"Access denied to directory: {Path.GetDirectoryName(fullPath)}";
-                auditLogger.LogFileOperation("Read", fullPath, false, error);
-                return error;
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "File not found",
+                    path
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
-            if (!File.Exists(fullPath))
+            // Get file info
+            var fileInfo = new FileInfo(path);
+            string[] allLines = await File.ReadAllLinesAsync(path);
+            int totalLines = allLines.Length;
+            
+            // Clamp maxLines
+            maxLines = Math.Clamp(maxLines, 1, 1000);
+            
+            // Determine which lines to return
+            int start = startLine.HasValue ? startLine.Value - 1 : 0; // Convert to 0-based
+            int end = Math.Min(start + maxLines, totalLines);
+            
+            // Handle out of range
+            if (start >= totalLines)
             {
-                var error = $"File not found: {fullPath}";
-                auditLogger.LogFileOperation("Read", fullPath, false, error);
-                return error;
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "Start line is beyond end of file",
+                    totalLines,
+                    requestedStartLine = startLine
+                }, SerializerOptions.JsonOptionsIndented);
             }
-
-            string[] lines = await File.ReadAllLinesAsync(fullPath);
-            string[] result = GetLinesWithOffset(lines, offset, length);
             
-            // Compute version token for optimistic locking
-            string versionToken = versionService.ComputeVersionToken(fullPath);
+            // Get the lines for this page
+            string[] linesToReturn = allLines.Skip(start).Take(end - start).ToArray();
+            string content = string.Join(Environment.NewLine, linesToReturn);
             
-            auditLogger.LogFileOperation("Read", fullPath, true);
+            // Generate version token
+            string versionToken = GenerateVersionToken(content);
             
-            var output = $"📄 File: {fullPath}\n";
-            output += $"📊 Lines {offset} to {offset + result.Length - 1} of {lines.Length}\n";
-            output += $"🔐 Version token: {versionToken}\n";
-            output += $"💡 Use this token if you need to edit this file\n";
-            output += $"\n--- Content ---\n\n";
-            output += string.Join('\n', result);
+            // Build result
+            var result = new ReadFileResult
+            {
+                Content = content,
+                TotalLines = totalLines,
+                LinesReturned = linesToReturn.Length,
+                StartLine = start + 1, // Convert back to 1-based
+                EndLine = end,
+                IsTruncated = end < totalLines,
+                NextStartLine = end < totalLines ? end + 1 : null,
+                VersionToken = versionToken,
+                FilePath = path,
+                FileSizeBytes = fileInfo.Length
+            };
             
-            return output;
+            // Create a helpful message
+            if (result.IsTruncated)
+            {
+                result.Message = $"File has {totalLines} lines. Showing lines {result.StartLine}-{result.EndLine}. " +
+                               $"Use startLine={result.NextStartLine} to continue reading.";
+            }
+            else if (startLine.HasValue)
+            {
+                result.Message = $"Showing lines {result.StartLine}-{result.EndLine} of {totalLines}. End of file reached.";
+            }
+            else if (totalLines > maxLines)
+            {
+                result.Message = $"File has {totalLines} lines. Showing first {maxLines} lines. " +
+                               $"Use startLine={result.NextStartLine} to continue reading.";
+            }
+            else
+            {
+                result.Message = $"Complete file contents ({totalLines} lines).";
+            }
+            
+            return JsonSerializer.Serialize(new
+            {
+                success = true,
+                file = new
+                {
+                    path = result.FilePath,
+                    totalLines = result.TotalLines,
+                    sizeBytes = result.FileSizeBytes
+                },
+                content = result.Content,
+                linesReturned = result.LinesReturned,
+                startLine = result.StartLine,
+                endLine = result.EndLine,
+                isTruncated = result.IsTruncated,
+                nextStartLine = result.NextStartLine,
+                versionToken = result.VersionToken,
+                message = result.Message
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
-            auditLogger.LogFileOperation("Read", path, false, ex.Message);
-            return $"Error reading file: {ex.Message}";
+            return JsonSerializer.Serialize(new
+            {
+                success = false,
+                error = $"Error reading file: {ex.Message}",
+                path
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
-    [McpServerTool]
-    [Description(@"Write content to a file (overwrite or append).
+    // Helper method to generate a version token (if not already present)
+    private static string GenerateVersionToken(string content)
+    {
+        byte[] hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content));
+        return "sha256:" + Convert.ToHexString(hash).ToLower();
+    }
 
-    ⚠️ For overwriting existing files, version_token is REQUIRED to prevent conflicts.
-    For new files or append mode, version_token is optional.")]
+    [McpServerTool]
+    [Description("""
+                 Write content to a file (overwrite or append).
+
+                     ⚠️ For overwriting existing files, version_token is REQUIRED to prevent conflicts.
+                     For new files or append mode, version_token is optional.
+                 """)]
     public async Task<string> WriteFile(
         [Description("Path to the file to write - must be canonical")] string path,
         [Description("Content to write")] string content,

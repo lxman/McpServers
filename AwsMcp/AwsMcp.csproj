@@ -37,7 +37,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="ECR\" />
       <Folder Include="ECS\" />
     </ItemGroup>
 
