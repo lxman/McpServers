@@ -7,15 +7,8 @@ using ModelContextProtocol.Server;
 namespace AwsMcp.Tools;
 
 [McpServerToolType]
-public class AwsDiscoveryTools
+public class AwsDiscoveryTools(AwsDiscoveryService discoveryService)
 {
-    private readonly AwsDiscoveryService _discoveryService;
-
-    public AwsDiscoveryTools(AwsDiscoveryService discoveryService)
-    {
-        _discoveryService = discoveryService;
-    }
-
     [McpServerTool]
     [Description("Initialize AWS Discovery service with AWS credentials and configuration")]
     public async Task<string> InitializeAwsDiscovery(
@@ -41,7 +34,7 @@ public class AwsDiscoveryTools
                 ServiceUrl = serviceUrl
             };
 
-            bool success = await _discoveryService.InitializeAsync(config);
+            bool success = discoveryService.Initialize(config);
             
             return JsonSerializer.Serialize(new
             {
@@ -65,7 +58,7 @@ public class AwsDiscoveryTools
         try
         {
             // Try auto-initialization first
-            if (!await _discoveryService.AutoInitializeAsync())
+            if (!discoveryService.AutoInitialize())
             {
                 return JsonSerializer.Serialize(new
                 {
@@ -81,7 +74,7 @@ public class AwsDiscoveryTools
             }
         
             // Now get account info
-            AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
+            AccountInfo accountInfo = await discoveryService.GetAccountInfoAsync();
         
             return JsonSerializer.Serialize(new
             {
@@ -111,7 +104,7 @@ public class AwsDiscoveryTools
     {
         try
         {
-            AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
+            AccountInfo accountInfo = await discoveryService.GetAccountInfoAsync();
             
             return JsonSerializer.Serialize(new
             {
@@ -140,7 +133,7 @@ public class AwsDiscoveryTools
     {
         try
         {
-            AutoDiscoveryResult result = await _discoveryService.AutoDiscoverConfigurationAsync();
+            AutoDiscoveryResult result = await discoveryService.AutoDiscoverConfigurationAsync();
             
             return JsonSerializer.Serialize(new
             {
@@ -208,7 +201,7 @@ public class AwsDiscoveryTools
     {
         try
         {
-            List<ServicePermissionTest> results = await _discoveryService.TestServicePermissionsAsync(region);
+            List<ServicePermissionTest> results = await discoveryService.TestServicePermissionsAsync(region);
             
             List<ServicePermissionTest> workingServices = results.Where(r => r.HasPermission).ToList();
             List<ServicePermissionTest> failedServices = results.Where(r => !r.HasPermission).ToList();
@@ -259,7 +252,7 @@ public class AwsDiscoveryTools
     {
         try
         {
-            CliConfiguration cliConfig = _discoveryService.DetectCliConfiguration();
+            CliConfiguration cliConfig = discoveryService.DetectCliConfiguration();
             
             return JsonSerializer.Serialize(new
             {
@@ -296,7 +289,7 @@ public class AwsDiscoveryTools
         try
         {
             // Run full discovery
-            AutoDiscoveryResult discoveryResult = await _discoveryService.AutoDiscoverConfigurationAsync();
+            AutoDiscoveryResult discoveryResult = await discoveryService.AutoDiscoverConfigurationAsync();
             
             // Analyze the current state
             var analysis = new

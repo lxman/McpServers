@@ -6,15 +6,8 @@ namespace AwsMcp.Configuration;
 /// <summary>
 /// Provides AWS credentials based on configuration
 /// </summary>
-public class AwsCredentialsProvider
+public class AwsCredentialsProvider(AwsConfiguration config)
 {
-    private readonly AwsConfiguration _config;
-    
-    public AwsCredentialsProvider(AwsConfiguration config)
-    {
-        _config = config;
-    }
-    
     /// <summary>
     /// Gets AWS credentials based on the configuration
     /// </summary>
@@ -22,31 +15,31 @@ public class AwsCredentialsProvider
     public AWSCredentials? GetCredentials()
     {
         // If explicit credentials are provided
-        if (!string.IsNullOrEmpty(_config.AccessKeyId) && !string.IsNullOrEmpty(_config.SecretAccessKey))
+        if (!string.IsNullOrEmpty(config.AccessKeyId) && !string.IsNullOrEmpty(config.SecretAccessKey))
         {
-            if (!string.IsNullOrEmpty(_config.SessionToken))
+            if (!string.IsNullOrEmpty(config.SessionToken))
             {
-                return new SessionAWSCredentials(_config.AccessKeyId, _config.SecretAccessKey, _config.SessionToken);
+                return new SessionAWSCredentials(config.AccessKeyId, config.SecretAccessKey, config.SessionToken);
             }
             else
             {
-                return new BasicAWSCredentials(_config.AccessKeyId, _config.SecretAccessKey);
+                return new BasicAWSCredentials(config.AccessKeyId, config.SecretAccessKey);
             }
         }
         
         // If profile is specified
-        if (!string.IsNullOrEmpty(_config.ProfileName))
+        if (!string.IsNullOrEmpty(config.ProfileName))
         {
             var chain = new CredentialProfileStoreChain();
-            if (chain.TryGetAWSCredentials(_config.ProfileName, out AWSCredentials? credentials))
+            if (chain.TryGetAWSCredentials(config.ProfileName, out AWSCredentials? credentials))
             {
                 return credentials;
             }
-            throw new InvalidOperationException($"Could not load AWS profile '{_config.ProfileName}'");
+            throw new InvalidOperationException($"Could not load AWS profile '{config.ProfileName}'");
         }
         
         // For LocalStack or similar, use dummy credentials
-        if (!string.IsNullOrEmpty(_config.ServiceUrl))
+        if (!string.IsNullOrEmpty(config.ServiceUrl))
         {
             return new BasicAWSCredentials("test", "test");
         }

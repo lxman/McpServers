@@ -681,7 +681,7 @@ public class CloudWatchService
             throw new InvalidOperationException(
                 "CloudWatch Metrics client is not available. This may be due to insufficient permissions " +
                 "(cloudwatch:ListMetrics required) or initialization failure. " +
-                "Try explicit initialization with InitializeAsync() or check your AWS permissions.");
+                "Try explicit initialization with Initialize() or check your AWS permissions.");
         }
     }
 
@@ -706,7 +706,7 @@ public class CloudWatchService
             throw new InvalidOperationException(
                 "CloudWatch Logs client is not available. This may be due to insufficient permissions " +
                 "(logs:DescribeLogGroups required) or initialization failure. " +
-                "Try explicit initialization with InitializeAsync() or check your AWS permissions.");
+                "Try explicit initialization with Initialize() or check your AWS permissions.");
         }
     }
 
@@ -717,7 +717,7 @@ public class CloudWatchService
     {
         try
         {
-            if (await _discoveryService.AutoInitializeAsync())
+            if (_discoveryService.AutoInitialize())
             {
                 AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
                 

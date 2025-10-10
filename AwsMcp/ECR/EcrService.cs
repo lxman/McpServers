@@ -368,7 +368,7 @@ public class EcrService
     {
         try
         {
-            if (await _discoveryService.AutoInitializeAsync())
+            if (_discoveryService.AutoInitialize())
             {
                 AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
                 
@@ -407,7 +407,7 @@ public class EcrService
             if (_ecrClient == null)
             {
                 throw new InvalidOperationException(
-                    "S3 client could not be auto-initialized. Please ensure AWS credentials are configured properly or call InitializeAsync explicitly.");
+                    "S3 client could not be auto-initialized. Please ensure AWS credentials are configured properly or call Initialize explicitly.");
             }
         }
     }

@@ -11,15 +11,8 @@ using InvalidOperationException = Amazon.CloudWatchLogs.Model.InvalidOperationEx
 namespace AwsMcp.Tools;
 
 [McpServerToolType]
-public class CloudWatchTools
+public class CloudWatchTools(CloudWatchService cloudWatchService)
 {
-    private readonly CloudWatchService _cloudWatchService;
-
-    public CloudWatchTools(CloudWatchService cloudWatchService)
-    {
-        _cloudWatchService = cloudWatchService;
-    }
-
     [McpServerTool]
     [Description("Initialize CloudWatch service with AWS credentials and configuration")]
     public async Task<string> InitializeCloudWatch(
@@ -45,7 +38,7 @@ public class CloudWatchTools
                 ServiceUrl = serviceUrl
             };
 
-            bool success = await _cloudWatchService.InitializeAsync(config);
+            bool success = await cloudWatchService.InitializeAsync(config);
             
             return JsonSerializer.Serialize(new
             {
@@ -76,7 +69,7 @@ public class CloudWatchTools
     {
         try
         {
-            List<Metric> metrics = await _cloudWatchService.ListMetricsAsync(namespaceName, metricName, maxRecords);
+            List<Metric> metrics = await cloudWatchService.ListMetricsAsync(namespaceName, metricName, maxRecords);
             
             return JsonSerializer.Serialize(new
             {
@@ -135,7 +128,7 @@ public class CloudWatchTools
                 }).ToList();
             }
             
-            List<Datapoint> datapoints = await _cloudWatchService.GetMetricStatisticsAsync(
+            List<Datapoint> datapoints = await cloudWatchService.GetMetricStatisticsAsync(
                 namespaceName, metricName, start, end, period, statisticsList, dimensions);
             
             return JsonSerializer.Serialize(new
@@ -204,7 +197,7 @@ public class CloudWatchTools
                 }).ToList();
             }
             
-            await _cloudWatchService.PutMetricDataAsync(namespaceName, [metricDatum]);
+            await cloudWatchService.PutMetricDataAsync(namespaceName, [metricDatum]);
             
             return JsonSerializer.Serialize(new
             {
@@ -260,7 +253,7 @@ public class CloudWatchTools
                 }).ToList();
             }
             
-            await _cloudWatchService.CreateAlarmAsync(
+            await cloudWatchService.CreateAlarmAsync(
                 alarmName,
                 alarmDescription,
                 metricName,
@@ -298,7 +291,7 @@ public class CloudWatchTools
     {
         try
         {
-            List<MetricAlarm> alarms = await _cloudWatchService.ListAlarmsAsync(stateValue, maxRecords);
+            List<MetricAlarm> alarms = await cloudWatchService.ListAlarmsAsync(stateValue, maxRecords);
         
             return JsonSerializer.Serialize(new
             {
@@ -341,7 +334,7 @@ public class CloudWatchTools
     {
         try
         {
-            List<LogGroup> logGroups = await _cloudWatchService.ListLogGroupsAsync(logGroupNamePrefix, limit);
+            List<LogGroup> logGroups = await cloudWatchService.ListLogGroupsAsync(logGroupNamePrefix, limit);
             
             return JsonSerializer.Serialize(new
             {
@@ -374,7 +367,7 @@ public class CloudWatchTools
     {
         try
         {
-            List<LogStream> logStreams = await _cloudWatchService.ListLogStreamsAsync(logGroupName, limit);
+            List<LogStream> logStreams = await cloudWatchService.ListLogStreamsAsync(logGroupName, limit);
             
             return JsonSerializer.Serialize(new
             {
@@ -425,7 +418,7 @@ public class CloudWatchTools
                 end = DateTime.Parse(endTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
             }
             
-            List<OutputLogEvent> logEvents = await _cloudWatchService.GetLogEventsAsync(logGroupName, logStreamName, start, end, limit);
+            List<OutputLogEvent> logEvents = await cloudWatchService.GetLogEventsAsync(logGroupName, logStreamName, start, end, limit);
             
             return JsonSerializer.Serialize(new
             {
@@ -478,7 +471,7 @@ public class CloudWatchTools
                 end = DateTime.Parse(endTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
             }
             
-            List<FilteredLogEvent> logEvents = await _cloudWatchService.FilterLogEventsAsync(logGroupName, filterPattern, start, end, limit);
+            List<FilteredLogEvent> logEvents = await cloudWatchService.FilterLogEventsAsync(logGroupName, filterPattern, start, end, limit);
             
             return JsonSerializer.Serialize(new
             {
@@ -512,7 +505,7 @@ public class CloudWatchTools
     {
         try
         {
-            await _cloudWatchService.CreateLogGroupAsync(logGroupName);
+            await cloudWatchService.CreateLogGroupAsync(logGroupName);
             
             return JsonSerializer.Serialize(new
             {
@@ -535,7 +528,7 @@ public class CloudWatchTools
     {
         try
         {
-            await _cloudWatchService.DeleteLogGroupAsync(logGroupName);
+            await cloudWatchService.DeleteLogGroupAsync(logGroupName);
             
             return JsonSerializer.Serialize(new
             {
@@ -579,7 +572,7 @@ public class CloudWatchTools
                 end = DateTime.Parse(endTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
             }
             
-            (List<LogSearchMatch> matches, LogSearchSummary summary) = await _cloudWatchService.SearchLogEventsWithRegexAsync(
+            (List<LogSearchMatch> matches, LogSearchSummary summary) = await cloudWatchService.SearchLogEventsWithRegexAsync(
                 logGroupName, regexPattern, start, end, contextLines, caseSensitive, maxMatches, maxStreamsToSearch);
             
             return JsonSerializer.Serialize(new
@@ -630,13 +623,13 @@ public class CloudWatchTools
             List<string> logGroups = logGroupNames.Split(',', StringSplitOptions.RemoveEmptyEntries)
                                        .Select(lg => lg.Trim()).ToList();
             
-            (List<LogSearchMatch> matches, LogSearchSummary summary) = await _cloudWatchService.SearchMultipleLogGroupsWithRegexAsync(
+            (List<LogSearchMatch> matches, LogSearchSummary summary) = await cloudWatchService.SearchMultipleLogGroupsWithRegexAsync(
                 logGroups, regexPattern, start, end, contextLines, caseSensitive, maxMatches, maxStreamsPerGroup);
             
             return JsonSerializer.Serialize(new
             {
                 success = true,
-                logGroups = logGroups,
+                logGroups,
                 searchPattern = regexPattern,
                 searchOptions = new { contextLines, caseSensitive, maxMatches, maxStreamsPerGroup },
                 startTime = start,
@@ -681,7 +674,7 @@ public class CloudWatchTools
             
             foreach ((string patternName, string pattern) in patterns)
             {
-                (List<LogSearchMatch> matches, _) = await _cloudWatchService.SearchLogEventsWithRegexAsync(
+                (List<LogSearchMatch> matches, _) = await cloudWatchService.SearchLogEventsWithRegexAsync(
                     logGroupName, pattern, start, end, 2, false, maxMatches / patterns.Count, 10);
                 
                 if (matches.Any())

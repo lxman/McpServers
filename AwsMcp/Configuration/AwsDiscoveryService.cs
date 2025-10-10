@@ -1,4 +1,12 @@
-﻿using Amazon.Runtime;
+﻿using Amazon.CloudWatch;
+using Amazon.CloudWatch.Model;
+using Amazon.CloudWatchLogs;
+using Amazon.CloudWatchLogs.Model;
+using Amazon.ECR;
+using Amazon.ECR.Model;
+using Amazon.ECS;
+using Amazon.ECS.Model;
+using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
 using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
@@ -10,26 +18,20 @@ namespace AwsMcp.Configuration;
 /// <summary>
 /// Service for AWS account discovery, configuration detection, and permission testing
 /// </summary>
-public class AwsDiscoveryService
+public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
 {
-    private readonly ILogger<AwsDiscoveryService> _logger;
     private AmazonSecurityTokenServiceClient? _stsClient;
     private AwsConfiguration? _config;
     private AWSCredentials? _credentials;
 
-    public AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
-    {
-        _logger = logger;
-    }
-    
     /// <summary>
     /// Auto-discover and initialize with working credentials
     /// </summary>
-    public async Task<bool> AutoInitializeAsync()
+    public bool AutoInitialize()
     {
         try
         {
-            // Try default credential chain first
+            // Try the default credential chain first
             var config = new AwsConfiguration
             {
                 Region = Environment.GetEnvironmentVariable("AWS_REGION") ?? 
@@ -37,10 +39,10 @@ public class AwsDiscoveryService
                          "us-east-1"
             };
         
-            // Try to detect region from CLI config
+            // Try to detect the region from CLI config
             CliConfiguration cliConfig = DetectCliConfiguration();
             AwsProfile? defaultProfile = cliConfig.Profiles.FirstOrDefault(p => p.Name == "default");
-            if (defaultProfile?.Region != null)
+            if (defaultProfile?.Region is not null)
             {
                 config.Region = defaultProfile.Region;
             }
@@ -48,18 +50,16 @@ public class AwsDiscoveryService
             // Try profile-based credentials first
             string profileName = Environment.GetEnvironmentVariable("AWS_PROFILE") ?? "default";
             var chain = new CredentialProfileStoreChain();
-            if (chain.TryGetAWSCredentials(profileName, out AWSCredentials? profileCredentials))
-            {
-                config.ProfileName = profileName;
-                return await InitializeAsync(config);
-            }
-        
+            if (!chain.TryGetAWSCredentials(profileName, out AWSCredentials? profileCredentials))
+                return Initialize(config);
+            config.ProfileName = profileName;
+            return Initialize(config);
+
             // Fall back to environment variables / instance profile
-            return await InitializeAsync(config);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to auto-initialize AWS Discovery service");
+            logger.LogError(ex, "Failed to auto-initialize AWS Discovery service");
             return false;
         }
     }
@@ -67,7 +67,7 @@ public class AwsDiscoveryService
     /// <summary>
     /// Initialize the discovery service with AWS configuration
     /// </summary>
-    public async Task<bool> InitializeAsync(AwsConfiguration config)
+    public bool Initialize(AwsConfiguration config)
     {
         try
         {
@@ -90,21 +90,17 @@ public class AwsDiscoveryService
             var credentialsProvider = new AwsCredentialsProvider(config);
             _credentials = credentialsProvider.GetCredentials();
 
-            if (_credentials != null)
-            {
-                _stsClient = new AmazonSecurityTokenServiceClient(_credentials, clientConfig);
-            }
-            else
-            {
-                _stsClient = new AmazonSecurityTokenServiceClient(clientConfig);
-            }
+            _stsClient =
+                _credentials is not null
+                    ? new AmazonSecurityTokenServiceClient(_credentials, clientConfig)
+                    : new AmazonSecurityTokenServiceClient(clientConfig);
 
-            _logger.LogInformation("AWS Discovery service initialized successfully");
+            logger.LogInformation("AWS Discovery service initialized successfully");
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to initialize AWS Discovery service");
+            logger.LogError(ex, "Failed to initialize AWS Discovery service");
             return false;
         }
     }
@@ -139,7 +135,7 @@ public class AwsDiscoveryService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get AWS account information");
+            logger.LogError(ex, "Failed to get AWS account information");
             throw;
         }
     }
@@ -151,11 +147,12 @@ public class AwsDiscoveryService
     {
         try
         {
-            var result = new AutoDiscoveryResult();
-
-            // Step 1: Detect existing configuration
-            result.CliConfiguration = DetectCliConfiguration();
-            result.EnvironmentVariables = DetectEnvironmentVariables();
+            var result = new AutoDiscoveryResult
+            {
+                // Step 1: Detect existing configuration
+                CliConfiguration = DetectCliConfiguration(),
+                EnvironmentVariables = DetectEnvironmentVariables()
+            };
 
             // Step 2: Try to get account info with current configuration
             try
@@ -170,7 +167,7 @@ public class AwsDiscoveryService
             }
 
             // Step 3: Test service permissions if authentication succeeded
-            if (result.AccountInfo != null)
+            if (result.AccountInfo is not null)
             {
                 result.ServicePermissions = await TestServicePermissionsAsync(result.AccountInfo.InferredRegion);
                 result.RecommendedConfiguration = GenerateRecommendedConfiguration(result);
@@ -183,7 +180,7 @@ public class AwsDiscoveryService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to auto-discover configuration");
+            logger.LogError(ex, "Failed to auto-discover configuration");
             throw;
         }
     }
@@ -193,25 +190,21 @@ public class AwsDiscoveryService
     /// </summary>
     public async Task<List<ServicePermissionTest>> TestServicePermissionsAsync(string region = "us-east-1")
     {
-        var results = new List<ServicePermissionTest>();
-
-        // Test STS (should work if we got this far)
-        results.Add(await TestStsPermissions());
-
-        // Test CloudWatch Metrics
-        results.Add(await TestCloudWatchMetricsPermissions(region));
-
-        // Test CloudWatch Logs
-        results.Add(await TestCloudWatchLogsPermissions(region));
-
-        // Test S3
-        results.Add(await TestS3Permissions(region));
-
-        // Test ECR
-        results.Add(await TestEcrPermissions(region));
-
-        // Test ECS
-        results.Add(await TestEcsPermissions(region));
+        var results = new List<ServicePermissionTest>
+        {
+            // Test STS (should work if we got this far)
+            await TestStsPermissions(),
+            // Test CloudWatch Metrics
+            await TestCloudWatchMetricsPermissions(region),
+            // Test CloudWatch Logs
+            await TestCloudWatchLogsPermissions(region),
+            // Test S3
+            await TestS3Permissions(region),
+            // Test ECR
+            await TestEcrPermissions(region),
+            // Test ECS
+            await TestEcsPermissions(region)
+        };
 
         return results;
     }
@@ -247,7 +240,7 @@ public class AwsDiscoveryService
                 List<AwsProfile> credProfiles = ParseAwsCredentialsFile(credentialsFile);
                 foreach (AwsProfile profile in credProfiles)
                 {
-                    if (!config.Profiles.Any(p => p.Name == profile.Name))
+                    if (config.Profiles.All(p => p.Name != profile.Name))
                     {
                         config.Profiles.Add(profile);
                     }
@@ -260,7 +253,7 @@ public class AwsDiscoveryService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error detecting CLI configuration");
+            logger.LogWarning(ex, "Error detecting CLI configuration");
             config.DetectionError = ex.Message;
         }
 
@@ -271,10 +264,10 @@ public class AwsDiscoveryService
 
     private void EnsureInitialized()
     {
-        if (_stsClient == null)
+        if (_stsClient is null)
         {
-            throw new InvalidOperationException(
-                "AWS Discovery service is not initialized. Call InitializeAsync first.");
+            throw new System.InvalidOperationException(
+                "AWS Discovery service is not initialized. Call Initialize first.");
         }
     }
 
@@ -284,26 +277,28 @@ public class AwsDiscoveryService
         {
             // ARN format: arn:partition:service:region:account-id:resource
             string[] parts = arn.Split(':');
-            if (parts.Length >= 4 && !string.IsNullOrEmpty(parts[3]))
+            switch (parts.Length)
             {
-                return parts[3]; // Region is the 4th part (0-indexed)
-            }
-        
-            // For global services like IAM, fall back to configured region
-            if (parts.Length >= 2 && parts[2] == "iam")
-            {
-                // Use CLI config region as fallback
-                CliConfiguration cliConfig = DetectCliConfiguration();
-                AwsProfile? defaultProfile = cliConfig.Profiles.FirstOrDefault(p => p.Name == "default");
-                if (defaultProfile?.Region != null)
+                case >= 4 when !string.IsNullOrEmpty(parts[3]):
+                    return parts[3]; // Region is the 4th part (0-indexed)
+                // For global services like IAM, fall back to configured region
+                case >= 2 when parts[2] == "iam":
                 {
-                    return defaultProfile.Region;
+                    // Use CLI config region as fallback
+                    CliConfiguration cliConfig = DetectCliConfiguration();
+                    AwsProfile? defaultProfile = cliConfig.Profiles.FirstOrDefault(p => p.Name == "default");
+                    if (defaultProfile?.Region is not null)
+                    {
+                        return defaultProfile.Region;
+                    }
+
+                    break;
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to infer region from ARN: {Arn}", arn);
+            logger.LogWarning(ex, "Failed to infer region from ARN: {Arn}", arn);
         }
 
         return _config?.Region ?? "us-east-1";
@@ -332,7 +327,7 @@ public class AwsDiscoveryService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to extract principal name from ARN: {Arn}", arn);
+            logger.LogWarning(ex, "Failed to extract principal name from ARN: {Arn}", arn);
         }
 
         return "Unknown";
@@ -386,24 +381,19 @@ public class AwsDiscoveryService
     {
         try
         {
-            var config = new Amazon.CloudWatch.AmazonCloudWatchConfig
+            var config = new AmazonCloudWatchConfig
             {
                 RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region)
             };
 
-            Amazon.CloudWatch.AmazonCloudWatchClient client;
-            if (_credentials != null)
-            {
-                client = new Amazon.CloudWatch.AmazonCloudWatchClient(_credentials, config);
-            }
-            else
-            {
-                client = new Amazon.CloudWatch.AmazonCloudWatchClient(config);
-            }
+            AmazonCloudWatchClient client =
+                _credentials is not null
+                    ? new AmazonCloudWatchClient(_credentials, config)
+                    : new AmazonCloudWatchClient(config);
 
             using (client)
             {
-                await client.ListMetricsAsync(new Amazon.CloudWatch.Model.ListMetricsRequest());
+                await client.ListMetricsAsync(new ListMetricsRequest());
             }
 
             return new ServicePermissionTest
@@ -431,24 +421,19 @@ public class AwsDiscoveryService
     {
         try
         {
-            var config = new Amazon.CloudWatchLogs.AmazonCloudWatchLogsConfig
+            var config = new AmazonCloudWatchLogsConfig
             {
                 RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region)
             };
 
-            Amazon.CloudWatchLogs.AmazonCloudWatchLogsClient client;
-            if (_credentials != null)
-            {
-                client = new Amazon.CloudWatchLogs.AmazonCloudWatchLogsClient(_credentials, config);
-            }
-            else
-            {
-                client = new Amazon.CloudWatchLogs.AmazonCloudWatchLogsClient(config);
-            }
+            AmazonCloudWatchLogsClient client =
+                _credentials is not null
+                    ? new AmazonCloudWatchLogsClient(_credentials, config)
+                    : new AmazonCloudWatchLogsClient(config);
 
             using (client)
             {
-                await client.DescribeLogGroupsAsync(new Amazon.CloudWatchLogs.Model.DescribeLogGroupsRequest
+                await client.DescribeLogGroupsAsync(new DescribeLogGroupsRequest
                     { Limit = 1 });
             }
 
@@ -482,15 +467,10 @@ public class AwsDiscoveryService
                 RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region)
             };
 
-            Amazon.S3.AmazonS3Client client;
-            if (_credentials != null)
-            {
-                client = new Amazon.S3.AmazonS3Client(_credentials, config);
-            }
-            else
-            {
-                client = new Amazon.S3.AmazonS3Client(config);
-            }
+            Amazon.S3.AmazonS3Client client =
+                _credentials is not null
+                    ? new Amazon.S3.AmazonS3Client(_credentials, config)
+                    : new Amazon.S3.AmazonS3Client(config);
 
             using (client)
             {
@@ -522,24 +502,19 @@ public class AwsDiscoveryService
     {
         try
         {
-            var config = new Amazon.ECR.AmazonECRConfig
+            var config = new AmazonECRConfig
             {
                 RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region)
             };
 
-            Amazon.ECR.AmazonECRClient client;
-            if (_credentials != null)
-            {
-                client = new Amazon.ECR.AmazonECRClient(_credentials, config);
-            }
-            else
-            {
-                client = new Amazon.ECR.AmazonECRClient(config);
-            }
+            AmazonECRClient client =
+                _credentials is not null
+                    ? new AmazonECRClient(_credentials, config)
+                    : new AmazonECRClient(config);
 
             using (client)
             {
-                await client.DescribeRepositoriesAsync(new Amazon.ECR.Model.DescribeRepositoriesRequest
+                await client.DescribeRepositoriesAsync(new DescribeRepositoriesRequest
                     { MaxResults = 1 });
             }
 
@@ -568,24 +543,19 @@ public class AwsDiscoveryService
     {
         try
         {
-            var config = new Amazon.ECS.AmazonECSConfig
+            var config = new AmazonECSConfig
             {
                 RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region)
             };
 
-            Amazon.ECS.AmazonECSClient client;
-            if (_credentials != null)
-            {
-                client = new Amazon.ECS.AmazonECSClient(_credentials, config);
-            }
-            else
-            {
-                client = new Amazon.ECS.AmazonECSClient(config);
-            }
+            AmazonECSClient client =
+                _credentials is not null
+                    ? new AmazonECSClient(_credentials, config)
+                    : new AmazonECSClient(config);
 
             using (client)
             {
-                await client.ListClustersAsync(new Amazon.ECS.Model.ListClustersRequest { MaxResults = 1 });
+                await client.ListClustersAsync(new ListClustersRequest { MaxResults = 1 });
             }
 
             return new ServicePermissionTest
@@ -621,10 +591,10 @@ public class AwsDiscoveryService
             foreach (string line in lines)
             {
                 string trimmed = line.Trim();
-                if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("#"))
+                if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#'))
                     continue;
 
-                if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+                if (trimmed.StartsWith('[') && trimmed.EndsWith(']'))
                 {
                     // New profile section
                     string profileName = trimmed.Trim('[', ']');
@@ -634,7 +604,7 @@ public class AwsDiscoveryService
                     currentProfile = new AwsProfile { Name = profileName };
                     profiles.Add(currentProfile);
                 }
-                else if (currentProfile != null && trimmed.Contains("="))
+                else if (currentProfile is not null && trimmed.Contains('='))
                 {
                     string[] parts = trimmed.Split('=', 2);
                     string key = parts[0].Trim();
@@ -654,7 +624,7 @@ public class AwsDiscoveryService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error parsing AWS config file: {ConfigFile}", configFile);
+            logger.LogWarning(ex, "Error parsing AWS config file: {ConfigFile}", configFile);
         }
 
         return profiles;
@@ -680,7 +650,7 @@ public class AwsDiscoveryService
                     profile.HasAccessKey = true;
                     profile.HasSecretKey = true;
                 
-                    // Try to get region from the profile
+                    // Try to get the region from the profile
                     if (chain.TryGetProfile(credentialProfile.Name, out CredentialProfile? profileInfo))
                     {
                         profile.Region = profileInfo.Region?.SystemName ?? "us-east-1";
@@ -692,7 +662,7 @@ public class AwsDiscoveryService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error parsing AWS credentials file: {CredentialsFile}", credentialsFile);
+            logger.LogWarning(ex, "Error parsing AWS credentials file: {CredentialsFile}", credentialsFile);
         }
     
         return profiles;
@@ -702,33 +672,29 @@ public class AwsDiscoveryService
     {
         var config = new RecommendedConfiguration();
 
-        // Recommend region based on inferred region from account info
-        if (result.AccountInfo != null)
+        // Recommend a region based on the inferred region from account info
+        if (result.AccountInfo is not null)
         {
             config.RecommendedRegion = result.AccountInfo.InferredRegion;
             config.Reasoning.Add($"Using region {result.AccountInfo.InferredRegion} inferred from your AWS identity");
         }
 
         // Analyze service permissions and recommend initialization strategies
-        if (result.ServicePermissions != null)
+        if (result.ServicePermissions is null) return config;
+        List<ServicePermissionTest> workingServices = result.ServicePermissions.Where(s => s.HasPermission).ToList();
+        List<ServicePermissionTest> failedServices = result.ServicePermissions.Where(s => !s.HasPermission).ToList();
+
+        if (workingServices.Count != 0)
         {
-            List<ServicePermissionTest> workingServices = result.ServicePermissions.Where(s => s.HasPermission).ToList();
-            List<ServicePermissionTest> failedServices = result.ServicePermissions.Where(s => !s.HasPermission).ToList();
-
-            if (workingServices.Count != 0)
-            {
-                config.InitializationStrategy = "Partial service initialization";
-                config.WorkingServices = workingServices.Select(s => s.ServiceName).ToList();
-                config.Reasoning.Add(
-                    $"You have permissions for {workingServices.Count} out of {result.ServicePermissions.Count} services");
-            }
-
-            if (failedServices.Count != 0)
-            {
-                config.FailedServices = failedServices.Select(s => s.ServiceName).ToList();
-                config.Reasoning.Add($"Services without permissions: {string.Join(", ", config.FailedServices)}");
-            }
+            config.InitializationStrategy = "Partial service initialization";
+            config.WorkingServices = workingServices.Select(s => s.ServiceName).ToList();
+            config.Reasoning.Add(
+                $"You have permissions for {workingServices.Count} out of {result.ServicePermissions.Count} services");
         }
+
+        if (failedServices.Count == 0) return config;
+        config.FailedServices = failedServices.Select(s => s.ServiceName).ToList();
+        config.Reasoning.Add($"Services without permissions: {string.Join(", ", config.FailedServices)}");
 
         return config;
     }
@@ -741,7 +707,7 @@ public class AwsDiscoveryService
         {
             suggestions.Add("AWS authentication failed - check your credentials");
 
-            if (result.EnvironmentVariables?.AwsAccessKeyId == null &&
+            if (result.EnvironmentVariables?.AwsAccessKeyId is null &&
                 (result.CliConfiguration?.Profiles?.Count ?? 0) == 0)
             {
                 suggestions.Add("No AWS credentials found - configure AWS CLI or set environment variables");
@@ -759,17 +725,13 @@ public class AwsDiscoveryService
             }
         }
 
-        if (result.ServicePermissions != null)
-        {
-            List<ServicePermissionTest> failedServices = result.ServicePermissions.Where(s => !s.HasPermission).ToList();
-            if (failedServices.Count != 0)
-            {
-                suggestions.Add(
-                    $"Missing permissions for {failedServices.Count} services - contact your AWS administrator");
-                suggestions.Add(
-                    "Use service-specific initialization (testMetricsOnly/testLogsOnly) for available services");
-            }
-        }
+        if (result.ServicePermissions is null) return suggestions;
+        List<ServicePermissionTest> failedServices = result.ServicePermissions.Where(s => !s.HasPermission).ToList();
+        if (failedServices.Count == 0) return suggestions;
+        suggestions.Add(
+            $"Missing permissions for {failedServices.Count} services - contact your AWS administrator");
+        suggestions.Add(
+            "Use service-specific initialization (testMetricsOnly/testLogsOnly) for available services");
 
         return suggestions;
     }

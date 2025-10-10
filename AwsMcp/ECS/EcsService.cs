@@ -355,7 +355,7 @@ public class EcsService
     {
         try
         {
-            if (await _discoveryService.AutoInitializeAsync())
+            if (_discoveryService.AutoInitialize())
             {
                 AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
                 
@@ -377,7 +377,7 @@ public class EcsService
     }
     
     /// <summary>
-    /// Ensure service is initialized (wait if auto-initialization is still running)
+    /// Ensure the service is initialized (wait if auto-initialization is still running)
     /// </summary>
     private async Task EnsureInitializedAsync()
     {
@@ -394,7 +394,7 @@ public class EcsService
             if (_ecsClient == null)
             {
                 throw new InvalidOperationException(
-                    "S3 client could not be auto-initialized. Please ensure AWS credentials are configured properly or call InitializeAsync explicitly.");
+                    "S3 client could not be auto-initialized. Please ensure AWS credentials are configured properly or call Initialize explicitly.");
             }
         }
     }

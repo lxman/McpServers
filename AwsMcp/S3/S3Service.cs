@@ -271,7 +271,7 @@ public class S3Service
     {
         try
         {
-            if (await _discoveryService.AutoInitializeAsync())
+            if (_discoveryService.AutoInitialize())
             {
                 AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
                 
@@ -310,7 +310,7 @@ public class S3Service
             if (_s3Client == null)
             {
                 throw new InvalidOperationException(
-                    "S3 client could not be auto-initialized. Please ensure AWS credentials are configured properly or call InitializeAsync explicitly.");
+                    "S3 client could not be auto-initialized. Please ensure AWS credentials are configured properly or call Initialize explicitly.");
             }
         }
     }

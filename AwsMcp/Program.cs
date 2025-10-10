@@ -1,10 +1,11 @@
-﻿using AwsMcp.CloudWatch;
+using AwsMcp.CloudWatch;
 using AwsMcp.Configuration;
 using AwsMcp.ECR;
 using AwsMcp.ECS;
 using AwsMcp.Prompts;
 using AwsMcp.Resources;
 using AwsMcp.S3;
+using AwsMcp.QuickSight;
 using AwsMcp.Tools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +36,7 @@ public class Program
             .AddSingleton<CloudWatchService>()
             .AddSingleton<EcsService>()
             .AddSingleton<EcrService>()
+            .AddSingleton<QuickSightService>()
             .AddSingleton<AwsDiscoveryService>()
             .AddLogging(logging =>
             {
@@ -52,6 +54,11 @@ public class Program
             .WithTools<CloudWatchTools>()
             .WithTools<EcsTools>()
             .WithTools<EcrTools>()
+            .WithTools<QuickSightDashboardTools>()
+            .WithTools<QuickSightAnalysisTools>()
+            .WithTools<QuickSightDataTools>()
+            .WithTools<QuickSightEmbedTools>()
+            .WithTools<QuickSightManagementTools>()
             .WithTools<FileSearchTools>()
             .WithTools<AwsDiscoveryTools>()
             .WithResources<EmptyResourceProvider>()

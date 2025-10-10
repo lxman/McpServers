@@ -8,15 +8,8 @@ using ModelContextProtocol.Server;
 namespace AwsMcp.Tools;
 
 [McpServerToolType]
-public class EcsTools
+public class EcsTools(EcsService ecsService)
 {
-    private readonly EcsService _ecsService;
-
-    public EcsTools(EcsService ecsService)
-    {
-        _ecsService = ecsService;
-    }
-
     [McpServerTool]
     [Description("Initialize ECS service with AWS credentials and configuration")]
     public async Task<string> InitializeEcs(
@@ -42,7 +35,7 @@ public class EcsTools
                 ServiceUrl = serviceUrl
             };
 
-            bool success = await _ecsService.InitializeAsync(config);
+            bool success = await ecsService.InitializeAsync(config);
             
             return JsonSerializer.Serialize(new
             {
@@ -67,7 +60,7 @@ public class EcsTools
     {
         try
         {
-            ListClustersResponse response = await _ecsService.ListClustersAsync();
+            ListClustersResponse response = await ecsService.ListClustersAsync();
             
             return JsonSerializer.Serialize(new
             {
@@ -100,26 +93,24 @@ public class EcsTools
                 clusters = clusterNames.Split(',').Select(c => c.Trim()).ToList();
             }
 
-            DescribeClustersResponse response = await _ecsService.DescribeClustersAsync(clusters);
+            DescribeClustersResponse response = await ecsService.DescribeClustersAsync(clusters);
             
             var clusterDetails = response.Clusters.Select(cluster => new
             {
-                ClusterName = cluster.ClusterName,
-                ClusterArn = cluster.ClusterArn,
-                Status = cluster.Status,
-                RunningTasksCount = cluster.RunningTasksCount,
-                PendingTasksCount = cluster.PendingTasksCount,
-                ActiveServicesCount = cluster.ActiveServicesCount,
-                RegisteredContainerInstancesCount = cluster.RegisteredContainerInstancesCount,
+                cluster.ClusterName,
+                cluster.ClusterArn,
+                cluster.Status,
+                cluster.RunningTasksCount,
+                cluster.PendingTasksCount,
+                cluster.ActiveServicesCount,
+                cluster.RegisteredContainerInstancesCount,
                 Statistics = cluster.Statistics?.Select(stat => new
                 {
-                    Name = stat.Name,
-                    Value = stat.Value
+                    stat.Name, stat.Value
                 }),
                 Tags = cluster.Tags?.Select(tag => new
                 {
-                    Key = tag.Key,
-                    Value = tag.Value
+                    tag.Key, tag.Value
                 })
             });
 
@@ -130,9 +121,9 @@ public class EcsTools
                 count = response.Clusters.Count,
                 failures = response.Failures?.Select(f => new
                 {
-                    Arn = f.Arn,
-                    Reason = f.Reason,
-                    Detail = f.Detail
+                    f.Arn,
+                    f.Reason,
+                    f.Detail
                 })
             });
         }
@@ -163,16 +154,16 @@ public class EcsTools
                 clusterTags = tagData?.Select(t => new Tag { Key = t["Key"], Value = t["Value"] }).ToList();
             }
 
-            CreateClusterResponse response = await _ecsService.CreateClusterAsync(clusterName, clusterTags);
+            CreateClusterResponse response = await ecsService.CreateClusterAsync(clusterName, clusterTags);
             
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 cluster = new
                 {
-                    ClusterName = response.Cluster.ClusterName,
-                    ClusterArn = response.Cluster.ClusterArn,
-                    Status = response.Cluster.Status
+                    response.Cluster.ClusterName,
+                    response.Cluster.ClusterArn,
+                    response.Cluster.Status
                 }
             });
         }
@@ -194,16 +185,16 @@ public class EcsTools
     {
         try
         {
-            DeleteClusterResponse response = await _ecsService.DeleteClusterAsync(cluster);
+            DeleteClusterResponse response = await ecsService.DeleteClusterAsync(cluster);
             
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 cluster = new
                 {
-                    ClusterName = response.Cluster.ClusterName,
-                    ClusterArn = response.Cluster.ClusterArn,
-                    Status = response.Cluster.Status
+                    response.Cluster.ClusterName,
+                    response.Cluster.ClusterArn,
+                    response.Cluster.Status
                 }
             });
         }
@@ -225,7 +216,7 @@ public class EcsTools
     {
         try
         {
-            ListServicesResponse response = await _ecsService.ListServicesAsync(cluster);
+            ListServicesResponse response = await ecsService.ListServicesAsync(cluster);
             
             return JsonSerializer.Serialize(new
             {
@@ -255,32 +246,31 @@ public class EcsTools
         try
         {
             List<string> serviceList = services.Split(',').Select(s => s.Trim()).ToList();
-            DescribeServicesResponse response = await _ecsService.DescribeServicesAsync(serviceList, cluster);
+            DescribeServicesResponse response = await ecsService.DescribeServicesAsync(serviceList, cluster);
             
             var serviceDetails = response.Services.Select(service => new
             {
-                ServiceName = service.ServiceName,
-                ServiceArn = service.ServiceArn,
-                ClusterArn = service.ClusterArn,
-                TaskDefinition = service.TaskDefinition,
-                Status = service.Status,
-                RunningCount = service.RunningCount,
-                PendingCount = service.PendingCount,
-                DesiredCount = service.DesiredCount,
+                service.ServiceName,
+                service.ServiceArn,
+                service.ClusterArn,
+                service.TaskDefinition,
+                service.Status,
+                service.RunningCount,
+                service.PendingCount,
+                service.DesiredCount,
                 LaunchType = service.LaunchType?.ToString(),
-                PlatformVersion = service.PlatformVersion,
-                CreatedAt = service.CreatedAt,
+                service.PlatformVersion,
+                service.CreatedAt,
                 LoadBalancers = service.LoadBalancers?.Select(lb => new
                 {
-                    TargetGroupArn = lb.TargetGroupArn,
-                    LoadBalancerName = lb.LoadBalancerName,
-                    ContainerName = lb.ContainerName,
-                    ContainerPort = lb.ContainerPort
+                    lb.TargetGroupArn,
+                    lb.LoadBalancerName,
+                    lb.ContainerName,
+                    lb.ContainerPort
                 }),
                 Tags = service.Tags?.Select(tag => new
                 {
-                    Key = tag.Key,
-                    Value = tag.Value
+                    tag.Key, tag.Value
                 })
             });
 
@@ -291,9 +281,9 @@ public class EcsTools
                 count = response.Services.Count,
                 failures = response.Failures?.Select(f => new
                 {
-                    Arn = f.Arn,
-                    Reason = f.Reason,
-                    Detail = f.Detail
+                    f.Arn,
+                    f.Reason,
+                    f.Detail
                 })
             });
         }
@@ -317,7 +307,7 @@ public class EcsTools
     {
         try
         {
-            ListTasksResponse response = await _ecsService.ListTasksAsync(cluster, serviceName);
+            ListTasksResponse response = await ecsService.ListTasksAsync(cluster, serviceName);
             
             return JsonSerializer.Serialize(new
             {
@@ -347,45 +337,44 @@ public class EcsTools
         try
         {
             List<string> taskList = tasks.Split(',').Select(t => t.Trim()).ToList();
-            DescribeTasksResponse response = await _ecsService.DescribeTasksAsync(taskList, cluster);
+            DescribeTasksResponse response = await ecsService.DescribeTasksAsync(taskList, cluster);
             
             var taskDetails = response.Tasks.Select(task => new
             {
-                TaskArn = task.TaskArn,
-                TaskDefinitionArn = task.TaskDefinitionArn,
-                ClusterArn = task.ClusterArn,
-                LastStatus = task.LastStatus,
-                DesiredStatus = task.DesiredStatus,
+                task.TaskArn,
+                task.TaskDefinitionArn,
+                task.ClusterArn,
+                task.LastStatus,
+                task.DesiredStatus,
                 HealthStatus = task.HealthStatus?.ToString(),
                 LaunchType = task.LaunchType?.ToString(),
-                PlatformVersion = task.PlatformVersion,
-                Cpu = task.Cpu,
-                Memory = task.Memory,
-                CreatedAt = task.CreatedAt,
-                StartedAt = task.StartedAt,
-                StoppedAt = task.StoppedAt,
+                task.PlatformVersion,
+                task.Cpu,
+                task.Memory,
+                task.CreatedAt,
+                task.StartedAt,
+                task.StoppedAt,
                 StopCode = task.StopCode?.ToString(),
-                StoppedReason = task.StoppedReason,
+                task.StoppedReason,
                 Containers = task.Containers?.Select(container => new
                 {
-                    ContainerArn = container.ContainerArn,
-                    Name = container.Name,
-                    LastStatus = container.LastStatus,
-                    ExitCode = container.ExitCode,
-                    Reason = container.Reason,
+                    container.ContainerArn,
+                    container.Name,
+                    container.LastStatus,
+                    container.ExitCode,
+                    container.Reason,
                     HealthStatus = container.HealthStatus?.ToString(),
                     NetworkBindings = container.NetworkBindings?.Select(nb => new
                     {
-                        BindIP = nb.BindIP,
-                        ContainerPort = nb.ContainerPort,
-                        HostPort = nb.HostPort,
+                        nb.BindIP,
+                        nb.ContainerPort,
+                        nb.HostPort,
                         Protocol = nb.Protocol?.ToString()
                     })
                 }),
                 Tags = task.Tags?.Select(tag => new
                 {
-                    Key = tag.Key,
-                    Value = tag.Value
+                    tag.Key, tag.Value
                 })
             });
 
@@ -396,9 +385,9 @@ public class EcsTools
                 count = response.Tasks.Count,
                 failures = response.Failures?.Select(f => new
                 {
-                    Arn = f.Arn,
-                    Reason = f.Reason,
-                    Detail = f.Detail
+                    f.Arn,
+                    f.Reason,
+                    f.Detail
                 })
             });
         }
@@ -420,7 +409,7 @@ public class EcsTools
     {
         try
         {
-            ListTaskDefinitionsResponse response = await _ecsService.ListTaskDefinitionsAsync(familyPrefix);
+            ListTaskDefinitionsResponse response = await ecsService.ListTaskDefinitionsAsync(familyPrefix);
             
             return JsonSerializer.Serialize(new
             {
@@ -447,52 +436,49 @@ public class EcsTools
     {
         try
         {
-            DescribeTaskDefinitionResponse response = await _ecsService.DescribeTaskDefinitionAsync(taskDefinition);
+            DescribeTaskDefinitionResponse response = await ecsService.DescribeTaskDefinitionAsync(taskDefinition);
             
             TaskDefinition? taskDef = response.TaskDefinition;
             var result = new
             {
-                TaskDefinitionArn = taskDef.TaskDefinitionArn,
-                Family = taskDef.Family,
-                Revision = taskDef.Revision,
+                taskDef.TaskDefinitionArn,
+                taskDef.Family,
+                taskDef.Revision,
                 Status = taskDef.Status?.ToString(),
-                Cpu = taskDef.Cpu,
-                Memory = taskDef.Memory,
+                taskDef.Cpu,
+                taskDef.Memory,
                 NetworkMode = taskDef.NetworkMode?.ToString(),
                 RequiresCompatibilities = taskDef.RequiresCompatibilities?.Select(rc => rc.ToString()),
-                ExecutionRoleArn = taskDef.ExecutionRoleArn,
-                TaskRoleArn = taskDef.TaskRoleArn,
-                RegisteredAt = taskDef.RegisteredAt,
-                RegisteredBy = taskDef.RegisteredBy,
+                taskDef.ExecutionRoleArn,
+                taskDef.TaskRoleArn,
+                taskDef.RegisteredAt,
+                taskDef.RegisteredBy,
                 ContainerDefinitions = taskDef.ContainerDefinitions?.Select(cd => new
                 {
-                    Name = cd.Name,
-                    Image = cd.Image,
-                    Cpu = cd.Cpu,
-                    Memory = cd.Memory,
-                    MemoryReservation = cd.MemoryReservation,
-                    Essential = cd.Essential,
+                    cd.Name,
+                    cd.Image,
+                    cd.Cpu,
+                    cd.Memory,
+                    cd.MemoryReservation,
+                    cd.Essential,
                     PortMappings = cd.PortMappings?.Select(pm => new
                     {
-                        ContainerPort = pm.ContainerPort,
-                        HostPort = pm.HostPort,
+                        pm.ContainerPort,
+                        pm.HostPort,
                         Protocol = pm.Protocol?.ToString()
                     }),
                     Environment = cd.Environment?.Select(env => new
                     {
-                        Name = env.Name,
-                        Value = env.Value
+                        env.Name, env.Value
                     }),
                     LogConfiguration = cd.LogConfiguration != null ? new
                     {
-                        LogDriver = cd.LogConfiguration.LogDriver?.ToString(),
-                        Options = cd.LogConfiguration.Options
+                        LogDriver = cd.LogConfiguration.LogDriver?.ToString(), cd.LogConfiguration.Options
                     } : null
                 }),
                 Tags = response.Tags?.Select(tag => new
                 {
-                    Key = tag.Key,
-                    Value = tag.Value
+                    tag.Key, tag.Value
                 })
             };
 
@@ -526,17 +512,17 @@ public class EcsTools
     {
         try
         {
-            RunTaskResponse response = await _ecsService.RunTaskAsync(taskDefinition, cluster, count, launchType);
+            RunTaskResponse response = await ecsService.RunTaskAsync(taskDefinition, cluster, count, launchType);
             
             var taskDetails = response.Tasks?.Select(task => new
             {
-                TaskArn = task.TaskArn,
-                TaskDefinitionArn = task.TaskDefinitionArn,
-                ClusterArn = task.ClusterArn,
-                LastStatus = task.LastStatus,
-                DesiredStatus = task.DesiredStatus,
+                task.TaskArn,
+                task.TaskDefinitionArn,
+                task.ClusterArn,
+                task.LastStatus,
+                task.DesiredStatus,
                 LaunchType = task.LaunchType?.ToString(),
-                CreatedAt = task.CreatedAt
+                task.CreatedAt
             });
 
             return JsonSerializer.Serialize(new
@@ -546,9 +532,9 @@ public class EcsTools
                 count = response.Tasks?.Count ?? 0,
                 failures = response.Failures?.Select(f => new
                 {
-                    Arn = f.Arn,
-                    Reason = f.Reason,
-                    Detail = f.Detail
+                    f.Arn,
+                    f.Reason,
+                    f.Detail
                 })
             });
         }
@@ -574,17 +560,17 @@ public class EcsTools
     {
         try
         {
-            StopTaskResponse response = await _ecsService.StopTaskAsync(task, cluster, reason);
+            StopTaskResponse response = await ecsService.StopTaskAsync(task, cluster, reason);
             
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 task = new
                 {
-                    TaskArn = response.Task.TaskArn,
-                    LastStatus = response.Task.LastStatus,
-                    DesiredStatus = response.Task.DesiredStatus,
-                    StoppedReason = response.Task.StoppedReason
+                    response.Task.TaskArn,
+                    response.Task.LastStatus,
+                    response.Task.DesiredStatus,
+                    response.Task.StoppedReason
                 }
             });
         }
@@ -612,20 +598,20 @@ public class EcsTools
     {
         try
         {
-            UpdateServiceResponse response = await _ecsService.UpdateServiceAsync(service, cluster, desiredCount, taskDefinition);
+            UpdateServiceResponse response = await ecsService.UpdateServiceAsync(service, cluster, desiredCount, taskDefinition);
             
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 service = new
                 {
-                    ServiceName = response.Service.ServiceName,
-                    ServiceArn = response.Service.ServiceArn,
-                    TaskDefinition = response.Service.TaskDefinition,
-                    DesiredCount = response.Service.DesiredCount,
-                    RunningCount = response.Service.RunningCount,
-                    PendingCount = response.Service.PendingCount,
-                    Status = response.Service.Status
+                    response.Service.ServiceName,
+                    response.Service.ServiceArn,
+                    response.Service.TaskDefinition,
+                    response.Service.DesiredCount,
+                    response.Service.RunningCount,
+                    response.Service.PendingCount,
+                    response.Service.Status
                 }
             });
         }
@@ -647,39 +633,39 @@ public class EcsTools
     {
         try
         {
-            List<ContainerInstance> response = await _ecsService.ListContainerInstancesAsync(cluster);
+            List<ContainerInstance> response = await ecsService.ListContainerInstancesAsync(cluster);
             
             var instanceDetails = response.Select(instance => new
             {
-                ContainerInstanceArn = instance.ContainerInstanceArn,
-                Ec2InstanceId = instance.Ec2InstanceId,
-                Status = instance.Status,
-                RunningTasksCount = instance.RunningTasksCount,
-                PendingTasksCount = instance.PendingTasksCount,
-                AgentConnected = instance.AgentConnected,
+                instance.ContainerInstanceArn,
+                instance.Ec2InstanceId,
+                instance.Status,
+                instance.RunningTasksCount,
+                instance.PendingTasksCount,
+                instance.AgentConnected,
                 VersionInfo = instance.VersionInfo != null ? new
                 {
-                    AgentVersion = instance.VersionInfo.AgentVersion,
-                    AgentHash = instance.VersionInfo.AgentHash,
-                    DockerVersion = instance.VersionInfo.DockerVersion
+                    instance.VersionInfo.AgentVersion,
+                    instance.VersionInfo.AgentHash,
+                    instance.VersionInfo.DockerVersion
                 } : null,
                 RegisteredResources = instance.RegisteredResources?.Select(resource => new
                 {
-                    Name = resource.Name,
-                    Type = resource.Type,
-                    IntegerValue = resource.IntegerValue,
-                    DoubleValue = resource.DoubleValue,
-                    LongValue = resource.LongValue,
-                    StringSetValue = resource.StringSetValue
+                    resource.Name,
+                    resource.Type,
+                    resource.IntegerValue,
+                    resource.DoubleValue,
+                    resource.LongValue,
+                    resource.StringSetValue
                 }),
                 RemainingResources = instance.RemainingResources?.Select(resource => new
                 {
-                    Name = resource.Name,
-                    Type = resource.Type,
-                    IntegerValue = resource.IntegerValue,
-                    DoubleValue = resource.DoubleValue,
-                    LongValue = resource.LongValue,
-                    StringSetValue = resource.StringSetValue
+                    resource.Name,
+                    resource.Type,
+                    resource.IntegerValue,
+                    resource.DoubleValue,
+                    resource.LongValue,
+                    resource.StringSetValue
                 })
             });
 

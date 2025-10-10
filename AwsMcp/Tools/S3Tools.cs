@@ -9,15 +9,8 @@ using ModelContextProtocol.Server;
 namespace AwsMcp.Tools;
 
 [McpServerToolType]
-public class S3Tools
+public class S3Tools(S3Service s3Service)
 {
-    private readonly S3Service _s3Service;
-
-    public S3Tools(S3Service s3Service)
-    {
-        _s3Service = s3Service;
-    }
-
     [McpServerTool]
     [Description("Initialize S3 service with AWS credentials and configuration")]
     public async Task<string> InitializeS3(
@@ -46,7 +39,7 @@ public class S3Tools
                 ForcePathStyle = forcePathStyle
             };
 
-            bool success = await _s3Service.InitializeAsync(config);
+            bool success = await s3Service.InitializeAsync(config);
             
             return JsonSerializer.Serialize(new
             {
@@ -69,7 +62,7 @@ public class S3Tools
     {
         try
         {
-            List<S3Bucket> buckets = await _s3Service.ListBucketsAsync();
+            List<S3Bucket> buckets = await s3Service.ListBucketsAsync();
             
             return JsonSerializer.Serialize(new
             {
@@ -100,7 +93,7 @@ public class S3Tools
     {
         try
         {
-            List<S3Object> objects = await _s3Service.ListObjectsAsync(bucketName, prefix, maxKeys);
+            List<S3Object> objects = await s3Service.ListObjectsAsync(bucketName, prefix, maxKeys);
             
             return JsonSerializer.Serialize(new
             {
@@ -134,7 +127,7 @@ public class S3Tools
     {
         try
         {
-            string content = await _s3Service.GetObjectContentAsync(bucketName, key);
+            string content = await s3Service.GetObjectContentAsync(bucketName, key);
             
             return JsonSerializer.Serialize(new
             {
@@ -161,7 +154,7 @@ public class S3Tools
     {
         try
         {
-            GetObjectMetadataResponse metadata = await _s3Service.GetObjectMetadataAsync(bucketName, key);
+            GetObjectMetadataResponse metadata = await s3Service.GetObjectMetadataAsync(bucketName, key);
             
             return JsonSerializer.Serialize(new
             {
@@ -196,7 +189,7 @@ public class S3Tools
     {
         try
         {
-            PutObjectResponse response = await _s3Service.PutObjectAsync(bucketName, key, content, contentType);
+            PutObjectResponse response = await s3Service.PutObjectAsync(bucketName, key, content, contentType);
             
             return JsonSerializer.Serialize(new
             {
@@ -224,7 +217,7 @@ public class S3Tools
     {
         try
         {
-            await _s3Service.DeleteObjectAsync(bucketName, key);
+            await s3Service.DeleteObjectAsync(bucketName, key);
             
             return JsonSerializer.Serialize(new
             {
@@ -248,7 +241,7 @@ public class S3Tools
     {
         try
         {
-            await _s3Service.CreateBucketAsync(bucketName);
+            await s3Service.CreateBucketAsync(bucketName);
             
             return JsonSerializer.Serialize(new
             {
@@ -271,7 +264,7 @@ public class S3Tools
     {
         try
         {
-            await _s3Service.DeleteBucketAsync(bucketName);
+            await s3Service.DeleteBucketAsync(bucketName);
             
             return JsonSerializer.Serialize(new
             {
@@ -309,7 +302,7 @@ public class S3Tools
                 _ => HttpVerb.GET
             };
             
-            string url = await _s3Service.GeneratePresignedUrl(bucketName, key, expiry, httpVerb);
+            string url = await s3Service.GeneratePresignedUrl(bucketName, key, expiry, httpVerb);
             
             return JsonSerializer.Serialize(new
             {
@@ -336,7 +329,7 @@ public class S3Tools
     {
         try
         {
-            bool exists = await _s3Service.BucketExistsAsync(bucketName);
+            bool exists = await s3Service.BucketExistsAsync(bucketName);
             
             return JsonSerializer.Serialize(new
             {
@@ -361,7 +354,7 @@ public class S3Tools
     {
         try
         {
-            bool exists = await _s3Service.ObjectExistsAsync(bucketName, key);
+            bool exists = await s3Service.ObjectExistsAsync(bucketName, key);
             
             return JsonSerializer.Serialize(new
             {
@@ -385,7 +378,7 @@ public class S3Tools
     {
         try
         {
-            GetBucketVersioningResponse response = await _s3Service.GetBucketVersioningAsync(bucketName);
+            GetBucketVersioningResponse response = await s3Service.GetBucketVersioningAsync(bucketName);
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -407,7 +400,7 @@ public class S3Tools
     {
         try
         {
-            ListVersionsResponse response = await _s3Service.ListObjectVersionsAsync(bucketName, prefix);
+            ListVersionsResponse response = await s3Service.ListObjectVersionsAsync(bucketName, prefix);
             List<S3ObjectVersion> delMarkers = response.Versions.Where(v => v.IsDeleteMarker.HasValue && v.IsDeleteMarker.Value).ToList();
             return JsonSerializer.Serialize(new
             {
