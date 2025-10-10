@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using Microsoft.Playwright;
 using ModelContextProtocol.Server;
+using PlaywrightTester.Common;
 using PlaywrightTester.Services;
 
 namespace PlaywrightTester.Tools;
@@ -58,7 +59,7 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
                     recommendation = "Use SwitchToTab to switch between tabs, or continue using current tab"
                 };
 
-                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+                return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
@@ -75,7 +76,7 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
                 success = false,
                 error = ex.Message,
                 capability = "OpenNewTab"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -101,7 +102,7 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
                     error = $"Tab index {index} is out of range. Available tabs: 0 to {allPages.Count - 1}",
                     availableTabs = await GetTabList(allPages),
                     capability = "SwitchToTab"
-                }, new JsonSerializerOptions { WriteIndented = true });
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             IPage targetPage = allPages[index];
@@ -135,7 +136,7 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
                 }
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -144,7 +145,7 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
                 success = false,
                 error = ex.Message,
                 capability = "SwitchToTab"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -337,7 +338,7 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
                     success = false,
                     error = $"Invalid storage type: {type}. Valid types: {string.Join(", ", validTypes)}",
                     capability = "ClearStorage"
-                }, new JsonSerializerOptions { WriteIndented = true });
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             var result = new
@@ -355,7 +356,7 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
                 recommendations = GenerateStorageRecommendations(clearResults, errors, normalizedType)
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -364,7 +365,7 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
                 success = false,
                 error = ex.Message,
                 capability = "ClearStorage"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 

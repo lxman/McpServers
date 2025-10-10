@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
+using AwsMcp.Common;
 using AwsMcp.Configuration;
 using AwsMcp.Configuration.Models;
 using ModelContextProtocol.Server;
@@ -43,7 +44,7 @@ public class AwsDiscoveryTools(AwsDiscoveryService discoveryService)
                 region,
                 usingProfile = !string.IsNullOrEmpty(profileName),
                 usingCustomEndpoint = !string.IsNullOrEmpty(serviceUrl)
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -90,7 +91,7 @@ public class AwsDiscoveryTools(AwsDiscoveryService discoveryService)
                     inferredRegion = accountInfo.InferredRegion,
                     configuredRegion = accountInfo.ConfiguredRegion
                 }
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -119,7 +120,7 @@ public class AwsDiscoveryTools(AwsDiscoveryService discoveryService)
                     inferredRegion = accountInfo.InferredRegion,
                     configuredRegion = accountInfo.ConfiguredRegion
                 }
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -185,7 +186,7 @@ public class AwsDiscoveryTools(AwsDiscoveryService discoveryService)
                     reasoning = result.RecommendedConfiguration.Reasoning
                 } : null,
                 troubleshootingSuggestions = result.TroubleshootingSuggestions
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -238,7 +239,7 @@ public class AwsDiscoveryTools(AwsDiscoveryService discoveryService)
                     status = r.Status,
                     errorMessage = r.ErrorMessage
                 }).ToList()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -274,7 +275,7 @@ public class AwsDiscoveryTools(AwsDiscoveryService discoveryService)
                     isComplete = p is { HasAccessKey: true, HasSecretKey: true }
                 }).ToList(),
                 recommendations = GenerateCliRecommendations(cliConfig)
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -358,7 +359,7 @@ public class AwsDiscoveryTools(AwsDiscoveryService discoveryService)
                 suggestedCommands = GenerateInitializationCommands(discoveryResult)
             };
             
-            return JsonSerializer.Serialize(analysis, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(analysis, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -590,7 +591,7 @@ public class AwsDiscoveryTools(AwsDiscoveryService discoveryService)
             }
         };
         
-        return JsonSerializer.Serialize(helpInfo, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(helpInfo, SerializerOptions.JsonOptionsIndented);
     }
 
     #region Private Helper Methods
@@ -842,7 +843,7 @@ public class AwsDiscoveryTools(AwsDiscoveryService discoveryService)
             };
         }
 
-        return JsonSerializer.Serialize(error, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(error, SerializerOptions.JsonOptionsIndented);
     }
 
     #endregion

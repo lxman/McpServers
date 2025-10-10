@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using Microsoft.Playwright;
 using ModelContextProtocol.Server;
+using PlaywrightTester.Common;
 using PlaywrightTester.Services;
 
 namespace PlaywrightTester.Tools;
@@ -242,7 +243,7 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
                 testData.Add(data);
             }
 
-            return $"Generated {count} {dataType} records:\n{JsonSerializer.Serialize(testData, new JsonSerializerOptions { WriteIndented = true })}";
+            return $"Generated {count} {dataType} records:\n{JsonSerializer.Serialize(testData, SerializerOptions.JsonOptionsIndented)}";
         }
         catch (Exception ex)
         {
@@ -464,7 +465,7 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
             }
         ");
 
-        return $"Keyboard navigation analysis:\n{JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true })}";
+        return $"Keyboard navigation analysis:\n{JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented)}";
     }
 
     private static async Task<string> TestAriaLabels(IPage page)
@@ -498,7 +499,7 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
             }
         ");
 
-        return $"ARIA labels analysis:\n{JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true })}";
+        return $"ARIA labels analysis:\n{JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented)}";
     }
 
     private static async Task<string> TestColorContrast(IPage page)
@@ -535,7 +536,7 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
             }
         ");
 
-        return $"Color contrast analysis:\n{JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true })}";
+        return $"Color contrast analysis:\n{JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented)}";
     }
 
     private static async Task<string> TestFocusOrder(IPage page)
@@ -572,7 +573,7 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
             }
         ");
 
-        return $"Focus order analysis:\n{JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true })}";
+        return $"Focus order analysis:\n{JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented)}";
     }
 
     // Helper method for smart selector determination

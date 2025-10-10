@@ -4,6 +4,7 @@ using MongoDB.Driver;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MongoIntegration.Common;
 using MongoIntegration.Configuration;
 using MongoIntegration.Services;
 
@@ -11,12 +12,11 @@ namespace MongoIntegration;
 
 public class MongoDbService
 {
-    private readonly IConfiguration _configuration;
     private readonly ILogger<MongoDbService> _logger;
     private readonly MongoDbConfiguration _mongoConfig;
     private readonly ConnectionManager _connectionManager;
 
-    // Backward compatibility fields - these will delegate to connection manager
+    // Backward compatibility fields - these will delegate to the connection manager
     private const string DefaultServerName = "default";
 
     // Public property to access the connection manager
@@ -24,11 +24,10 @@ public class MongoDbService
 
     public MongoDbService(IConfiguration configuration, ILogger<MongoDbService> logger)
     {
-        _configuration = configuration;
         _logger = logger;
         _mongoConfig = new MongoDbConfiguration();
         
-        // Create connection manager with its own logger
+        // Create a connection manager with its own logger
         ILogger<ConnectionManager> connectionLogger = LoggerFactory.Create(builder => builder.AddConsole())
             .CreateLogger<ConnectionManager>();
         _connectionManager = new ConnectionManager(connectionLogger);
@@ -44,12 +43,12 @@ public class MongoDbService
             $"=== MongoDB Configuration Debug - {DateTime.Now} ===",
             $"Current Directory: {currentDir}",
             $"Base Directory: {baseDir}",
-            $"Configuration providers count: {_configuration.GetType().GetProperty("Providers")?.GetValue(_configuration)?.ToString() ?? "unknown"}",
+            $"Configuration providers count: {configuration.GetType().GetProperty("Providers")?.GetValue(configuration)?.ToString() ?? "unknown"}",
             ""
         };
 
-        // Check if MongoDB section exists
-        IConfigurationSection mongoSection = _configuration.GetSection("MongoDB");
+        // Check if the MongoDB section exists
+        IConfigurationSection mongoSection = configuration.GetSection("MongoDB");
         debugInfo.Add($"MongoDB section exists: {mongoSection.Exists()}");
         debugInfo.Add($"MongoDB section path: {mongoSection.Path}");
         debugInfo.Add($"MongoDB section key: {mongoSection.Key}");
@@ -57,14 +56,11 @@ public class MongoDbService
         // Get all keys in the section
         List<IConfigurationSection> children = mongoSection.GetChildren().ToList();
         debugInfo.Add($"MongoDB section children count: {children.Count}");
-        
-        foreach (IConfigurationSection child in children)
-        {
-            debugInfo.Add($"  Child Key: {child.Key}, Value: {child.Value}");
-        }
-        
+
+        debugInfo.AddRange(children.Select(child => $"  Child Key: {child.Key}, Value: {child.Value}"));
+
         // Try binding and check results
-        _configuration.GetSection("MongoDB").Bind(_mongoConfig);
+        configuration.GetSection("MongoDB").Bind(_mongoConfig);
         
         debugInfo.Add("");
         debugInfo.Add("=== After Binding ===");
@@ -76,14 +72,10 @@ public class MongoDbService
         
         if (_mongoConfig.ConnectionProfiles != null)
         {
-            for (var i = 0; i < _mongoConfig.ConnectionProfiles.Count; i++)
-            {
-                ConnectionProfile profile = _mongoConfig.ConnectionProfiles[i];
-                debugInfo.Add($"  Profile {i}: Name='{profile.Name}', ConnectionString='{profile.ConnectionString}', Database='{profile.DefaultDatabase}', AutoConnect={profile.AutoConnect}");
-            }
+            debugInfo.AddRange(_mongoConfig.ConnectionProfiles.Select((profile, i) => $"  Profile {i}: Name='{profile.Name}', ConnectionString='{profile.ConnectionString}', Database='{profile.DefaultDatabase}', AutoConnect={profile.AutoConnect}"));
         }
         
-        // Write debug info to file
+        // Write debug info to a file
         try
         {
             File.WriteAllLines(debugPath, debugInfo);
@@ -158,7 +150,7 @@ public class MongoDbService
                 }
             }
             
-            // Fallback to configuration file if no profiles worked
+            // Fallback to the configuration file if no profiles worked
             if (!hasConnected && _mongoConfig.AutoConnect && 
                 !string.IsNullOrEmpty(_mongoConfig.ConnectionString) && 
                 !string.IsNullOrEmpty(_mongoConfig.DefaultDatabase))
@@ -169,7 +161,7 @@ public class MongoDbService
                 hasConnected = true;
             }
             
-            // Final fallback to first available profile
+            // Final fallback to the first available profile
             if (!hasConnected)
             {
                 ConnectionProfile? activeProfile = _mongoConfig.ConnectionProfiles
@@ -241,7 +233,7 @@ public class MongoDbService
                 serverName,
                 connected = false,
                 message = "Server not found"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
 
         return info.ToJson();
@@ -259,7 +251,7 @@ public class MongoDbService
             isHealthy = info?.IsHealthy ?? false,
             lastPingDuration = info?.LastPingDuration?.TotalMilliseconds,
             lastPing = info?.LastPing
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     private IMongoDatabase GetDatabase(string serverName = DefaultServerName)
@@ -295,7 +287,7 @@ public class MongoDbService
                 currentDatabase = _connectionManager.GetCurrentDatabase(serverName),
                 totalDatabases = databases.Count,
                 databases = databases.OrderBy(db => db).ToList()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -305,7 +297,7 @@ public class MongoDbService
                 success = false,
                 error = ex.Message,
                 suggestion = $"Ensure server '{serverName}' is connected and accessible"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -322,7 +314,7 @@ public class MongoDbService
                 message = result,
                 currentDatabase = databaseName,
                 nextSteps = "You can now run operations like list_collections, query, etc. on this database"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -332,7 +324,7 @@ public class MongoDbService
                 success = false,
                 error = ex.Message,
                 suggestion = "Use list_databases to see available databases on this server"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -350,7 +342,7 @@ public class MongoDbService
                     serverName,
                     success = false,
                     error = "Server not connected"
-                }, new JsonSerializerOptions { WriteIndented = true });
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
@@ -372,7 +364,7 @@ public class MongoDbService
                     canListDatabases = true,
                     supportsMultiDatabase = true
                 }
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -381,7 +373,7 @@ public class MongoDbService
                 serverName,
                 success = false,
                 error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -414,7 +406,7 @@ public class MongoDbService
                 collection = collectionName,
                 count = results.Count,
                 documents = results.Select(doc => BsonTypeMapper.MapToDotNetValue(doc))
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -425,7 +417,7 @@ public class MongoDbService
                 success = false,
                 error = ex.Message,
                 suggestion = "Verify server connection and database/collection names"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -447,7 +439,7 @@ public class MongoDbService
                 databaseName,
                 collections = collectionList.OrderBy(c => c).ToList(),
                 totalCollections = collectionList.Count
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -457,7 +449,7 @@ public class MongoDbService
                 databaseName,
                 success = false,
                 error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -498,7 +490,7 @@ public class MongoDbService
         return JsonSerializer.Serialize(new { 
             serverName,
             collections = collectionList 
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     public async Task<string> QueryAsync(string serverName, string collectionName, string filterJson, int limit = 100, int skip = 0)
@@ -521,7 +513,7 @@ public class MongoDbService
             collection = collectionName,
             count = results.Count,
             documents = results.Select(doc => BsonTypeMapper.MapToDotNetValue(doc))
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     // Backward compatible overload
@@ -544,7 +536,7 @@ public class MongoDbService
             success = true, 
             message = "Document inserted successfully",
             insertedId = document.GetValue("_id", BsonNull.Value).ToString()
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     // Backward compatible overload
@@ -568,7 +560,7 @@ public class MongoDbService
             serverName,
             success = true, 
             message = $"Inserted {documents.Count} documents successfully"
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     // Backward compatible overload
@@ -594,7 +586,7 @@ public class MongoDbService
             matchedCount = result.MatchedCount,
             modifiedCount = result.ModifiedCount,
             upsertedId = result.UpsertedId?.ToString()
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     // Backward compatible overload
@@ -619,7 +611,7 @@ public class MongoDbService
             success = true,
             matchedCount = result.MatchedCount,
             modifiedCount = result.ModifiedCount
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     // Backward compatible overload
@@ -641,7 +633,7 @@ public class MongoDbService
             serverName,
             success = true,
             deletedCount = result.DeletedCount
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     // Backward compatible overload
@@ -663,7 +655,7 @@ public class MongoDbService
             serverName,
             success = true,
             deletedCount = result.DeletedCount
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     // Backward compatible overload
@@ -688,7 +680,7 @@ public class MongoDbService
             collection = collectionName,
             stages = pipeline.Length,
             results = results.Select(doc => BsonTypeMapper.MapToDotNetValue(doc))
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     // Backward compatible overload
@@ -710,7 +702,7 @@ public class MongoDbService
             serverName,
             collection = collectionName,
             count = count
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     // Backward compatible overload
@@ -737,7 +729,7 @@ public class MongoDbService
             serverName,
             success = true,
             indexName = result
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     // Backward compatible overload
@@ -756,7 +748,7 @@ public class MongoDbService
             serverName,
             success = true,
             message = $"Collection '{collectionName}' dropped successfully"
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     // Backward compatible overload
@@ -775,7 +767,7 @@ public class MongoDbService
         {
             serverName,
             result = BsonTypeMapper.MapToDotNetValue(result)
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     // Backward compatible overload
@@ -843,7 +835,7 @@ public class MongoDbService
             currentConnections = currentConnections,
             defaultServer = _connectionManager.GetDefaultServer(),
             configDefaultServer = _mongoConfig?.DefaultServer
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
         
         debugInfo.Add($"Final JSON result: {result}");
         
@@ -898,7 +890,7 @@ public class MongoDbService
             availableProfiles = _mongoConfig.ConnectionProfiles.Count,
             autoConnectProfiles = _mongoConfig.ConnectionProfiles.Count(p => p.AutoConnect),
             features = _mongoConfig.Features
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     #endregion

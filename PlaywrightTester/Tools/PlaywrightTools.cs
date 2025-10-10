@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using Microsoft.Playwright;
 using ModelContextProtocol.Server;
+using PlaywrightTester.Common;
 using PlaywrightTester.Models;
 using PlaywrightTester.Services;
 
@@ -214,7 +215,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
                 Logs = result
             };
 
-            return JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(response, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -272,7 +273,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
                 NetworkActivity = result
             };
 
-            return JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(response, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -321,7 +322,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
                 ActiveSessions = sessionManager.GetActiveSessionIds().ToList()
             };
 
-            return JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(summary, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -508,7 +509,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
             ";
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -606,7 +607,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
             ";
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -723,7 +724,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
             ";
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -821,7 +822,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
             ";
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -957,7 +958,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
             ";
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1051,7 +1052,7 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
             ";
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {

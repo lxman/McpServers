@@ -5,6 +5,7 @@ using Microsoft.Playwright;
 using ModelContextProtocol.Server;
 using PlaywrightTester.Services;
 using System.Collections.Concurrent;
+using PlaywrightTester.Common;
 
 namespace PlaywrightTester.Tools;
 
@@ -168,7 +169,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
                 timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -310,7 +311,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
                 timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -427,7 +428,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
                     timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")
                 };
 
-                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+                return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
             }
             catch (Exception ex)
             {
@@ -534,7 +535,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
                 timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -573,7 +574,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
                 timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -611,7 +612,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
                 timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -649,7 +650,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
                 timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -812,7 +813,7 @@ public class NetworkTestingTools(PlaywrightSessionManager sessionManager)
                 note = "HAR file generated with network performance data. For full HAR functionality with request/response bodies, consider using dedicated HAR recording tools."
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {

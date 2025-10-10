@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using Microsoft.Playwright;
 using ModelContextProtocol.Server;
+using PlaywrightTester.Common;
 using PlaywrightTester.Services;
 
 namespace PlaywrightTester.Tools;
@@ -64,7 +65,7 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
                 sessionId = sessionId
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -148,7 +149,7 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
                 sessionId = sessionId
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -214,7 +215,7 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
                 sessionId = sessionId
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -304,7 +305,7 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
                 timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -453,7 +454,7 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
                 timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -544,7 +545,7 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
                 }
             };
 
-            return JsonSerializer.Serialize(comparison, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(comparison, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {

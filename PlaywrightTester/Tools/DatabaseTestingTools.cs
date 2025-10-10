@@ -4,6 +4,7 @@ using Microsoft.Playwright;
 using ModelContextProtocol.Server;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using PlaywrightTester.Common;
 using PlaywrightTester.Services;
 
 namespace PlaywrightTester.Tools;
@@ -333,7 +334,7 @@ public class DatabaseTestingTools(ToolService toolService)
                 await Task.Delay(1000); // Wait 1 second
             }
 
-            return $"Performance monitoring completed ({durationSeconds}s):\n{JsonSerializer.Serialize(metrics, new JsonSerializerOptions { WriteIndented = true })}";
+            return $"Performance monitoring completed ({durationSeconds}s):\n{JsonSerializer.Serialize(metrics, SerializerOptions.JsonOptionsIndented)}";
         }
         catch (Exception ex)
         {
@@ -395,7 +396,7 @@ public class DatabaseTestingTools(ToolService toolService)
                 formDataReceived = formData.Keys.ToArray()
             };
 
-            return $"Business rules validation:\n{JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true })}";
+            return $"Business rules validation:\n{JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented)}";
         }
         catch (Exception ex)
         {
@@ -471,7 +472,7 @@ public class DatabaseTestingTools(ToolService toolService)
             }
         };
 
-        return JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(report, SerializerOptions.JsonOptionsIndented);
     }
 
     private static string GenerateMarkdownReport(string testData)

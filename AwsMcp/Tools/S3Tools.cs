@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Amazon.S3;
 using Amazon.S3.Model;
+using AwsMcp.Common;
 using AwsMcp.Configuration;
 using AwsMcp.S3;
 using ModelContextProtocol.Server;
@@ -48,7 +49,7 @@ public class S3Tools(S3Service s3Service)
                 region,
                 usingProfile = !string.IsNullOrEmpty(profileName),
                 usingCustomEndpoint = !string.IsNullOrEmpty(serviceUrl)
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -73,7 +74,7 @@ public class S3Tools(S3Service s3Service)
                     name = b.BucketName,
                     creationDate = b.CreationDate
                 }).ToList()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -109,7 +110,7 @@ public class S3Tools(S3Service s3Service)
                     storageClass = o.StorageClass?.Value ?? "STANDARD",
                     etag = o.ETag ?? ""
                 }).ToList()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -136,7 +137,7 @@ public class S3Tools(S3Service s3Service)
                 key,
                 contentLength = content.Length,
                 content
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -167,7 +168,7 @@ public class S3Tools(S3Service s3Service)
                 etag = metadata.ETag,
                 serverSideEncryption = metadata.ServerSideEncryptionMethod?.Value,
                 metadata = metadata.Metadata
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -199,7 +200,7 @@ public class S3Tools(S3Service s3Service)
                 etag = response.ETag,
                 contentLength = content.Length,
                 contentType
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -225,7 +226,7 @@ public class S3Tools(S3Service s3Service)
                 message = "Object deleted successfully",
                 bucketName,
                 key
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -248,7 +249,7 @@ public class S3Tools(S3Service s3Service)
                 success = true,
                 message = "Bucket created successfully",
                 bucketName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -271,7 +272,7 @@ public class S3Tools(S3Service s3Service)
                 success = true,
                 message = "Bucket deleted successfully",
                 bucketName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -313,7 +314,7 @@ public class S3Tools(S3Service s3Service)
                 httpMethod,
                 expiresAt = expiry,
                 expirationHours
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -336,7 +337,7 @@ public class S3Tools(S3Service s3Service)
                 success = true,
                 bucketName,
                 exists
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -362,7 +363,7 @@ public class S3Tools(S3Service s3Service)
                 bucketName,
                 key,
                 exists
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -386,7 +387,7 @@ public class S3Tools(S3Service s3Service)
                 versioningEnabled = response.VersioningConfig.Status == VersionStatus.Enabled,
                 status = response.VersioningConfig.Status?.Value,
                 mfaDelete = response.VersioningConfig.EnableMfaDelete
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -426,7 +427,7 @@ public class S3Tools(S3Service s3Service)
                     isLatest = d.IsLatest,
                     lastModified = d.LastModified
                 }).ToList()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         } catch (Exception ex)
         {
             return HandleError(ex, "listing S3 object versions");
@@ -685,6 +686,6 @@ public class S3Tools(S3Service s3Service)
                 break;
         }
 
-        return JsonSerializer.Serialize(error, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(error, SerializerOptions.JsonOptionsIndented);
     }
 }

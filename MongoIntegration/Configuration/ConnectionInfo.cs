@@ -1,4 +1,5 @@
 using System.Text.Json;
+using MongoIntegration.Common;
 
 namespace MongoIntegration.Configuration;
 
@@ -30,7 +31,7 @@ public class ConnectionInfo
             LastPing,
             IsHealthy,
             LastPingDuration = LastPingDuration?.TotalMilliseconds
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     private static string MaskConnectionString(string connectionString)

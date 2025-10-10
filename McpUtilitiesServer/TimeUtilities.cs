@@ -43,7 +43,7 @@ public class TimeUtilities
             timeZoneOffset = TimeZoneInfo.Local.BaseUtcOffset.ToString()
         };
         
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
     }
     
     /// <summary>
@@ -84,7 +84,7 @@ public class TimeUtilities
                 isPositive = elapsed.TotalMilliseconds >= 0
             };
             
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -94,7 +94,7 @@ public class TimeUtilities
                 error = ex.Message,
                 startTimestamp,
                 endTimestamp
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
     
@@ -120,7 +120,7 @@ public class TimeUtilities
             utcDateTime = now.ToUniversalTime().ToString("F")
         };
         
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
     }
     
     /// <summary>
@@ -141,7 +141,7 @@ public class TimeUtilities
                 timerName
             };
             
-            return JsonSerializer.Serialize(errorResult, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(errorResult, SerializerOptions.JsonOptionsIndented);
         }
         
         var timestampKey = $"timer_{timerName}";
@@ -165,7 +165,7 @@ public class TimeUtilities
             wasOverwritten = isOverwriting
         };
         
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
     }
     
     /// <summary>
@@ -188,7 +188,7 @@ public class TimeUtilities
                 timerName
             };
             
-            return JsonSerializer.Serialize(errorResult, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(errorResult, SerializerOptions.JsonOptionsIndented);
         }
         
         // Parse start time as UTC and get current UTC time for consistent calculation
@@ -215,7 +215,7 @@ public class TimeUtilities
             message = $"Timer '{timerName}' stopped after {elapsed.TotalSeconds:F3} seconds"
         };
         
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
     }
     
     /// <summary>
@@ -272,7 +272,7 @@ public class TimeUtilities
             currentTime = currentUtc.ToString("o")
         };
         
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
     }
     
     /// <summary>
@@ -308,7 +308,7 @@ public class TimeUtilities
             precisionDifference = actualDuration.TotalSeconds - durationSeconds
         };
         
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
     }
     
     /// <summary>

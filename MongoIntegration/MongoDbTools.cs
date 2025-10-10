@@ -3,6 +3,7 @@ using ModelContextProtocol.Server;
 using MongoIntegration.Services;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using MongoIntegration.Common;
 
 namespace MongoIntegration;
 
@@ -44,7 +45,7 @@ public class MongoDbTools
                 connectionType = "primary",
                 supportsCrud = true,
                 operatedOn = "default"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -54,7 +55,7 @@ public class MongoDbTools
                 error = ex.Message,
                 connectionType = "primary",
                 suggestion = "Verify your connection string format and network connectivity"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -79,7 +80,7 @@ public class MongoDbTools
                 serverName = serverName,
                 supportsCrud = true,
                 operatedOn = serverName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -90,7 +91,7 @@ public class MongoDbTools
                 connectionType = "additional",
                 serverName = serverName,
                 suggestion = "Verify connection string and ensure server name is unique"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -106,7 +107,7 @@ public class MongoDbTools
                 success = true,
                 message = result,
                 operatedOn = "default"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -115,7 +116,7 @@ public class MongoDbTools
                 success = false,
                 error = ex.Message,
                 operatedOn = "default"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -133,7 +134,7 @@ public class MongoDbTools
                 success = true,
                 message = result,
                 operatedOn = serverName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -142,7 +143,7 @@ public class MongoDbTools
                 success = false,
                 error = ex.Message,
                 operatedOn = serverName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -178,7 +179,7 @@ public class MongoDbTools
                 nextSteps = primaryStatus == "Not connected to MongoDB" 
                     ? "Run mongodb:connect_primary to establish your main database connection for CRUD operations"
                     : "Connection ready for CRUD operations. Use mongodb:connect_additional for multi-server features."
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -186,7 +187,7 @@ public class MongoDbTools
             {
                 error = ex.Message,
                 suggestion = "Check connection manager status"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -213,7 +214,7 @@ public class MongoDbTools
                 error = ex.Message,
                 operatedOn = serverName,
                 suggestion = $"Ensure server '{serverName}' is connected. Use mongodb:get_connection_status to check."
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -239,7 +240,7 @@ public class MongoDbTools
                 operatedOn = serverName,
                 targetDatabase = databaseName,
                 suggestion = "Use mongodb:list_databases to see available databases on this server"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -261,7 +262,7 @@ public class MongoDbTools
                 operation = "get_current_database_info",
                 error = ex.Message,
                 operatedOn = serverName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -295,7 +296,7 @@ public class MongoDbTools
                 operatedOn = serverName,
                 targetDatabase = databaseName,
                 suggestion = "Verify server connection and use mongodb:list_databases to see available databases"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -321,7 +322,7 @@ public class MongoDbTools
                 operatedOn = serverName,
                 targetDatabase = databaseName,
                 suggestion = "Use mongodb:list_databases first to see available databases"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -349,7 +350,7 @@ public class MongoDbTools
                     error = connectResult,
                     profileName = profileName,
                     suggestion = "Check that the profile exists using mongodb:list_connection_profiles"
-                }, new JsonSerializerOptions { WriteIndented = true });
+                }, SerializerOptions.JsonOptionsIndented);
             }
             
             // Get the server name that was connected
@@ -379,7 +380,7 @@ public class MongoDbTools
                     browseDatabase = $"mongodb:list_collections_by_database \"database_name\" \"{serverName}\"",
                     queryAnyDatabase = $"mongodb:query_database \"database_name\" \"collection_name\" \"{{}}\" 10 0 \"{serverName}\""
                 }
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -390,7 +391,7 @@ public class MongoDbTools
                 error = ex.Message,
                 profileName = profileName,
                 suggestion = "Check that the profile exists using mongodb:list_connection_profiles"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -409,7 +410,7 @@ public class MongoDbTools
                 solution = "Run mongodb:connect_primary to establish your main database connection",
                 operatedOn = "none",
                 suggestion = "Primary connection is required for CRUD operations"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         return null; // Connection is valid
     }
@@ -450,7 +451,7 @@ public class MongoDbTools
                 serverName = resultObj.GetProperty("serverName").GetString(),
                 count = resultObj.GetProperty("count").GetInt32(),
                 documents = resultObj.GetProperty("documents")
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -463,7 +464,7 @@ public class MongoDbTools
                 suggestion = serverName == "default" 
                     ? "Ensure primary connection is established and healthy"
                     : $"Verify server '{serverName}' is connected and accessible"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -498,7 +499,7 @@ public class MongoDbTools
                 collection = collectionName,
                 insertedId = resultObj.GetProperty("insertedId").GetString(),
                 message = "Document inserted successfully"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -511,7 +512,7 @@ public class MongoDbTools
                 suggestion = serverName == "default"
                     ? "Ensure primary connection is established and document JSON is valid"
                     : $"Verify server '{serverName}' is connected and document JSON is valid"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -545,7 +546,7 @@ public class MongoDbTools
                 operatedOn = serverName,
                 collection = collectionName,
                 message = resultObj.GetProperty("message").GetString()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -556,7 +557,7 @@ public class MongoDbTools
                 error = ex.Message,
                 operatedOn = serverName,
                 suggestion = "Verify connection and ensure documents is a valid JSON array"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -593,7 +594,7 @@ public class MongoDbTools
                 collection = collectionName,
                 matchedCount = resultObj.GetProperty("matchedCount").GetInt64(),
                 modifiedCount = resultObj.GetProperty("modifiedCount").GetInt64()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -604,7 +605,7 @@ public class MongoDbTools
                 error = ex.Message,
                 operatedOn = serverName,
                 suggestion = "Verify connection and ensure filter/update JSON syntax is correct"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -641,7 +642,7 @@ public class MongoDbTools
                 collection = collectionName,
                 matchedCount = resultObj.GetProperty("matchedCount").GetInt64(),
                 modifiedCount = resultObj.GetProperty("modifiedCount").GetInt64()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -652,7 +653,7 @@ public class MongoDbTools
                 error = ex.Message,
                 operatedOn = serverName,
                 suggestion = "Verify connection and ensure filter/update JSON syntax is correct"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -686,7 +687,7 @@ public class MongoDbTools
                 operatedOn = serverName,
                 collection = collectionName,
                 deletedCount = resultObj.GetProperty("deletedCount").GetInt64()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -697,7 +698,7 @@ public class MongoDbTools
                 error = ex.Message,
                 operatedOn = serverName,
                 suggestion = "Verify connection and ensure filter JSON syntax is correct"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -731,7 +732,7 @@ public class MongoDbTools
                 operatedOn = serverName,
                 collection = collectionName,
                 deletedCount = resultObj.GetProperty("deletedCount").GetInt64()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -742,7 +743,7 @@ public class MongoDbTools
                 error = ex.Message,
                 operatedOn = serverName,
                 suggestion = "Verify connection and ensure filter JSON syntax is correct"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -777,7 +778,7 @@ public class MongoDbTools
                 collection = collectionName,
                 stages = resultObj.GetProperty("stages").GetInt32(),
                 results = resultObj.GetProperty("results")
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -788,7 +789,7 @@ public class MongoDbTools
                 error = ex.Message,
                 operatedOn = serverName,
                 suggestion = "Verify connection and ensure pipeline is a valid JSON array of aggregation stages"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -822,7 +823,7 @@ public class MongoDbTools
                 operatedOn = serverName,
                 collection = collectionName,
                 count = resultObj.GetProperty("count").GetInt64()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -833,7 +834,7 @@ public class MongoDbTools
                 error = ex.Message,
                 operatedOn = serverName,
                 suggestion = "Verify connection and ensure filter JSON syntax is correct"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -873,7 +874,7 @@ public class MongoDbTools
                 operatedOn = serverName,
                 collection = collectionName,
                 indexName = resultObj.GetProperty("indexName").GetString()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -884,7 +885,7 @@ public class MongoDbTools
                 error = ex.Message,
                 operatedOn = serverName,
                 suggestion = "Verify connection and ensure index specification is valid JSON"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -916,7 +917,7 @@ public class MongoDbTools
                 operatedOn = serverName,
                 collection = collectionName,
                 message = resultObj.GetProperty("message").GetString()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -927,7 +928,7 @@ public class MongoDbTools
                 error = ex.Message,
                 operatedOn = serverName,
                 suggestion = "Verify connection and ensure collection name is correct"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -956,7 +957,7 @@ public class MongoDbTools
                 operation = "list_collections",
                 operatedOn = serverName,
                 collections = resultObj.GetProperty("collections")
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -967,7 +968,7 @@ public class MongoDbTools
                 error = ex.Message,
                 operatedOn = serverName,
                 suggestion = "Verify connection is established and healthy"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -998,7 +999,7 @@ public class MongoDbTools
                 operation = "execute_command",
                 operatedOn = serverName,
                 result = resultObj.GetProperty("result")
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1009,7 +1010,7 @@ public class MongoDbTools
                 error = ex.Message,
                 operatedOn = serverName,
                 suggestion = "Verify connection and ensure command is valid MongoDB JSON"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -1034,7 +1035,7 @@ public class MongoDbTools
                 healthyConnections = resultObj.GetProperty("healthyConnections").GetInt32(),
                 defaultServer = resultObj.GetProperty("defaultServer").GetString(),
                 connections = resultObj.GetProperty("connections")
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1043,7 +1044,7 @@ public class MongoDbTools
                 success = false,
                 operation = "list_servers",
                 error = ex.Message
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -1062,7 +1063,7 @@ public class MongoDbTools
                 operation = "set_default_server",
                 message = result,
                 newDefault = serverName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1072,7 +1073,7 @@ public class MongoDbTools
                 operation = "set_default_server",
                 error = ex.Message,
                 suggestion = "Verify the server name exists in your active connections"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -1093,7 +1094,7 @@ public class MongoDbTools
                 operation = "get_server_status",
                 serverName = serverName,
                 details = resultObj
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1103,7 +1104,7 @@ public class MongoDbTools
                 operation = "get_server_status",
                 error = ex.Message,
                 serverName = serverName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -1127,7 +1128,7 @@ public class MongoDbTools
                 isHealthy = resultObj.GetProperty("isHealthy").GetBoolean(),
                 responseTimeMs = resultObj.TryGetProperty("lastPingDuration", out JsonElement duration) 
                     ? (double?)duration.GetDouble() : null
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1137,7 +1138,7 @@ public class MongoDbTools
                 operation = "ping_server",
                 error = ex.Message,
                 serverName = serverName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -1199,7 +1200,7 @@ public class MongoDbTools
                     success = false,
                     error = "Invalid or empty server names array",
                     operation = "cross_server_query"
-                }, new JsonSerializerOptions { WriteIndented = true });
+                }, SerializerOptions.JsonOptionsIndented);
             }
             
             return await _crossServerOperations.CrossServerQueryAsync(serverNames, collectionName, filter, limitPerServer);
@@ -1211,7 +1212,7 @@ public class MongoDbTools
                 success = false,
                 error = "Invalid JSON format for server names. Expected array like [\"server1\", \"server2\"]",
                 operation = "cross_server_query"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -1237,7 +1238,7 @@ public class MongoDbTools
                     success = false,
                     error = "Invalid or empty collection names array",
                     operation = "bulk_transfer"
-                }, new JsonSerializerOptions { WriteIndented = true });
+                }, SerializerOptions.JsonOptionsIndented);
             }
             
             return await _crossServerOperations.BulkTransferAsync(sourceServer, targetServer, collectionNames, dryRun);
@@ -1249,7 +1250,7 @@ public class MongoDbTools
                 success = false,
                 error = "Invalid JSON format for collection names. Expected array like [\"collection1\", \"collection2\"]",
                 operation = "bulk_transfer"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -1354,7 +1355,7 @@ public class MongoDbTools
                 viewStatus = "Use mongodb:get_connection_status for comprehensive info",
                 databaseLockIn = "Use mongodb:connect_with_profile_and_explore to avoid being trapped in one database"
             }
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     [McpServerTool]
@@ -1438,7 +1439,7 @@ public class MongoDbTools
                 monitoring = "Use mongodb:health_dashboard for comprehensive server monitoring",
                 databaseSwitching = "Use the new database management tools to browse multiple databases on the same server"
             }
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     #endregion

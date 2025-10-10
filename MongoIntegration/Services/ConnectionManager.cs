@@ -4,6 +4,7 @@ using MongoIntegration.Configuration;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using MongoIntegration.Common;
 
 namespace MongoIntegration.Services;
 
@@ -290,7 +291,7 @@ public class ConnectionManager : IDisposable
             totalConnections = connections.Count,
             healthyConnections = connections.Count(c => c.IsHealthy),
             connections
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     private async void PerformHealthChecks(object? state)

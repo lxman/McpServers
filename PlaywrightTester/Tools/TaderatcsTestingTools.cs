@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using Microsoft.Playwright;
 using ModelContextProtocol.Server;
+using PlaywrightTester.Common;
 using PlaywrightTester.Services;
 
 namespace PlaywrightTester.Tools;
@@ -49,7 +50,7 @@ public class TaderatcsTestingTools(ToolService toolService)
             int totalTests = testResults.Count;
             
             return $"TADERATCS Comprehensive Test Results: {passedTests}/{totalTests} passed\n" +
-                   $"{JsonSerializer.Serialize(testResults, new JsonSerializerOptions { WriteIndented = true })}";
+                   $"{JsonSerializer.Serialize(testResults, SerializerOptions.JsonOptionsIndented)}";
         }
         catch (Exception ex)
         {
@@ -249,7 +250,7 @@ public class TaderatcsTestingTools(ToolService toolService)
             }
         }
 
-        return $"SSN Validation Test Results:\n{JsonSerializer.Serialize(results, new JsonSerializerOptions { WriteIndented = true })}";
+        return $"SSN Validation Test Results:\n{JsonSerializer.Serialize(results, SerializerOptions.JsonOptionsIndented)}";
     }
 
     private static async Task<string> TestSubProgramRules(IPage page)
@@ -290,7 +291,7 @@ public class TaderatcsTestingTools(ToolService toolService)
                 }
             }
 
-            return $"SubProgram Rules Test Results:\n{JsonSerializer.Serialize(results, new JsonSerializerOptions { WriteIndented = true })}";
+            return $"SubProgram Rules Test Results:\n{JsonSerializer.Serialize(results, SerializerOptions.JsonOptionsIndented)}";
         }
         catch (Exception ex)
         {
@@ -322,7 +323,7 @@ public class TaderatcsTestingTools(ToolService toolService)
             int addressCount = await page.Locator("[data-testid*='address']").CountAsync();
             results.Add(new { test = "Address Fields Present", passed = addressCount > 0 });
 
-            return $"Cross-Tab Validation Results:\n{JsonSerializer.Serialize(results, new JsonSerializerOptions { WriteIndented = true })}";
+            return $"Cross-Tab Validation Results:\n{JsonSerializer.Serialize(results, SerializerOptions.JsonOptionsIndented)}";
         }
         catch (Exception ex)
         {

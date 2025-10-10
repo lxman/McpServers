@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using ModelContextProtocol.Server;
+using PlaywrightTester.Common;
 using PlaywrightTester.Services;
 
 namespace PlaywrightTester.Tools;
@@ -265,7 +266,7 @@ public class AccessibilityTestingTools(PlaywrightSessionManager sessionManager)
                     }}
                 }}", finalContainerSelector);
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -274,7 +275,7 @@ public class AccessibilityTestingTools(PlaywrightSessionManager sessionManager)
                 success = false,
                 error = ex.Message,
                 capability = "ValidateAriaLabels"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -565,7 +566,7 @@ public class AccessibilityTestingTools(PlaywrightSessionManager sessionManager)
 
             // Filter out null results
             var resultObj = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(result));
-            return JsonSerializer.Serialize(resultObj, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(resultObj, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -574,7 +575,7 @@ public class AccessibilityTestingTools(PlaywrightSessionManager sessionManager)
                 success = false,
                 error = ex.Message,
                 capability = "TestColorContrast"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -1014,7 +1015,7 @@ public class AccessibilityTestingTools(PlaywrightSessionManager sessionManager)
                     }}
                 }}", finalContainerSelector);
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1023,7 +1024,7 @@ public class AccessibilityTestingTools(PlaywrightSessionManager sessionManager)
                 success = false,
                 error = ex.Message,
                 capability = "TestFocusOrder"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -1186,7 +1187,7 @@ public class AccessibilityTestingTools(PlaywrightSessionManager sessionManager)
                 }
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1195,7 +1196,7 @@ public class AccessibilityTestingTools(PlaywrightSessionManager sessionManager)
                 success = false,
                 error = ex.Message,
                 capability = "TestScreenReaderNavigation"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

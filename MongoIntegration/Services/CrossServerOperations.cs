@@ -3,6 +3,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using MongoIntegration.Common;
 using MongoIntegration.Configuration;
 
 namespace MongoIntegration.Services;
@@ -32,7 +33,7 @@ public class CrossServerOperations
                     error = "One or both servers are not connected",
                     server1Connected = db1 != null,
                     server2Connected = db2 != null
-                }, new JsonSerializerOptions { WriteIndented = true });
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             IMongoCollection<BsonDocument>? collection1 = db1.GetCollection<BsonDocument>(collectionName);
@@ -64,7 +65,7 @@ public class CrossServerOperations
                     server1 = sample1.Select(doc => BsonTypeMapper.MapToDotNetValue(doc)),
                     server2 = sample2.Select(doc => BsonTypeMapper.MapToDotNetValue(doc))
                 }
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -76,7 +77,7 @@ public class CrossServerOperations
                 server1,
                 server2,
                 collectionName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -94,7 +95,7 @@ public class CrossServerOperations
                     error = "One or both servers are not connected",
                     sourceConnected = sourceDb != null,
                     targetConnected = targetDb != null
-                }, new JsonSerializerOptions { WriteIndented = true });
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             IMongoCollection<BsonDocument>? sourceCollection = sourceDb.GetCollection<BsonDocument>(collectionName);
@@ -159,7 +160,7 @@ public class CrossServerOperations
                     ["insert"] = insertOperations,
                     ["update"] = updateOperations
                 }
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -171,7 +172,7 @@ public class CrossServerOperations
                 sourceServer,
                 targetServer,
                 collectionName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -247,7 +248,7 @@ public class CrossServerOperations
                     success = r.Success,
                     error = r.Error
                 })
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -258,7 +259,7 @@ public class CrossServerOperations
                 operation = "cross_server_query",
                 servers = serverNames,
                 collectionName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -276,7 +277,7 @@ public class CrossServerOperations
                     error = "One or both servers are not connected",
                     sourceConnected = sourceDb != null,
                     targetConnected = targetDb != null
-                }, new JsonSerializerOptions { WriteIndented = true });
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             var transferResults = new List<BulkTransferResult>();
@@ -346,7 +347,7 @@ public class CrossServerOperations
                     success = r.Success,
                     error = r.Error
                 })
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -358,7 +359,7 @@ public class CrossServerOperations
                 sourceServer,
                 targetServer,
                 collections = collectionNames
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -423,7 +424,7 @@ public class CrossServerOperations
                     failedOperations = serverNames.Count - successfulOperations
                 },
                 results
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -433,7 +434,7 @@ public class CrossServerOperations
                 error = ex.Message,
                 operation = "execute_on_all_servers",
                 command
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -496,7 +497,7 @@ public class CrossServerOperations
                     defaultServer = _connectionManager.GetDefaultServer()
                 },
                 servers = healthResults
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -505,7 +506,7 @@ public class CrossServerOperations
             {
                 error = ex.Message,
                 operation = "health_dashboard"
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

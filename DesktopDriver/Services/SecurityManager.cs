@@ -1,4 +1,5 @@
 using System.Text.Json;
+using DesktopDriver.Common;
 using Microsoft.Extensions.Logging;
 
 namespace DesktopDriver.Services;
@@ -142,7 +143,7 @@ public class SecurityManager
                 AllowedDirectories = _allowedDirectories.ToArray(),
                 BlockedCommands = _blockedCommands.ToArray()
             };
-            string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+            string json = JsonSerializer.Serialize(config, SerializerOptions.JsonOptionsIndented);
             File.WriteAllText(_configPath, json);
         }
         catch (Exception ex)

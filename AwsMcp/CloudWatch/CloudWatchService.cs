@@ -390,16 +390,28 @@ public class CloudWatchService
     }
     
     /// <summary>
-    /// Filter log events
+    /// Filter log events with pagination support.
+    /// Returns one page of results at a time to avoid timeouts with large result sets.
     /// </summary>
-    public async Task<List<FilteredLogEvent>> FilterLogEventsAsync(
+    /// <param name="logGroupName">Name of the log group to search</param>
+    /// <param name="filterPattern">Optional CloudWatch Logs filter pattern (e.g., "[ERROR]" or "[level=ERROR]")</param>
+    /// <param name="startTime">Optional start time for the search range</param>
+    /// <param name="endTime">Optional end time for the search range</param>
+    /// <param name="limit">Maximum number of events to return per page (1-10000, default: 100)</param>
+    /// <param name="nextToken">Continuation token from previous response (for pagination)</param>
+    /// <returns>Paginated result containing events and pagination metadata</returns>
+    public async Task<FilterLogEventsResult> FilterLogEventsAsync(
         string logGroupName,
         string? filterPattern = null,
         DateTime? startTime = null,
         DateTime? endTime = null,
-        int limit = 100)
+        int limit = 100,
+        string? nextToken = null)
     {
         await EnsureLogsInitializedAsync();
+        
+        // Clamp limit to AWS allowed range (1-10,000)
+        limit = Math.Clamp(limit, 1, 10000);
         
         var request = new FilterLogEventsRequest
         {
@@ -407,27 +419,56 @@ public class CloudWatchService
             Limit = limit
         };
         
+        // Add filter pattern if provided
         if (!string.IsNullOrEmpty(filterPattern))
         {
             request.FilterPattern = filterPattern;
         }
         
+        // Convert start time to Unix milliseconds
         if (startTime.HasValue)
         {
-            // Convert to Unix timestamp in milliseconds
             var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             request.StartTime = (long)(startTime.Value.ToUniversalTime() - epoch).TotalMilliseconds;
         }
         
+        // Convert end time to Unix milliseconds
         if (endTime.HasValue)
         {
-            // Convert to Unix timestamp in milliseconds
             var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             request.EndTime = (long)(endTime.Value.ToUniversalTime() - epoch).TotalMilliseconds;
         }
         
-        FilterLogEventsResponse? response = await _logsClient!.FilterLogEventsAsync(request);
-        return response.Events;
+        // Add the continuation token for pagination
+        if (!string.IsNullOrEmpty(nextToken))
+        {
+            request.NextToken = nextToken;
+        }
+        
+        // Execute the API call (fast - single page only)
+        FilterLogEventsResponse response = await _logsClient!.FilterLogEventsAsync(request);
+        
+        // Build paginated result
+        var result = new FilterLogEventsResult
+        {
+            Events = response.Events ?? [],
+            EventCount = response.Events?.Count ?? 0,
+            HasMoreResults = !string.IsNullOrEmpty(response.NextToken),
+            NextToken = response.NextToken,
+            SearchedLogStreams = response.SearchedLogStreams,
+            StartTime = startTime,
+            EndTime = endTime
+        };
+        
+        // Create a helpful summary message
+        result.Summary =
+            result.HasMoreResults
+                ? $"Retrieved {result.EventCount} events. More results available - use NextToken to continue pagination."
+                : $"Retrieved {result.EventCount} events. No more results available.";
+        
+        result.Summary += $" Searched {result.SearchedLogStreams.Count} log stream(s).";
+        
+        return result;
     }
     
     /// <summary>

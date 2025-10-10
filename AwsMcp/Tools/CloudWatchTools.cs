@@ -4,6 +4,7 @@ using Amazon.CloudWatch.Model;
 using Amazon.CloudWatchLogs.Model;
 using AwsMcp.CloudWatch;
 using AwsMcp.CloudWatch.Models;
+using AwsMcp.Common;
 using AwsMcp.Configuration;
 using ModelContextProtocol.Server;
 using InvalidOperationException = Amazon.CloudWatchLogs.Model.InvalidOperationException;
@@ -47,7 +48,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                 region,
                 usingProfile = !string.IsNullOrEmpty(profileName),
                 usingCustomEndpoint = !string.IsNullOrEmpty(serviceUrl)
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -83,7 +84,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                     metricName = m.MetricName,
                     dimensions = m.Dimensions?.Select(d => new { name = d.Name, value = d.Value }).ToList()
                 }).ToList()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -151,7 +152,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                     sampleCount = d.SampleCount,
                     unit = d.Unit?.Value
                 }).ToList()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -208,7 +209,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                 value,
                 unit,
                 timestamp = metricDatum.Timestamp
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -273,7 +274,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                 metricName,
                 threshold,
                 comparisonOperator
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -312,7 +313,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                     stateReason = a.StateReason,
                     stateUpdatedTimestamp = a.StateUpdatedTimestamp
                 }).ToList()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -349,7 +350,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                     storedBytes = lg.StoredBytes,
                     metricFilterCount = lg.MetricFilterCount
                 }).ToList()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -381,7 +382,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                     lastIngestionTime = ls.LastIngestionTime
                     // Note: Removed FirstEventTime and LastEventTime as they may not exist in current AWS SDK
                 }).ToList()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -434,7 +435,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                     message = e.Message,
                     ingestionTime = e.IngestionTime
                 }).ToList()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -443,7 +444,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
     }
 
     [McpServerTool]
-    [Description("Filter log events across log streams using a filter pattern")]
+    [Description("Filter log events across log streams with pagination support. Returns one page of results at a time to avoid timeouts with large result sets.")]
     public async Task<string> FilterLogEvents(
         [Description("Name of the log group")]
         string logGroupName,
@@ -453,8 +454,10 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
         string? startTime = null,
         [Description("End time (ISO 8601 format, optional)")]
         string? endTime = null,
-        [Description("Maximum number of log events to return (default: 100)")]
-        int limit = 100)
+        [Description("Maximum number of log events to return per page (1-10000, default: 100)")]
+        int limit = 100,
+        [Description("Continuation token from previous response (for pagination). Leave empty for first request.")]
+        string? nextToken = null)
     {
         try
         {
@@ -471,17 +474,27 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                 end = DateTime.Parse(endTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
             }
             
-            List<FilteredLogEvent> logEvents = await cloudWatchService.FilterLogEventsAsync(logGroupName, filterPattern, start, end, limit);
+            FilterLogEventsResult result = await cloudWatchService.FilterLogEventsAsync(
+                logGroupName, 
+                filterPattern, 
+                start, 
+                end, 
+                limit, 
+                nextToken);
             
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 logGroupName,
                 filterPattern,
-                eventCount = logEvents.Count,
-                startTime = start,
-                endTime = end,
-                events = logEvents.Select(e => new
+                eventCount = result.EventCount,
+                hasMoreResults = result.HasMoreResults,
+                nextToken = result.NextToken,
+                searchedLogStreams = result.SearchedLogStreams,
+                summary = result.Summary,
+                startTime = result.StartTime,
+                endTime = result.EndTime,
+                events = result.Events.Select(e => new
                 {
                     logStreamName = e.LogStreamName,
                     timestamp = e.Timestamp,
@@ -489,7 +502,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                     ingestionTime = e.IngestionTime,
                     eventId = e.EventId
                 }).ToList()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -512,7 +525,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                 success = true,
                 message = "Log group created successfully",
                 logGroupName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -535,7 +548,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                 success = true,
                 message = "Log group deleted successfully",
                 logGroupName
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -585,7 +598,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                 endTime = end,
                 summary,
                 matches = matches.Take(maxMatches).ToArray()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -636,7 +649,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                 endTime = end,
                 summary,
                 matches = matches.ToArray()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -697,7 +710,7 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                         count = kvp.Value.Count, 
                         matches = kvp.Value.Take(10).ToArray() // Limit to first 10 matches per issue type
                     })
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -892,6 +905,6 @@ public class CloudWatchTools(CloudWatchService cloudWatchService)
                 break;
         }
 
-        return JsonSerializer.Serialize(error, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(error, SerializerOptions.JsonOptionsIndented);
     }
 }

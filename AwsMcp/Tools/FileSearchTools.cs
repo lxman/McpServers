@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using AwsMcp.Common;
 using ModelContextProtocol.Server;
 
 namespace AwsMcp.Tools;
@@ -27,7 +28,7 @@ public class FileSearchTools
                     success = false,
                     error = "File not found",
                     filePath
-                }, new JsonSerializerOptions { WriteIndented = true });
+                }, SerializerOptions.JsonOptionsIndented);
             }
             
             var regex = new Regex(regexPattern, caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase);
@@ -90,7 +91,7 @@ public class FileSearchTools
                 searchOptions = new { contextLines, caseSensitive, maxMatches, skipLines },
                 totalMatches = matches.Count,
                 matches = matches.ToArray()
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -100,7 +101,7 @@ public class FileSearchTools
                 error = $"Error searching file: {ex.Message}",
                 filePath,
                 exceptionType = ex.GetType().Name
-            }, new JsonSerializerOptions { WriteIndented = true });
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
     
