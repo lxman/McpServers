@@ -35,6 +35,18 @@
     "aws": {
       "name": "AWS Tools",
       "url": "https://localhost:7188"
+    },
+    "go-analyzer": {
+      "name": "Go Analyzer Tools",
+      "url": "http://localhost:7300"
+    },
+    "typescript-analyzer": {
+      "name": "Typescript Analyzer Tools",
+      "url": "http://localhost:7302"
+    },
+    "python-analyzer": {
+      "name": "Python Analyzer Tools",
+      "url": "http://localhost:7301"
     }
   },
   "usage": "Call GET {url}/description to see available endpoints and capabilities."

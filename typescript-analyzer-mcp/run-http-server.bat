@@ -1,0 +1,16 @@
+@echo off
+cd /d "%~dp0"
+echo Starting TypeScript Analyzer HTTP Server on port 7302...
+echo Current directory: %cd%
+echo.
+echo Installing dependencies...
+call npm install
+echo.
+echo Generating OpenAPI spec and routes with tsoa...
+call npx tsoa spec-and-routes
+echo.
+echo Building TypeScript...
+call npm run build
+echo.
+echo Starting server...
+node dist/http_server.js

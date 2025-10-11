@@ -1,6 +1,11 @@
 # MCP SDK
 mcp>=1.0.0
 
+# HTTP Server with OpenAPI auto-generation
+Flask>=3.0.0
+flask-restx>=1.3.0
+flask-cors>=4.0.0
+
 # Code Analysis
 pylint>=3.0.0
 pyflakes>=3.1.0

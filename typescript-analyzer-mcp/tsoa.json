@@ -1,0 +1,16 @@
+{
+  "entryFile": "http_server.ts",
+  "noImplicitAdditionalProperties": "throw-on-extras",
+  "controllerPathGlobs": ["src/**/*Controller.ts"],
+  "spec": {
+    "outputDirectory": "build",
+    "specVersion": 3,
+    "name": "TypeScript Analyzer API",
+    "version": "1.0.0",
+    "description": "TypeScript code analysis tools with auto-generated OpenAPI documentation"
+  },
+  "routes": {
+    "routesDir": "build",
+    "esm": true
+  }
+}

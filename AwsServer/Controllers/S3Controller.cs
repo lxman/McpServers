@@ -69,8 +69,9 @@ public class S3Controller(S3Service s3Service) : ControllerBase
     /// <summary>
     /// Get the content of an S3 object as text
     /// </summary>
-    [HttpGet("buckets/{bucketName}/objects/{*key}")]
-    public async Task<IActionResult> GetObjectContent(string bucketName, string key)
+    [HttpGet("buckets/{bucketName}/object-content")]
+
+    public async Task<IActionResult> GetObjectContent(string bucketName, [FromQuery] string key)
     {
         try
         {
