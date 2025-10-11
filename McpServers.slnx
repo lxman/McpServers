@@ -1,13 +1,14 @@
 ﻿<Solution>
   <Project Path="AwsMcp\AwsMcp.csproj" Type="Classic C#" />
   <Project Path="AzureMcp\AzureMcp.csproj" Type="Classic C#" />
-  <Project Path="CSharpAnalyzerMcp\CSharpAnalyzerMcp.csproj" Type="Classic C#" />
-  <Project Path="DesktopDriver\DesktopDriver.csproj" Type="Classic C#" />
+  <Project Path="CSharpAnalyzer\CSharpAnalyzer.csproj" Type="Classic C#" />
+  <Project Path="DesktopCommander\DesktopCommander.csproj" Type="Classic C#" />
+  <Project Path="DirectoryMcp\DirectoryMcp.csproj" Type="Classic C#" />
   <Project Path="McpUtilitiesServer\McpUtilitiesServer.csproj" Type="Classic C#" />
-  <Project Path="MongoIntegration\MongoIntegration.csproj" Type="Classic C#" />
+  <Project Path="MongoTools\MongoTools.csproj" Type="Classic C#" />
   <Project Path="MsOfficeCrypto\MsOfficeCrypto.csproj" Type="Classic C#" />
-  <Project Path="OfficeMcp\OfficeMcp.csproj" Type="Classic C#" />
-  <Project Path="PdfMcp\PdfMcp.csproj" Type="Classic C#" />
+  <Project Path="OfficeReader\OfficeReader.csproj" Type="Classic C#" />
+  <Project Path="PdfReader\PdfReader.csproj" Type="Classic C#" />
   <Project Path="PlaywrightTester\PlaywrightTester.csproj" Type="Classic C#" />
   <Project Path="RedisBrowser\RedisBrowser.csproj" Type="Classic C#" />
   <Project Path="SeleniumChromeTool\SeleniumChromeTool.csproj" Type="Classic C#" />

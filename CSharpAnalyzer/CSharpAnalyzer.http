@@ -1,0 +1,6 @@
+@CSharpAnalyzer_HostAddress = http://localhost:5211
+
+GET {{CSharpAnalyzer_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

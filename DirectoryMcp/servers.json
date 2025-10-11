@@ -1,0 +1,29 @@
+{
+  "servers": {
+    "redis": {
+      "name": "Redis Tools",
+      "url": "https://localhost:7183"
+    },
+    "pdf": {
+      "name": "PDF Tools",
+      "url": "https://localhost:7002"
+    },
+    "office": {
+      "name": "Office Tools",
+      "url": "https://localhost:7030"
+    },
+    "desktop-commander": {
+      "name": "Desktop Tools",
+      "url": "https://localhost:7004"
+    },
+    "mongo": {
+      "name": "Mongo Tools",
+      "url": "https://localhost:7099"
+    },
+    "csharp-analyzer": {
+      "name": "C# Analyzer Tools",
+      "url": "https://localhost:7214"
+    }
+  },
+  "usage": "Call GET {url}/description to see available endpoints and capabilities."
+}
