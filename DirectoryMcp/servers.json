@@ -23,6 +23,10 @@
     "csharp-analyzer": {
       "name": "C# Analyzer Tools",
       "url": "https://localhost:7214"
+    },
+    "playwright": {
+      "name": "Playwright Browser Tools",
+      "url": "https://localhost:7060"
     }
   },
   "usage": "Call GET {url}/description to see available endpoints and capabilities."
