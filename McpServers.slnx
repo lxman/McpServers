@@ -1,6 +1,6 @@
 ﻿<Solution>
-  <Project Path="AwsMcp\AwsMcp.csproj" Type="Classic C#" />
-  <Project Path="AzureMcp\AzureMcp.csproj" Type="Classic C#" />
+  <Project Path="AwsServer\AwsServer.csproj" Type="Classic C#" />
+  <Project Path="AzureServer\AzureServer.csproj" Type="Classic C#" />
   <Project Path="CSharpAnalyzer\CSharpAnalyzer.csproj" Type="Classic C#" />
   <Project Path="DesktopCommander\DesktopCommander.csproj" Type="Classic C#" />
   <Project Path="DirectoryMcp\DirectoryMcp.csproj" Type="Classic C#" />

@@ -27,6 +27,14 @@
     "playwright": {
       "name": "Playwright Browser Tools",
       "url": "https://localhost:7060"
+    },
+    "azure": {
+      "name": "Azure Tools",
+      "url": "https://localhost:7084"
+    },
+    "aws": {
+      "name": "AWS Tools",
+      "url": "https://localhost:7188"
     }
   },
   "usage": "Call GET {url}/description to see available endpoints and capabilities."
