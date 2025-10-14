@@ -10,8 +10,8 @@
     },
     "documents": {
       "name": "Document Server",
-      "url": "https://localhost:7070",
-      "port": 7070,
+      "url": "https://localhost:7255",
+      "port": 7255,
       "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\DocumentServer",
       "startCommand": "dotnet run --launch-profile https --configuration Release",
       "requiresInit": false
