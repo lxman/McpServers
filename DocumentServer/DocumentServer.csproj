@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Office Processing -->
+        <PackageReference Include="ClosedXML" Version="0.105.0" />
+        <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
+        <PackageReference Include="ShapeCrawler" Version="0.74.0" />
+        <PackageReference Include="NPOI" Version="2.7.5" />
+        
+        <!-- PDF Processing -->
+        <PackageReference Include="itext" Version="9.3.0" />
+        <PackageReference Include="itext.bouncy-castle-adapter" Version="9.3.0" />
+        <PackageReference Include="PdfPig" Version="0.1.12-alpha-20251014-cf0c3" />
+        <PackageReference Include="PDFsharp" Version="6.2.2" />
+        
+        <!-- Search & Analysis -->
+        <PackageReference Include="Lucene.Net" Version="4.8.0-beta00017" />
+        <PackageReference Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00017" />
+        <PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00017" />
+        <PackageReference Include="FuzzySharp" Version="2.0.2" />
+        
+        <!-- OCR -->
+        <PackageReference Include="TesseractOCR" Version="5.5.1" />
+        <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
+        
+        <!-- API -->
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9"/>
+        <PackageReference Include="Scalar.AspNetCore" Version="2.8.11" />
+        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0-rc.1.25451.107" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\MsOfficeCrypto\MsOfficeCrypto.csproj" />
+    </ItemGroup>
+
+
+    <ItemGroup>
+      <Folder Include="Models\Common\" />
+      <Folder Include="Models\Requests\" />
+      <Folder Include="Models\Responses\" />
+      <Folder Include="Services\FormatSpecific\Excel\" />
+      <Folder Include="Services\FormatSpecific\Pdf\" />
+      <Folder Include="Services\FormatSpecific\PowerPoint\" />
+      <Folder Include="Services\FormatSpecific\Word\" />
+      <Folder Include="Services\Ocr\Models\" />
+    </ItemGroup>
+
+</Project>

@@ -1,6 +1,0 @@
-@DesktopCommander_HostAddress = http://localhost:5208
-
-GET {{DesktopCommander_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

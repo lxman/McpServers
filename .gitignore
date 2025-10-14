@@ -3,3 +3,6 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
+/go-analyzer-mcp/docs/*.json
+/go-analyzer-mcp/docs/*.yaml
+/go-analyzer-mcp/*.exe

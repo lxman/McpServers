@@ -1,0 +1,101 @@
+{
+  "servers": {
+    "redis": {
+      "name": "Redis Tools",
+      "url": "https://localhost:7183",
+      "port": 7183,
+      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\RedisBrowser",
+      "startCommand": "dotnet run --launch-profile https --configuration Release",
+      "requiresInit": false
+    },
+    "documents": {
+      "name": "Document Server",
+      "url": "https://localhost:7070",
+      "port": 7070,
+      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\DocumentServer",
+      "startCommand": "dotnet run --launch-profile https --configuration Release",
+      "requiresInit": false
+    },
+    "mongo": {
+      "name": "Mongo Tools",
+      "url": "https://localhost:7099",
+      "port": 7099,
+      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\MongoTools",
+      "startCommand": "dotnet run --launch-profile https --configuration Release",
+      "requiresInit": false
+    },
+    "csharp-analyzer": {
+      "name": "C# Analyzer Tools",
+      "url": "https://localhost:7214",
+      "port": 7214,
+      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\CSharpAnalyzer",
+      "startCommand": "dotnet run --launch-profile https --configuration Release",
+      "requiresInit": false
+    },
+    "playwright": {
+      "name": "Playwright Browser Tools",
+      "url": "https://localhost:7060",
+      "port": 7060,
+      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\PlaywrightServer",
+      "startCommand": "dotnet run --launch-profile https --configuration Release",
+      "requiresInit": false
+    },
+    "azure": {
+      "name": "Azure Tools",
+      "url": "https://localhost:7084",
+      "port": 7084,
+      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\AzureServer",
+      "startCommand": "dotnet run --launch-profile https --configuration Release",
+      "requiresInit": false
+    },
+    "aws": {
+      "name": "AWS Tools",
+      "url": "https://localhost:7188",
+      "port": 7188,
+      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\AwsServer",
+      "startCommand": "dotnet run --launch-profile https --configuration Release",
+      "requiresInit": false
+    },
+    "go-analyzer": {
+      "name": "Go Analyzer Tools",
+      "url": "http://localhost:7300",
+      "port": 7300,
+      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\go-analyzer-mcp",
+      "initCommands": [
+        "go mod tidy",
+        "go mod download",
+        "go install github.com/swaggo/swag/cmd/swag@latest",
+        "swag init -g http_server.go -o ./docs"
+      ],
+      "startCommand": "go run http_server.go",
+      "requiresInit": true
+    },
+    "typescript-analyzer": {
+      "name": "Typescript Analyzer Tools",
+      "url": "http://localhost:7302",
+      "port": 7302,
+      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\typescript-analyzer-mcp",
+      "initCommands": [
+        "npm install",
+        "npx tsoa spec-and-routes",
+        "npm run build"
+      ],
+      "startCommand": "node dist/http_server.js",
+      "requiresInit": true
+    },
+    "python-analyzer": {
+      "name": "Python Analyzer Tools",
+      "url": "http://localhost:7301",
+      "port": 7301,
+      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\python-analyzer-mcp",
+      "initCommands": [
+        "python -m venv .venv",
+        ".venv\\Scripts\\pip.exe install -r requirements.txt"
+      ],
+      "startCommand": ".venv\\Scripts\\python.exe http_server.py",
+      "requiresInit": true,
+      "initCheckPath": ".venv\\Scripts\\python.exe"
+    }
+  },
+  "usage": "Call GET {url}/description to see available endpoints and capabilities."
+}
