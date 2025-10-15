@@ -1,4 +1,7 @@
 ﻿<Solution>
+  <Folder Name="/SolutionFolder/">
+    <File Path="README.md" />
+  </Folder>
   <Project Path="AwsServer\AwsServer.csproj" Type="Classic C#" />
   <Project Path="AzureServer\AzureServer.csproj" Type="Classic C#" />
   <Project Path="CSharpAnalyzer\CSharpAnalyzer.csproj" Type="Classic C#" />
