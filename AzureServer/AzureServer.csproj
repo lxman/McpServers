@@ -9,7 +9,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9" />
-        <PackageReference Include="Scalar.AspNetCore" Version="2.8.11" />
+        <PackageReference Include="Scalar.AspNetCore" Version="2.9.0" />
         <PackageReference Include="Aspire.Hosting.Azure.AppService" Version="9.5.1-preview.1.25502.11" />
         <PackageReference Include="Azure.Containers.ContainerRegistry" Version="1.2.0" />
         <PackageReference Include="Azure.Identity" Version="1.17.0" />
@@ -41,7 +41,7 @@
         <PackageReference Include="Azure.ResourceManager.CostManagement" Version="1.0.2" />
         <PackageReference Include="Azure.ResourceManager.Dns" Version="1.2.0-beta.2" />
         <PackageReference Include="Azure.ResourceManager.EventHubs" Version="1.2.1" />
-        <PackageReference Include="Azure.ResourceManager.FrontDoor" Version="1.4.0" />
+        <PackageReference Include="Azure.ResourceManager.FrontDoor" Version="1.4.1" />
         <PackageReference Include="Azure.ResourceManager.Kubernetes" Version="1.0.0-beta.5" />
         <PackageReference Include="Azure.ResourceManager.KubernetesConfiguration" Version="1.2.0" />
         <PackageReference Include="Azure.ResourceManager.Monitor" Version="1.4.0-beta.3" />

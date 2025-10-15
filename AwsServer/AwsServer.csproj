@@ -8,7 +8,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9"/>
-        <PackageReference Include="Scalar.AspNetCore" Version="2.8.11" />
+        <PackageReference Include="Scalar.AspNetCore" Version="2.9.0" />
         <PackageReference Include="AWSSDK.CloudWatch" Version="4.0.4.5" />
         <PackageReference Include="AWSSDK.CloudWatchLogs" Version="4.0.8.6" />
         <PackageReference Include="AWSSDK.Core" Version="4.0.1" />
@@ -16,7 +16,7 @@
         <PackageReference Include="AWSSDK.ECS" Version="4.0.6.3" />
         <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.6" />
         <PackageReference Include="AWSSDK.QuickSight" Version="4.0.7.1" />
-        <PackageReference Include="AWSSDK.S3" Version="4.0.7.9" />
+        <PackageReference Include="AWSSDK.S3" Version="4.0.7.10" />
         <PackageReference Include="AWSSDK.SecurityToken" Version="4.0.2.8" />
     </ItemGroup>
 
