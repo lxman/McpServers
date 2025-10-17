@@ -15,7 +15,7 @@ public class ServiceBusController(IServiceBusService serviceBusService, ILogger<
     {
         try
         {
-            IEnumerable<ServiceBusNamespaceDto> namespaces = await serviceBusService.ListNamespacesAsync(resourceGroupName, subscriptionId);
+            var namespaces = await serviceBusService.ListNamespacesAsync(resourceGroupName, subscriptionId);
             return Ok(new { success = true, namespaces = namespaces.ToArray() });
         }
         catch (Exception ex)
@@ -33,7 +33,7 @@ public class ServiceBusController(IServiceBusService serviceBusService, ILogger<
     {
         try
         {
-            ServiceBusNamespaceDto? ns = await serviceBusService.GetNamespaceAsync(resourceGroupName, namespaceName, subscriptionId);
+            var ns = await serviceBusService.GetNamespaceAsync(resourceGroupName, namespaceName, subscriptionId);
             if (ns is null)
                 return NotFound(new { success = false, error = $"Namespace {namespaceName} not found" });
 
@@ -54,7 +54,7 @@ public class ServiceBusController(IServiceBusService serviceBusService, ILogger<
     {
         try
         {
-            ServiceBusNamespaceDto ns = await serviceBusService.CreateNamespaceAsync(
+            var ns = await serviceBusService.CreateNamespaceAsync(
                 resourceGroupName, namespaceName, request.Location, request.SubscriptionId, request.Sku);
             return Ok(new { success = true, @namespace = ns });
         }
@@ -91,7 +91,7 @@ public class ServiceBusController(IServiceBusService serviceBusService, ILogger<
     {
         try
         {
-            IEnumerable<ServiceBusQueueDto> queues = await serviceBusService.ListQueuesAsync(resourceGroupName, namespaceName, subscriptionId);
+            var queues = await serviceBusService.ListQueuesAsync(resourceGroupName, namespaceName, subscriptionId);
             return Ok(new { success = true, queues = queues.ToArray() });
         }
         catch (Exception ex)

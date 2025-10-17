@@ -13,7 +13,7 @@ public class KeyVaultService(
 
     private async Task<SecretClient> GetSecretClientAsync(string vaultName)
     {
-        if (_secretClients.TryGetValue(vaultName, out SecretClient? existingClient))
+        if (_secretClients.TryGetValue(vaultName, out var existingClient))
             return existingClient;
 
         var vaultUri = new Uri($"https://{vaultName}.vault.azure.net");
@@ -29,10 +29,10 @@ public class KeyVaultService(
     {
         try
         {
-            SecretClient client = await GetSecretClientAsync(vaultName);
+            var client = await GetSecretClientAsync(vaultName);
             var secrets = new List<SecretPropertiesDto>();
 
-            await foreach (SecretProperties secret in client.GetPropertiesOfSecretsAsync())
+            await foreach (var secret in client.GetPropertiesOfSecretsAsync())
             {
                 secrets.Add(MapSecretProperties(secret, vaultName));
             }
@@ -51,7 +51,7 @@ public class KeyVaultService(
     {
         try
         {
-            SecretClient client = await GetSecretClientAsync(vaultName);
+            var client = await GetSecretClientAsync(vaultName);
             
             KeyVaultSecret secret = string.IsNullOrEmpty(version)
                 ? await client.GetSecretAsync(secretName)
@@ -78,7 +78,7 @@ public class KeyVaultService(
     {
         try
         {
-            SecretClient client = await GetSecretClientAsync(vaultName);
+            var client = await GetSecretClientAsync(vaultName);
             var secret = new KeyVaultSecret(secretName, value);
 
             if (!string.IsNullOrEmpty(contentType))
@@ -92,7 +92,7 @@ public class KeyVaultService(
 
             if (tags is not null)
             {
-                foreach (KeyValuePair<string, string> tag in tags)
+                foreach (var tag in tags)
                 {
                     secret.Properties.Tags[tag.Key] = tag.Value;
                 }
@@ -114,8 +114,8 @@ public class KeyVaultService(
     {
         try
         {
-            SecretClient client = await GetSecretClientAsync(vaultName);
-            DeleteSecretOperation operation = await client.StartDeleteSecretAsync(secretName);
+            var client = await GetSecretClientAsync(vaultName);
+            var operation = await client.StartDeleteSecretAsync(secretName);
             DeletedSecret deletedSecret = await operation.WaitForCompletionAsync();
 
             logger.LogInformation("Deleted secret {SecretName} from vault {VaultName}", secretName, vaultName);
@@ -132,10 +132,10 @@ public class KeyVaultService(
     {
         try
         {
-            SecretClient client = await GetSecretClientAsync(vaultName);
+            var client = await GetSecretClientAsync(vaultName);
             var versions = new List<SecretPropertiesDto>();
 
-            await foreach (SecretProperties version in client.GetPropertiesOfSecretVersionsAsync(secretName))
+            await foreach (var version in client.GetPropertiesOfSecretVersionsAsync(secretName))
             {
                 versions.Add(MapSecretProperties(version, vaultName));
             }
@@ -156,10 +156,10 @@ public class KeyVaultService(
     {
         try
         {
-            SecretClient client = await GetSecretClientAsync(vaultName);
+            var client = await GetSecretClientAsync(vaultName);
             var deletedSecrets = new List<DeletedSecretDto>();
 
-            await foreach (DeletedSecret secret in client.GetDeletedSecretsAsync())
+            await foreach (var secret in client.GetDeletedSecretsAsync())
             {
                 deletedSecrets.Add(MapDeletedSecret(secret, vaultName));
             }
@@ -179,7 +179,7 @@ public class KeyVaultService(
     {
         try
         {
-            SecretClient client = await GetSecretClientAsync(vaultName);
+            var client = await GetSecretClientAsync(vaultName);
             DeletedSecret deletedSecret = await client.GetDeletedSecretAsync(secretName);
 
             logger.LogInformation("Retrieved deleted secret {SecretName} from vault {VaultName}", 
@@ -203,8 +203,8 @@ public class KeyVaultService(
     {
         try
         {
-            SecretClient client = await GetSecretClientAsync(vaultName);
-            RecoverDeletedSecretOperation operation = await client.StartRecoverDeletedSecretAsync(secretName);
+            var client = await GetSecretClientAsync(vaultName);
+            var operation = await client.StartRecoverDeletedSecretAsync(secretName);
             SecretProperties properties = await operation.WaitForCompletionAsync();
 
             logger.LogInformation("Recovered deleted secret {SecretName} in vault {VaultName}", 
@@ -223,7 +223,7 @@ public class KeyVaultService(
     {
         try
         {
-            SecretClient client = await GetSecretClientAsync(vaultName);
+            var client = await GetSecretClientAsync(vaultName);
             await client.PurgeDeletedSecretAsync(secretName);
 
             logger.LogInformation("Purged deleted secret {SecretName} from vault {VaultName}", 
@@ -243,9 +243,9 @@ public class KeyVaultService(
     {
         try
         {
-            SecretClient client = await GetSecretClientAsync(vaultName);
+            var client = await GetSecretClientAsync(vaultName);
             
-            SecretProperties properties = string.IsNullOrEmpty(version)
+            var properties = string.IsNullOrEmpty(version)
                 ? (await client.GetSecretAsync(secretName)).Value.Properties
                 : (await client.GetSecretAsync(secretName, version)).Value.Properties;
 
@@ -264,7 +264,7 @@ public class KeyVaultService(
             if (tags is not null)
             {
                 properties.Tags.Clear();
-                foreach (KeyValuePair<string, string> tag in tags)
+                foreach (var tag in tags)
                 {
                     properties.Tags[tag.Key] = tag.Value;
                 }

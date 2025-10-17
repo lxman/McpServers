@@ -13,7 +13,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            IEnumerable<ProjectDto> projects = await devOpsService.GetProjectsAsync();
+            var projects = await devOpsService.GetProjectsAsync();
             return Ok(new { success = true, projects = projects.ToArray() });
         }
         catch (Exception ex)
@@ -28,7 +28,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            ProjectDto? project = await devOpsService.GetProjectAsync(projectName);
+            var project = await devOpsService.GetProjectAsync(projectName);
             if (project is null)
                 return NotFound(new { success = false, error = $"Project {projectName} not found" });
 
@@ -46,7 +46,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            WorkItemDto? workItem = await devOpsService.GetWorkItemAsync(id);
+            var workItem = await devOpsService.GetWorkItemAsync(id);
             if (workItem is null)
                 return NotFound(new { success = false, error = $"Work item {id} not found" });
 
@@ -64,7 +64,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            IEnumerable<WorkItemDto> workItems = await devOpsService.GetWorkItemsAsync(projectName, wiql);
+            var workItems = await devOpsService.GetWorkItemsAsync(projectName, wiql);
             return Ok(new { success = true, workItems = workItems.ToArray() });
         }
         catch (Exception ex)
@@ -81,7 +81,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            WorkItemDto workItem = await devOpsService.CreateWorkItemAsync(
+            var workItem = await devOpsService.CreateWorkItemAsync(
                 projectName, 
                 request.WorkItemType, 
                 request.Title, 
@@ -100,7 +100,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            IEnumerable<RepositoryDto> repositories = await devOpsService.GetRepositoriesAsync(projectName);
+            var repositories = await devOpsService.GetRepositoriesAsync(projectName);
             return Ok(new { success = true, repositories = repositories.ToArray() });
         }
         catch (Exception ex)
@@ -115,7 +115,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            RepositoryDto? repository = await devOpsService.GetRepositoryAsync(projectName, repositoryName);
+            var repository = await devOpsService.GetRepositoryAsync(projectName, repositoryName);
             if (repository is null)
                 return NotFound(new { success = false, error = $"Repository {repositoryName} not found" });
 
@@ -133,7 +133,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            IEnumerable<BuildDefinitionDto> definitions = await devOpsService.GetBuildDefinitionsAsync(projectName);
+            var definitions = await devOpsService.GetBuildDefinitionsAsync(projectName);
             return Ok(new { success = true, buildDefinitions = definitions.ToArray() });
         }
         catch (Exception ex)
@@ -148,7 +148,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            BuildDefinitionDto? definition = await devOpsService.GetBuildDefinitionAsync(projectName, definitionId);
+            var definition = await devOpsService.GetBuildDefinitionAsync(projectName, definitionId);
             if (definition is null)
                 return NotFound(new { success = false, error = $"Build definition {definitionId} not found" });
 
@@ -169,7 +169,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            IEnumerable<BuildDto> builds = await devOpsService.GetBuildsAsync(projectName, definitionId, top);
+            var builds = await devOpsService.GetBuildsAsync(projectName, definitionId, top);
             return Ok(new { success = true, builds = builds.ToArray() });
         }
         catch (Exception ex)
@@ -184,7 +184,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            BuildDto? build = await devOpsService.GetBuildAsync(projectName, buildId);
+            var build = await devOpsService.GetBuildAsync(projectName, buildId);
             if (build is null)
                 return NotFound(new { success = false, error = $"Build {buildId} not found" });
 
@@ -204,7 +204,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            BuildDto build = await devOpsService.QueueBuildAsync(projectName, request.DefinitionId, request.Branch);
+            var build = await devOpsService.QueueBuildAsync(projectName, request.DefinitionId, request.Branch);
             return Ok(new { success = true, build });
         }
         catch (Exception ex)
@@ -219,7 +219,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            IEnumerable<ReleaseDefinitionDto> definitions = await devOpsService.GetReleaseDefinitionsAsync(projectName);
+            var definitions = await devOpsService.GetReleaseDefinitionsAsync(projectName);
             return Ok(new { success = true, releaseDefinitions = definitions.ToArray() });
         }
         catch (Exception ex)
@@ -234,7 +234,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            ReleaseDefinitionDto? definition = await devOpsService.GetReleaseDefinitionAsync(projectName, definitionId);
+            var definition = await devOpsService.GetReleaseDefinitionAsync(projectName, definitionId);
             if (definition is null)
                 return NotFound(new { success = false, error = $"Release definition {definitionId} not found" });
 
@@ -254,7 +254,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            IEnumerable<ReleaseDto> releases = await devOpsService.GetReleasesAsync(projectName, definitionId);
+            var releases = await devOpsService.GetReleasesAsync(projectName, definitionId);
             return Ok(new { success = true, releases = releases.ToArray() });
         }
         catch (Exception ex)
@@ -273,7 +273,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            string? content = await devOpsService.GetRepositoryFileContentAsync(projectName, repositoryName, filePath, branch);
+            var content = await devOpsService.GetRepositoryFileContentAsync(projectName, repositoryName, filePath, branch);
             if (content is null)
                 return NotFound(new { success = false, error = $"File {filePath} not found" });
 
@@ -294,7 +294,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            bool success = await devOpsService.UpdateRepositoryFileAsync(
+            var success = await devOpsService.UpdateRepositoryFileAsync(
                 projectName, 
                 repositoryName, 
                 request.FilePath, 
@@ -315,7 +315,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            IEnumerable<string> files = await devOpsService.FindYamlPipelineFilesAsync(projectName, repositoryName);
+            var files = await devOpsService.FindYamlPipelineFilesAsync(projectName, repositoryName);
             return Ok(new { success = true, files = files.ToArray() });
         }
         catch (Exception ex)
@@ -330,7 +330,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            string? yaml = await devOpsService.GetPipelineYamlAsync(projectName, definitionId);
+            var yaml = await devOpsService.GetPipelineYamlAsync(projectName, definitionId);
             if (yaml is null)
                 return NotFound(new { success = false, error = $"YAML for definition {definitionId} not found" });
 
@@ -351,7 +351,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            bool success = await devOpsService.UpdatePipelineYamlAsync(
+            var success = await devOpsService.UpdatePipelineYamlAsync(
                 projectName, 
                 definitionId, 
                 request.YamlContent, 
@@ -370,7 +370,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            IEnumerable<BuildLogDto> logs = await devOpsService.GetBuildLogsAsync(projectName, buildId);
+            var logs = await devOpsService.GetBuildLogsAsync(projectName, buildId);
             return Ok(new { success = true, logs = logs.ToArray() });
         }
         catch (Exception ex)
@@ -385,7 +385,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            BuildLogContentDto? logContent = await devOpsService.GetBuildLogContentAsync(projectName, buildId, logId);
+            var logContent = await devOpsService.GetBuildLogContentAsync(projectName, buildId, logId);
             if (logContent is null)
                 return NotFound(new { success = false, error = $"Log {logId} not found" });
 
@@ -403,7 +403,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            BuildTimelineDto? timeline = await devOpsService.GetBuildTimelineAsync(projectName, buildId);
+            var timeline = await devOpsService.GetBuildTimelineAsync(projectName, buildId);
             if (timeline is null)
                 return NotFound(new { success = false, error = $"Timeline for build {buildId} not found" });
 
@@ -421,7 +421,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            IEnumerable<BuildStepLogDto> stepLogs = await devOpsService.GetBuildStepLogsAsync(projectName, buildId);
+            var stepLogs = await devOpsService.GetBuildStepLogsAsync(projectName, buildId);
             return Ok(new { success = true, stepLogs = stepLogs.ToArray() });
         }
         catch (Exception ex)
@@ -436,7 +436,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            string log = await devOpsService.GetCompleteBuildLogAsync(projectName, buildId);
+            var log = await devOpsService.GetCompleteBuildLogAsync(projectName, buildId);
             return Ok(new { success = true, log });
         }
         catch (Exception ex)
@@ -451,7 +451,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            BuildLogContentDto? taskLog = await devOpsService.GetBuildTaskLogAsync(projectName, buildId, taskId);
+            var taskLog = await devOpsService.GetBuildTaskLogAsync(projectName, buildId, taskId);
             if (taskLog is null)
                 return NotFound(new { success = false, error = $"Task log for task {taskId} not found" });
 
@@ -472,7 +472,7 @@ public class DevOpsController(IDevOpsService devOpsService, ILogger<DevOpsContro
     {
         try
         {
-            string result = await devOpsService.SearchBuildLogsWithRegexAsync(
+            var result = await devOpsService.SearchBuildLogsWithRegexAsync(
                 projectName, 
                 buildId, 
                 request.RegexPattern,

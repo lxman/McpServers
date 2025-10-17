@@ -14,7 +14,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            IEnumerable<ServerDto> servers = await databaseService.ListServersAsync(subscriptionId, resourceGroupName);
+            var servers = await databaseService.ListServersAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, servers = servers.ToArray() });
         }
         catch (Exception ex)
@@ -29,7 +29,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            ServerDto? server = await databaseService.GetServerAsync(serverName, resourceGroupName, subscriptionId);
+            var server = await databaseService.GetServerAsync(serverName, resourceGroupName, subscriptionId);
             if (server is null)
                 return NotFound(new { success = false, error = $"Server {serverName} not found" });
 
@@ -47,7 +47,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            bool result = await databaseService.DeleteServerAsync(serverName, resourceGroupName, subscriptionId);
+            var result = await databaseService.DeleteServerAsync(serverName, resourceGroupName, subscriptionId);
             return Ok(new { success = result, message = result ? "Server deleted successfully" : "Server not found" });
         }
         catch (Exception ex)
@@ -62,7 +62,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            IEnumerable<DatabaseDto> databases = await databaseService.ListDatabasesAsync(serverName, resourceGroupName, subscriptionId);
+            var databases = await databaseService.ListDatabasesAsync(serverName, resourceGroupName, subscriptionId);
             return Ok(new { success = true, databases = databases.ToArray() });
         }
         catch (Exception ex)
@@ -77,7 +77,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            DatabaseDto? database = await databaseService.GetDatabaseAsync(databaseName, serverName, resourceGroupName, subscriptionId);
+            var database = await databaseService.GetDatabaseAsync(databaseName, serverName, resourceGroupName, subscriptionId);
             if (database is null)
                 return NotFound(new { success = false, error = $"Database {databaseName} not found" });
 
@@ -98,7 +98,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            DatabaseDto database = await databaseService.CreateDatabaseAsync(
+            var database = await databaseService.CreateDatabaseAsync(
                 request.DatabaseName, serverName, resourceGroupName,
                 request.SubscriptionId, request.Edition, request.ServiceObjective,
                 request.MaxSizeBytes, request.Tags);
@@ -117,7 +117,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            bool result = await databaseService.DeleteDatabaseAsync(databaseName, serverName, resourceGroupName, subscriptionId);
+            var result = await databaseService.DeleteDatabaseAsync(databaseName, serverName, resourceGroupName, subscriptionId);
             return Ok(new { success = result, message = result ? "Database deleted successfully" : "Database not found" });
         }
         catch (Exception ex)
@@ -132,7 +132,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            IEnumerable<FirewallRuleDto> rules = await databaseService.ListFirewallRulesAsync(serverName, resourceGroupName, subscriptionId);
+            var rules = await databaseService.ListFirewallRulesAsync(serverName, resourceGroupName, subscriptionId);
             return Ok(new { success = true, firewallRules = rules.ToArray() });
         }
         catch (Exception ex)
@@ -150,7 +150,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            FirewallRuleDto rule = await databaseService.CreateFirewallRuleAsync(
+            var rule = await databaseService.CreateFirewallRuleAsync(
                 request.RuleName, serverName, resourceGroupName,
                 request.StartIpAddress, request.EndIpAddress, request.SubscriptionId);
 
@@ -168,7 +168,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            bool result = await databaseService.DeleteFirewallRuleAsync(ruleName, serverName, resourceGroupName, subscriptionId);
+            var result = await databaseService.DeleteFirewallRuleAsync(ruleName, serverName, resourceGroupName, subscriptionId);
             return Ok(new { success = result, message = result ? "Firewall rule deleted successfully" : "Firewall rule not found" });
         }
         catch (Exception ex)
@@ -183,7 +183,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            IEnumerable<ElasticPoolDto> pools = await databaseService.ListElasticPoolsAsync(serverName, resourceGroupName, subscriptionId);
+            var pools = await databaseService.ListElasticPoolsAsync(serverName, resourceGroupName, subscriptionId);
             return Ok(new { success = true, elasticPools = pools.ToArray() });
         }
         catch (Exception ex)
@@ -198,7 +198,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            IEnumerable<ServerDto> servers = await databaseService.ListPostgreSqlServersAsync(subscriptionId, resourceGroupName);
+            var servers = await databaseService.ListPostgreSqlServersAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, servers = servers.ToArray() });
         }
         catch (Exception ex)
@@ -213,7 +213,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            IEnumerable<DatabaseDto> databases = await databaseService.ListPostgreSqlDatabasesAsync(serverName, resourceGroupName, subscriptionId);
+            var databases = await databaseService.ListPostgreSqlDatabasesAsync(serverName, resourceGroupName, subscriptionId);
             return Ok(new { success = true, databases = databases.ToArray() });
         }
         catch (Exception ex)
@@ -228,7 +228,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            bool result = await databaseService.DeletePostgreSqlServerAsync(serverName, resourceGroupName, subscriptionId);
+            var result = await databaseService.DeletePostgreSqlServerAsync(serverName, resourceGroupName, subscriptionId);
             return Ok(new { success = result, message = result ? "PostgreSQL server deleted successfully" : "PostgreSQL server not found" });
         }
         catch (Exception ex)
@@ -243,7 +243,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            IEnumerable<ServerDto> servers = await databaseService.ListPostgreSqlFlexibleServersAsync(subscriptionId, resourceGroupName);
+            var servers = await databaseService.ListPostgreSqlFlexibleServersAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, servers = servers.ToArray() });
         }
         catch (Exception ex)
@@ -258,7 +258,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            IEnumerable<ServerDto> servers = await databaseService.ListMySqlServersAsync(subscriptionId, resourceGroupName);
+            var servers = await databaseService.ListMySqlServersAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, servers = servers.ToArray() });
         }
         catch (Exception ex)
@@ -273,7 +273,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            IEnumerable<DatabaseDto> databases = await databaseService.ListMySqlDatabasesAsync(serverName, resourceGroupName, subscriptionId);
+            var databases = await databaseService.ListMySqlDatabasesAsync(serverName, resourceGroupName, subscriptionId);
             return Ok(new { success = true, databases = databases.ToArray() });
         }
         catch (Exception ex)
@@ -288,7 +288,7 @@ public class SqlController(ISqlDatabaseService databaseService, ISqlQueryService
     {
         try
         {
-            bool result = await databaseService.DeleteMySqlServerAsync(serverName, resourceGroupName, subscriptionId);
+            var result = await databaseService.DeleteMySqlServerAsync(serverName, resourceGroupName, subscriptionId);
             return Ok(new { success = result, message = result ? "MySQL server deleted successfully" : "MySQL server not found" });
         }
         catch (Exception ex)

@@ -16,8 +16,8 @@ public class ExpressRouteService(ArmClientFactory armClientFactory, ILogger<Expr
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await armClient.GetDefaultSubscriptionAsync()
                 : armClient.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
@@ -27,7 +27,7 @@ public class ExpressRouteService(ArmClientFactory armClientFactory, ILogger<Expr
             {
                 // List circuits in a specific resource group
                 Response<ResourceGroupResource>? resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
-                await foreach (ExpressRouteCircuitResource? circuit in resourceGroup.Value.GetExpressRouteCircuits().GetAllAsync())
+                await foreach (var circuit in resourceGroup.Value.GetExpressRouteCircuits().GetAllAsync())
                 {
                     circuits.Add(MappingService.MapToExpressRouteCircuitDto(circuit.Data));
                 }
@@ -35,7 +35,7 @@ public class ExpressRouteService(ArmClientFactory armClientFactory, ILogger<Expr
             else
             {
                 // List all circuits in the subscription
-                await foreach (ExpressRouteCircuitResource? circuit in subscription.GetExpressRouteCircuitsAsync())
+                await foreach (var circuit in subscription.GetExpressRouteCircuitsAsync())
                 {
                     circuits.Add(MappingService.MapToExpressRouteCircuitDto(circuit.Data));
                 }
@@ -55,8 +55,8 @@ public class ExpressRouteService(ArmClientFactory armClientFactory, ILogger<Expr
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource? subscription = armClient.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var subscription = armClient.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             Response<ResourceGroupResource>? resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             
             Response<ExpressRouteCircuitResource>? circuit = await resourceGroup.Value.GetExpressRouteCircuits().GetAsync(circuitName);
@@ -80,8 +80,8 @@ public class ExpressRouteService(ArmClientFactory armClientFactory, ILogger<Expr
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource? subscription = armClient.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var subscription = armClient.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             Response<ResourceGroupResource>? resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
 
             var circuitData = new ExpressRouteCircuitData
@@ -104,7 +104,7 @@ public class ExpressRouteService(ArmClientFactory armClientFactory, ILogger<Expr
 
             if (request.Tags != null)
             {
-                foreach (KeyValuePair<string, string> tag in request.Tags)
+                foreach (var tag in request.Tags)
                 {
                     circuitData.Tags.Add(tag.Key, tag.Value);
                 }
@@ -127,8 +127,8 @@ public class ExpressRouteService(ArmClientFactory armClientFactory, ILogger<Expr
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource? subscription = armClient.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var subscription = armClient.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             Response<ResourceGroupResource>? resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
 
             Response<ExpressRouteCircuitResource>? circuit = await resourceGroup.Value.GetExpressRouteCircuits().GetAsync(circuitName);

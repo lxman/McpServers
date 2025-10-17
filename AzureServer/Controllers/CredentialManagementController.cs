@@ -13,7 +13,7 @@ public class CredentialManagementController(CredentialSelectionService selection
     {
         try
         {
-            (_, CredentialSelectionResult result) = await selectionService.GetCredentialAsync();
+            (_, var result) = await selectionService.GetCredentialAsync();
 
             if (result.Status == SelectionStatus.NoCredentialsFound)
             {
@@ -31,7 +31,7 @@ public class CredentialManagementController(CredentialSelectionService selection
                 });
             }
 
-            List<CredentialInfo> credentials =
+            var credentials =
                 result.AvailableCredentials
                 ?? (result.SelectedCredential is not null ? [result.SelectedCredential] : []);
 
@@ -40,7 +40,7 @@ public class CredentialManagementController(CredentialSelectionService selection
                 return Ok(new { success = false, message = "No credentials available" });
             }
 
-            CredentialInfo? selected = selectionService.GetSelectedCredential();
+            var selected = selectionService.GetSelectedCredential();
             return Ok(new
             {
                 success = true,
@@ -71,7 +71,7 @@ public class CredentialManagementController(CredentialSelectionService selection
     {
         try
         {
-            (TokenCredential? credential, CredentialSelectionResult result) = selectionService.SelectCredential(request.CredentialId);
+            (var credential, var result) = selectionService.SelectCredential(request.CredentialId);
 
             if (result.Status == SelectionStatus.Error)
             {
@@ -81,7 +81,7 @@ public class CredentialManagementController(CredentialSelectionService selection
             if (result.Status != SelectionStatus.Selected || result.SelectedCredential is null)
                 return BadRequest(new { success = false, error = "Failed to select credential" });
 
-            CredentialInfo? info = result.SelectedCredential;
+            var info = result.SelectedCredential;
             return Ok(new
             {
                 success = true,
@@ -109,7 +109,7 @@ public class CredentialManagementController(CredentialSelectionService selection
     {
         try
         {
-            CredentialInfo? selected = selectionService.GetSelectedCredential();
+            var selected = selectionService.GetSelectedCredential();
 
             if (selected is null)
             {

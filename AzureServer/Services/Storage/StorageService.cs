@@ -20,7 +20,7 @@ public class StorageService(
 
     private async Task<BlobServiceClient> GetBlobServiceClientAsync(string accountName)
     {
-        if (_blobServiceClients.TryGetValue(accountName, out BlobServiceClient? existingClient))
+        if (_blobServiceClients.TryGetValue(accountName, out var existingClient))
             return existingClient;
 
         var serviceUri = new Uri($"https://{accountName}.blob.core.windows.net");
@@ -36,19 +36,19 @@ public class StorageService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            var armClient = await armClientFactory.GetArmClientAsync();
             var accounts = new List<StorageAccountDto>();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
-                await foreach (SubscriptionResource subscription in armClient.GetSubscriptions())
+                await foreach (var subscription in armClient.GetSubscriptions())
                 {
                     accounts.AddRange(subscription.GetStorageAccounts().Select(MapStorageAccount));
                 }
             }
             else
             {
-                SubscriptionResource subscription = armClient.GetSubscriptionResource(
+                var subscription = armClient.GetSubscriptionResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
                 accounts.AddRange(subscription.GetStorageAccounts().Select(MapStorageAccount));
@@ -68,8 +68,8 @@ public class StorageService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceGroupResource resourceGroup = armClient.GetResourceGroupResource(
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceGroup = armClient.GetResourceGroupResource(
                 new ResourceIdentifier($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}"));
 
             StorageAccountResource account = await resourceGroup.GetStorageAccounts().GetAsync(accountName);
@@ -95,10 +95,10 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
             var containers = new List<BlobContainerDto>();
 
-            await foreach (BlobContainerItem container in serviceClient.GetBlobContainersAsync(prefix: prefix))
+            await foreach (var container in serviceClient.GetBlobContainersAsync(prefix: prefix))
             {
                 containers.Add(MapBlobContainer(container, accountName));
             }
@@ -117,8 +117,8 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
 
             if (!await containerClient.ExistsAsync())
                 return null;
@@ -141,8 +141,8 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
 
             await containerClient.CreateIfNotExistsAsync(metadata: metadata);
             BlobContainerProperties properties = await containerClient.GetPropertiesAsync();
@@ -161,11 +161,11 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
 
-            Response<bool> response = await containerClient.DeleteIfExistsAsync();
-            bool deleted = response.Value;
+            var response = await containerClient.DeleteIfExistsAsync();
+            var deleted = response.Value;
 
             if (deleted)
                 logger.LogInformation("Deleted container {ContainerName} from {AccountName}", containerName, accountName);
@@ -183,8 +183,8 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
             return await containerClient.ExistsAsync();
         }
         catch (Exception ex)
@@ -202,11 +202,11 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
             var blobs = new List<BlobItemDto>();
 
-            await foreach (BlobItem blob in containerClient.GetBlobsAsync(prefix: prefix))
+            await foreach (var blob in containerClient.GetBlobsAsync(prefix: prefix))
             {
                 blobs.Add(MapBlobItem(blob, containerName, accountName));
 
@@ -228,9 +228,9 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var blobClient = containerClient.GetBlobClient(blobName);
 
             if (!await blobClient.ExistsAsync())
                 return null;
@@ -254,12 +254,12 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var blobClient = containerClient.GetBlobClient(blobName);
 
             Response<BlobDownloadResult> response = await blobClient.DownloadContentAsync();
-            string content = response.Value.Content.ToString();
+            var content = response.Value.Content.ToString();
 
             logger.LogInformation("Downloaded blob {BlobName} as text from {ContainerName}/{AccountName}", 
                 blobName, containerName, accountName);
@@ -277,12 +277,12 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var blobClient = containerClient.GetBlobClient(blobName);
 
             Response<BlobDownloadResult> response = await blobClient.DownloadContentAsync();
-            byte[] content = response.Value.Content.ToArray();
+            var content = response.Value.Content.ToArray();
 
             logger.LogInformation("Downloaded blob {BlobName} as bytes from {ContainerName}/{AccountName}", 
                 blobName, containerName, accountName);
@@ -300,11 +300,11 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var blobClient = containerClient.GetBlobClient(blobName);
 
-            byte[] bytes = Encoding.UTF8.GetBytes(content);
+            var bytes = Encoding.UTF8.GetBytes(content);
             using var stream = new MemoryStream(bytes);
 
             var options = new BlobUploadOptions
@@ -344,9 +344,9 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var blobClient = containerClient.GetBlobClient(blobName);
 
             using var stream = new MemoryStream(content);
 
@@ -387,12 +387,12 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var blobClient = containerClient.GetBlobClient(blobName);
 
-            Response<bool> response = await blobClient.DeleteIfExistsAsync();
-            bool deleted = response.Value;
+            var response = await blobClient.DeleteIfExistsAsync();
+            var deleted = response.Value;
 
             if (deleted)
                 logger.LogInformation("Deleted blob {BlobName} from {ContainerName}/{AccountName}", 
@@ -412,9 +412,9 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var blobClient = containerClient.GetBlobClient(blobName);
 
             return await blobClient.ExistsAsync();
         }
@@ -431,13 +431,13 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient sourceServiceClient = await GetBlobServiceClientAsync(sourceAccountName);
-            BlobContainerClient sourceContainerClient = sourceServiceClient.GetBlobContainerClient(sourceContainerName);
-            BlobClient sourceBlobClient = sourceContainerClient.GetBlobClient(sourceBlobName);
+            var sourceServiceClient = await GetBlobServiceClientAsync(sourceAccountName);
+            var sourceContainerClient = sourceServiceClient.GetBlobContainerClient(sourceContainerName);
+            var sourceBlobClient = sourceContainerClient.GetBlobClient(sourceBlobName);
 
-            BlobServiceClient destServiceClient = await GetBlobServiceClientAsync(destAccountName);
-            BlobContainerClient destContainerClient = destServiceClient.GetBlobContainerClient(destContainerName);
-            BlobClient destBlobClient = destContainerClient.GetBlobClient(destBlobName);
+            var destServiceClient = await GetBlobServiceClientAsync(destAccountName);
+            var destContainerClient = destServiceClient.GetBlobContainerClient(destContainerName);
+            var destBlobClient = destContainerClient.GetBlobClient(destBlobName);
 
             await destBlobClient.StartCopyFromUriAsync(sourceBlobClient.Uri);
 
@@ -479,9 +479,9 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var blobClient = containerClient.GetBlobClient(blobName);
 
             BlobProperties properties = await blobClient.GetPropertiesAsync();
             return properties.Metadata.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
@@ -498,9 +498,9 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var blobClient = containerClient.GetBlobClient(blobName);
 
             await blobClient.SetMetadataAsync(metadata);
 
@@ -524,9 +524,9 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var blobClient = containerClient.GetBlobClient(blobName);
 
             if (!blobClient.CanGenerateSasUri)
             {
@@ -548,7 +548,7 @@ public class StorageService(
             if (permissions.Contains('a')) sasBuilder.SetPermissions(BlobSasPermissions.Add);
             if (permissions.Contains('c')) sasBuilder.SetPermissions(BlobSasPermissions.Create);
 
-            Uri sasUri = blobClient.GenerateSasUri(sasBuilder);
+            var sasUri = blobClient.GenerateSasUri(sasBuilder);
 
             logger.LogInformation("Generated SAS URL for blob {BlobName} in {ContainerName}/{AccountName}",
                 blobName, containerName, accountName);
@@ -577,8 +577,8 @@ public class StorageService(
     {
         try
         {
-            BlobServiceClient serviceClient = await GetBlobServiceClientAsync(accountName);
-            BlobContainerClient containerClient = serviceClient.GetBlobContainerClient(containerName);
+            var serviceClient = await GetBlobServiceClientAsync(accountName);
+            var containerClient = serviceClient.GetBlobContainerClient(containerName);
 
             if (!containerClient.CanGenerateSasUri)
             {
@@ -600,7 +600,7 @@ public class StorageService(
             if (permissions.Contains('a')) sasBuilder.SetPermissions(BlobContainerSasPermissions.Add);
             if (permissions.Contains('c')) sasBuilder.SetPermissions(BlobContainerSasPermissions.Create);
 
-            Uri sasUri = containerClient.GenerateSasUri(sasBuilder);
+            var sasUri = containerClient.GenerateSasUri(sasBuilder);
 
             logger.LogInformation("Generated SAS URL for container {ContainerName} in {AccountName}",
                 containerName, accountName);

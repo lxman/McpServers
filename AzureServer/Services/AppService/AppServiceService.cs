@@ -19,16 +19,16 @@ public class AppServiceService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            var armClient = await armClientFactory.GetArmClientAsync();
             var webApps = new List<WebAppDto>();
 
             if (!string.IsNullOrEmpty(resourceGroupName) && !string.IsNullOrEmpty(subscriptionId))
             {
                 // List web apps in a specific resource group
-                ResourceGroupResource resourceGroup = armClient.GetResourceGroupResource(
+                var resourceGroup = armClient.GetResourceGroupResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}"));
 
-                await foreach (WebSiteResource webApp in resourceGroup.GetWebSites())
+                await foreach (var webApp in resourceGroup.GetWebSites())
                 {
                     webApps.Add(await MapWebAppAsync(webApp));
                 }
@@ -36,10 +36,10 @@ public class AppServiceService(
             else if (!string.IsNullOrEmpty(subscriptionId))
             {
                 // List web apps in a specific subscription
-                SubscriptionResource subscription = armClient.GetSubscriptionResource(
+                var subscription = armClient.GetSubscriptionResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
-                await foreach (WebSiteResource webApp in subscription.GetWebSitesAsync())
+                await foreach (var webApp in subscription.GetWebSitesAsync())
                 {
                     webApps.Add(await MapWebAppAsync(webApp));
                 }
@@ -47,9 +47,9 @@ public class AppServiceService(
             else
             {
                 // List web apps across all subscriptions
-                await foreach (SubscriptionResource subscription in armClient.GetSubscriptions())
+                await foreach (var subscription in armClient.GetSubscriptions())
                 {
-                    await foreach (WebSiteResource webApp in subscription.GetWebSitesAsync())
+                    await foreach (var webApp in subscription.GetWebSitesAsync())
                     {
                         webApps.Add(await MapWebAppAsync(webApp));
                     }
@@ -70,12 +70,12 @@ public class AppServiceService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            var armClient = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 // Try to find in any subscription
-                await foreach (SubscriptionResource subscription in armClient.GetSubscriptions())
+                await foreach (var subscription in armClient.GetSubscriptions())
                 {
                     try
                     {
@@ -91,7 +91,7 @@ public class AppServiceService(
                 return null;
             }
 
-            ResourceGroupResource targetResourceGroup = armClient.GetResourceGroupResource(
+            var targetResourceGroup = armClient.GetResourceGroupResource(
                 new ResourceIdentifier($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}"));
 
             WebSiteResource targetWebApp = await targetResourceGroup.GetWebSites().GetAsync(webAppName);
@@ -113,7 +113,7 @@ public class AppServiceService(
     {
         try
         {
-            WebSiteResource? webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
+            var webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
             if (webApp is null)
                 return false;
 
@@ -132,7 +132,7 @@ public class AppServiceService(
     {
         try
         {
-            WebSiteResource? webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
+            var webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
             if (webApp is null)
                 return false;
 
@@ -151,7 +151,7 @@ public class AppServiceService(
     {
         try
         {
-            WebSiteResource? webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
+            var webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
             if (webApp is null)
                 return false;
 
@@ -174,12 +174,12 @@ public class AppServiceService(
     {
         try
         {
-            WebSiteResource? webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
+            var webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
             if (webApp is null)
                 return [];
 
             var slots = new List<DeploymentSlotDto>();
-            await foreach (WebSiteSlotResource slot in webApp.GetWebSiteSlots())
+            await foreach (var slot in webApp.GetWebSiteSlots())
             {
                 slots.Add(MapDeploymentSlot(slot));
             }
@@ -198,7 +198,7 @@ public class AppServiceService(
     {
         try
         {
-            WebSiteResource? webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
+            var webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
             if (webApp is null)
                 return null;
 
@@ -221,7 +221,7 @@ public class AppServiceService(
     {
         try
         {
-            WebSiteResource? webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
+            var webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
             if (webApp is null)
                 return false;
 
@@ -251,7 +251,7 @@ public class AppServiceService(
     {
         try
         {
-            WebSiteResource? webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
+            var webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
             if (webApp is null)
                 return false;
 
@@ -272,7 +272,7 @@ public class AppServiceService(
     {
         try
         {
-            WebSiteResource? webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
+            var webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
             if (webApp is null)
                 return false;
 
@@ -297,12 +297,12 @@ public class AppServiceService(
     {
         try
         {
-            WebSiteResource? webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
+            var webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
             if (webApp is null)
                 return new AppSettingsDto();
 
             WebSiteConfigResource config = await webApp.GetWebSiteConfig().GetAsync();
-            Dictionary<string, string> settings = config.Data.AppSettings?.ToDictionary(x => x.Name, x => x.Value) ?? new Dictionary<string, string>();
+            var settings = config.Data.AppSettings?.ToDictionary(x => x.Name, x => x.Value) ?? new Dictionary<string, string>();
 
             logger.LogInformation("Retrieved {Count} app settings for {WebAppName}", settings.Count, webAppName);
             return new AppSettingsDto { Settings = settings };
@@ -318,12 +318,12 @@ public class AppServiceService(
     {
         try
         {
-            WebSiteResource? webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
+            var webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
             if (webApp is null)
                 return false;
             
             var appSettings = new AppServiceConfigurationDictionary();
-            foreach (KeyValuePair<string, string> setting in settings)
+            foreach (var setting in settings)
             {
                 appSettings.Properties[setting.Key] = setting.Value;
             }
@@ -343,12 +343,12 @@ public class AppServiceService(
     {
         try
         {
-            WebSiteResource? webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
+            var webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
             if (webApp is null)
                 return [];
 
             Response<ConnectionStringDictionary>? connectionStrings = await webApp.GetConnectionStringsAsync();
-            List<ConnectionStringDto>? result = connectionStrings.Value.Properties?
+            var result = connectionStrings.Value.Properties?
                 .Select(kvp => new ConnectionStringDto
                 {
                     Name = kvp.Key,
@@ -375,7 +375,7 @@ public class AppServiceService(
     {
         try
         {
-            WebSiteResource? webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
+            var webApp = await GetWebAppResourceAsync(webAppName, resourceGroupName, subscriptionId);
             if (webApp is null)
                 return false;
 
@@ -387,16 +387,16 @@ public class AppServiceService(
                 return false;
             }
 
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            AppServicePlanResource plan = armClient.GetAppServicePlanResource(new ResourceIdentifier(planId));
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var plan = armClient.GetAppServicePlanResource(new ResourceIdentifier(planId));
 
             // Get current plan data to preserve SKU settings
-            AppServicePlanData currentData = plan.Data;
-            string planResourceGroup = plan.Id.ResourceGroupName ?? resourceGroupName;
-            string? planSubscriptionId = plan.Id.SubscriptionId ?? subscriptionId;
+            var currentData = plan.Data;
+            var planResourceGroup = plan.Id.ResourceGroupName ?? resourceGroupName;
+            var planSubscriptionId = plan.Id.SubscriptionId ?? subscriptionId;
             
             // Get the resource group
-            ResourceGroupResource rgResource = armClient.GetResourceGroupResource(
+            var rgResource = armClient.GetResourceGroupResource(
                 new ResourceIdentifier($"/subscriptions/{planSubscriptionId}/resourceGroups/{planResourceGroup}"));
             
             var updateData = new AppServicePlanData(currentData.Location)
@@ -431,16 +431,16 @@ public class AppServiceService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            var armClient = await armClientFactory.GetArmClientAsync();
             var plans = new List<AppServicePlanDto>();
 
             if (!string.IsNullOrEmpty(resourceGroupName) && !string.IsNullOrEmpty(subscriptionId))
             {
                 // List plans in a specific resource group
-                ResourceGroupResource resourceGroup = armClient.GetResourceGroupResource(
+                var resourceGroup = armClient.GetResourceGroupResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}"));
 
-                await foreach (AppServicePlanResource plan in resourceGroup.GetAppServicePlans())
+                await foreach (var plan in resourceGroup.GetAppServicePlans())
                 {
                     plans.Add(MapAppServicePlan(plan));
                 }
@@ -448,10 +448,10 @@ public class AppServiceService(
             else if (!string.IsNullOrEmpty(subscriptionId))
             {
                 // List plans in a specific subscription
-                SubscriptionResource subscription = armClient.GetSubscriptionResource(
+                var subscription = armClient.GetSubscriptionResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
-                await foreach (AppServicePlanResource plan in subscription.GetAppServicePlansAsync())
+                await foreach (var plan in subscription.GetAppServicePlansAsync())
                 {
                     plans.Add(MapAppServicePlan(plan));
                 }
@@ -459,9 +459,9 @@ public class AppServiceService(
             else
             {
                 // List plans across all subscriptions
-                await foreach (SubscriptionResource subscription in armClient.GetSubscriptions())
+                await foreach (var subscription in armClient.GetSubscriptions())
                 {
-                    await foreach (AppServicePlanResource plan in subscription.GetAppServicePlansAsync())
+                    await foreach (var plan in subscription.GetAppServicePlansAsync())
                     {
                         plans.Add(MapAppServicePlan(plan));
                     }
@@ -482,12 +482,12 @@ public class AppServiceService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            var armClient = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 // Try to find in any subscription
-                await foreach (SubscriptionResource subscription in armClient.GetSubscriptions())
+                await foreach (var subscription in armClient.GetSubscriptions())
                 {
                     try
                     {
@@ -503,7 +503,7 @@ public class AppServiceService(
                 return null;
             }
 
-            ResourceGroupResource targetResourceGroup = armClient.GetResourceGroupResource(
+            var targetResourceGroup = armClient.GetResourceGroupResource(
                 new ResourceIdentifier($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}"));
 
             AppServicePlanResource targetPlan = await targetResourceGroup.GetAppServicePlans().GetAsync(planName);
@@ -550,12 +550,12 @@ public class AppServiceService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            var armClient = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 // Try to find in any subscription
-                await foreach (SubscriptionResource subscription in armClient.GetSubscriptions())
+                await foreach (var subscription in armClient.GetSubscriptions())
                 {
                     try
                     {
@@ -570,7 +570,7 @@ public class AppServiceService(
                 return null;
             }
 
-            ResourceGroupResource targetResourceGroup = armClient.GetResourceGroupResource(
+            var targetResourceGroup = armClient.GetResourceGroupResource(
                 new ResourceIdentifier($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}"));
 
             return await targetResourceGroup.GetWebSites().GetAsync(webAppName);

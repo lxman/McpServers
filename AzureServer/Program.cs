@@ -1,7 +1,7 @@
 using AzureServer.Configuration;
 using Scalar.AspNetCore;
 
-WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -31,7 +31,7 @@ builder.Services.AddLogging(logging =>
     logging.SetMinimumLevel(LogLevel.Information);
 });
 
-WebApplication app = builder.Build();
+var app = builder.Build();
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

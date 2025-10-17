@@ -1,13 +1,20 @@
-﻿using AzureServer.Authentication.models;
-using CredentialManagement;
+using System.Diagnostics.CodeAnalysis;
+using AzureServer.Authentication.models;
+using Meziantou.Framework.Win32;
 using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.WebApi;
 
 namespace AzureServer.Authentication;
 
+[SuppressMessage("Interoperability", "CA1416:Validate platform compatibility")]
 public class DevOpsCredentialManager
 {
+    // Public interface methods (compatible with existing DevOpsService)
+    public T GetClient<T>() where T : VssHttpClientBase => _connection.GetClient<T>();
+    public VssConnection GetConnection() => _connection;
+    public string GetOrganizationUrl() => _organizationUrl;
+
     private readonly ILogger<DevOpsCredentialManager> _logger;
     private readonly VssConnection _connection;
     private readonly string _organizationUrl;
@@ -42,11 +49,11 @@ public class DevOpsCredentialManager
     public static async Task<DevOpsCredentialManager?> CreateFromDiscoveryAsync(
         ILogger<DevOpsCredentialManager> logger)
     {
-        ILogger<AzureEnvironmentDiscovery> discoveryLogger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<AzureEnvironmentDiscovery>();
+        var discoveryLogger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<AzureEnvironmentDiscovery>();
         var discovery = new AzureEnvironmentDiscovery(discoveryLogger);
-        AzureDiscoveryResult result = await discovery.DiscoverAzureEnvironmentsAsync();
+        var result = await discovery.DiscoverAzureEnvironmentsAsync();
         
-        DevOpsEnvironmentInfo? primaryEnvironment = result.DevOpsEnvironments.FirstOrDefault();
+        var primaryEnvironment = result.DevOpsEnvironments.FirstOrDefault();
         if (primaryEnvironment is not null) return new DevOpsCredentialManager(primaryEnvironment, logger);
         logger.LogWarning("No Azure DevOps environments discovered");
         return null;
@@ -61,7 +68,7 @@ public class DevOpsCredentialManager
         ILogger<DevOpsCredentialManager> logger,
         string? credentialTarget = null)
     {
-        string pat = DiscoverPersonalAccessToken(credentialTarget, organizationUrl, logger);
+        var pat = DiscoverPersonalAccessToken(credentialTarget, organizationUrl, logger);
         
         var environmentInfo = new DevOpsEnvironmentInfo
         {
@@ -78,8 +85,8 @@ public class DevOpsCredentialManager
     private static string DiscoverPersonalAccessToken(string? credentialTarget, string organizationUrl, ILogger logger)
     {
         // Try credential manager first
-        string target = credentialTarget ?? "AzureDevOps";
-        string? pat = TryGetFromCredentialManager(target);
+        var target = credentialTarget ?? "AzureDevOps";
+        var pat = TryGetFromCredentialManager(target);
         if (!string.IsNullOrEmpty(pat))
         {
             logger.LogDebug("Retrieved PAT from Windows Credential Manager");
@@ -105,9 +112,8 @@ public class DevOpsCredentialManager
     {
         try
         {
-            using var cred = new Credential();
-            cred.Target = target;
-            return cred.Load() ? cred.Password : null;
+            var cred = CredentialManager.ReadCredential(target);
+            return cred?.Password;
         }
         catch
         {
@@ -115,11 +121,6 @@ public class DevOpsCredentialManager
         }
     }
     
-    // Public interface methods (compatible with existing DevOpsService)
-    public T GetClient<T>() where T : VssHttpClientBase => _connection.GetClient<T>();
-    public VssConnection GetConnection() => _connection;
-    public string GetOrganizationUrl() => _organizationUrl;
-
     public async Task<bool> ValidateConnectionAsync()
     {
         try

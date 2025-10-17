@@ -42,10 +42,10 @@ public class CredentialDiscoveryService(ILogger<CredentialDiscoveryService> logg
             await EnrichCredentialInfoAsync(info, credential);
             
             // Try to get last modified time from Azure CLI cache
-            string azurePath = Path.Combine(
+            var azurePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                 ".azure");
-            string tokenCache = Path.Combine(azurePath, "msal_token_cache.bin");
+            var tokenCache = Path.Combine(azurePath, "msal_token_cache.bin");
             
             if (File.Exists(tokenCache))
             {
@@ -76,10 +76,10 @@ public class CredentialDiscoveryService(ILogger<CredentialDiscoveryService> logg
             await EnrichCredentialInfoAsync(info, credential);
             
             // Try to get last modified time from VS cache
-            string identityServicePath = Path.Combine(
+            var identityServicePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 ".IdentityService");
-            string msalCache = Path.Combine(identityServicePath, "msalV2.cache");
+            var msalCache = Path.Combine(identityServicePath, "msalV2.cache");
             
             if (File.Exists(msalCache))
             {
@@ -107,9 +107,9 @@ public class CredentialDiscoveryService(ILogger<CredentialDiscoveryService> logg
         try
         {
             // Check if environment variables are set
-            string? clientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
-            string? tenantId = Environment.GetEnvironmentVariable("AZURE_TENANT_ID");
-            string? clientSecret = Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET");
+            var clientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
+            var tenantId = Environment.GetEnvironmentVariable("AZURE_TENANT_ID");
+            var clientSecret = Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET");
 
             if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(tenantId))
             {
@@ -186,7 +186,7 @@ public class CredentialDiscoveryService(ILogger<CredentialDiscoveryService> logg
         {
             // Test the credential by getting a token
             var tokenContext = new TokenRequestContext(["https://management.azure.com/.default"]);
-            AccessToken token = await credential.GetTokenAsync(tokenContext, CancellationToken.None);
+            var token = await credential.GetTokenAsync(tokenContext, CancellationToken.None);
 
             info.IsValid = true;
 
@@ -196,8 +196,8 @@ public class CredentialDiscoveryService(ILogger<CredentialDiscoveryService> logg
             // Get tenant information
             try
             {
-                TenantCollection? tenants = armClient.GetTenants();
-                TenantResource? tenant = tenants.FirstOrDefault();
+                var tenants = armClient.GetTenants();
+                var tenant = tenants.FirstOrDefault();
                 if (tenant is not null)
                 {
                     info.TenantId = tenant.Data.TenantId?.ToString();
@@ -212,8 +212,8 @@ public class CredentialDiscoveryService(ILogger<CredentialDiscoveryService> logg
             // Get subscription information
             try
             {
-                SubscriptionCollection? subscriptions = armClient.GetSubscriptions();
-                await foreach (SubscriptionResource? subscription in subscriptions)
+                var subscriptions = armClient.GetSubscriptions();
+                await foreach (var subscription in subscriptions)
                 {
                     info.SubscriptionIds.Add(subscription.Data.SubscriptionId ?? string.Empty);
                     
@@ -234,7 +234,7 @@ public class CredentialDiscoveryService(ILogger<CredentialDiscoveryService> logg
             {
                 try
                 {
-                    (bool success, string output) = await ExecuteCommandAsync("az", "account show --query user.name -o tsv");
+                    (var success, var output) = await ExecuteCommandAsync("az", "account show --query user.name -o tsv");
                     if (success && !string.IsNullOrWhiteSpace(output))
                     {
                         info.AccountName = output.Trim();
@@ -274,7 +274,7 @@ public class CredentialDiscoveryService(ILogger<CredentialDiscoveryService> logg
             };
 
             process.Start();
-            string output = await process.StandardOutput.ReadToEndAsync();
+            var output = await process.StandardOutput.ReadToEndAsync();
             await process.WaitForExitAsync();
 
             return (process.ExitCode == 0, output);

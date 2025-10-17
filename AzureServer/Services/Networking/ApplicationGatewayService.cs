@@ -16,17 +16,17 @@ public class ApplicationGatewayService(ArmClientFactory armClientFactory, ILogge
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            var armClient = await armClientFactory.GetArmClientAsync();
             var appGateways = new List<ApplicationGatewayDto>();
 
             switch (string.IsNullOrEmpty(subscriptionId))
             {
                 case false when !string.IsNullOrEmpty(resourceGroupName):
                 {
-                    ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
+                    var resourceGroup = armClient.GetResourceGroupResource(
                         ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
                 
-                    await foreach (ApplicationGatewayResource? appGateway in resourceGroup.GetApplicationGateways())
+                    await foreach (var appGateway in resourceGroup.GetApplicationGateways())
                     {
                         appGateways.Add(MappingService.MapToApplicationGatewayDto(appGateway.Data));
                     }
@@ -35,10 +35,10 @@ public class ApplicationGatewayService(ArmClientFactory armClientFactory, ILogge
                 }
                 case false:
                 {
-                    SubscriptionResource? subscription = armClient.GetSubscriptionResource(
+                    var subscription = armClient.GetSubscriptionResource(
                         new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
-                    await foreach (ApplicationGatewayResource? appGateway in subscription.GetApplicationGatewaysAsync())
+                    await foreach (var appGateway in subscription.GetApplicationGatewaysAsync())
                     {
                         appGateways.Add(MappingService.MapToApplicationGatewayDto(appGateway.Data));
                     }
@@ -47,9 +47,9 @@ public class ApplicationGatewayService(ArmClientFactory armClientFactory, ILogge
                 }
                 default:
                 {
-                    await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
+                    await foreach (var subscription in armClient.GetSubscriptions())
                     {
-                        await foreach (ApplicationGatewayResource? appGateway in subscription.GetApplicationGatewaysAsync())
+                        await foreach (var appGateway in subscription.GetApplicationGatewaysAsync())
                         {
                             appGateways.Add(MappingService.MapToApplicationGatewayDto(appGateway.Data));
                         }
@@ -72,8 +72,8 @@ public class ApplicationGatewayService(ArmClientFactory armClientFactory, ILogge
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceIdentifier? resourceId = ApplicationGatewayResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, gatewayName);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceId = ApplicationGatewayResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, gatewayName);
             Response<ApplicationGatewayResource>? response = await armClient.GetApplicationGatewayResource(resourceId).GetAsync();
             
             return response.HasValue ? MappingService.MapToApplicationGatewayDto(response.Value.Data) : null;
@@ -93,8 +93,8 @@ public class ApplicationGatewayService(ArmClientFactory armClientFactory, ILogge
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceGroup = armClient.GetResourceGroupResource(
                 ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
 
             var appGatewayData = new ApplicationGatewayData
@@ -110,7 +110,7 @@ public class ApplicationGatewayService(ArmClientFactory armClientFactory, ILogge
 
             if (request.Tags is not null)
             {
-                foreach (KeyValuePair<string, string> tag in request.Tags)
+                foreach (var tag in request.Tags)
                     appGatewayData.Tags.Add(tag.Key, tag.Value);
             }
 
@@ -130,9 +130,9 @@ public class ApplicationGatewayService(ArmClientFactory armClientFactory, ILogge
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceIdentifier? resourceId = ApplicationGatewayResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, gatewayName);
-            ApplicationGatewayResource? appGateway = armClient.GetApplicationGatewayResource(resourceId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceId = ApplicationGatewayResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, gatewayName);
+            var appGateway = armClient.GetApplicationGatewayResource(resourceId);
             
             await appGateway.DeleteAsync(WaitUntil.Completed);
             return true;
@@ -148,9 +148,9 @@ public class ApplicationGatewayService(ArmClientFactory armClientFactory, ILogge
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceIdentifier? resourceId = ApplicationGatewayResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, gatewayName);
-            ApplicationGatewayResource? appGateway = armClient.GetApplicationGatewayResource(resourceId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceId = ApplicationGatewayResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, gatewayName);
+            var appGateway = armClient.GetApplicationGatewayResource(resourceId);
             
             await appGateway.StartAsync(WaitUntil.Completed);
             
@@ -168,9 +168,9 @@ public class ApplicationGatewayService(ArmClientFactory armClientFactory, ILogge
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceIdentifier? resourceId = ApplicationGatewayResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, gatewayName);
-            ApplicationGatewayResource? appGateway = armClient.GetApplicationGatewayResource(resourceId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceId = ApplicationGatewayResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, gatewayName);
+            var appGateway = armClient.GetApplicationGatewayResource(resourceId);
             
             await appGateway.StopAsync(WaitUntil.Completed);
             

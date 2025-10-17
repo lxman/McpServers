@@ -13,7 +13,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            IEnumerable<SubscriptionDto> subscriptions = await resourceService.GetSubscriptionsAsync();
+            var subscriptions = await resourceService.GetSubscriptionsAsync();
             return Ok(new { success = true, subscriptions = subscriptions.ToArray() });
         }
         catch (Exception ex)
@@ -28,7 +28,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            SubscriptionDto? subscription = await resourceService.GetSubscriptionAsync(subscriptionId);
+            var subscription = await resourceService.GetSubscriptionAsync(subscriptionId);
             if (subscription is null)
                 return NotFound(new { success = false, error = $"Subscription {subscriptionId} not found" });
 
@@ -46,7 +46,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            IEnumerable<ResourceGroupDto> resourceGroups = await resourceService.GetResourceGroupsAsync(subscriptionId);
+            var resourceGroups = await resourceService.GetResourceGroupsAsync(subscriptionId);
             return Ok(new { success = true, resourceGroups = resourceGroups.ToArray() });
         }
         catch (Exception ex)
@@ -61,7 +61,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            ResourceGroupDto? resourceGroup = await resourceService.GetResourceGroupAsync(subscriptionId, resourceGroupName);
+            var resourceGroup = await resourceService.GetResourceGroupAsync(subscriptionId, resourceGroupName);
             if (resourceGroup is null)
                 return NotFound(new { success = false, error = $"Resource group {resourceGroupName} not found" });
 
@@ -81,7 +81,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            List<GenericResourceDto> resources = (await resourceService.GetResourcesAsync(subscriptionId, resourceGroupName)).ToList();
+            var resources = (await resourceService.GetResourcesAsync(subscriptionId, resourceGroupName)).ToList();
             return Ok(new { success = true, resources = resources.ToArray(), count = resources.Count });
         }
         catch (Exception ex)
@@ -98,7 +98,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            List<GenericResourceDto> resources = (await resourceService.GetResourcesByTypeAsync(resourceType, subscriptionId)).ToList();
+            var resources = (await resourceService.GetResourcesByTypeAsync(resourceType, subscriptionId)).ToList();
             return Ok(new { success = true, resourceType, resources = resources.ToArray(), count = resources.Count });
         }
         catch (Exception ex)
@@ -113,7 +113,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            GenericResourceDto? resource = await resourceService.GetResourceAsync(request.ResourceId);
+            var resource = await resourceService.GetResourceAsync(request.ResourceId);
             if (resource is null)
                 return NotFound(new { success = false, error = $"Resource {request.ResourceId} not found" });
 
@@ -131,7 +131,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            Dictionary<string, int> countByType = await resourceService.GetResourceCountByTypeAsync(subscriptionId);
+            var countByType = await resourceService.GetResourceCountByTypeAsync(subscriptionId);
             var sortedCounts = countByType
                 .OrderByDescending(kvp => kvp.Value)
                 .Select(kvp => new { resourceType = kvp.Key, count = kvp.Value })

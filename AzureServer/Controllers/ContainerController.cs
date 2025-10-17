@@ -17,7 +17,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            IEnumerable<ContainerGroupDto> groups = await containerService.ListContainerGroupsAsync(subscriptionId, resourceGroupName);
+            var groups = await containerService.ListContainerGroupsAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, containerGroups = groups.ToArray() });
         }
         catch (Exception ex)
@@ -35,7 +35,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            ContainerGroupDto? group = await containerService.GetContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
+            var group = await containerService.GetContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
             if (group is null)
                 return NotFound(new { success = false, error = $"Container group {containerGroupName} not found" });
 
@@ -56,7 +56,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            ContainerGroupDto group = await containerService.CreateContainerGroupAsync(subscriptionId, resourceGroupName, request);
+            var group = await containerService.CreateContainerGroupAsync(subscriptionId, resourceGroupName, request);
             return Ok(new { success = true, containerGroup = group });
         }
         catch (Exception ex)
@@ -74,7 +74,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            bool result = await containerService.DeleteContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
+            var result = await containerService.DeleteContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
             return Ok(new { success = result, message = result ? "Container group deleted" : "Container group not found" });
         }
         catch (Exception ex)
@@ -92,7 +92,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            ContainerGroupDto group = await containerService.RestartContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
+            var group = await containerService.RestartContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
             return Ok(new { success = true, containerGroup = group });
         }
         catch (Exception ex)
@@ -110,7 +110,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            ContainerGroupDto group = await containerService.StopContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
+            var group = await containerService.StopContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
             return Ok(new { success = true, containerGroup = group });
         }
         catch (Exception ex)
@@ -128,7 +128,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            ContainerGroupDto group = await containerService.StartContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
+            var group = await containerService.StartContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
             return Ok(new { success = true, containerGroup = group });
         }
         catch (Exception ex)
@@ -148,7 +148,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            string logs = await containerService.GetContainerLogsAsync(subscriptionId, resourceGroupName, containerGroupName, containerName, tail);
+            var logs = await containerService.GetContainerLogsAsync(subscriptionId, resourceGroupName, containerGroupName, containerName, tail);
             return Ok(new { success = true, logs });
         }
         catch (Exception ex)
@@ -167,7 +167,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            ContainerExecResult result = await containerService.ExecuteCommandAsync(subscriptionId, resourceGroupName, containerGroupName, request.ContainerName, request.Command);
+            var result = await containerService.ExecuteCommandAsync(subscriptionId, resourceGroupName, containerGroupName, request.ContainerName, request.Command);
             return Ok(new { success = true, result });
         }
         catch (Exception ex)
@@ -188,7 +188,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            IEnumerable<ContainerRegistryDto> registries = await containerService.ListRegistriesAsync(subscriptionId, resourceGroupName);
+            var registries = await containerService.ListRegistriesAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, registries = registries.ToArray() });
         }
         catch (Exception ex)
@@ -206,7 +206,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            ContainerRegistryDto? registry = await containerService.GetRegistryAsync(subscriptionId, resourceGroupName, registryName);
+            var registry = await containerService.GetRegistryAsync(subscriptionId, resourceGroupName, registryName);
             if (registry is null)
                 return NotFound(new { success = false, error = $"Registry {registryName} not found" });
 
@@ -227,7 +227,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            ContainerRegistryDto registry = await containerService.CreateRegistryAsync(subscriptionId, resourceGroupName, request);
+            var registry = await containerService.CreateRegistryAsync(subscriptionId, resourceGroupName, request);
             return Ok(new { success = true, registry });
         }
         catch (Exception ex)
@@ -245,7 +245,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            bool result = await containerService.DeleteRegistryAsync(subscriptionId, resourceGroupName, registryName);
+            var result = await containerService.DeleteRegistryAsync(subscriptionId, resourceGroupName, registryName);
             return Ok(new { success = result, message = result ? "Registry deleted" : "Registry not found" });
         }
         catch (Exception ex)
@@ -263,7 +263,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            RegistryCredentialsDto credentials = await containerService.GetRegistryCredentialsAsync(subscriptionId, resourceGroupName, registryName);
+            var credentials = await containerService.GetRegistryCredentialsAsync(subscriptionId, resourceGroupName, registryName);
             return Ok(new { success = true, credentials });
         }
         catch (Exception ex)
@@ -282,7 +282,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            RegistryCredentialsDto credentials = await containerService.RegenerateRegistryCredentialAsync(subscriptionId, resourceGroupName, registryName, request.PasswordName);
+            var credentials = await containerService.RegenerateRegistryCredentialAsync(subscriptionId, resourceGroupName, registryName, request.PasswordName);
             return Ok(new { success = true, credentials });
         }
         catch (Exception ex)
@@ -304,7 +304,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            IEnumerable<ContainerRepositoryDto> repositories = await containerService.ListRepositoriesAsync(subscriptionId, resourceGroupName, registryName);
+            var repositories = await containerService.ListRepositoriesAsync(subscriptionId, resourceGroupName, registryName);
             return Ok(new { success = true, repositories = repositories.ToArray() });
         }
         catch (Exception ex)
@@ -323,7 +323,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            IEnumerable<ContainerImageDto> images = await containerService.ListImagesAsync(subscriptionId, resourceGroupName, registryName, repositoryName);
+            var images = await containerService.ListImagesAsync(subscriptionId, resourceGroupName, registryName, repositoryName);
             return Ok(new { success = true, images = images.ToArray() });
         }
         catch (Exception ex)
@@ -343,7 +343,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            ContainerImageDto? image = await containerService.GetImageAsync(subscriptionId, resourceGroupName, registryName, repositoryName, tag);
+            var image = await containerService.GetImageAsync(subscriptionId, resourceGroupName, registryName, repositoryName, tag);
             if (image is null)
                 return NotFound(new { success = false, error = $"Image {repositoryName}:{tag} not found" });
 
@@ -366,7 +366,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            bool result = await containerService.DeleteImageAsync(subscriptionId, resourceGroupName, registryName, repositoryName, tag);
+            var result = await containerService.DeleteImageAsync(subscriptionId, resourceGroupName, registryName, repositoryName, tag);
             return Ok(new { success = result, message = result ? "Image deleted" : "Image not found" });
         }
         catch (Exception ex)
@@ -385,7 +385,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            bool result = await containerService.DeleteRepositoryAsync(subscriptionId, resourceGroupName, registryName, repositoryName);
+            var result = await containerService.DeleteRepositoryAsync(subscriptionId, resourceGroupName, registryName, repositoryName);
             return Ok(new { success = result, message = result ? "Repository deleted" : "Repository not found" });
         }
         catch (Exception ex)
@@ -408,7 +408,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            BuildTaskDto buildTask = await containerService.CreateBuildTaskAsync(subscriptionId, resourceGroupName, registryName, request);
+            var buildTask = await containerService.CreateBuildTaskAsync(subscriptionId, resourceGroupName, registryName, request);
             return Ok(new { success = true, buildTask });
         }
         catch (Exception ex)
@@ -427,7 +427,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            BuildRunDto buildRun = await containerService.RunBuildTaskAsync(subscriptionId, resourceGroupName, registryName, buildTaskName);
+            var buildRun = await containerService.RunBuildTaskAsync(subscriptionId, resourceGroupName, registryName, buildTaskName);
             return Ok(new { success = true, buildRun });
         }
         catch (Exception ex)
@@ -445,7 +445,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            IEnumerable<BuildRunDto> buildRuns = await containerService.ListBuildRunsAsync(subscriptionId, resourceGroupName, registryName);
+            var buildRuns = await containerService.ListBuildRunsAsync(subscriptionId, resourceGroupName, registryName);
             return Ok(new { success = true, buildRuns = buildRuns.ToArray() });
         }
         catch (Exception ex)
@@ -464,7 +464,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            string log = await containerService.GetBuildLogAsync(subscriptionId, resourceGroupName, registryName, runId);
+            var log = await containerService.GetBuildLogAsync(subscriptionId, resourceGroupName, registryName, runId);
             return Ok(new { success = true, log });
         }
         catch (Exception ex)
@@ -485,7 +485,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            IEnumerable<KubernetesClusterDto> clusters = await containerService.ListKubernetesClustersAsync(subscriptionId, resourceGroupName);
+            var clusters = await containerService.ListKubernetesClustersAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, clusters = clusters.ToArray() });
         }
         catch (Exception ex)
@@ -503,7 +503,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            KubernetesClusterDto? cluster = await containerService.GetKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
+            var cluster = await containerService.GetKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
             if (cluster is null)
                 return NotFound(new { success = false, error = $"Kubernetes cluster {clusterName} not found" });
 
@@ -524,7 +524,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            KubernetesClusterDto cluster = await containerService.CreateKubernetesClusterAsync(subscriptionId, resourceGroupName, request);
+            var cluster = await containerService.CreateKubernetesClusterAsync(subscriptionId, resourceGroupName, request);
             return Ok(new { success = true, cluster });
         }
         catch (Exception ex)
@@ -542,7 +542,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            bool result = await containerService.DeleteKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
+            var result = await containerService.DeleteKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
             return Ok(new { success = result, message = result ? "Cluster deleted" : "Cluster not found" });
         }
         catch (Exception ex)
@@ -561,7 +561,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            KubernetesClusterDto cluster = await containerService.ScaleKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName, request.NodePoolName, request.NodeCount);
+            var cluster = await containerService.ScaleKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName, request.NodePoolName, request.NodeCount);
             return Ok(new { success = true, cluster });
         }
         catch (Exception ex)
@@ -580,7 +580,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            KubernetesClusterDto cluster = await containerService.UpgradeKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName, request.KubernetesVersion);
+            var cluster = await containerService.UpgradeKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName, request.KubernetesVersion);
             return Ok(new { success = true, cluster });
         }
         catch (Exception ex)
@@ -598,7 +598,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            KubernetesCredentialsDto credentials = await containerService.GetKubernetesCredentialsAsync(subscriptionId, resourceGroupName, clusterName);
+            var credentials = await containerService.GetKubernetesCredentialsAsync(subscriptionId, resourceGroupName, clusterName);
             return Ok(new { success = true, credentials });
         }
         catch (Exception ex)
@@ -616,7 +616,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            KubernetesClusterDto cluster = await containerService.StartKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
+            var cluster = await containerService.StartKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
             return Ok(new { success = true, cluster });
         }
         catch (Exception ex)
@@ -634,7 +634,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            KubernetesClusterDto cluster = await containerService.StopKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
+            var cluster = await containerService.StopKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
             return Ok(new { success = true, cluster });
         }
         catch (Exception ex)
@@ -656,7 +656,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            IEnumerable<NodePoolDto> nodePools = await containerService.ListNodePoolsAsync(subscriptionId, resourceGroupName, clusterName);
+            var nodePools = await containerService.ListNodePoolsAsync(subscriptionId, resourceGroupName, clusterName);
             return Ok(new { success = true, nodePools = nodePools.ToArray() });
         }
         catch (Exception ex)
@@ -675,7 +675,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            NodePoolDto? nodePool = await containerService.GetNodePoolAsync(subscriptionId, resourceGroupName, clusterName, nodePoolName);
+            var nodePool = await containerService.GetNodePoolAsync(subscriptionId, resourceGroupName, clusterName, nodePoolName);
             if (nodePool is null)
                 return NotFound(new { success = false, error = $"Node pool {nodePoolName} not found" });
 
@@ -697,7 +697,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            NodePoolDto nodePool = await containerService.CreateNodePoolAsync(subscriptionId, resourceGroupName, clusterName, request);
+            var nodePool = await containerService.CreateNodePoolAsync(subscriptionId, resourceGroupName, clusterName, request);
             return Ok(new { success = true, nodePool });
         }
         catch (Exception ex)
@@ -716,7 +716,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            bool result = await containerService.DeleteNodePoolAsync(subscriptionId, resourceGroupName, clusterName, nodePoolName);
+            var result = await containerService.DeleteNodePoolAsync(subscriptionId, resourceGroupName, clusterName, nodePoolName);
             return Ok(new { success = result, message = result ? "Node pool deleted" : "Node pool not found" });
         }
         catch (Exception ex)
@@ -736,7 +736,7 @@ public class ContainerController(IContainerService containerService, ILogger<Con
     {
         try
         {
-            NodePoolDto nodePool = await containerService.UpdateNodePoolAsync(subscriptionId, resourceGroupName, clusterName, nodePoolName, request);
+            var nodePool = await containerService.UpdateNodePoolAsync(subscriptionId, resourceGroupName, clusterName, nodePoolName, request);
             return Ok(new { success = true, nodePool });
         }
         catch (Exception ex)

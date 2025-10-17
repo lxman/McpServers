@@ -13,11 +13,11 @@ public class MonitorController(IMonitorService monitorService, ILogger<MonitorCo
     {
         try
         {
-            TimeSpan timeSpan = request.TimeRangeHours.HasValue 
+            var timeSpan = request.TimeRangeHours.HasValue 
                 ? TimeSpan.FromHours(request.TimeRangeHours.Value) 
                 : TimeSpan.FromHours(24);
 
-            LogQueryResult result = await monitorService.QueryLogsAsync(request.WorkspaceId, request.Query, timeSpan);
+            var result = await monitorService.QueryLogsAsync(request.WorkspaceId, request.Query, timeSpan);
             
             if (result.Error is not null)
                 return BadRequest(new { success = false, error = result.Error });
@@ -36,7 +36,7 @@ public class MonitorController(IMonitorService monitorService, ILogger<MonitorCo
     {
         try
         {
-            IEnumerable<string?> workspaces = await monitorService.ListLogGroupsAsync(subscriptionId);
+            var workspaces = await monitorService.ListLogGroupsAsync(subscriptionId);
             return Ok(new { success = true, workspaces = workspaces.ToArray() });
         }
         catch (Exception ex)
@@ -51,7 +51,7 @@ public class MonitorController(IMonitorService monitorService, ILogger<MonitorCo
     {
         try
         {
-            IEnumerable<string> streams = await monitorService.ListLogStreamsAsync(workspaceId);
+            var streams = await monitorService.ListLogStreamsAsync(workspaceId);
             return Ok(new { success = true, streams = streams.ToArray() });
         }
         catch (Exception ex)
@@ -66,7 +66,7 @@ public class MonitorController(IMonitorService monitorService, ILogger<MonitorCo
     {
         try
         {
-            List<LogMatch> matches = await monitorService.SearchLogsWithRegexAsync(
+            var matches = await monitorService.SearchLogsWithRegexAsync(
                 request.WorkspaceId,
                 request.RegexPattern,
                 TimeSpan.FromHours(request.TimeRangeHours),
@@ -91,7 +91,7 @@ public class MonitorController(IMonitorService monitorService, ILogger<MonitorCo
             IEnumerable<string> workspaceList = request.WorkspaceIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(w => w.Trim()).ToList();
 
-            List<LogMatch> matches = await monitorService.SearchMultipleWorkspacesWithRegexAsync(
+            var matches = await monitorService.SearchMultipleWorkspacesWithRegexAsync(
                 workspaceList,
                 request.RegexPattern,
                 TimeSpan.FromHours(request.TimeRangeHours),
@@ -120,20 +120,20 @@ public class MonitorController(IMonitorService monitorService, ILogger<MonitorCo
     {
         try
         {
-            DateTime start = DateTime.Parse(request.StartTime);
-            DateTime end = DateTime.Parse(request.EndTime);
-            IEnumerable<string> metrics = request.MetricNames.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            var start = DateTime.Parse(request.StartTime);
+            var end = DateTime.Parse(request.EndTime);
+            var metrics = request.MetricNames.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(m => m.Trim());
 
             TimeSpan? interval = request.IntervalMinutes.HasValue 
                 ? TimeSpan.FromMinutes(request.IntervalMinutes.Value) 
                 : null;
 
-            IEnumerable<string>? aggList = !string.IsNullOrEmpty(request.Aggregations)
+            var aggList = !string.IsNullOrEmpty(request.Aggregations)
                 ? request.Aggregations.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(a => a.Trim())
                 : null;
 
-            MetricQueryResult result = await monitorService.QueryMetricsAsync(
+            var result = await monitorService.QueryMetricsAsync(
                 request.ResourceId, metrics, start, end, interval, aggList);
 
             if (result.Error is not null)
@@ -155,7 +155,7 @@ public class MonitorController(IMonitorService monitorService, ILogger<MonitorCo
     {
         try
         {
-            IEnumerable<string> metrics = await monitorService.ListMetricsAsync(resourceId, metricNamespace);
+            var metrics = await monitorService.ListMetricsAsync(resourceId, metricNamespace);
             return Ok(new { success = true, metrics = metrics.ToArray() });
         }
         catch (Exception ex)
@@ -172,7 +172,7 @@ public class MonitorController(IMonitorService monitorService, ILogger<MonitorCo
     {
         try
         {
-            IEnumerable<ApplicationInsightsDto> components = await monitorService.ListApplicationInsightsAsync(subscriptionId, resourceGroupName);
+            var components = await monitorService.ListApplicationInsightsAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, components = components.ToArray() });
         }
         catch (Exception ex)
@@ -190,7 +190,7 @@ public class MonitorController(IMonitorService monitorService, ILogger<MonitorCo
     {
         try
         {
-            ApplicationInsightsDto? component = await monitorService.GetApplicationInsightsAsync(resourceGroupName, componentName, subscriptionId);
+            var component = await monitorService.GetApplicationInsightsAsync(resourceGroupName, componentName, subscriptionId);
             if (component is null)
                 return NotFound(new { success = false, error = $"Application Insights component '{componentName}' not found in resource group '{resourceGroupName}'" });
 
@@ -210,7 +210,7 @@ public class MonitorController(IMonitorService monitorService, ILogger<MonitorCo
     {
         try
         {
-            IEnumerable<AlertRuleDto> alerts = await monitorService.ListAlertsAsync(subscriptionId, resourceGroupName);
+            var alerts = await monitorService.ListAlertsAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, alerts = alerts.ToArray() });
         }
         catch (Exception ex)
@@ -225,7 +225,7 @@ public class MonitorController(IMonitorService monitorService, ILogger<MonitorCo
     {
         try
         {
-            AlertRuleDto? alert = await monitorService.CreateAlertAsync(
+            var alert = await monitorService.CreateAlertAsync(
                 request.SubscriptionId,
                 request.ResourceGroupName,
                 request.AlertName,

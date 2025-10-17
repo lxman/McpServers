@@ -46,7 +46,7 @@ public class CredentialSelectionService(
         if (_availableCredentials.Count == 1)
         {
             // Only one credential available, use it automatically
-            CredentialInfo credential = _availableCredentials[0];
+            var credential = _availableCredentials[0];
             _selectedCredential = credential;
             _selectedTokenCredential = CreateTokenCredential(credential.Id);
             
@@ -81,7 +81,7 @@ public class CredentialSelectionService(
             });
         }
 
-        CredentialInfo? credential = _availableCredentials.FirstOrDefault(c => c.Id == credentialId);
+        var credential = _availableCredentials.FirstOrDefault(c => c.Id == credentialId);
         if (credential is null)
         {
             return (null, new CredentialSelectionResult

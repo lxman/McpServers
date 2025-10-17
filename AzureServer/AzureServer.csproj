@@ -8,6 +8,7 @@
   </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.6" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9" />
         <PackageReference Include="Scalar.AspNetCore" Version="2.9.0" />
         <PackageReference Include="Aspire.Hosting.Azure.AppService" Version="9.5.1-preview.1.25502.11" />
@@ -69,7 +70,6 @@
         <PackageReference Include="Azure.Storage.Files.DataLake" Version="12.24.0" />
         <PackageReference Include="Azure.Storage.Files.Shares" Version="12.24.0" />
         <PackageReference Include="Azure.Storage.Queues" Version="12.24.0" />
-        <PackageReference Include="CredentialManagement" Version="1.0.2" />
         <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.0-preview1.25257.1" />
         <PackageReference Include="Microsoft.TeamFoundationServer.Client" Version="19.225.1" />
         <PackageReference Include="Microsoft.TeamFoundationServer.ExtendedClient" Version="19.225.1" />
@@ -78,12 +78,14 @@
         <PackageReference Include="MySqlConnector" Version="2.4.0" />
         <PackageReference Include="Npgsql" Version="10.0.0-rc.1" />
         <PackageReference Include="Serilog.Extensions.Logging.File" Version="9.0.0-dev-02303" />
+        <PackageReference Include="System.Security.Permissions" Version="10.0.0-rc.2.25502.107" />
     </ItemGroup>
 
     <ItemGroup>
       <None Include="entra-auth.example.json">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+      <None Remove="Authentication\AzureEnvironmentDiscovery.cs.backup.20251017-105546" />
     </ItemGroup>
 
     <ItemGroup>

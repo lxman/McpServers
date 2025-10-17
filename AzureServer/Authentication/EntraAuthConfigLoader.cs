@@ -16,7 +16,7 @@ public class EntraAuthConfigLoader(ILogger<EntraAuthConfigLoader> logger)
     /// </summary>
     public EntraAuthConfig LoadConfiguration()
     {
-        string configPath = Path.Combine(AppContext.BaseDirectory, ConfigFileName);
+        var configPath = Path.Combine(AppContext.BaseDirectory, ConfigFileName);
 
         if (!File.Exists(configPath))
         {
@@ -26,7 +26,7 @@ public class EntraAuthConfigLoader(ILogger<EntraAuthConfigLoader> logger)
 
         try
         {
-            string jsonContent = File.ReadAllText(configPath);
+            var jsonContent = File.ReadAllText(configPath);
             var config = JsonSerializer.Deserialize<EntraAuthConfig>(jsonContent, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
@@ -105,7 +105,7 @@ public class EntraAuthConfigLoader(ILogger<EntraAuthConfigLoader> logger)
     /// </summary>
     public void CreateExampleConfigFile()
     {
-        string configPath = Path.Combine(AppContext.BaseDirectory, "entra-auth.example.json");
+        var configPath = Path.Combine(AppContext.BaseDirectory, "entra-auth.example.json");
 
         var exampleConfig = new
         {
@@ -143,7 +143,7 @@ public class EntraAuthConfigLoader(ILogger<EntraAuthConfigLoader> logger)
 
         try
         {
-            string json = JsonSerializer.Serialize(exampleConfig, new JsonSerializerOptions
+            var json = JsonSerializer.Serialize(exampleConfig, new JsonSerializerOptions
             {
                 WriteIndented = true
             });

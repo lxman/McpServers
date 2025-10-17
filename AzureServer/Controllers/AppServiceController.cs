@@ -13,7 +13,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            IEnumerable<WebAppDto> webApps = await appServiceService.ListWebAppsAsync(subscriptionId, resourceGroupName);
+            var webApps = await appServiceService.ListWebAppsAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, webApps = webApps.ToArray() });
         }
         catch (Exception ex)
@@ -28,7 +28,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            WebAppDto? webApp = await appServiceService.GetWebAppAsync(webAppName, resourceGroupName, subscriptionId);
+            var webApp = await appServiceService.GetWebAppAsync(webAppName, resourceGroupName, subscriptionId);
             if (webApp is null)
                 return NotFound(new { success = false, error = $"Web app {webAppName} not found" });
 
@@ -46,7 +46,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            bool success = await appServiceService.StartWebAppAsync(webAppName, resourceGroupName, subscriptionId);
+            var success = await appServiceService.StartWebAppAsync(webAppName, resourceGroupName, subscriptionId);
             return Ok(new { success, message = success ? $"Web app {webAppName} started" : $"Failed to start web app {webAppName}" });
         }
         catch (Exception ex)
@@ -61,7 +61,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            bool success = await appServiceService.StopWebAppAsync(webAppName, resourceGroupName, subscriptionId);
+            var success = await appServiceService.StopWebAppAsync(webAppName, resourceGroupName, subscriptionId);
             return Ok(new { success, message = success ? $"Web app {webAppName} stopped" : $"Failed to stop web app {webAppName}" });
         }
         catch (Exception ex)
@@ -76,7 +76,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            bool success = await appServiceService.RestartWebAppAsync(webAppName, resourceGroupName, subscriptionId);
+            var success = await appServiceService.RestartWebAppAsync(webAppName, resourceGroupName, subscriptionId);
             return Ok(new { success, message = success ? $"Web app {webAppName} restarted" : $"Failed to restart web app {webAppName}" });
         }
         catch (Exception ex)
@@ -91,7 +91,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            IEnumerable<DeploymentSlotDto> slots = await appServiceService.ListDeploymentSlotsAsync(webAppName, resourceGroupName, subscriptionId);
+            var slots = await appServiceService.ListDeploymentSlotsAsync(webAppName, resourceGroupName, subscriptionId);
             return Ok(new { success = true, slots = slots.ToArray() });
         }
         catch (Exception ex)
@@ -106,7 +106,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            DeploymentSlotDto? slot = await appServiceService.GetDeploymentSlotAsync(webAppName, slotName, resourceGroupName, subscriptionId);
+            var slot = await appServiceService.GetDeploymentSlotAsync(webAppName, slotName, resourceGroupName, subscriptionId);
             if (slot is null)
                 return NotFound(new { success = false, error = $"Deployment slot {slotName} not found" });
 
@@ -127,7 +127,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            bool success = await appServiceService.SwapSlotsAsync(webAppName, request.SourceSlotName, request.TargetSlotName, resourceGroupName, request.SubscriptionId);
+            var success = await appServiceService.SwapSlotsAsync(webAppName, request.SourceSlotName, request.TargetSlotName, resourceGroupName, request.SubscriptionId);
             return Ok(new { success, message = success ? $"Swapped {request.SourceSlotName} -> {request.TargetSlotName}" : "Swap failed" });
         }
         catch (Exception ex)
@@ -142,7 +142,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            bool success = await appServiceService.StartSlotAsync(webAppName, slotName, resourceGroupName, subscriptionId);
+            var success = await appServiceService.StartSlotAsync(webAppName, slotName, resourceGroupName, subscriptionId);
             return Ok(new { success, message = success ? $"Slot {slotName} started" : "Start failed" });
         }
         catch (Exception ex)
@@ -157,7 +157,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            bool success = await appServiceService.StopSlotAsync(webAppName, slotName, resourceGroupName, subscriptionId);
+            var success = await appServiceService.StopSlotAsync(webAppName, slotName, resourceGroupName, subscriptionId);
             return Ok(new { success, message = success ? $"Slot {slotName} stopped" : "Stop failed" });
         }
         catch (Exception ex)
@@ -172,7 +172,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            AppSettingsDto settings = await appServiceService.GetAppSettingsAsync(webAppName, resourceGroupName, subscriptionId);
+            var settings = await appServiceService.GetAppSettingsAsync(webAppName, resourceGroupName, subscriptionId);
             return Ok(new { success = true, settings = settings.Settings });
         }
         catch (Exception ex)
@@ -191,7 +191,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            bool success = await appServiceService.UpdateAppSettingsAsync(webAppName, resourceGroupName, settings, subscriptionId);
+            var success = await appServiceService.UpdateAppSettingsAsync(webAppName, resourceGroupName, settings, subscriptionId);
             return Ok(new { success, message = success ? "Settings updated" : "Update failed" });
         }
         catch (Exception ex)
@@ -206,7 +206,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            IEnumerable<ConnectionStringDto> connectionStrings = await appServiceService.GetConnectionStringsAsync(webAppName, resourceGroupName, subscriptionId);
+            var connectionStrings = await appServiceService.GetConnectionStringsAsync(webAppName, resourceGroupName, subscriptionId);
             return Ok(new { success = true, connectionStrings = connectionStrings.ToArray() });
         }
         catch (Exception ex)
@@ -227,7 +227,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
             if (request.InstanceCount is < 1 or > 30)
                 return BadRequest(new { success = false, error = "Instance count must be between 1 and 30" });
 
-            bool success = await appServiceService.ScaleWebAppAsync(webAppName, resourceGroupName, request.InstanceCount, request.SubscriptionId);
+            var success = await appServiceService.ScaleWebAppAsync(webAppName, resourceGroupName, request.InstanceCount, request.SubscriptionId);
             return Ok(new { success, message = success ? $"Scaled to {request.InstanceCount} instances" : "Scaling failed" });
         }
         catch (Exception ex)
@@ -242,7 +242,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            IEnumerable<AppServicePlanDto> plans = await appServiceService.ListAppServicePlansAsync(subscriptionId, resourceGroupName);
+            var plans = await appServiceService.ListAppServicePlansAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, plans = plans.ToArray() });
         }
         catch (Exception ex)
@@ -257,7 +257,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            AppServicePlanDto? plan = await appServiceService.GetAppServicePlanAsync(planName, resourceGroupName, subscriptionId);
+            var plan = await appServiceService.GetAppServicePlanAsync(planName, resourceGroupName, subscriptionId);
             if (plan is null)
                 return NotFound(new { success = false, error = $"App service plan {planName} not found" });
 
@@ -279,7 +279,7 @@ public class AppServiceController(IAppServiceService appServiceService, ILogger<
     {
         try
         {
-            string logs = await appServiceService.GetApplicationLogsAsync(webAppName, resourceGroupName, lastHours, subscriptionId);
+            var logs = await appServiceService.GetApplicationLogsAsync(webAppName, resourceGroupName, lastHours, subscriptionId);
             return Ok(new { success = true, logs, note = "Full log streaming requires Kudu API or Azure Monitor integration" });
         }
         catch (Exception ex)

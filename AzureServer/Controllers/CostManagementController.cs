@@ -13,7 +13,7 @@ public class CostManagementController(ICostManagementService costService, ILogge
     {
         try
         {
-            CostQueryResult result = await costService.GetCurrentMonthCostsAsync(subscriptionId);
+            var result = await costService.GetCurrentMonthCostsAsync(subscriptionId);
             return Ok(new { success = true, costs = result });
         }
         catch (Exception ex)
@@ -31,9 +31,9 @@ public class CostManagementController(ICostManagementService costService, ILogge
     {
         try
         {
-            DateTime start = DateTime.Parse(startDate);
-            DateTime end = DateTime.Parse(endDate);
-            CostQueryResult result = await costService.GetCostsForPeriodAsync(start, end, subscriptionId);
+            var start = DateTime.Parse(startDate);
+            var end = DateTime.Parse(endDate);
+            var result = await costService.GetCostsForPeriodAsync(start, end, subscriptionId);
             return Ok(new { success = true, costs = result });
         }
         catch (Exception ex)
@@ -51,9 +51,9 @@ public class CostManagementController(ICostManagementService costService, ILogge
     {
         try
         {
-            DateTime start = DateTime.Parse(startDate);
-            DateTime end = DateTime.Parse(endDate);
-            CostQueryResult result = await costService.GetCostsByServiceAsync(start, end, subscriptionId);
+            var start = DateTime.Parse(startDate);
+            var end = DateTime.Parse(endDate);
+            var result = await costService.GetCostsByServiceAsync(start, end, subscriptionId);
             return Ok(new { success = true, costs = result });
         }
         catch (Exception ex)
@@ -71,9 +71,9 @@ public class CostManagementController(ICostManagementService costService, ILogge
     {
         try
         {
-            DateTime start = DateTime.Parse(startDate);
-            DateTime end = DateTime.Parse(endDate);
-            CostQueryResult result = await costService.GetCostsByResourceGroupAsync(start, end, subscriptionId);
+            var start = DateTime.Parse(startDate);
+            var end = DateTime.Parse(endDate);
+            var result = await costService.GetCostsByResourceGroupAsync(start, end, subscriptionId);
             return Ok(new { success = true, costs = result });
         }
         catch (Exception ex)
@@ -91,9 +91,9 @@ public class CostManagementController(ICostManagementService costService, ILogge
     {
         try
         {
-            DateTime start = DateTime.Parse(startDate);
-            DateTime end = DateTime.Parse(endDate);
-            CostQueryResult result = await costService.GetDailyCostsAsync(start, end, subscriptionId);
+            var start = DateTime.Parse(startDate);
+            var end = DateTime.Parse(endDate);
+            var result = await costService.GetDailyCostsAsync(start, end, subscriptionId);
             return Ok(new { success = true, costs = result });
         }
         catch (Exception ex)
@@ -110,7 +110,7 @@ public class CostManagementController(ICostManagementService costService, ILogge
     {
         try
         {
-            CostQueryResult result = await costService.GetCostForecastAsync(daysAhead, subscriptionId);
+            var result = await costService.GetCostForecastAsync(daysAhead, subscriptionId);
             return Ok(new { success = true, forecast = result });
         }
         catch (Exception ex)
@@ -125,7 +125,7 @@ public class CostManagementController(ICostManagementService costService, ILogge
     {
         try
         {
-            IEnumerable<BudgetDto> budgets = await costService.GetBudgetsAsync(subscriptionId);
+            var budgets = await costService.GetBudgetsAsync(subscriptionId);
             return Ok(new { success = true, budgets = budgets.ToArray() });
         }
         catch (Exception ex)
@@ -140,7 +140,7 @@ public class CostManagementController(ICostManagementService costService, ILogge
     {
         try
         {
-            BudgetDto? budget = await costService.GetBudgetAsync(budgetName, subscriptionId);
+            var budget = await costService.GetBudgetAsync(budgetName, subscriptionId);
             if (budget is null)
                 return NotFound(new { success = false, error = $"Budget {budgetName} not found" });
 

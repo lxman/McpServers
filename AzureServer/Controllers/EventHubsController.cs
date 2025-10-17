@@ -15,7 +15,7 @@ public class EventHubsController(IEventHubsService eventHubsService, ILogger<Eve
     {
         try
         {
-            IEnumerable<EventHubsNamespaceDto> namespaces = await eventHubsService.ListNamespacesAsync(resourceGroupName, subscriptionId);
+            var namespaces = await eventHubsService.ListNamespacesAsync(resourceGroupName, subscriptionId);
             return Ok(new { success = true, namespaces = namespaces.ToArray() });
         }
         catch (Exception ex)
@@ -33,7 +33,7 @@ public class EventHubsController(IEventHubsService eventHubsService, ILogger<Eve
     {
         try
         {
-            EventHubsNamespaceDto? ns = await eventHubsService.GetNamespaceAsync(resourceGroupName, namespaceName, subscriptionId);
+            var ns = await eventHubsService.GetNamespaceAsync(resourceGroupName, namespaceName, subscriptionId);
             if (ns is null)
                 return NotFound(new { success = false, error = $"Namespace {namespaceName} not found" });
 
@@ -54,7 +54,7 @@ public class EventHubsController(IEventHubsService eventHubsService, ILogger<Eve
     {
         try
         {
-            EventHubsNamespaceDto ns = await eventHubsService.CreateNamespaceAsync(
+            var ns = await eventHubsService.CreateNamespaceAsync(
                 resourceGroupName, namespaceName, request.Location, request.SubscriptionId, request.Sku);
             return Ok(new { success = true, @namespace = ns });
         }
