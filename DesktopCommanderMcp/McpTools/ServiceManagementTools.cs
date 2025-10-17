@@ -139,6 +139,33 @@ public class ServiceManagementTools(
 
             logger.LogInformation("Started service {ServiceName} with ID {ServiceId}", serviceName, serviceId);
 
+            // Perform health check if URL is available
+
+            if (string.IsNullOrEmpty(serverInfo.Url))
+                return JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    serviceId,
+                    serviceName,
+                    processId = process.Id,
+                    port = serverInfo.Port,
+                    url = serverInfo.Url,
+                    startedAt = managedService.StartedAt
+                }, SerializerOptions.JsonOptionsIndented);
+            logger.LogInformation("Performing health check for {ServiceName} at {Url}", serviceName, serverInfo.Url);
+            (bool isHealthy, string healthCheckMessage) = await WaitForServiceHealthy(serverInfo.Url, process, timeoutSeconds: 30);
+                
+            if (isHealthy)
+            {
+                logger.LogInformation("Service {ServiceName} is healthy and ready", serviceName);
+            }
+            else
+            {
+                logger.LogWarning("Service {ServiceName} started but health check failed: {Message}", 
+                    serviceName, healthCheckMessage);
+            }
+
+
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -369,4 +396,70 @@ public class ServiceManagementTools(
         string[] parts = command.Split(' ', 2, StringSplitOptions.TrimEntries);
         return parts.Length == 2 ? (parts[0], parts[1]) : (parts[0], "");
     }
+
+    /// <summary>
+    /// Wait for service to become healthy by polling the health endpoint
+    /// </summary>
+    private async Task<(bool isHealthy, string message)> WaitForServiceHealthy(
+        string serviceUrl, 
+        Process process, 
+        int timeoutSeconds = 30)
+    {
+        using var httpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(5)
+        };
+        
+        // Skip TLS certificate validation for localhost development
+        var handler = new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true
+        };
+        using var httpsClient = new HttpClient(handler)
+        {
+            Timeout = TimeSpan.FromSeconds(5)
+        };
+        
+        var client = serviceUrl.StartsWith("https", StringComparison.OrdinalIgnoreCase) ? httpsClient : httpClient;
+        
+        int maxAttempts = timeoutSeconds * 2; // Poll every 500ms
+        int attempts = 0;
+        
+        while (attempts < maxAttempts)
+        {
+            // Check if process is still running
+            if (process.HasExited)
+            {
+                return (false, $"Process exited with code {process.ExitCode}");
+            }
+            
+            try
+            {
+                // Try to connect to the service
+                var response = await client.GetAsync(serviceUrl);
+                
+                // Any response (even 404, 500, etc.) means the server is listening
+                logger.LogDebug("Health check attempt {Attempt}: HTTP {StatusCode}", 
+                    attempts + 1, (int)response.StatusCode);
+                    
+                return (true, $"Service responding with HTTP {(int)response.StatusCode}");
+            }
+            catch (HttpRequestException)
+            {
+                // Connection refused or other HTTP error - service not ready yet
+                logger.LogDebug("Health check attempt {Attempt}: Connection refused", attempts + 1);
+            }
+            catch (TaskCanceledException)
+            {
+                // Timeout - service not responding yet
+                logger.LogDebug("Health check attempt {Attempt}: Timeout", attempts + 1);
+            }
+            
+            attempts++;
+            await Task.Delay(500); // Wait 500ms between attempts
+        }
+        
+        return (false, $"Service did not become healthy after {timeoutSeconds} seconds ({attempts} attempts)");
+    }
+
 }

@@ -83,8 +83,11 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
         catch (Exception ex)
         {
             await AddLogLine($"Discovery failed: {ex}");
-            throw;
+            logger.LogError(ex, "Azure environment discovery encountered an error, but returning partial results");
+            // Don't throw - return whatever partial results we have
+            // This allows the app to start even if discovery fails
         }
+
 
         return result;
     }

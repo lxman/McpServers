@@ -250,8 +250,10 @@ public class CredentialDiscoveryService(ILogger<CredentialDiscoveryService> logg
         {
             info.IsValid = false;
             info.ErrorMessage = ex.Message;
-            throw;
+            // Don't throw - just mark as invalid and let caller handle gracefully
+            logger.LogDebug("Credential validation failed for {Source}: {Error}", info.Source, ex.Message);
         }
+
     }
 
     private static async Task<(bool Success, string Output)> ExecuteCommandAsync(string command, string arguments)

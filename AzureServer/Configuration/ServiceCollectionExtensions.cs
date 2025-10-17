@@ -80,7 +80,27 @@ public static class ServiceCollectionExtensions
         // Discover Azure DevOps environments only (ARM credentials now handled by CredentialSelectionService)
         ILogger<AzureEnvironmentDiscovery> discoveryLogger = loggerFactory.CreateLogger<AzureEnvironmentDiscovery>();
         var discovery = new AzureEnvironmentDiscovery(discoveryLogger);
-        List<DevOpsEnvironmentInfo> devOpsEnvironments = await discovery.DiscoverDevOpsEnvironmentsAsync();
+        
+        // Safe discovery with graceful error handling
+        List<DevOpsEnvironmentInfo> devOpsEnvironments;
+        try
+        {
+            devOpsEnvironments = await discovery.DiscoverDevOpsEnvironmentsAsync();
+            if (devOpsEnvironments.Count > 0)
+            {
+                discoveryLogger.LogInformation("Successfully discovered {Count} Azure DevOps environment(s)", devOpsEnvironments.Count);
+            }
+            else
+            {
+                discoveryLogger.LogInformation("No Azure DevOps environments discovered. DevOps services will return helpful guidance.");
+            }
+        }
+        catch (Exception ex)
+        {
+            discoveryLogger.LogWarning(ex, "Failed to discover Azure DevOps environments. DevOps services will be unavailable but app will continue running.");
+            devOpsEnvironments = new List<DevOpsEnvironmentInfo>();
+        }
+
 
         // Configure Azure Resource Management service using ArmClientFactory
         services.AddScoped<IResourceManagementService>(provider =>
