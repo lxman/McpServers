@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
@@ -13,11 +13,10 @@ public class MongoDbService
 {
     private readonly ILogger<MongoDbService> _logger;
     private readonly MongoDbConfiguration _mongoConfig;
-    private readonly ConnectionManager _connectionManager;
 
     private const string DEFAULT_SERVER_NAME = "default";
 
-    public ConnectionManager ConnectionManager => _connectionManager;
+    public ConnectionManager ConnectionManager { get; }
 
     public MongoDbService(IConfiguration configuration, ILogger<MongoDbService> logger)
     {
@@ -27,7 +26,7 @@ public class MongoDbService
         // Create a connection manager with its own logger
         ILogger<ConnectionManager> connectionLogger = LoggerFactory.Create(builder => builder.AddConsole())
             .CreateLogger<ConnectionManager>();
-        _connectionManager = new ConnectionManager(connectionLogger);
+        ConnectionManager = new ConnectionManager(connectionLogger);
         
         // DEBUG: Log configuration details
         string currentDir = Directory.GetCurrentDirectory();
@@ -82,7 +81,7 @@ public class MongoDbService
             // Ignore file write errors
         }
         
-        // Try to auto-connect if configured - but don't log to console
+        // Try to auto-connect if configured - but don't log to the console
         _ = Task.Run(TryAutoConnectAsync);
     }
 
@@ -93,15 +92,16 @@ public class MongoDbService
             var hasConnected = false;
             var connectTasks = new List<Task<string>>();
             
-            // Try environment variables first (highest priority)
-            string? envConnectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING");
-            string? envDatabase = Environment.GetEnvironmentVariable("MONGODB_DATABASE");
+            // Try environment variables first (the highest priority, with registry fallback)
+            string? envConnectionString = RegistryEnvironmentReader.GetEnvironmentVariableWithFallback("MONGODB_CONNECTION_STRING");
+            string? envDatabase = RegistryEnvironmentReader.GetEnvironmentVariableWithFallback("MONGODB_DATABASE");
+
             
             if (!string.IsNullOrEmpty(envConnectionString) && !string.IsNullOrEmpty(envDatabase))
             {
                 _logger.LogInformation("Attempting auto-connect using environment variables");
                 await ConnectToServerAsync(DEFAULT_SERVER_NAME, envConnectionString, envDatabase);
-                _connectionManager.SetDefaultServer(DEFAULT_SERVER_NAME);
+                ConnectionManager.SetDefaultServer(DEFAULT_SERVER_NAME);
                 hasConnected = true;
             }
             
@@ -131,13 +131,13 @@ public class MongoDbService
                         if (profile.Name.Equals(_mongoConfig.DefaultServer, StringComparison.OrdinalIgnoreCase) ||
                             serverName.Equals(_mongoConfig.DefaultServer, StringComparison.OrdinalIgnoreCase))
                         {
-                            _connectionManager.SetDefaultServer(serverName);
+                            ConnectionManager.SetDefaultServer(serverName);
                             hasConnected = true;
                         }
                     }
                     else if (!hasConnected)
                     {
-                        _connectionManager.SetDefaultServer(serverName);
+                        ConnectionManager.SetDefaultServer(serverName);
                         hasConnected = true;
                     }
                 }
@@ -154,7 +154,7 @@ public class MongoDbService
             {
                 _logger.LogInformation("Attempting auto-connect using configuration file");
                 await ConnectToServerAsync(DEFAULT_SERVER_NAME, _mongoConfig.ConnectionString, _mongoConfig.DefaultDatabase);
-                _connectionManager.SetDefaultServer(DEFAULT_SERVER_NAME);
+                ConnectionManager.SetDefaultServer(DEFAULT_SERVER_NAME);
                 hasConnected = true;
             }
             
@@ -169,7 +169,7 @@ public class MongoDbService
                     _logger.LogInformation("Attempting fallback auto-connect using profile: {ProfileName}", activeProfile.Name);
                     string serverName = activeProfile.Name.Replace(" ", "_").ToLowerInvariant();
                     await ConnectToServerAsync(serverName, activeProfile.ConnectionString, activeProfile.DefaultDatabase);
-                    _connectionManager.SetDefaultServer(serverName);
+                    ConnectionManager.SetDefaultServer(serverName);
                     hasConnected = true;
                 }
             }
@@ -181,7 +181,7 @@ public class MongoDbService
             else
             {
                 _logger.LogInformation("Auto-connect completed. Active connections: {Count}", 
-                    _connectionManager.GetServerNames().Count);
+                    ConnectionManager.GetServerNames().Count);
             }
         }
         catch (Exception ex)
@@ -194,35 +194,35 @@ public class MongoDbService
 
     public async Task<string> ConnectToServerAsync(string serverName, string connectionString, string databaseName)
     {
-        return await _connectionManager.AddConnectionAsync(serverName, connectionString, databaseName);
+        return await ConnectionManager.AddConnectionAsync(serverName, connectionString, databaseName);
     }
 
     public string DisconnectFromServer(string serverName)
     {
-        bool result = _connectionManager.RemoveConnection(serverName);
+        bool result = ConnectionManager.RemoveConnection(serverName);
         return result ? $"Disconnected from server '{serverName}'" : $"Failed to disconnect from server '{serverName}'";
     }
 
     public string ListActiveConnections()
     {
-        return _connectionManager.GetConnectionsStatus();
+        return ConnectionManager.GetConnectionsStatus();
     }
 
     public string SetDefaultServer(string serverName)
     {
-        List<string> serverNames = _connectionManager.GetServerNames();
+        List<string> serverNames = ConnectionManager.GetServerNames();
         if (!serverNames.Contains(serverName))
         {
             return $"Server '{serverName}' is not connected. Available servers: {string.Join(", ", serverNames)}";
         }
 
-        _connectionManager.SetDefaultServer(serverName);
+        ConnectionManager.SetDefaultServer(serverName);
         return $"Default server set to '{serverName}'";
     }
 
     public string GetServerConnectionStatus(string serverName)
     {
-        ConnectionInfo? info = _connectionManager.GetConnectionInfo(serverName);
+        ConnectionInfo? info = ConnectionManager.GetConnectionInfo(serverName);
         if (info == null)
         {
             return JsonSerializer.Serialize(new
@@ -238,8 +238,8 @@ public class MongoDbService
 
     public async Task<string> PingServerAsync(string serverName)
     {
-        bool result = await _connectionManager.PingConnectionAsync(serverName);
-        ConnectionInfo? info = _connectionManager.GetConnectionInfo(serverName);
+        bool result = await ConnectionManager.PingConnectionAsync(serverName);
+        ConnectionInfo? info = ConnectionManager.GetConnectionInfo(serverName);
         
         return JsonSerializer.Serialize(new
         {
@@ -253,10 +253,10 @@ public class MongoDbService
 
     private IMongoDatabase GetDatabase(string serverName = DEFAULT_SERVER_NAME)
     {
-        IMongoDatabase? database = _connectionManager.GetDatabase(serverName);
+        IMongoDatabase? database = ConnectionManager.GetDatabase(serverName);
         if (database == null)
         {
-            List<string> availableServers = _connectionManager.GetServerNames();
+            List<string> availableServers = ConnectionManager.GetServerNames();
             if (availableServers.Count == 0)
             {
                 throw new InvalidOperationException("Not connected to any MongoDB servers. Use ConnectToServer command first.");
@@ -275,13 +275,13 @@ public class MongoDbService
     {
         try
         {
-            List<string> databases = await _connectionManager.ListDatabasesAsync(serverName);
+            List<string> databases = await ConnectionManager.ListDatabasesAsync(serverName);
             
             return JsonSerializer.Serialize(new
             {
                 serverName,
                 success = true,
-                currentDatabase = _connectionManager.GetCurrentDatabase(serverName),
+                currentDatabase = ConnectionManager.GetCurrentDatabase(serverName),
                 totalDatabases = databases.Count,
                 databases = databases.OrderBy(db => db).ToList()
             }, SerializerOptions.JsonOptionsIndented);
@@ -302,7 +302,7 @@ public class MongoDbService
     {
         try
         {
-            string result = await _connectionManager.SwitchDatabaseAsync(serverName, databaseName);
+            string result = await ConnectionManager.SwitchDatabaseAsync(serverName, databaseName);
             
             return JsonSerializer.Serialize(new
             {
@@ -329,8 +329,8 @@ public class MongoDbService
     {
         try
         {
-            ConnectionInfo? info = _connectionManager.GetConnectionInfo(serverName);
-            string? currentDb = _connectionManager.GetCurrentDatabase(serverName);
+            ConnectionInfo? info = ConnectionManager.GetConnectionInfo(serverName);
+            string? currentDb = ConnectionManager.GetCurrentDatabase(serverName);
             
             if (info == null)
             {
@@ -379,7 +379,7 @@ public class MongoDbService
     {
         try
         {
-            IMongoDatabase? database = _connectionManager.GetDatabase(serverName, databaseName);
+            IMongoDatabase? database = ConnectionManager.GetDatabase(serverName, databaseName);
             if (database == null)
             {
                 throw new InvalidOperationException($"Cannot access database '{databaseName}' on server '{serverName}'. Server may not be connected.");
@@ -422,7 +422,7 @@ public class MongoDbService
     {
         try
         {
-            IMongoDatabase? database = _connectionManager.GetDatabase(serverName, databaseName);
+            IMongoDatabase? database = ConnectionManager.GetDatabase(serverName, databaseName);
             if (database == null)
             {
                 throw new InvalidOperationException($"Cannot access database '{databaseName}' on server '{serverName}'. Server may not be connected.");
@@ -466,7 +466,7 @@ public class MongoDbService
 
     public string GetConnectionStatus()
     {
-        ConnectionInfo? info = _connectionManager.GetConnectionInfo(DEFAULT_SERVER_NAME);
+        ConnectionInfo? info = ConnectionManager.GetConnectionInfo(DEFAULT_SERVER_NAME);
         return info == null
             ? "Not connected to MongoDB"
             : $"Connected to database '{info.DatabaseName}' at '{info.ConnectionString}'";
@@ -733,16 +733,16 @@ public class MongoDbService
         debugInfo.Add($"Processed profiles count: {profilesList.Count}");
         
         // Include current connections from connection manager
-        var currentConnections = _connectionManager.GetServerNames().Select(name =>
+        var currentConnections = ConnectionManager.GetServerNames().Select(name =>
         {
-            ConnectionInfo? info = _connectionManager.GetConnectionInfo(name);
+            ConnectionInfo? info = ConnectionManager.GetConnectionInfo(name);
             return new
             {
                 ServerName = name,
                 info?.DatabaseName,
                 IsConnected = info?.IsHealthy ?? false,
                 info?.ConnectedAt,
-                IsDefault = name == _connectionManager.GetDefaultServer()
+                IsDefault = name == ConnectionManager.GetDefaultServer()
             };
         }).ToList();
         
@@ -750,7 +750,7 @@ public class MongoDbService
         { 
             profiles = profilesList,
             currentConnections,
-            defaultServer = _connectionManager.GetDefaultServer(),
+            defaultServer = ConnectionManager.GetDefaultServer(),
             configDefaultServer = _mongoConfig?.DefaultServer
         }, SerializerOptions.JsonOptionsIndented);
         
@@ -786,12 +786,13 @@ public class MongoDbService
 
     public string GetAutoConnectStatus()
     {
-        string? envConnectionString = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING");
-        string? envDatabase = Environment.GetEnvironmentVariable("MONGODB_DATABASE");
+        string? envConnectionString = RegistryEnvironmentReader.GetEnvironmentVariableWithFallback("MONGODB_CONNECTION_STRING");
+        string? envDatabase = RegistryEnvironmentReader.GetEnvironmentVariableWithFallback("MONGODB_DATABASE");
+
         
         return JsonSerializer.Serialize(new 
         {
-            currentConnections = _connectionManager.GetConnectionsStatus(),
+            currentConnections = ConnectionManager.GetConnectionsStatus(),
             autoConnectEnabled = _mongoConfig.AutoConnect,
             defaultServer = _mongoConfig.DefaultServer,
             environmentVariables = new
@@ -814,6 +815,6 @@ public class MongoDbService
 
     public void Dispose()
     {
-        _connectionManager?.Dispose();
+        ConnectionManager?.Dispose();
     }
 }

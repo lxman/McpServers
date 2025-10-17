@@ -12,6 +12,7 @@
   <Project Path="MsOfficeCrypto\MsOfficeCrypto.csproj" Type="Classic C#" />
   <Project Path="PlaywrightServer\PlaywrightServer.csproj" Type="Classic C#" />
   <Project Path="RedisBrowser\RedisBrowser.csproj" Type="Classic C#" />
+  <Project Path="RegistryTools\RegistryTools.csproj" Type="Classic C#" />
   <Project Path="SeleniumChromeTool\SeleniumChromeTool.csproj" Type="Classic C#" />
   <Project Path="TrafficGenerator\TrafficGenerator.csproj" Type="Classic C#" />
 </Solution>

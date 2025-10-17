@@ -1,4 +1,4 @@
-﻿using Amazon.CloudWatch;
+using Amazon.CloudWatch;
 using Amazon.CloudWatch.Model;
 using Amazon.CloudWatchLogs;
 using Amazon.CloudWatchLogs.Model;
@@ -11,6 +11,8 @@ using Amazon.Runtime.CredentialManagement;
 using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
 using AwsServer.Configuration.Models;
+using RegistryTools;
+
 
 namespace AwsServer.Configuration;
 
@@ -22,6 +24,40 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
     private AmazonSecurityTokenServiceClient? _stsClient;
     private AwsConfiguration? _config;
     private AWSCredentials? _credentials;
+
+    // Registry manager for reading system environment variables (read-only mode for safety)
+    private static readonly Lazy<RegistryManager> RegistryManager = new(() => 
+        new RegistryManager(RegistryAccessMode.ReadOnly));
+
+    /// <summary>
+    /// Gets an environment variable value from either the process environment or the system registry.
+    /// This is needed because when Claude starts the server, it doesn't inherit system environment variables.
+    /// </summary>
+    /// <param name="variableName">The name of the environment variable</param>
+    /// <returns>The value of the environment variable, or null if not found</returns>
+    private static string? GetEnvironmentVariableWithRegistryFallback(string variableName)
+    {
+        // First, try the process environment (fast path)
+        string? value = Environment.GetEnvironmentVariable(variableName);
+        if (!string.IsNullOrEmpty(value))
+        {
+            return value;
+        }
+
+        // Fallback to registry (slower, but works when process env is not inherited)
+        try
+        {
+            const string systemEnvPath = @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Environment";
+            value = RegistryManager.Value.ReadValue(systemEnvPath, variableName)?.ToString();
+            return value;
+        }
+        catch
+        {
+            // Registry read failed, return null
+            return null;
+        }
+    }
+
 
     /// <summary>
     /// Auto-discover and initialize with working credentials

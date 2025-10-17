@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using StackExchange.Redis;
 
 namespace RedisBrowser.Services;
@@ -8,7 +9,7 @@ public class RedisService
     private ConnectionMultiplexer? _connection;
     private IDatabase? _database;
     private string? _connectionString;
-    private int _currentDatabase = 0;
+    private int _currentDatabase;
     private readonly IConfiguration _configuration;
     private readonly ILogger<RedisService> _logger;
     private readonly JsonSerializerOptions _options = new() { WriteIndented = true };
@@ -26,8 +27,9 @@ public class RedisService
     {
         try
         {
-            // Try environment variables first
-            string? envConnectionString = Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING");
+            // Try environment variables first (with registry fallback)
+            string? envConnectionString = RegistryEnvironmentReader.GetEnvironmentVariableWithFallback("REDIS_CONNECTION_STRING");
+
             
             if (!string.IsNullOrEmpty(envConnectionString))
             {
@@ -36,7 +38,7 @@ public class RedisService
                 return;
             }
             
-            // Try configuration file
+            // Try the configuration file
             string? configConnectionString = _configuration.GetConnectionString("Redis");
             if (!string.IsNullOrEmpty(configConnectionString))
             {
@@ -67,7 +69,7 @@ public class RedisService
             return JsonSerializer.Serialize(new 
             { 
                 success = true,
-                message = $"Successfully connected to Redis",
+                message = "Successfully connected to Redis",
                 database = _currentDatabase,
                 connectionString = MaskConnectionString(connectionString)
             }, _options);
@@ -130,9 +132,7 @@ public class RedisService
 
     private IDatabase EnsureConnected()
     {
-        if (_database == null)
-            throw new InvalidOperationException("Not connected to Redis. Use redis-browser.connect command first.");
-        return _database;
+        return _database ?? throw new InvalidOperationException("Not connected to Redis. Use redis-browser.connect command first.");
     }
 
     public async Task<string> SelectDatabaseAsync(int databaseNumber)
@@ -173,8 +173,8 @@ public class RedisService
             RedisValue value = await db.StringGetAsync(key);
             
             return JsonSerializer.Serialize(new 
-            { 
-                key = key,
+            {
+                key,
                 value = value.HasValue ? (string)value! : null,
                 exists = value.HasValue,
                 type = "string"
@@ -200,7 +200,7 @@ public class RedisService
             return JsonSerializer.Serialize(new 
             { 
                 success = result,
-                key = key,
+                key,
                 message = result ? "Key set successfully" : "Failed to set key",
                 expiry = expiry?.TotalSeconds
             }, _options);
@@ -225,7 +225,7 @@ public class RedisService
             return JsonSerializer.Serialize(new 
             { 
                 success = result,
-                key = key,
+                key,
                 message = result ? "Key deleted successfully" : "Key not found"
             }, _options);
         }
@@ -247,9 +247,8 @@ public class RedisService
             bool exists = await db.KeyExistsAsync(key);
             
             return JsonSerializer.Serialize(new 
-            { 
-                key = key,
-                exists = exists
+            {
+                key, exists
             }, _options);
         }
         catch (Exception ex)
@@ -275,11 +274,11 @@ public class RedisService
                              .ToList();
             
             return JsonSerializer.Serialize(new 
-            { 
-                pattern = pattern,
+            {
+                pattern,
                 database = _currentDatabase,
                 count = keys.Count,
-                keys = keys
+                keys
             }, _options);
         }
         catch (Exception ex)
@@ -300,8 +299,8 @@ public class RedisService
             RedisType type = await db.KeyTypeAsync(key);
             
             return JsonSerializer.Serialize(new 
-            { 
-                key = key,
+            {
+                key,
                 type = type.ToString().ToLower(),
                 exists = type != RedisType.None
             }, _options);
@@ -324,8 +323,8 @@ public class RedisService
             TimeSpan? ttl = await db.KeyTimeToLiveAsync(key);
             
             return JsonSerializer.Serialize(new 
-            { 
-                key = key,
+            {
+                key,
                 ttl = ttl?.TotalSeconds,
                 persistent = !ttl.HasValue,
                 exists = await db.KeyExistsAsync(key)
@@ -351,7 +350,7 @@ public class RedisService
             return JsonSerializer.Serialize(new 
             { 
                 success = result,
-                key = key,
+                key,
                 expiry = expiry.TotalSeconds,
                 message = result ? "Expiry set successfully" : "Key not found or expiry failed"
             }, _options);
@@ -429,10 +428,10 @@ public class RedisService
             return "unknown";
         
         // Simple masking for passwords
-        return System.Text.RegularExpressions.Regex.Replace(
+        return Regex.Replace(
             connectionString, 
             @"password=([^,;]+)", 
             "password=***", 
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            RegexOptions.IgnoreCase);
     }
 }

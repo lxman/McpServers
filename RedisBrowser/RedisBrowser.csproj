@@ -12,4 +12,8 @@
         <PackageReference Include="StackExchange.Redis" Version="2.9.32" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\RegistryTools\RegistryTools.csproj" />
+    </ItemGroup>
+
 </Project>

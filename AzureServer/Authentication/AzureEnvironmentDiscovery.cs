@@ -7,6 +7,7 @@ using CredentialManagement;
 using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.WebApi;
+using RegistryTools;
 using Process = System.Diagnostics.Process;
 
 namespace AzureServer.Authentication;
@@ -17,6 +18,39 @@ namespace AzureServer.Authentication;
 public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger)
 {
     private readonly string _logPath = Path.Combine(AppContext.BaseDirectory, "azure-discovery.log");
+
+    // Registry manager for reading system environment variables (read-only mode for safety)
+    private static readonly Lazy<RegistryManager> _registryManager = new(() => 
+        new RegistryManager(RegistryAccessMode.ReadOnly));
+
+    /// <summary>
+    /// Gets an environment variable value from either the process environment or the system registry.
+    /// This is needed because when Claude starts the server, it doesn't inherit system environment variables.
+    /// </summary>
+    /// <param name="variableName">The name of the environment variable</param>
+    /// <returns>The value of the environment variable, or null if not found</returns>
+    private static async Task<string?> GetEnvironmentVariableWithRegistryFallback(string variableName)
+    {
+        // First, try the process environment (fast path)
+        string? value = Environment.GetEnvironmentVariable(variableName);
+        if (!string.IsNullOrEmpty(value))
+        {
+            return value;
+        }
+
+        // Fallback to registry (slower, but works when process env is not inherited)
+        try
+        {
+            const string systemEnvPath = @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Environment";
+            value = _registryManager.Value.ReadValue(systemEnvPath, variableName)?.ToString();
+            return value;
+        }
+        catch
+        {
+            // Registry read failed, return null
+            return null;
+        }
+    }
 
     /// <summary>
     /// Discovers Azure DevOps environments independently (no Azure RM required!)
@@ -183,7 +217,8 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
 
         await AddLogLine("Calling DiscoverFromAzurePipelines...");
         // 4. Azure Pipelines context (if running in pipeline)
-        DevOpsEnvironmentInfo? pipelineEnv = DiscoverFromAzurePipelines();
+        DevOpsEnvironmentInfo? pipelineEnv = await DiscoverFromAzurePipelines();
+
         await AddLogLine($"{(pipelineEnv is not null ? "Found" : "No")} Azure Pipelines DevOps environment");
         if (pipelineEnv is not null) environments.Add(pipelineEnv);
 
@@ -299,7 +334,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
         {
             await AddLogLine($"Attempting to get PAT from Credential Manager or env var: {target}");
             string? pat = TryGetFromCredentialManager(target) ??
-                          Environment.GetEnvironmentVariable(target);
+                          await GetEnvironmentVariableWithRegistryFallback(target);
             if (!string.IsNullOrEmpty(pat))
             {
                 await AddLogLine($"Recovered PAT from {target} - {pat}");
@@ -309,8 +344,8 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
             await AddLogLine("No PAT found in this source");
         }
 
-        return Environment.GetEnvironmentVariable("AZURE_DEVOPS_EXT_PAT") ??
-               Environment.GetEnvironmentVariable("AZURE_DEVOPS_PAT");
+        return await GetEnvironmentVariableWithRegistryFallback("AZURE_DEVOPS_EXT_PAT") ??
+               await GetEnvironmentVariableWithRegistryFallback("AZURE_DEVOPS_PAT");
     }
 
     private async Task<List<DevOpsEnvironmentInfo>> DiscoverFromCredentialManager()
@@ -369,7 +404,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
         foreach (string varName in patVars)
         {
             await AddLogLine($"Trying to get PAT from env var: {varName}");
-            pat = Environment.GetEnvironmentVariable(varName);
+            pat = await GetEnvironmentVariableWithRegistryFallback(varName);
             await AddLogLine($"Found PAT: {(string.IsNullOrEmpty(pat) ? "No" : "Yes")}");
             if (string.IsNullOrEmpty(pat)) continue;
             patSource = varName;
@@ -379,7 +414,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
         string? orgUrl = null;
         foreach (string varName in orgVars)
         {
-            orgUrl = Environment.GetEnvironmentVariable(varName);
+            orgUrl = await GetEnvironmentVariableWithRegistryFallback(varName);
             if (!string.IsNullOrEmpty(orgUrl)) break;
         }
 
@@ -397,11 +432,11 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
         return null;
     }
 
-    private static DevOpsEnvironmentInfo? DiscoverFromAzurePipelines()
+    private static async Task<DevOpsEnvironmentInfo?> DiscoverFromAzurePipelines()
     {
         // Check if running in Azure Pipelines
-        string? systemAccessToken = Environment.GetEnvironmentVariable("SYSTEM_ACCESSTOKEN");
-        string? collectionUri = Environment.GetEnvironmentVariable("SYSTEM_COLLECTIONURI");
+        string? systemAccessToken = await GetEnvironmentVariableWithRegistryFallback("SYSTEM_ACCESSTOKEN");
+        string? collectionUri = await GetEnvironmentVariableWithRegistryFallback("SYSTEM_COLLECTIONURI");
 
         if (!string.IsNullOrEmpty(systemAccessToken) && !string.IsNullOrEmpty(collectionUri))
         {

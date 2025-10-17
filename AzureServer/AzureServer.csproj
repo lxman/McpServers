@@ -86,4 +86,8 @@
       </None>
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\RegistryTools\RegistryTools.csproj" />
+    </ItemGroup>
+
 </Project>
