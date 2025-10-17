@@ -37,7 +37,7 @@ public class AwsCredentialsProvider(AwsConfiguration config)
         if (!string.IsNullOrEmpty(config.ProfileName))
         {
             var chain = new CredentialProfileStoreChain();
-            if (chain.TryGetAWSCredentials(config.ProfileName, out AWSCredentials? credentials))
+            if (chain.TryGetAWSCredentials(config.ProfileName, out var credentials))
             {
                 return credentials;
             }
@@ -48,7 +48,7 @@ public class AwsCredentialsProvider(AwsConfiguration config)
         // This handles the case where the service doesn't inherit system environment variables
         try
         {
-            AwsConfiguration? envConfig = RegistryEnvironmentReader.GetAwsCredentialsFromEnvironment();
+            var envConfig = RegistryEnvironmentReader.GetAwsCredentialsFromEnvironment();
             if (envConfig != null && !string.IsNullOrEmpty(envConfig.AccessKeyId) 
                 && !string.IsNullOrEmpty(envConfig.SecretAccessKey))
             {

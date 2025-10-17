@@ -1,8 +1,6 @@
 using Amazon.QuickSight;
 using Amazon.QuickSight.Model;
-using Amazon.Runtime;
 using AwsServer.Configuration;
-using AccountInfo = AwsServer.Configuration.Models.AccountInfo;
 
 namespace AwsServer.QuickSight;
 
@@ -51,7 +49,7 @@ public class QuickSightService
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            AWSCredentials? credentials = credentialsProvider.GetCredentials();
+            var credentials = credentialsProvider.GetCredentials();
             
             if (credentials != null)
             {
@@ -83,7 +81,7 @@ public class QuickSightService
         {
             if (_discoveryService.AutoInitialize())
             {
-                AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
+                var accountInfo = await _discoveryService.GetAccountInfoAsync();
                 
                 var config = new AwsConfiguration
                 {

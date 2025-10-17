@@ -1,9 +1,10 @@
 using Amazon.CloudWatch.Model;
-using Amazon.CloudWatchLogs.Model;
 using AwsServer.CloudWatch;
-using AwsServer.CloudWatch.Models;
 using AwsServer.Configuration;
+using AwsServer.Controllers.Requests;
 using Microsoft.AspNetCore.Mvc;
+using GetMetricStatisticsRequest = AwsServer.Controllers.Requests.GetMetricStatisticsRequest;
+using PutMetricDataRequest = AwsServer.Controllers.Requests.PutMetricDataRequest;
 
 namespace AwsServer.Controllers;
 
@@ -19,7 +20,7 @@ public class CloudWatchController(CloudWatchService cloudWatchService) : Control
     {
         try
         {
-            bool success = await cloudWatchService.InitializeAsync(config);
+            var success = await cloudWatchService.InitializeAsync(config);
             return Ok(new { success, message = success ? "CloudWatch service initialized successfully" : "Failed to initialize CloudWatch service" });
         }
         catch (Exception ex)
@@ -36,7 +37,7 @@ public class CloudWatchController(CloudWatchService cloudWatchService) : Control
     {
         try
         {
-            List<LogGroup> logGroups = await cloudWatchService.ListLogGroupsAsync(prefix, limit);
+            var logGroups = await cloudWatchService.ListLogGroupsAsync(prefix, limit);
             return Ok(new { success = true, logGroupCount = logGroups.Count, logGroups });
         }
         catch (Exception ex)
@@ -53,7 +54,7 @@ public class CloudWatchController(CloudWatchService cloudWatchService) : Control
     {
         try
         {
-            List<LogStream> logStreams = await cloudWatchService.ListLogStreamsAsync(logGroupName, limit);
+            var logStreams = await cloudWatchService.ListLogStreamsAsync(logGroupName, limit);
             return Ok(new { success = true, logStreamCount = logStreams.Count, logStreams });
         }
         catch (Exception ex)
@@ -75,7 +76,7 @@ public class CloudWatchController(CloudWatchService cloudWatchService) : Control
     {
         try
         {
-            List<OutputLogEvent> events = await cloudWatchService.GetLogEventsAsync(logGroupName, logStreamName, startTime, endTime, limit);
+            var events = await cloudWatchService.GetLogEventsAsync(logGroupName, logStreamName, startTime, endTime, limit);
             return Ok(new { success = true, eventCount = events.Count, events });
         }
         catch (Exception ex)
@@ -92,7 +93,7 @@ public class CloudWatchController(CloudWatchService cloudWatchService) : Control
     {
         try
         {
-            FilterLogEventsResult results = await cloudWatchService.FilterLogEventsAsync(
+            var results = await cloudWatchService.FilterLogEventsAsync(
                 request.LogGroupName,
                 request.FilterPattern,
                 request.StartTime,
@@ -115,8 +116,8 @@ public class CloudWatchController(CloudWatchService cloudWatchService) : Control
     {
         try
         {
-            List<Dimension>? dimensions = request.Dimensions?.Select(kvp => new Dimension { Name = kvp.Key, Value = kvp.Value }).ToList();
-            List<Datapoint> statistics = await cloudWatchService.GetMetricStatisticsAsync(
+            var dimensions = request.Dimensions?.Select(kvp => new Dimension { Name = kvp.Key, Value = kvp.Value }).ToList();
+            var statistics = await cloudWatchService.GetMetricStatisticsAsync(
                 request.Namespace,
                 request.MetricName,
                 request.StartTime,
@@ -142,7 +143,7 @@ public class CloudWatchController(CloudWatchService cloudWatchService) : Control
     {
         try
         {
-            List<Metric> metrics = await cloudWatchService.ListMetricsAsync(@namespace, metricName);
+            var metrics = await cloudWatchService.ListMetricsAsync(@namespace, metricName);
             return Ok(new { success = true, metricCount = metrics.Count, metrics });
         }
         catch (Exception ex)
@@ -181,34 +182,4 @@ public class CloudWatchController(CloudWatchService cloudWatchService) : Control
             return StatusCode(500, new { error = ex.Message });
         }
     }
-}
-
-public class FilterLogsRequest
-{
-    public required string LogGroupName { get; set; }
-    public string? FilterPattern { get; set; }
-    public DateTime? StartTime { get; set; }
-    public DateTime? EndTime { get; set; }
-    public int Limit { get; set; } = 100;
-    public string? NextToken { get; set; }
-}
-
-public class GetMetricStatisticsRequest
-{
-    public required string Namespace { get; set; }
-    public required string MetricName { get; set; }
-    public Dictionary<string, string>? Dimensions { get; set; }
-    public DateTime StartTime { get; set; }
-    public DateTime EndTime { get; set; }
-    public int Period { get; set; } = 300;
-    public List<string>? Statistics { get; set; }
-}
-
-public class PutMetricDataRequest
-{
-    public required string Namespace { get; set; }
-    public required string MetricName { get; set; }
-    public double Value { get; set; }
-    public string? Unit { get; set; }
-    public Dictionary<string, string>? Dimensions { get; set; }
 }

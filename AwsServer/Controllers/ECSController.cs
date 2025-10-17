@@ -1,5 +1,5 @@
-using Amazon.ECS.Model;
 using AwsServer.Configuration;
+using AwsServer.Controllers.Requests;
 using AwsServer.ECS;
 using Microsoft.AspNetCore.Mvc;
 // ReSharper disable InconsistentNaming
@@ -18,7 +18,7 @@ public class ECSController(EcsService ecsService) : ControllerBase
     {
         try
         {
-            bool success = await ecsService.InitializeAsync(config);
+            var success = await ecsService.InitializeAsync(config);
             return Ok(new { success, message = success ? "ECS service initialized successfully" : "Failed to initialize ECS service" });
         }
         catch (Exception ex)
@@ -35,7 +35,7 @@ public class ECSController(EcsService ecsService) : ControllerBase
     {
         try
         {
-            ListClustersResponse clusters = await ecsService.ListClustersAsync();
+            var clusters = await ecsService.ListClustersAsync();
             return Ok(new { success = true, clusterCount = clusters.ClusterArns.Count, clusters });
         }
         catch (Exception ex)
@@ -52,7 +52,7 @@ public class ECSController(EcsService ecsService) : ControllerBase
     {
         try
         {
-            DescribeClustersResponse cluster = await ecsService.DescribeClustersAsync([clusterName]);
+            var cluster = await ecsService.DescribeClustersAsync([clusterName]);
             return Ok(new { success = true, cluster });
         }
         catch (Exception ex)
@@ -69,7 +69,7 @@ public class ECSController(EcsService ecsService) : ControllerBase
     {
         try
         {
-            ListServicesResponse services = await ecsService.ListServicesAsync(clusterName);
+            var services = await ecsService.ListServicesAsync(clusterName);
             return Ok(new { success = true, serviceCount = services.ServiceArns.Count, services });
         }
         catch (Exception ex)
@@ -86,7 +86,7 @@ public class ECSController(EcsService ecsService) : ControllerBase
     {
         try
         {
-            DescribeServicesResponse services = await ecsService.DescribeServicesAsync(serviceNames, clusterName);
+            var services = await ecsService.DescribeServicesAsync(serviceNames, clusterName);
             return Ok(new { success = true, serviceCount = services.Services.Count, services });
         }
         catch (Exception ex)
@@ -103,7 +103,7 @@ public class ECSController(EcsService ecsService) : ControllerBase
     {
         try
         {
-            ListTasksResponse tasks = await ecsService.ListTasksAsync(clusterName, serviceName);
+            var tasks = await ecsService.ListTasksAsync(clusterName, serviceName);
             return Ok(new { success = true, taskCount = tasks.TaskArns.Count, tasks });
         }
         catch (Exception ex)
@@ -120,7 +120,7 @@ public class ECSController(EcsService ecsService) : ControllerBase
     {
         try
         {
-            DescribeTasksResponse tasks = await ecsService.DescribeTasksAsync(taskArns, clusterName);
+            var tasks = await ecsService.DescribeTasksAsync(taskArns, clusterName);
             return Ok(new { success = true, taskCount = tasks.Tasks.Count, tasks });
         }
         catch (Exception ex)
@@ -137,7 +137,7 @@ public class ECSController(EcsService ecsService) : ControllerBase
     {
         try
         {
-            ListTaskDefinitionsResponse taskDefinitions = await ecsService.ListTaskDefinitionsAsync(familyPrefix);
+            var taskDefinitions = await ecsService.ListTaskDefinitionsAsync(familyPrefix);
             return Ok(new { success = true, taskDefinitionCount = taskDefinitions.TaskDefinitionArns.Count, taskDefinitions });
         }
         catch (Exception ex)
@@ -154,7 +154,7 @@ public class ECSController(EcsService ecsService) : ControllerBase
     {
         try
         {
-            DescribeTaskDefinitionResponse td = await ecsService.DescribeTaskDefinitionAsync(taskDefinition);
+            var td = await ecsService.DescribeTaskDefinitionAsync(taskDefinition);
             return Ok(new { success = true, taskDefinition = td });
         }
         catch (Exception ex)
@@ -171,7 +171,7 @@ public class ECSController(EcsService ecsService) : ControllerBase
     {
         try
         {
-            RunTaskResponse response = await ecsService.RunTaskAsync(clusterName, request.TaskDefinition, request.Count);
+            var response = await ecsService.RunTaskAsync(clusterName, request.TaskDefinition, request.Count);
             return Ok(new { success = true, response });
         }
         catch (Exception ex)
@@ -188,7 +188,7 @@ public class ECSController(EcsService ecsService) : ControllerBase
     {
         try
         {
-            StopTaskResponse response = await ecsService.StopTaskAsync(clusterName, taskArn, reason);
+            var response = await ecsService.StopTaskAsync(clusterName, taskArn, reason);
             return Ok(new { success = true, response });
         }
         catch (Exception ex)
@@ -208,7 +208,7 @@ public class ECSController(EcsService ecsService) : ControllerBase
     {
         try
         {
-            UpdateServiceResponse response = await ecsService.UpdateServiceAsync(
+            var response = await ecsService.UpdateServiceAsync(
                 clusterName,
                 serviceName,
                 request.DesiredCount,
@@ -222,14 +222,5 @@ public class ECSController(EcsService ecsService) : ControllerBase
     }
 }
 
-public class RunTaskRequest
-{
-    public required string TaskDefinition { get; set; }
-    public int Count { get; set; } = 1;
-}
 
-public class UpdateServiceRequest
-{
-    public int? DesiredCount { get; set; }
-    public string? TaskDefinition { get; set; }
-}
+

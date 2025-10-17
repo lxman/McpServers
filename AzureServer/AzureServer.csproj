@@ -18,7 +18,7 @@
         <PackageReference Include="Azure.Messaging.EventHubs.Processor" Version="5.12.2" />
         <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
         <PackageReference Include="Azure.Monitor.Ingestion" Version="1.2.0" />
-        <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.4.0" />
+        <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.5.0-beta.1" />
         <PackageReference Include="Azure.Monitor.OpenTelemetry.LiveMetrics" Version="1.0.0-beta.3" />
         <PackageReference Include="Azure.Monitor.OpenTelemetry.Profiler" Version="1.0.0-beta6" />
         <PackageReference Include="Azure.Monitor.Query" Version="1.7.1" />
@@ -70,7 +70,7 @@
         <PackageReference Include="Azure.Storage.Files.DataLake" Version="12.24.0" />
         <PackageReference Include="Azure.Storage.Files.Shares" Version="12.24.0" />
         <PackageReference Include="Azure.Storage.Queues" Version="12.24.0" />
-        <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.0-preview1.25257.1" />
+        <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.0-preview2.25289.6" />
         <PackageReference Include="Microsoft.TeamFoundationServer.Client" Version="19.225.1" />
         <PackageReference Include="Microsoft.TeamFoundationServer.ExtendedClient" Version="19.225.1" />
         <PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="19.225.1" />

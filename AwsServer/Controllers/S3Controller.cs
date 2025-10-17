@@ -1,8 +1,7 @@
 using Amazon.S3;
-using Amazon.S3.Model;
 using AwsServer.Configuration;
+using AwsServer.Controllers.Requests;
 using AwsServer.S3;
-using AwsServer.S3.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AwsServer.Controllers;
@@ -19,7 +18,7 @@ public class S3Controller(S3Service s3Service) : ControllerBase
     {
         try
         {
-            bool success = await s3Service.InitializeAsync(config);
+            var success = await s3Service.InitializeAsync(config);
             return Ok(new { success, message = success ? "S3 service initialized successfully" : "Failed to initialize S3 service" });
         }
         catch (Exception ex)
@@ -36,7 +35,7 @@ public class S3Controller(S3Service s3Service) : ControllerBase
     {
         try
         {
-            List<S3Bucket> buckets = await s3Service.ListBucketsAsync();
+            var buckets = await s3Service.ListBucketsAsync();
             return Ok(new { success = true, bucketCount = buckets.Count, buckets });
         }
         catch (Exception ex)
@@ -57,7 +56,7 @@ public class S3Controller(S3Service s3Service) : ControllerBase
     {
         try
         {
-            ListObjectsResult result = await s3Service.ListObjectsAsync(bucketName, prefix, maxKeys, continuationToken);
+            var result = await s3Service.ListObjectsAsync(bucketName, prefix, maxKeys, continuationToken);
             return Ok(result);
         }
         catch (Exception ex)
@@ -75,7 +74,7 @@ public class S3Controller(S3Service s3Service) : ControllerBase
     {
         try
         {
-            string content = await s3Service.GetObjectContentAsync(bucketName, key);
+            var content = await s3Service.GetObjectContentAsync(bucketName, key);
             return Ok(new { success = true, bucketName, key, content });
         }
         catch (Exception ex)
@@ -96,7 +95,7 @@ public class S3Controller(S3Service s3Service) : ControllerBase
     {
         try
         {
-            GetObjectMetadataResponse metadata = await s3Service.GetObjectMetadataAsync(bucketName, key);
+            var metadata = await s3Service.GetObjectMetadataAsync(bucketName, key);
             return Ok(new
             {
                 success = true,
@@ -125,7 +124,7 @@ public class S3Controller(S3Service s3Service) : ControllerBase
     {
         try
         {
-            PutObjectResponse response = await s3Service.PutObjectAsync(bucketName, key, request.Content, request.ContentType);
+            var response = await s3Service.PutObjectAsync(bucketName, key, request.Content, request.ContentType);
             return Ok(new { success = true, bucketName, key, etag = response.ETag });
         }
         catch (Exception ex)
@@ -197,8 +196,8 @@ public class S3Controller(S3Service s3Service) : ControllerBase
     {
         try
         {
-            DateTime expiry = DateTime.UtcNow.AddHours(expirationHours);
-            HttpVerb httpVerb = httpMethod.ToUpperInvariant() switch
+            var expiry = DateTime.UtcNow.AddHours(expirationHours);
+            var httpVerb = httpMethod.ToUpperInvariant() switch
             {
                 "GET" => HttpVerb.GET,
                 "PUT" => HttpVerb.PUT,
@@ -206,7 +205,7 @@ public class S3Controller(S3Service s3Service) : ControllerBase
                 _ => HttpVerb.GET
             };
 
-            string url = await s3Service.GeneratePresignedUrl(bucketName, key, expiry, httpVerb);
+            var url = await s3Service.GeneratePresignedUrl(bucketName, key, expiry, httpVerb);
             return Ok(new { success = true, bucketName, key, presignedUrl = url, expiresAt = expiry });
         }
         catch (Exception ex)
@@ -223,7 +222,7 @@ public class S3Controller(S3Service s3Service) : ControllerBase
     {
         try
         {
-            bool exists = await s3Service.BucketExistsAsync(bucketName);
+            var exists = await s3Service.BucketExistsAsync(bucketName);
             return Ok(new { success = true, bucketName, exists });
         }
         catch (Exception ex)
@@ -241,7 +240,7 @@ public class S3Controller(S3Service s3Service) : ControllerBase
     {
         try
         {
-            bool exists = await s3Service.ObjectExistsAsync(bucketName, key);
+            var exists = await s3Service.ObjectExistsAsync(bucketName, key);
             return Ok(new { success = true, bucketName, key, exists });
         }
         catch (Exception ex)
@@ -258,7 +257,7 @@ public class S3Controller(S3Service s3Service) : ControllerBase
     {
         try
         {
-            GetBucketVersioningResponse response = await s3Service.GetBucketVersioningAsync(bucketName);
+            var response = await s3Service.GetBucketVersioningAsync(bucketName);
             return Ok(new
             {
                 success = true,
@@ -281,7 +280,7 @@ public class S3Controller(S3Service s3Service) : ControllerBase
     {
         try
         {
-            ListVersionsResponse response = await s3Service.ListObjectVersionsAsync(bucketName, prefix);
+            var response = await s3Service.ListObjectVersionsAsync(bucketName, prefix);
             return Ok(new
             {
                 success = true,
@@ -298,8 +297,3 @@ public class S3Controller(S3Service s3Service) : ControllerBase
     }
 }
 
-public class PutObjectRequest
-{
-    public required string Content { get; set; }
-    public string? ContentType { get; set; }
-}

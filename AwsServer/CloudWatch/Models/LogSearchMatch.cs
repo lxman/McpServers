@@ -9,6 +9,6 @@ public class LogSearchMatch
     public string EventId { get; set; } = string.Empty;
     public int LineNumber { get; set; }
     public string MatchedLine { get; set; } = string.Empty;
-    public List<LogContextLine> Context { get; set; } = new();
-    public List<string> ExtractedValues { get; set; } = new();
+    public List<LogContextLine> Context { get; set; } = [];
+    public List<string> ExtractedValues { get; set; } = [];
 }
