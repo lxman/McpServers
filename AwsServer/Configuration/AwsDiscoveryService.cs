@@ -40,7 +40,7 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
     private static string? GetEnvironmentVariableWithRegistryFallback(string variableName)
     {
         // First, try the process environment (fast path)
-        var value = Environment.GetEnvironmentVariable(variableName);
+        string? value = Environment.GetEnvironmentVariable(variableName);
         if (!string.IsNullOrEmpty(value))
         {
             return value;
@@ -77,17 +77,17 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
             };
         
             // Try to detect the region from CLI config
-            var cliConfig = DetectCliConfiguration();
-            var defaultProfile = cliConfig.Profiles.FirstOrDefault(p => p.Name == "default");
+            CliConfiguration cliConfig = DetectCliConfiguration();
+            AwsProfile? defaultProfile = cliConfig.Profiles.FirstOrDefault(p => p.Name == "default");
             if (defaultProfile?.Region is not null)
             {
                 config.Region = defaultProfile.Region;
             }
         
             // Try profile-based credentials first
-            var profileName = Environment.GetEnvironmentVariable("AWS_PROFILE") ?? "default";
+            string profileName = Environment.GetEnvironmentVariable("AWS_PROFILE") ?? "default";
             var chain = new CredentialProfileStoreChain();
-            if (!chain.TryGetAWSCredentials(profileName, out var profileCredentials))
+            if (!chain.TryGetAWSCredentials(profileName, out AWSCredentials? profileCredentials))
                 return Initialize(config);
             config.ProfileName = profileName;
             return Initialize(config);
@@ -151,13 +151,13 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
 
         try
         {
-            var response = await _stsClient!.GetCallerIdentityAsync(new GetCallerIdentityRequest());
+            GetCallerIdentityResponse? response = await _stsClient!.GetCallerIdentityAsync(new GetCallerIdentityRequest());
 
             // Determine if this is GovCloud based on the ARN
-            var isGovCloud = response.Arn.Contains("aws-us-gov") || response.Arn.Contains("-gov-") || response.Arn.Contains(".amazonaws-us-gov.com");
+            bool isGovCloud = response.Arn.Contains("aws-us-gov") || response.Arn.Contains("-gov-") || response.Arn.Contains(".amazonaws-us-gov.com");
 
             // Infer region from ARN
-            var inferredRegion = InferRegionFromArn(response.Arn);
+            string inferredRegion = InferRegionFromArn(response.Arn);
 
             return new AccountInfo
             {
@@ -256,11 +256,11 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
         try
         {
             // Check for AWS CLI config files
-            var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var awsDir = Path.Combine(homeDir, ".aws");
+            string homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string awsDir = Path.Combine(homeDir, ".aws");
 
-            var configFile = Path.Combine(awsDir, "config");
-            var credentialsFile = Path.Combine(awsDir, "credentials");
+            string configFile = Path.Combine(awsDir, "config");
+            string credentialsFile = Path.Combine(awsDir, "credentials");
 
             config.ConfigFileExists = File.Exists(configFile);
             config.CredentialsFileExists = File.Exists(credentialsFile);
@@ -274,8 +274,8 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
             if (config.CredentialsFileExists)
             {
                 config.CredentialsFilePath = credentialsFile;
-                var credProfiles = ParseAwsCredentialsFile(credentialsFile);
-                foreach (var profile in credProfiles)
+                List<AwsProfile> credProfiles = ParseAwsCredentialsFile(credentialsFile);
+                foreach (AwsProfile profile in credProfiles)
                 {
                     if (config.Profiles.All(p => p.Name != profile.Name))
                     {
@@ -313,7 +313,7 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
         try
         {
             // ARN format: arn:partition:service:region:account-id:resource
-            var parts = arn.Split(':');
+            string[] parts = arn.Split(':');
             switch (parts.Length)
             {
                 case >= 4 when !string.IsNullOrEmpty(parts[3]):
@@ -322,8 +322,8 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
                 case >= 2 when parts[2] == "iam":
                 {
                     // Use CLI config region as fallback
-                    var cliConfig = DetectCliConfiguration();
-                    var defaultProfile = cliConfig.Profiles.FirstOrDefault(p => p.Name == "default");
+                    CliConfiguration cliConfig = DetectCliConfiguration();
+                    AwsProfile? defaultProfile = cliConfig.Profiles.FirstOrDefault(p => p.Name == "default");
                     if (defaultProfile?.Region is not null)
                     {
                         return defaultProfile.Region;
@@ -358,7 +358,7 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
 
             if (arn.Contains(":assumed-role/"))
             {
-                var parts = arn.Split(":assumed-role/")[1].Split('/');
+                string[] parts = arn.Split(":assumed-role/")[1].Split('/');
                 return parts.Length > 1 ? $"{parts[0]} (assumed by {parts[1]})" : parts[0];
             }
         }
@@ -423,7 +423,7 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
                 RegionEndpoint = RegionEndpoint.GetBySystemName(region)
             };
 
-            var client =
+            AmazonCloudWatchClient client =
                 _credentials is not null
                     ? new AmazonCloudWatchClient(_credentials, config)
                     : new AmazonCloudWatchClient(config);
@@ -463,7 +463,7 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
                 RegionEndpoint = RegionEndpoint.GetBySystemName(region)
             };
 
-            var client =
+            AmazonCloudWatchLogsClient client =
                 _credentials is not null
                     ? new AmazonCloudWatchLogsClient(_credentials, config)
                     : new AmazonCloudWatchLogsClient(config);
@@ -504,7 +504,7 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
                 RegionEndpoint = RegionEndpoint.GetBySystemName(region)
             };
 
-            var client =
+            AmazonS3Client client =
                 _credentials is not null
                     ? new AmazonS3Client(_credentials, config)
                     : new AmazonS3Client(config);
@@ -544,7 +544,7 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
                 RegionEndpoint = RegionEndpoint.GetBySystemName(region)
             };
 
-            var client =
+            AmazonECRClient client =
                 _credentials is not null
                     ? new AmazonECRClient(_credentials, config)
                     : new AmazonECRClient(config);
@@ -585,7 +585,7 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
                 RegionEndpoint = RegionEndpoint.GetBySystemName(region)
             };
 
-            var client =
+            AmazonECSClient client =
                 _credentials is not null
                     ? new AmazonECSClient(_credentials, config)
                     : new AmazonECSClient(config);
@@ -622,19 +622,19 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
 
         try
         {
-            var lines = File.ReadAllLines(configFile);
+            string[] lines = File.ReadAllLines(configFile);
             AwsProfile? currentProfile = null;
 
-            foreach (var line in lines)
+            foreach (string line in lines)
             {
-                var trimmed = line.Trim();
+                string trimmed = line.Trim();
                 if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#'))
                     continue;
 
                 if (trimmed.StartsWith('[') && trimmed.EndsWith(']'))
                 {
                     // New profile section
-                    var profileName = trimmed.Trim('[', ']');
+                    string profileName = trimmed.Trim('[', ']');
                     if (profileName.StartsWith("profile "))
                         profileName = profileName.Substring(8);
 
@@ -643,9 +643,9 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
                 }
                 else if (currentProfile is not null && trimmed.Contains('='))
                 {
-                    var parts = trimmed.Split('=', 2);
-                    var key = parts[0].Trim();
-                    var value = parts[1].Trim();
+                    string[] parts = trimmed.Split('=', 2);
+                    string key = parts[0].Trim();
+                    string value = parts[1].Trim();
 
                     switch (key.ToLower())
                     {
@@ -677,18 +677,18 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
             var chain = new CredentialProfileStoreChain();
             List<CredentialProfile>? credentialProfiles = chain.ListProfiles();
         
-            foreach (var credentialProfile in credentialProfiles)
+            foreach (CredentialProfile credentialProfile in credentialProfiles)
             {
                 var profile = new AwsProfile { Name = credentialProfile.Name };
             
                 // Actually test if credentials work
-                if (chain.TryGetAWSCredentials(credentialProfile.Name, out var credentials))
+                if (chain.TryGetAWSCredentials(credentialProfile.Name, out AWSCredentials? credentials))
                 {
                     profile.HasAccessKey = true;
                     profile.HasSecretKey = true;
                 
                     // Try to get the region from the profile
-                    if (chain.TryGetProfile(credentialProfile.Name, out var profileInfo))
+                    if (chain.TryGetProfile(credentialProfile.Name, out CredentialProfile? profileInfo))
                     {
                         profile.Region = profileInfo.Region?.SystemName ?? "us-east-1";
                     }
@@ -718,8 +718,8 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
 
         // Analyze service permissions and recommend initialization strategies
         if (result.ServicePermissions is null) return config;
-        var workingServices = result.ServicePermissions.Where(s => s.HasPermission).ToList();
-        var failedServices = result.ServicePermissions.Where(s => !s.HasPermission).ToList();
+        List<ServicePermissionTest> workingServices = result.ServicePermissions.Where(s => s.HasPermission).ToList();
+        List<ServicePermissionTest> failedServices = result.ServicePermissions.Where(s => !s.HasPermission).ToList();
 
         if (workingServices.Count != 0)
         {
@@ -763,7 +763,7 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
         }
 
         if (result.ServicePermissions is null) return suggestions;
-        var failedServices = result.ServicePermissions.Where(s => !s.HasPermission).ToList();
+        List<ServicePermissionTest> failedServices = result.ServicePermissions.Where(s => !s.HasPermission).ToList();
         if (failedServices.Count == 0) return suggestions;
         suggestions.Add(
             $"Missing permissions for {failedServices.Count} services - contact your AWS administrator");

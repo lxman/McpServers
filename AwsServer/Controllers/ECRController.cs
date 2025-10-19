@@ -1,6 +1,7 @@
 using Amazon.ECR.Model;
 using AwsServer.Configuration;
 using AwsServer.ECR;
+using AwsServer.ECR.Models;
 using Microsoft.AspNetCore.Mvc;
 
 // ReSharper disable InconsistentNaming
@@ -19,7 +20,7 @@ public class ECRController(EcrService ecrService) : ControllerBase
     {
         try
         {
-            var success = await ecrService.InitializeAsync(config);
+            bool success = await ecrService.InitializeAsync(config);
             return Ok(new { success, message = success ? "ECR service initialized successfully" : "Failed to initialize ECR service" });
         }
         catch (Exception ex)
@@ -36,7 +37,7 @@ public class ECRController(EcrService ecrService) : ControllerBase
     {
         try
         {
-            var repositories = await ecrService.ListRepositoriesAsync();
+            DescribeRepositoriesResponse repositories = await ecrService.ListRepositoriesAsync();
             return Ok(new { success = true, repositoryCount = repositories.Repositories.Count, repositories });
         }
         catch (Exception ex)
@@ -53,7 +54,7 @@ public class ECRController(EcrService ecrService) : ControllerBase
     {
         try
         {
-            var repositories = await ecrService.DescribeRepositoriesAsync(repositoryNames);
+            DescribeRepositoriesResponse repositories = await ecrService.DescribeRepositoriesAsync(repositoryNames);
             return Ok(new { success = true, repositoryCount = repositories.Repositories.Count, repositories });
         }
         catch (Exception ex)
@@ -70,7 +71,7 @@ public class ECRController(EcrService ecrService) : ControllerBase
     {
         try
         {
-            var images = await ecrService.ListImagesAsync(repositoryName);
+            ListImagesResult images = await ecrService.ListImagesAsync(repositoryName);
             return Ok(new { success = true, imageCount = images.ImageCount, images });
         }
         catch (Exception ex)
@@ -87,8 +88,8 @@ public class ECRController(EcrService ecrService) : ControllerBase
     {
         try
         {
-            var imageIds = imageTags?.Select(tag => new ImageIdentifier { ImageTag = tag }).ToList();
-            var images = await ecrService.DescribeImagesAsync(repositoryName, imageIds);
+            List<ImageIdentifier>? imageIds = imageTags?.Select(tag => new ImageIdentifier { ImageTag = tag }).ToList();
+            DescribeImagesResponse images = await ecrService.DescribeImagesAsync(repositoryName, imageIds);
             return Ok(new { success = true, imageCount = images.ImageDetails.Count, images });
         }
         catch (Exception ex)
@@ -105,7 +106,7 @@ public class ECRController(EcrService ecrService) : ControllerBase
     {
         try
         {
-            var repository = await ecrService.CreateRepositoryAsync(request.RepositoryName);
+            CreateRepositoryResponse repository = await ecrService.CreateRepositoryAsync(request.RepositoryName);
             return Ok(new { success = true, repository });
         }
         catch (Exception ex)
@@ -141,8 +142,8 @@ public class ECRController(EcrService ecrService) : ControllerBase
     {
         try
         {
-            var imageIds = imageTags.Select(tag => new ImageIdentifier { ImageTag = tag }).ToList();
-            var response = await ecrService.BatchDeleteImageAsync(repositoryName, imageIds);
+            List<ImageIdentifier> imageIds = imageTags.Select(tag => new ImageIdentifier { ImageTag = tag }).ToList();
+            BatchDeleteImageResponse response = await ecrService.BatchDeleteImageAsync(repositoryName, imageIds);
             return Ok(new { success = true, response });
         }
         catch (Exception ex)
@@ -159,7 +160,7 @@ public class ECRController(EcrService ecrService) : ControllerBase
     {
         try
         {
-            var token = await ecrService.GetAuthorizationTokenAsync();
+            GetAuthorizationTokenResponse token = await ecrService.GetAuthorizationTokenAsync();
             return Ok(new { success = true, token });
         }
         catch (Exception ex)
@@ -176,7 +177,7 @@ public class ECRController(EcrService ecrService) : ControllerBase
     {
         try
         {
-            var policy = await ecrService.GetLifecyclePolicyAsync(repositoryName);
+            GetLifecyclePolicyResponse policy = await ecrService.GetLifecyclePolicyAsync(repositoryName);
             return Ok(new { success = true, policy });
         }
         catch (Exception ex)
@@ -195,7 +196,7 @@ public class ECRController(EcrService ecrService) : ControllerBase
     {
         try
         {
-            var response = await ecrService.PutLifecyclePolicyAsync(repositoryName, request.LifecyclePolicyText);
+            PutLifecyclePolicyResponse response = await ecrService.PutLifecyclePolicyAsync(repositoryName, request.LifecyclePolicyText);
             return Ok(new { success = true, response });
         }
         catch (Exception ex)

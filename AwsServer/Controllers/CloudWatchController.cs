@@ -1,7 +1,7 @@
 using Amazon.CloudWatch.Model;
+using Amazon.CloudWatchLogs.Model;
 using AwsServer.CloudWatch;
 using AwsServer.Configuration;
-using AwsServer.Controllers.Requests;
 using Microsoft.AspNetCore.Mvc;
 using GetMetricStatisticsRequest = AwsServer.Controllers.Requests.GetMetricStatisticsRequest;
 using PutMetricDataRequest = AwsServer.Controllers.Requests.PutMetricDataRequest;
@@ -20,7 +20,7 @@ public class CloudWatchController(CloudWatchService cloudWatchService) : Control
     {
         try
         {
-            var success = await cloudWatchService.InitializeAsync(config);
+            bool success = await cloudWatchService.InitializeAsync(config);
             return Ok(new { success, message = success ? "CloudWatch service initialized successfully" : "Failed to initialize CloudWatch service" });
         }
         catch (Exception ex)
@@ -37,7 +37,7 @@ public class CloudWatchController(CloudWatchService cloudWatchService) : Control
     {
         try
         {
-            var logGroups = await cloudWatchService.ListLogGroupsAsync(prefix, limit);
+            List<LogGroup> logGroups = await cloudWatchService.ListLogGroupsAsync(prefix, limit);
             return Ok(new { success = true, logGroupCount = logGroups.Count, logGroups });
         }
         catch (Exception ex)
@@ -54,7 +54,7 @@ public class CloudWatchController(CloudWatchService cloudWatchService) : Control
     {
         try
         {
-            var logStreams = await cloudWatchService.ListLogStreamsAsync(logGroupName, limit);
+            List<LogStream> logStreams = await cloudWatchService.ListLogStreamsAsync(logGroupName, limit);
             return Ok(new { success = true, logStreamCount = logStreams.Count, logStreams });
         }
         catch (Exception ex)
@@ -76,31 +76,8 @@ public class CloudWatchController(CloudWatchService cloudWatchService) : Control
     {
         try
         {
-            var events = await cloudWatchService.GetLogEventsAsync(logGroupName, logStreamName, startTime, endTime, limit);
+            List<OutputLogEvent> events = await cloudWatchService.GetLogEventsAsync(logGroupName, logStreamName, startTime, endTime, limit);
             return Ok(new { success = true, eventCount = events.Count, events });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { error = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Filter CloudWatch Logs with optional filter pattern
-    /// </summary>
-    [HttpPost("filter")]
-    public async Task<IActionResult> FilterLogs([FromBody] FilterLogsRequest request)
-    {
-        try
-        {
-            var results = await cloudWatchService.FilterLogEventsAsync(
-                request.LogGroupName,
-                request.FilterPattern,
-                request.StartTime,
-                request.EndTime,
-                request.Limit,
-                request.NextToken);
-            return Ok(new { success = true, results });
         }
         catch (Exception ex)
         {
@@ -116,8 +93,8 @@ public class CloudWatchController(CloudWatchService cloudWatchService) : Control
     {
         try
         {
-            var dimensions = request.Dimensions?.Select(kvp => new Dimension { Name = kvp.Key, Value = kvp.Value }).ToList();
-            var statistics = await cloudWatchService.GetMetricStatisticsAsync(
+            List<Dimension>? dimensions = request.Dimensions?.Select(kvp => new Dimension { Name = kvp.Key, Value = kvp.Value }).ToList();
+            List<Datapoint> statistics = await cloudWatchService.GetMetricStatisticsAsync(
                 request.Namespace,
                 request.MetricName,
                 request.StartTime,
@@ -143,7 +120,7 @@ public class CloudWatchController(CloudWatchService cloudWatchService) : Control
     {
         try
         {
-            var metrics = await cloudWatchService.ListMetricsAsync(@namespace, metricName);
+            List<Metric> metrics = await cloudWatchService.ListMetricsAsync(@namespace, metricName);
             return Ok(new { success = true, metricCount = metrics.Count, metrics });
         }
         catch (Exception ex)

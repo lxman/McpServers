@@ -17,10 +17,16 @@ public static class ServiceCollectionExtensions
         // Register AWS service implementations
         services.AddAWSService<IAmazonCloudWatchLogs>();
         services.AddSingleton<S3Service>();
-        services.AddSingleton<CloudWatchService>();
+        services.AddSingleton<CloudWatchLogsService>(); // New simplified service
         services.AddSingleton<EcsService>();
         services.AddSingleton<EcrService>();
         services.AddSingleton<QuickSightService>();
+        
+        // Add response compression for large log responses
+        services.AddResponseCompression(options =>
+        {
+            options.EnableForHttps = true;
+        });
         
         return services;
     }

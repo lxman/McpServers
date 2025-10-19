@@ -1,6 +1,8 @@
 using Amazon.QuickSight;
 using Amazon.QuickSight.Model;
+using Amazon.Runtime;
 using AwsServer.Configuration;
+using AccountInfo = AwsServer.Configuration.Models.AccountInfo;
 
 namespace AwsServer.QuickSight;
 
@@ -28,7 +30,7 @@ public class QuickSightService
     /// <summary>
     /// Initialize QuickSight client with configuration
     /// </summary>
-    public async Task<bool> InitializeAsync(AwsConfiguration config)
+    public bool Initialize(AwsConfiguration config)
     {
         try
         {
@@ -49,16 +51,11 @@ public class QuickSightService
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            var credentials = credentialsProvider.GetCredentials();
+            AWSCredentials? credentials = credentialsProvider.GetCredentials();
             
-            if (credentials != null)
-            {
-                _quickSightClient = new AmazonQuickSightClient(credentials, clientConfig);
-            }
-            else
-            {
-                _quickSightClient = new AmazonQuickSightClient(clientConfig);
-            }
+            _quickSightClient = credentials is not null
+                ? new AmazonQuickSightClient(credentials, clientConfig)
+                : new AmazonQuickSightClient(clientConfig);
             
             _isInitialized = true;
             _logger.LogInformation("QuickSight client initialized successfully");
@@ -81,7 +78,7 @@ public class QuickSightService
         {
             if (_discoveryService.AutoInitialize())
             {
-                var accountInfo = await _discoveryService.GetAccountInfoAsync();
+                AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
                 
                 var config = new AwsConfiguration
                 {
@@ -90,7 +87,7 @@ public class QuickSightService
                     SecretAccessKey = null
                 };
                 
-                await InitializeAsync(config);
+                Initialize(config);
             }
         }
         catch (Exception ex)

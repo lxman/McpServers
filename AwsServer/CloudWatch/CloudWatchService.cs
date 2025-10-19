@@ -1,11 +1,10 @@
-﻿using System.Diagnostics;
-using System.Text.RegularExpressions;
 using Amazon.CloudWatch;
 using Amazon.CloudWatch.Model;
 using Amazon.CloudWatchLogs;
 using Amazon.CloudWatchLogs.Model;
-using AwsServer.CloudWatch.Models;
+using Amazon.Runtime;
 using AwsServer.Configuration;
+using AwsServer.Configuration.Models;
 using InvalidOperationException = Amazon.CloudWatchLogs.Model.InvalidOperationException;
 using Metric = Amazon.CloudWatch.Model.Metric;
 
@@ -24,12 +23,12 @@ public class CloudWatchService
     private bool _cloudWatchInitialized;
     
     /// <summary>
-    /// Check if metrics client is available
+    /// Check if the metrics client is available
     /// </summary>
     public bool IsMetricsClientAvailable => _cloudWatchClient != null;
 
     /// <summary>
-    /// Check if logs client is available
+    /// Check if the logs client is available
     /// </summary>
     public bool IsLogsClientAvailable => _logsClient != null;
     
@@ -47,9 +46,9 @@ public class CloudWatchService
     /// Initialize CloudWatch clients with configuration
     /// </summary>
     /// <param name="config">AWS configuration</param>
-    /// <param name="testConnection">Whether to test connection during initialization (default: true)</param>
+    /// <param name="testConnection">Whether to test the connection during initialization (default: true)</param>
     /// <param name="testMetricsOnly">If testing, only test metrics client (default: false)</param>
-    /// <param name="testLogsOnly">If testing, only test logs client (default: false)</param>
+    /// <param name="testLogsOnly">If testing, only test logs the client (default: false)</param>
     public async Task<bool> InitializeAsync(AwsConfiguration config, bool testConnection = true, bool testMetricsOnly = false, bool testLogsOnly = false)
     {
         try
@@ -80,7 +79,7 @@ public class CloudWatchService
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            var credentials = credentialsProvider.GetCredentials();
+            AWSCredentials? credentials = credentialsProvider.GetCredentials();
             
             if (credentials != null)
             {
@@ -114,13 +113,13 @@ public class CloudWatchService
                         
                         if (testMetricsOnly)
                         {
-                            // If we're only testing metrics and it fails, this is a critical failure
+                            // If we're only testing metrics, and it fails, this is a critical failure
                             throw new InvalidOperationException("CloudWatch Metrics client connection test failed", ex);
                         }
                     }
                 }
                 
-                // Test logs client if not metrics-only
+                // Test logs the client if not metrics-only
                 if (!testMetricsOnly)
                 {
                     try
@@ -186,7 +185,7 @@ public class CloudWatchService
                 request.NextToken = nextToken;
             }
             
-            var response = await _cloudWatchClient!.ListMetricsAsync(request);
+            ListMetricsResponse? response = await _cloudWatchClient!.ListMetricsAsync(request);
             allMetrics.AddRange(response.Metrics);
             nextToken = response.NextToken;
             
@@ -230,7 +229,7 @@ public class CloudWatchService
             request.Dimensions = dimensions;
         }
         
-        var response = await _cloudWatchClient!.GetMetricStatisticsAsync(request);
+        GetMetricStatisticsResponse? response = await _cloudWatchClient!.GetMetricStatisticsAsync(request);
         return response.Datapoints.OrderBy(d => d.Timestamp).ToList();
     }
     
@@ -305,7 +304,7 @@ public class CloudWatchService
             request.StateValue = stateValue;
         }
         
-        var response = await _cloudWatchClient!.DescribeAlarmsAsync(request);
+        DescribeAlarmsResponse? response = await _cloudWatchClient!.DescribeAlarmsAsync(request);
         return response.MetricAlarms;
     }
     
@@ -330,7 +329,7 @@ public class CloudWatchService
             request.LogGroupNamePrefix = logGroupNamePrefix;
         }
         
-        var response = await _logsClient!.DescribeLogGroupsAsync(request);
+        DescribeLogGroupsResponse? response = await _logsClient!.DescribeLogGroupsAsync(request);
         return response.LogGroups;
     }
     
@@ -349,7 +348,7 @@ public class CloudWatchService
             Descending = true
         };
         
-        var response = await _logsClient!.DescribeLogStreamsAsync(request);
+        DescribeLogStreamsResponse? response = await _logsClient!.DescribeLogStreamsAsync(request);
         return response.LogStreams;
     }
     
@@ -383,95 +382,10 @@ public class CloudWatchService
             request.EndTime = endTime.Value;
         }
         
-        var response = await _logsClient!.GetLogEventsAsync(request);
+        GetLogEventsResponse? response = await _logsClient!.GetLogEventsAsync(request);
         return response.Events;
     }
     
-    /// <summary>
-    /// Filter log events with pagination support.
-    /// Returns one page of results at a time to avoid timeouts with large result sets.
-    /// </summary>
-    /// <param name="logGroupName">Name of the log group to search</param>
-    /// <param name="filterPattern">Optional CloudWatch Logs filter pattern (e.g., "[ERROR]" or "[level=ERROR]")</param>
-    /// <param name="startTime">Optional start time for the search range</param>
-    /// <param name="endTime">Optional end time for the search range</param>
-    /// <param name="limit">Maximum number of events to return per page (1-10000, default: 100)</param>
-    /// <param name="nextToken">Continuation token from previous response (for pagination)</param>
-    /// <returns>Paginated result containing events and pagination metadata</returns>
-    public async Task<FilterLogEventsResult> FilterLogEventsAsync(
-        string logGroupName,
-        string? filterPattern = null,
-        DateTime? startTime = null,
-        DateTime? endTime = null,
-        int limit = 100,
-        string? nextToken = null)
-    {
-        await EnsureLogsInitializedAsync();
-        
-        // Clamp limit to AWS allowed range (1-10,000)
-        limit = Math.Clamp(limit, 1, 10000);
-        
-        var request = new FilterLogEventsRequest
-        {
-            LogGroupName = logGroupName,
-            Limit = limit
-        };
-        
-        // Add filter pattern if provided
-        if (!string.IsNullOrEmpty(filterPattern))
-        {
-            request.FilterPattern = filterPattern;
-        }
-        
-        // Convert start time to Unix milliseconds
-        if (startTime.HasValue)
-        {
-            var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            request.StartTime = (long)(startTime.Value.ToUniversalTime() - epoch).TotalMilliseconds;
-        }
-        
-        // Convert end time to Unix milliseconds
-        if (endTime.HasValue)
-        {
-            var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            request.EndTime = (long)(endTime.Value.ToUniversalTime() - epoch).TotalMilliseconds;
-        }
-        
-        // Add the continuation token for pagination
-        if (!string.IsNullOrEmpty(nextToken))
-        {
-            request.NextToken = nextToken;
-        }
-        
-        // Execute the API call (fast - single page only)
-        var response = await _logsClient!.FilterLogEventsAsync(request);
-        
-        // Build paginated result
-        var result = new FilterLogEventsResult
-        {
-            Events = response.Events ?? [],
-            EventCount = response.Events?.Count ?? 0,
-            HasMoreResults = !string.IsNullOrEmpty(response.NextToken),
-            NextToken = response.NextToken,
-            SearchedLogStreams = response.SearchedLogStreams,
-            StartTime = startTime,
-            EndTime = endTime
-        };
-        
-        // Create a helpful summary message
-        result.Summary =
-            result.HasMoreResults
-                ? $"Retrieved {result.EventCount} events. More results available - use NextToken to continue pagination."
-                : $"Retrieved {result.EventCount} events. No more results available.";
-        
-        result.Summary += $" Searched {result.SearchedLogStreams.Count} log stream(s).";
-        
-        return result;
-    }
-    
-    /// <summary>
-    /// Create log group
-    /// </summary>
     public async Task<CreateLogGroupResponse> CreateLogGroupAsync(string logGroupName)
     {
         await EnsureLogsInitializedAsync();
@@ -499,222 +413,25 @@ public class CloudWatchService
         return await _logsClient!.DeleteLogGroupAsync(request);
     }
     
-    /// <summary>
-    /// Search CloudWatch logs using regex patterns with context
-    /// </summary>
-    public async Task<(List<LogSearchMatch> matches, LogSearchSummary summary)> SearchLogEventsWithRegexAsync(
-        string logGroupName,
-        string regexPattern,
-        DateTime? startTime = null,
-        DateTime? endTime = null,
-        int contextLines = 3,
-        bool caseSensitive = false,
-        int maxMatches = 100,
-        int maxStreamsToSearch = 20)
-    {
-        var stopwatch = Stopwatch.StartNew();
-        await EnsureLogsInitializedAsync();
-        
-        var regex = new Regex(regexPattern, caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase);
-        var allMatches = new List<LogSearchMatch>();
-        var logStreamsSearched = 0;
-        
-        try
-        {
-            // Get log streams, limited to prevent overwhelming searches
-            var logStreams = await ListLogStreamsAsync(logGroupName, maxStreamsToSearch);
-            
-            foreach (var logStream in logStreams.Take(maxStreamsToSearch))
-            {
-                if (allMatches.Count >= maxMatches) break;
-                
-                logStreamsSearched++;
-                
-                try
-                {
-                    // Get log events for this stream
-                    var logEvents = await GetLogEventsAsync(logGroupName, logStream.LogStreamName, startTime, endTime, 1000);
-                    
-                    // Convert to searchable format with line numbers
-                    var searchableEvents = logEvents.Select((evt, idx) => new
-                    {
-                        Event = evt,
-                        LineNumber = idx + 1,
-                        Message = evt.Message ?? string.Empty
-                    }).ToList();
-                    
-                    // Search through events
-                    for (var i = 0; i < searchableEvents.Count; i++)
-                    {
-                        var searchEvent = searchableEvents[i];
-                        var match = regex.Match(searchEvent.Message);
-                        
-                        if (match.Success)
-                        {
-                            var contextStart = Math.Max(0, i - contextLines);
-                            var contextEnd = Math.Min(searchableEvents.Count - 1, i + contextLines);
-                            
-                            var logMatch = new LogSearchMatch
-                            {
-                                LogGroupName = logGroupName,
-                                LogStreamName = logStream.LogStreamName,
-                                Timestamp = searchEvent.Event.Timestamp,
-                                IngestionTime = searchEvent.Event.IngestionTime,
-                                EventId = $"{searchEvent.Event.Timestamp?.Ticks}-{searchEvent.LineNumber}",
-                                LineNumber = searchEvent.LineNumber,
-                                MatchedLine = searchEvent.Message.Trim(),
-                                Context = searchableEvents
-                                    .Skip(contextStart)
-                                    .Take(contextEnd - contextStart + 1)
-                                    .Select(e => new LogContextLine
-                                    {
-                                        LineNumber = e.LineNumber,
-                                        Timestamp = e.Event.Timestamp,
-                                        Content = e.Message.Trim(),
-                                        IsMatch = e.LineNumber == searchEvent.LineNumber,
-                                        LogStreamName = logStream.LogStreamName
-                                    }).ToList(),
-                                ExtractedValues = ExtractRegexGroups(match)
-                            };
-                            
-                            allMatches.Add(logMatch);
-                            
-                            if (allMatches.Count >= maxMatches) break;
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to search log stream {LogStream} in group {LogGroup}", 
-                        logStream.LogStreamName, logGroupName);
-                }
-            }
-            
-            stopwatch.Stop();
-            
-            var summary = GenerateLogSearchSummary(allMatches, logStreamsSearched, stopwatch.Elapsed);
-            
-            return (allMatches, summary);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error searching CloudWatch logs with regex pattern {Pattern}", regexPattern);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Search multiple log groups using regex patterns
-    /// </summary>
-    public async Task<(List<LogSearchMatch> matches, LogSearchSummary summary)> SearchMultipleLogGroupsWithRegexAsync(
-        List<string> logGroupNames,
-        string regexPattern,
-        DateTime? startTime = null,
-        DateTime? endTime = null,
-        int contextLines = 3,
-        bool caseSensitive = false,
-        int maxMatches = 100,
-        int maxStreamsPerGroup = 5)
-    {
-        var stopwatch = Stopwatch.StartNew();
-        var allMatches = new List<LogSearchMatch>();
-        var totalStreamsSearched = 0;
-        
-        foreach (var logGroupName in logGroupNames)
-        {
-            if (allMatches.Count >= maxMatches) break;
-            
-            try
-            {
-                (var groupMatches, _) = await SearchLogEventsWithRegexAsync(
-                    logGroupName, regexPattern, startTime, endTime, 
-                    contextLines, caseSensitive, maxMatches - allMatches.Count, maxStreamsPerGroup);
-                
-                allMatches.AddRange(groupMatches);
-                totalStreamsSearched += Math.Min(maxStreamsPerGroup, groupMatches.Count);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to search log group {LogGroup}", logGroupName);
-            }
-        }
-        
-        stopwatch.Stop();
-        var summary = GenerateLogSearchSummary(allMatches, totalStreamsSearched, stopwatch.Elapsed);
-        summary.LogGroupsSearched = logGroupNames.Count;
-        
-        return (allMatches, summary);
-    }
-
-    // Helper methods - add to CloudWatchService.cs
-    private static List<string> ExtractRegexGroups(Match match)
-    {
-        var extractedValues = new List<string>();
-        
-        // Extract named and numbered groups
-        for (var i = 1; i < match.Groups.Count; i++)
-        {
-            if (match.Groups[i].Success)
-            {
-                extractedValues.Add(match.Groups[i].Value);
-            }
-        }
-        
-        return extractedValues;
-    }
-
-    private static LogSearchSummary GenerateLogSearchSummary(List<LogSearchMatch> matches, int streamsSearched, TimeSpan duration)
-    {
-        var summary = new LogSearchSummary
-        {
-            TotalMatches = matches.Count,
-            LogStreamsSearched = streamsSearched,
-            SearchDuration = duration
-        };
-        
-        if (matches.Count != 0)
-        {
-            summary.FirstMatchTimestamp = matches.Min(m => m.Timestamp);
-            summary.LastMatchTimestamp = matches.Max(m => m.Timestamp);
-            
-            // Analyze error patterns
-            foreach (var match in matches)
-            {
-                var message = match.MatchedLine.ToLower();
-                
-                if (message.Contains("error")) summary.ErrorPatterns["Error"] = summary.ErrorPatterns.GetValueOrDefault("Error") + 1;
-                if (message.Contains("warn")) summary.ErrorPatterns["Warning"] = summary.ErrorPatterns.GetValueOrDefault("Warning") + 1;
-                if (message.Contains("exception")) summary.ErrorPatterns["Exception"] = summary.ErrorPatterns.GetValueOrDefault("Exception") + 1;
-                if (message.Contains("timeout")) summary.ErrorPatterns["Timeout"] = summary.ErrorPatterns.GetValueOrDefault("Timeout") + 1;
-                if (message.Contains("failed")) summary.ErrorPatterns["Failed"] = summary.ErrorPatterns.GetValueOrDefault("Failed") + 1;
-                
-                // Track log stream distribution
-                summary.LogStreamDistribution[match.LogStreamName] = 
-                    summary.LogStreamDistribution.GetValueOrDefault(match.LogStreamName) + 1;
-            }
-        }
-        
-        return summary;
-    }
     
     #endregion
     
     /// <summary>
-    /// Ensure metrics client is initialized and available (async version for auto-init support)
+    /// Ensure the metrics client is initialized and available (async version for auto-init support)
     /// </summary>
     private async Task EnsureMetricsInitializedAsync()
     {
         // Wait for auto-initialization to complete if still running
         if (!_cloudWatchInitialized)
         {
-            var timeout = DateTime.UtcNow.AddSeconds(5);
+            DateTime timeout = DateTime.UtcNow.AddSeconds(5);
             while (!_cloudWatchInitialized && DateTime.UtcNow < timeout)
             {
                 await Task.Delay(100);
             }
         }
         
-        // Check if metrics client is available after auto-initialization
+        // Check if the metrics client is available after auto-initialization
         if (_cloudWatchClient == null)
         {
             throw new InvalidOperationException(
@@ -725,21 +442,21 @@ public class CloudWatchService
     }
 
     /// <summary>
-    /// Ensure logs client is initialized and available (async version for auto-init support)  
+    /// Ensure the logs client is initialized and available (async version for auto-init support)  
     /// </summary>
     private async Task EnsureLogsInitializedAsync()
     {
         // Wait for auto-initialization to complete if still running
         if (!_cloudWatchInitialized)
         {
-            var timeout = DateTime.UtcNow.AddSeconds(5);
+            DateTime timeout = DateTime.UtcNow.AddSeconds(5);
             while (!_cloudWatchInitialized && DateTime.UtcNow < timeout)
             {
                 await Task.Delay(100);
             }
         }
         
-        // Check if logs client is available after auto-initialization
+        // Check if the logs client is available after auto-initialization
         if (_logsClient == null)
         {
             throw new InvalidOperationException(
@@ -758,7 +475,7 @@ public class CloudWatchService
         {
             if (_discoveryService.AutoInitialize())
             {
-                var accountInfo = await _discoveryService.GetAccountInfoAsync();
+                AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
                 
                 var config = new AwsConfiguration
                 {
@@ -766,9 +483,9 @@ public class CloudWatchService
                     ProfileName = Environment.GetEnvironmentVariable("AWS_PROFILE") ?? "default"
                 };
                 
-                // Try to initialize both clients, but allow partial success
-                var metricsSuccess = await TryInitializeMetricsAsync(config);
-                var logsSuccess = await TryInitializeLogsAsync(config);
+                // Try to initialize both clients but allow partial success
+                bool metricsSuccess = await TryInitializeMetricsAsync(config);
+                bool logsSuccess = await TryInitializeLogsAsync(config);
                 
                 if (metricsSuccess || logsSuccess)
                 {
@@ -789,7 +506,7 @@ public class CloudWatchService
     }
 
     /// <summary>
-    /// Try to initialize metrics client with permission testing
+    /// Try to initialize the metrics client with permission testing
     /// </summary>
     private async Task<bool> TryInitializeMetricsAsync(AwsConfiguration config)
     {
@@ -804,7 +521,7 @@ public class CloudWatchService
             };
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            var credentials = credentialsProvider.GetCredentials();
+            AWSCredentials? credentials = credentialsProvider.GetCredentials();
             
             _cloudWatchClient = credentials != null 
                 ? new AmazonCloudWatchClient(credentials, clientConfig)
@@ -826,7 +543,7 @@ public class CloudWatchService
     }
 
     /// <summary>
-    /// Try to initialize logs client with permission testing
+    /// Try to initialize the logs client with permission testing
     /// </summary>
     private async Task<bool> TryInitializeLogsAsync(AwsConfiguration config)
     {
@@ -841,7 +558,7 @@ public class CloudWatchService
             };
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            var credentials = credentialsProvider.GetCredentials();
+            AWSCredentials? credentials = credentialsProvider.GetCredentials();
             
             _logsClient = credentials != null 
                 ? new AmazonCloudWatchLogsClient(credentials, clientConfig)

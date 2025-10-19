@@ -1,3 +1,4 @@
+using Amazon.QuickSight.Model;
 using AwsServer.Controllers.Requests;
 using AwsServer.QuickSight;
 using Microsoft.AspNetCore.Mvc;
@@ -14,11 +15,11 @@ public class QuickSightController(QuickSightService quickSightService) : Control
     /// Initialize QuickSight service with AWS credentials
     /// </summary>
     [HttpPost("initialize")]
-    public async Task<IActionResult> Initialize([FromBody] InitializeQuickSightRequest request)
+    public IActionResult Initialize([FromBody] InitializeQuickSightRequest request)
     {
         try
         {
-            var success = await quickSightService.InitializeAsync(request.Config);
+            bool success = quickSightService.Initialize(request.Config);
             if (success)
             {
                 _awsAccountId = request.AwsAccountId;
@@ -40,7 +41,7 @@ public class QuickSightController(QuickSightService quickSightService) : Control
         try
         {
             EnsureAccountIdSet();
-            var dashboards = await quickSightService.ListDashboardsAsync(_awsAccountId!);
+            ListDashboardsResponse dashboards = await quickSightService.ListDashboardsAsync(_awsAccountId!);
             return Ok(new { success = true, dashboardCount = dashboards.DashboardSummaryList.Count, dashboards });
         }
         catch (Exception ex)
@@ -58,7 +59,7 @@ public class QuickSightController(QuickSightService quickSightService) : Control
         try
         {
             EnsureAccountIdSet();
-            var dashboard = await quickSightService.DescribeDashboardAsync(_awsAccountId!, dashboardId);
+            DescribeDashboardResponse dashboard = await quickSightService.DescribeDashboardAsync(_awsAccountId!, dashboardId);
             return Ok(new { success = true, dashboard });
         }
         catch (Exception ex)
@@ -76,7 +77,7 @@ public class QuickSightController(QuickSightService quickSightService) : Control
         try
         {
             EnsureAccountIdSet();
-            var analyses = await quickSightService.ListAnalysesAsync(_awsAccountId!);
+            ListAnalysesResponse analyses = await quickSightService.ListAnalysesAsync(_awsAccountId!);
             return Ok(new { success = true, analysisCount = analyses.AnalysisSummaryList.Count, analyses });
         }
         catch (Exception ex)
@@ -94,7 +95,7 @@ public class QuickSightController(QuickSightService quickSightService) : Control
         try
         {
             EnsureAccountIdSet();
-            var analysis = await quickSightService.DescribeAnalysisAsync(_awsAccountId!, analysisId);
+            DescribeAnalysisResponse analysis = await quickSightService.DescribeAnalysisAsync(_awsAccountId!, analysisId);
             return Ok(new { success = true, analysis });
         }
         catch (Exception ex)
@@ -112,7 +113,7 @@ public class QuickSightController(QuickSightService quickSightService) : Control
         try
         {
             EnsureAccountIdSet();
-            var datasets = await quickSightService.ListDataSetsAsync(_awsAccountId!);
+            ListDataSetsResponse datasets = await quickSightService.ListDataSetsAsync(_awsAccountId!);
             return Ok(new { success = true, datasetCount = datasets.DataSetSummaries.Count, datasets });
         }
         catch (Exception ex)
@@ -130,7 +131,7 @@ public class QuickSightController(QuickSightService quickSightService) : Control
         try
         {
             EnsureAccountIdSet();
-            var dataset = await quickSightService.DescribeDataSetAsync(_awsAccountId!, dataSetId);
+            DescribeDataSetResponse dataset = await quickSightService.DescribeDataSetAsync(_awsAccountId!, dataSetId);
             return Ok(new { success = true, dataset });
         }
         catch (Exception ex)
@@ -148,7 +149,7 @@ public class QuickSightController(QuickSightService quickSightService) : Control
         try
         {
             EnsureAccountIdSet();
-            var dataSources = await quickSightService.ListDataSourcesAsync(_awsAccountId!);
+            ListDataSourcesResponse dataSources = await quickSightService.ListDataSourcesAsync(_awsAccountId!);
             return Ok(new { success = true, dataSourceCount = dataSources.DataSources.Count, dataSources });
         }
         catch (Exception ex)
@@ -166,7 +167,7 @@ public class QuickSightController(QuickSightService quickSightService) : Control
         try
         {
             EnsureAccountIdSet();
-            var dataSource = await quickSightService.DescribeDataSourceAsync(_awsAccountId!, dataSourceId);
+            DescribeDataSourceResponse dataSource = await quickSightService.DescribeDataSourceAsync(_awsAccountId!, dataSourceId);
             return Ok(new { success = true, dataSource });
         }
         catch (Exception ex)
@@ -186,7 +187,7 @@ public class QuickSightController(QuickSightService quickSightService) : Control
         try
         {
             EnsureAccountIdSet();
-            var response = await quickSightService.GenerateEmbedUrlForAnonymousUserAsync(
+            GenerateEmbedUrlForAnonymousUserResponse response = await quickSightService.GenerateEmbedUrlForAnonymousUserAsync(
                 _awsAccountId!,
                 request.Namespace,
                 request.AuthorizedResourceArns ??
@@ -212,7 +213,7 @@ public class QuickSightController(QuickSightService quickSightService) : Control
         try
         {
             EnsureAccountIdSet();
-            var users = await quickSightService.ListUsersAsync(_awsAccountId!, @namespace);
+            ListUsersResponse users = await quickSightService.ListUsersAsync(_awsAccountId!, @namespace);
             return Ok(new { success = true, userCount = users.UserList.Count, users });
         }
         catch (Exception ex)
@@ -230,7 +231,7 @@ public class QuickSightController(QuickSightService quickSightService) : Control
         try
         {
             EnsureAccountIdSet();
-            var user = await quickSightService.DescribeUserAsync(_awsAccountId!, userName, @namespace);
+            DescribeUserResponse user = await quickSightService.DescribeUserAsync(_awsAccountId!, userName, @namespace);
             return Ok(new { success = true, user });
         }
         catch (Exception ex)

@@ -2,7 +2,7 @@ using AwsServer.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Scalar.AspNetCore;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -10,7 +10,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 
-// Add AWS services
+// Add AWS services (includes response compression)
 builder.Services.AddAwsServices();
 
 // Configure JSON options
@@ -20,7 +20,7 @@ builder.Services.Configure<JsonOptions>(options =>
     options.JsonSerializerOptions.WriteIndented = true;
 });
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
@@ -28,6 +28,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
+
+// Enable response compression for large log responses
+app.UseResponseCompression();
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
