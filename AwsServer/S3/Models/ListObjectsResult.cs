@@ -1,4 +1,6 @@
-﻿namespace AwsServer.S3.Models;
+﻿using Amazon.S3.Model;
+
+namespace AwsServer.S3.Models;
 
 /// <summary>
 /// Paginated response for S3 list objects operation
@@ -8,7 +10,7 @@ public class ListObjectsResult
     /// <summary>
     /// S3 objects in this page
     /// </summary>
-    public List<Amazon.S3.Model.S3Object> Objects { get; set; } = [];
+    public List<S3Object> Objects { get; set; } = [];
     
     /// <summary>
     /// Number of objects in this page

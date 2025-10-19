@@ -1,4 +1,3 @@
-using Azure.Core;
 using AzureServer.Authentication;
 using Microsoft.AspNetCore.Mvc;
 

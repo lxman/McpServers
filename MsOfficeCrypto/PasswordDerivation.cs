@@ -155,7 +155,7 @@ namespace MsOfficeCrypto
             try
             {
                 // Use the corrected key derivation
-                byte[] derivedKey = DeriveKey(password, verifier.Salt, (int)header.KeySize, 0);
+                byte[] derivedKey = DeriveKey(password, verifier.Salt, (int)header.KeySize);
 
                 return TryVerifyWithKey(derivedKey, verifier, "Corrected Standard");
             }

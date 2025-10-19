@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Xml.Linq;
 using MsOfficeCrypto.Exceptions;
 using MsOfficeCrypto.Structures;
@@ -423,7 +424,7 @@ namespace MsOfficeCrypto
                 var xmlData = new byte[encInfo.EncryptionInfoData.Length - 8];
                 Array.Copy(encInfo.EncryptionInfoData, 8, xmlData, 0, xmlData.Length);
                 
-                string xmlString = System.Text.Encoding.UTF8.GetString(xmlData);
+                string xmlString = Encoding.UTF8.GetString(xmlData);
                 XDocument doc = XDocument.Parse(xmlString);
                 
                 XNamespace encNs = "http://schemas.microsoft.com/office/2006/encryption";

@@ -1,5 +1,4 @@
 using AzureServer.Services.CostManagement;
-using AzureServer.Services.CostManagement.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;

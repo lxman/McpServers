@@ -3,14 +3,13 @@ using Azure;
 using Azure.Core;
 using Azure.Monitor.Query;
 using Azure.Monitor.Query.Models;
-using Azure.ResourceManager;
 using Azure.ResourceManager.ApplicationInsights;
 using Azure.ResourceManager.Monitor;
 using Azure.ResourceManager.OperationalInsights;
 using Azure.ResourceManager.Resources;
 using AzureServer.Services.Core;
 using AzureServer.Services.Monitor.Models;
-using MetricValue = Azure.Monitor.Query.Models.MetricValue;
+using MetricValue = AzureServer.Services.Monitor.Models.MetricValue;
 
 namespace AzureServer.Services.Monitor;
 
@@ -326,7 +325,7 @@ public class MonitorService(
 
                     foreach (var value in timeSeries.Values)
                     {
-                        timeSeriesData.Data.Add(new Models.MetricValue
+                        timeSeriesData.Data.Add(new MetricValue
                         {
                             TimeStamp = value.TimeStamp.DateTime,
                             Average = value.Average,

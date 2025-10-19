@@ -1,4 +1,6 @@
-﻿namespace AwsServer.ECR.Models;
+﻿using Amazon.ECR.Model;
+
+namespace AwsServer.ECR.Models;
 
 /// <summary>
 /// Paginated response for ECR list images operation
@@ -8,7 +10,7 @@ public class ListImagesResult
     /// <summary>
     /// Image identifiers in this page
     /// </summary>
-    public List<Amazon.ECR.Model.ImageIdentifier> ImageIds { get; set; } = [];
+    public List<ImageIdentifier> ImageIds { get; set; } = [];
     
     /// <summary>
     /// Number of images in this page

@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Diagnostics;
+using System.Text.RegularExpressions;
 using Amazon.CloudWatch;
 using Amazon.CloudWatch.Model;
 using Amazon.CloudWatchLogs;
@@ -511,7 +512,7 @@ public class CloudWatchService
         int maxMatches = 100,
         int maxStreamsToSearch = 20)
     {
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var stopwatch = Stopwatch.StartNew();
         await EnsureLogsInitializedAsync();
         
         var regex = new Regex(regexPattern, caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase);
@@ -615,7 +616,7 @@ public class CloudWatchService
         int maxMatches = 100,
         int maxStreamsPerGroup = 5)
     {
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var stopwatch = Stopwatch.StartNew();
         var allMatches = new List<LogSearchMatch>();
         var totalStreamsSearched = 0;
         

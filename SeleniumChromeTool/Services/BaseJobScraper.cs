@@ -9,7 +9,7 @@ public abstract class BaseJobScraper : IJobSiteScraper, IDisposable
     protected IWebDriver? Driver;
     protected readonly ILogger Logger;
     protected readonly Random Random = new();
-    private bool _disposed = false;
+    private bool _disposed;
     
     public abstract JobSite SupportedSite { get; }
 

@@ -1,3 +1,4 @@
+using Amazon;
 using Amazon.CloudWatch;
 using Amazon.CloudWatch.Model;
 using Amazon.CloudWatchLogs;
@@ -8,11 +9,12 @@ using Amazon.ECS;
 using Amazon.ECS.Model;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
+using Amazon.S3;
 using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
 using AwsServer.Configuration.Models;
 using RegistryTools;
-
+using InvalidOperationException = System.InvalidOperationException;
 
 namespace AwsServer.Configuration;
 
@@ -301,7 +303,7 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
     {
         if (_stsClient is null)
         {
-            throw new System.InvalidOperationException(
+            throw new InvalidOperationException(
                 "AWS Discovery service is not initialized. Call Initialize first.");
         }
     }
@@ -418,7 +420,7 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
         {
             var config = new AmazonCloudWatchConfig
             {
-                RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region)
+                RegionEndpoint = RegionEndpoint.GetBySystemName(region)
             };
 
             var client =
@@ -458,7 +460,7 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
         {
             var config = new AmazonCloudWatchLogsConfig
             {
-                RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region)
+                RegionEndpoint = RegionEndpoint.GetBySystemName(region)
             };
 
             var client =
@@ -497,15 +499,15 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
     {
         try
         {
-            var config = new Amazon.S3.AmazonS3Config
+            var config = new AmazonS3Config
             {
-                RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region)
+                RegionEndpoint = RegionEndpoint.GetBySystemName(region)
             };
 
             var client =
                 _credentials is not null
-                    ? new Amazon.S3.AmazonS3Client(_credentials, config)
-                    : new Amazon.S3.AmazonS3Client(config);
+                    ? new AmazonS3Client(_credentials, config)
+                    : new AmazonS3Client(config);
 
             using (client)
             {
@@ -539,7 +541,7 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
         {
             var config = new AmazonECRConfig
             {
-                RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region)
+                RegionEndpoint = RegionEndpoint.GetBySystemName(region)
             };
 
             var client =
@@ -580,7 +582,7 @@ public class AwsDiscoveryService(ILogger<AwsDiscoveryService> logger)
         {
             var config = new AmazonECSConfig
             {
-                RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region)
+                RegionEndpoint = RegionEndpoint.GetBySystemName(region)
             };
 
             var client =

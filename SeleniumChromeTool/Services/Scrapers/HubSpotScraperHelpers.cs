@@ -85,7 +85,6 @@ public partial class HubSpotScraper
                     }
                     catch
                     {
-                        continue;
                     }
                 }
                 

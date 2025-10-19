@@ -390,12 +390,10 @@ public partial class SimplifyJobsScraper : BaseJobScraper
                     Logger.LogInformation("Authentication confirmed - proceeding with scraping");
                     return true;
                 }
-                else
-                {
-                    Logger.LogWarning($"Authentication unclear. Current URL: {currentUrl}");
-                    Logger.LogInformation("Proceeding with scraping attempt anyway");
-                    return true; // Proceed anyway
-                }
+
+                Logger.LogWarning($"Authentication unclear. Current URL: {currentUrl}");
+                Logger.LogInformation("Proceeding with scraping attempt anyway");
+                return true; // Proceed anyway
             }
             catch (Exception ex)
             {
@@ -1111,7 +1109,6 @@ public partial class SimplifyJobsScraper : BaseJobScraper
                 catch (Exception ex)
                 {
                     Logger.LogWarning($"API endpoint {apiUrl} failed: {ex.Message}");
-                    continue;
                 }
             }
             
@@ -1308,11 +1305,9 @@ public partial class SimplifyJobsScraper : BaseJobScraper
                     Logger.LogInformation("Successfully extracted job data from page");
                     return jsonDoc.RootElement;
                 }
-                else
-                {
-                    Logger.LogWarning("Could not find job title on page - skipping extraction");
-                }
-                
+
+                Logger.LogWarning("Could not find job title on page - skipping extraction");
+
             }
             catch (Exception ex)
             {
@@ -1474,11 +1469,11 @@ public partial class SimplifyJobsScraper : BaseJobScraper
             // 🚀 Enhanced Benefits field: Show URL type for clarity
             if (!string.IsNullOrEmpty(externalUrl))
             {
-                job.Benefits = $"✅ Direct apply link available";
+                job.Benefits = "✅ Direct apply link available";
             }
             else
             {
-                job.Benefits = $"⚠️ Apply via SimplifyJobs page";
+                job.Benefits = "⚠️ Apply via SimplifyJobs page";
             }
             
             // Calculate basic match score for .NET roles

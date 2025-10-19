@@ -36,7 +36,7 @@ public class JobScrapingController : ControllerBase
             return Ok(new { 
                 Success = true,
                 JobCount = jobs.Count,
-                Sites = request.Sites,
+                request.Sites,
                 Jobs = jobs.Take(request.MaxResults),
                 TopMatches = jobs.Where(j => j.MatchScore > 50).Take(10),
                 ScrapedAt = DateTime.UtcNow,
@@ -130,17 +130,15 @@ public class JobScrapingController : ControllerBase
                     Success = true,
                     Message = $"Successfully saved {request.Jobs.Count} jobs",
                     JobCount = request.Jobs.Count,
-                    UserId = request.UserId,
+                    request.UserId,
                     SavedAt = DateTime.UtcNow
                 });
             }
-            else
-            {
-                return StatusCode(500, new { 
-                    Success = false, 
-                    Error = "Failed to save jobs to database" 
-                });
-            }
+
+            return StatusCode(500, new { 
+                Success = false, 
+                Error = "Failed to save jobs to database" 
+            });
         }
         catch (Exception ex)
         {
@@ -409,15 +407,15 @@ public class JobScrapingController : ControllerBase
 
             return Ok(new { 
                 Success = true,
-                TotalJobsFound = results.TotalJobsFound,
+                results.TotalJobsFound,
                 SearchDuration = results.TotalSearchDuration,
-                SearchTermsUsed = results.SearchTermsUsed,
+                results.SearchTermsUsed,
                 Results = new
                 {
-                    HighPriority = new { Count = results.HighPriorityJobs.Count, Jobs = results.HighPriorityJobs.Take(5) },
-                    ApplicationReady = new { Count = results.ApplicationReadyJobs.Count, Jobs = results.ApplicationReadyJobs.Take(10) },
-                    Consider = new { Count = results.ConsiderJobs.Count, Jobs = results.ConsiderJobs.Take(5) },
-                    Skipped = new { Count = results.SkippedJobs.Count }
+                    HighPriority = new { results.HighPriorityJobs.Count, Jobs = results.HighPriorityJobs.Take(5) },
+                    ApplicationReady = new { results.ApplicationReadyJobs.Count, Jobs = results.ApplicationReadyJobs.Take(10) },
+                    Consider = new { results.ConsiderJobs.Count, Jobs = results.ConsiderJobs.Take(5) },
+                    Skipped = new { results.SkippedJobs.Count }
                 },
                 Enhancement = "Phase 1 - Multi-Search Automation with Intelligent Scoring",
                 Message = "Comprehensive .NET job search completed with automated term cycling and enhanced scoring",
@@ -449,7 +447,7 @@ public class JobScrapingController : ControllerBase
             return Ok(new { 
                 Success = results.IsSuccessful,
                 ProcessedJobs = results.ProcessedJobs.Count,
-                PagesProcessed = results.PagesProcessed,
+                results.PagesProcessed,
                 Duration = results.TotalDuration,
                 Statistics = new
                 {
@@ -461,7 +459,7 @@ public class JobScrapingController : ControllerBase
                     JobsPerMinute = Math.Round(results.JobsPerMinute, 1)
                 },
                 Jobs = results.ProcessedJobs.OrderByDescending(j => j.MatchScore).Take(20),
-                Errors = results.Errors,
+                results.Errors,
                 Enhancement = "Phase 1 - Intelligent Bulk Processing (10-20x capacity increase)",
                 Message = $"Bulk processing completed: {results.ProcessedJobs.Count} jobs processed across {results.PagesProcessed} pages",
                 ScrapedAt = DateTime.UtcNow
@@ -511,12 +509,12 @@ public class JobScrapingController : ControllerBase
                     Duration = results.TotalDuration,
                     JobsPerMinute = Math.Round(results.JobsPerMinute, 1),
                     AverageScore = Math.Round(results.AverageScore, 1),
-                    PagesProcessed = results.PagesProcessed
+                    results.PagesProcessed
                 },
                 Enhancement = "Phase 1 - Enhanced SimplifyJobs with Bulk Processing + Smart Scoring",
                 Message = "Enhanced SimplifyJobs scraping with 10x capacity and intelligent scoring",
                 ScrapedAt = DateTime.UtcNow,
-                Errors = results.Errors
+                results.Errors
             });
         }
         catch (Exception ex)
@@ -547,9 +545,9 @@ public class JobScrapingController : ControllerBase
                 Success = true,
                 OriginalJobCount = result.OriginalCount,
                 UniqueJobCount = result.UniqueCount,
-                DuplicatesRemoved = result.DuplicatesRemoved,
+                result.DuplicatesRemoved,
                 DeduplicationRate = $"{result.DeduplicationRate}%",
-                UniqueJobs = result.UniqueJobs,
+                result.UniqueJobs,
                 DuplicateGroups = result.DuplicateGroups.Take(10), // Limit for response size
                 Statistics = new
                 {
@@ -562,7 +560,7 @@ public class JobScrapingController : ControllerBase
                 },
                 Enhancement = "Phase 2 - Smart Deduplication with Cross-Source Matching",
                 Message = $"Deduplication completed: {result.DuplicatesRemoved} duplicates removed from {result.OriginalCount} jobs",
-                ProcessedAt = result.ProcessedAt
+                result.ProcessedAt
             });
         }
         catch (Exception ex)
@@ -595,15 +593,15 @@ public class JobScrapingController : ControllerBase
 
             return Ok(new { 
                 Success = true,
-                TotalJobs = result.TotalJobs,
+                result.TotalJobs,
                 Categorization = new
                 {
-                    Immediate = new { Count = result.ImmediateApplications.Count, Jobs = result.ImmediateApplications.Take(5) },
-                    HighPriority = new { Count = result.HighPriorityApplications.Count, Jobs = result.HighPriorityApplications.Take(10) },
-                    MediumPriority = new { Count = result.MediumPriorityApplications.Count, Jobs = result.MediumPriorityApplications.Take(5) },
-                    LowPriority = new { Count = result.LowPriorityApplications.Count, Jobs = result.LowPriorityApplications.Take(3) },
-                    NotRecommended = new { Count = result.NotRecommended.Count },
-                    AlreadyApplied = new { Count = result.AlreadyApplied.Count }
+                    Immediate = new { result.ImmediateApplications.Count, Jobs = result.ImmediateApplications.Take(5) },
+                    HighPriority = new { result.HighPriorityApplications.Count, Jobs = result.HighPriorityApplications.Take(10) },
+                    MediumPriority = new { result.MediumPriorityApplications.Count, Jobs = result.MediumPriorityApplications.Take(5) },
+                    LowPriority = new { result.LowPriorityApplications.Count, Jobs = result.LowPriorityApplications.Take(3) },
+                    NotRecommended = new { result.NotRecommended.Count },
+                    AlreadyApplied = new { result.AlreadyApplied.Count }
                 },
                 ApplicationPlan = new
                 {
@@ -614,7 +612,7 @@ public class JobScrapingController : ControllerBase
                 },
                 Insights = new
                 {
-                    Recommendations = result.Insights.Recommendations,
+                    result.Insights.Recommendations,
                     PriorityDistribution = new
                     {
                         ImmediatePercentage = result.TotalJobs > 0 ? Math.Round((double)result.ImmediateApplications.Count / result.TotalJobs * 100, 1) : 0.0,
@@ -624,7 +622,7 @@ public class JobScrapingController : ControllerBase
                 },
                 Enhancement = "Phase 2 - Intelligent Application Management with Priority Categorization",
                 Message = $"Application categorization completed: {result.ImmediateApplications.Count + result.HighPriorityApplications.Count} application-ready jobs identified",
-                ProcessedAt = result.ProcessedAt
+                result.ProcessedAt
             });
         }
         catch (Exception ex)
@@ -659,13 +657,13 @@ public class JobScrapingController : ControllerBase
                 Success = true,
                 Report = new
                 {
-                    GeneratedAt = result.GeneratedAt,
-                    AnalysisPeriod = result.AnalysisPeriod,
-                    TotalJobsAnalyzed = result.TotalJobsAnalyzed,
+                    result.GeneratedAt,
+                    result.AnalysisPeriod,
+                    result.TotalJobsAnalyzed,
                     
                     SalaryInsights = new
                     {
-                        OverallStats = result.SalaryTrends.OverallStats,
+                        result.SalaryTrends.OverallStats,
                         // RemoteVsOnsite = result.SalaryTrends.RemoteVsOnsite, // Commented out - not implemented yet
                         TopPayingCompanies = result.SalaryTrends.TopPayingCompanies.Take(10),
                         ExperienceLevelBreakdown = result.SalaryTrends.ByExperienceLevel.Take(5)
@@ -685,15 +683,15 @@ public class JobScrapingController : ControllerBase
                     HiringPatterns = new
                     {
                         MostActiveCompanies = result.HiringPatterns.MostActiveCompanies.Take(15),
-                        HiringVelocityTrends = result.HiringPatterns.HiringVelocityTrends,
-                        CompanySizeBreakdown = result.HiringPatterns.CompanySizeBreakdown,
-                        IndustryTrends = result.HiringPatterns.IndustryTrends
+                        result.HiringPatterns.HiringVelocityTrends,
+                        result.HiringPatterns.CompanySizeBreakdown,
+                        result.HiringPatterns.IndustryTrends
                     },
                     
                     RemoteWorkTrends = new
                     {
-                        OverallDistribution = result.RemoteWorkTrends.OverallDistribution,
-                        ByExperienceLevel = result.RemoteWorkTrends.ByExperienceLevel,
+                        result.RemoteWorkTrends.OverallDistribution,
+                        result.RemoteWorkTrends.ByExperienceLevel,
                         TopRemoteCompanies = result.RemoteWorkTrends.TopRemoteCompanies.Take(10)
                     },
                     
@@ -705,17 +703,15 @@ public class JobScrapingController : ControllerBase
                     
                     ExperienceLevelDemand = new
                     {
-                        LevelBreakdown = result.ExperienceLevelDemand.LevelBreakdown,
-                        CareerProgressionInsights = result.ExperienceLevelDemand.CareerProgressionInsights
+                        result.ExperienceLevelDemand.LevelBreakdown, result.ExperienceLevelDemand.CareerProgressionInsights
                     },
-                    
-                    CompetitivenessInsights = result.CompetitivenessInsights,
+                    result.CompetitivenessInsights,
                     
                     KeyRecommendations = result.Recommendations.Take(10)
                 },
                 Enhancement = "Phase 2 - Comprehensive Market Intelligence with Trend Analysis",
                 Message = $"Market intelligence report generated from {result.TotalJobsAnalyzed} jobs with {result.Recommendations.Count} recommendations",
-                GeneratedAt = result.GeneratedAt
+                result.GeneratedAt
             });
         }
         catch (Exception ex)
@@ -794,8 +790,8 @@ public class JobScrapingController : ControllerBase
                 {
                     Deduplication = new
                     {
-                        DuplicatesRemoved = analysisResult.DeduplicationResult.DuplicatesRemoved,
-                        DeduplicationRate = analysisResult.DeduplicationResult.DeduplicationRate,
+                        analysisResult.DeduplicationResult.DuplicatesRemoved,
+                        analysisResult.DeduplicationResult.DeduplicationRate,
                         UniqueJobs = analysisResult.DeduplicationResult.UniqueJobs.Take(20) // Limit for response size
                     },
                     ApplicationPriority = new
@@ -803,7 +799,7 @@ public class JobScrapingController : ControllerBase
                         Immediate = analysisResult.CategorizationResult.ImmediateApplications.Take(5),
                         HighPriority = analysisResult.CategorizationResult.HighPriorityApplications.Take(10),
                         DailyPlan = analysisResult.CategorizationResult.Insights.DailyApplicationPlan,
-                        Recommendations = analysisResult.CategorizationResult.Insights.Recommendations
+                        analysisResult.CategorizationResult.Insights.Recommendations
                     },
                     MarketInsights = new
                     {
@@ -814,7 +810,7 @@ public class JobScrapingController : ControllerBase
                         KeyRecommendations = analysisResult.MarketIntelligenceResult.Recommendations.Take(8)
                     }
                 },
-                ProcessingSteps = analysisResult.ProcessingSteps,
+                analysisResult.ProcessingSteps,
                 Enhancement = "Phase 2 - Complete Intelligence Pipeline: Deduplication + Application Management + Market Intelligence",
                 Message = $"Enhanced analysis completed: {analysisResult.DeduplicationResult.UniqueCount} unique jobs analyzed with intelligent categorization and market insights",
                 ProcessedAt = analysisResult.CompletedAt
@@ -846,15 +842,13 @@ public class JobScrapingController : ControllerBase
                     Success = true,
                     Message = "Application tracked successfully",
                     ApplicationId = request.Application.Id,
-                    Company = request.Application.Company,
-                    Title = request.Application.Title,
+                    request.Application.Company,
+                    request.Application.Title,
                     TrackedAt = DateTime.UtcNow
                 });
             }
-            else
-            {
-                return StatusCode(500, new { Success = false, Error = "Failed to track application" });
-            }
+
+            return StatusCode(500, new { Success = false, Error = "Failed to track application" });
         }
         catch (Exception ex)
         {
@@ -884,15 +878,13 @@ public class JobScrapingController : ControllerBase
                 return Ok(new { 
                     Success = true,
                     Message = "Application status updated successfully",
-                    ApplicationId = request.ApplicationId,
+                    request.ApplicationId,
                     NewStatus = request.Status.ToString(),
                     UpdatedAt = DateTime.UtcNow
                 });
             }
-            else
-            {
-                return StatusCode(500, new { Success = false, Error = "Failed to update application status" });
-            }
+
+            return StatusCode(500, new { Success = false, Error = "Failed to update application status" });
         }
         catch (Exception ex)
         {

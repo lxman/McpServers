@@ -196,7 +196,6 @@ public partial class StackOverflowScraper
                     }
                     catch
                     {
-                        continue;
                     }
                 }
                 

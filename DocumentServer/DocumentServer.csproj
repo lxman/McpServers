@@ -10,7 +10,7 @@
         <!-- Office Processing -->
         <PackageReference Include="ClosedXML" Version="0.105.0" />
         <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
-        <PackageReference Include="ShapeCrawler" Version="0.74.0" />
+        <PackageReference Include="ShapeCrawler" Version="0.75.0" />
         <PackageReference Include="NPOI" Version="2.7.5" />
         
         <!-- PDF Processing -->
@@ -32,7 +32,7 @@
         <!-- API -->
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9"/>
         <PackageReference Include="Scalar.AspNetCore" Version="2.9.0" />
-        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0-rc.1.25451.107" />
+        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0-rc.2.25502.107" />
     </ItemGroup>
 
     <ItemGroup>

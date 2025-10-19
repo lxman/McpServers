@@ -170,7 +170,7 @@ namespace MsOfficeCrypto.Decryption
             // TODO: Position stream to EncryptedPackage data start
             // This would require additional compound file navigation
             
-            return new StreamingDocumentDecryptor(encryptionInfo, fileStream, true);
+            return new StreamingDocumentDecryptor(encryptionInfo, fileStream);
         }
         
         #endregion
@@ -216,12 +216,10 @@ namespace MsOfficeCrypto.Decryption
                     BytesDecrypted += bytesRead;
                     break;
                 }
-                else
-                {
-                    // Intermediate block - use TransformBlock
-                    int decryptedBytes = decryptor.TransformBlock(buffer, 0, bytesRead, decryptedBuffer, 0);
-                    await outputStream.WriteAsync(decryptedBuffer, 0, decryptedBytes, cancellationToken);
-                }
+
+                // Intermediate block - use TransformBlock
+                int decryptedBytes = decryptor.TransformBlock(buffer, 0, bytesRead, decryptedBuffer, 0);
+                await outputStream.WriteAsync(decryptedBuffer, 0, decryptedBytes, cancellationToken);
 
                 BytesDecrypted += bytesRead;
             }

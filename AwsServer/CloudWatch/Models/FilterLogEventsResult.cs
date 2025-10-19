@@ -10,7 +10,7 @@ public class FilterLogEventsResult
     /// <summary>
     /// Log events in this page
     /// </summary>
-    public List<Amazon.CloudWatchLogs.Model.FilteredLogEvent> Events { get; set; } = [];
+    public List<FilteredLogEvent> Events { get; set; } = [];
     
     /// <summary>
     /// Number of events in this page
@@ -23,7 +23,7 @@ public class FilterLogEventsResult
     public bool HasMoreResults { get; set; }
     
     /// <summary>
-    /// Token to retrieve next page of results. 
+    /// Token to retrieve the next page of results. 
     /// Pass this to the next FilterLogEventsAsync call to continue pagination.
     /// </summary>
     public string? NextToken { get; set; }

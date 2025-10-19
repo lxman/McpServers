@@ -2,6 +2,7 @@ using AwsServer.Configuration;
 using AwsServer.Controllers.Requests;
 using AwsServer.ECS;
 using Microsoft.AspNetCore.Mvc;
+
 // ReSharper disable InconsistentNaming
 
 namespace AwsServer.Controllers;

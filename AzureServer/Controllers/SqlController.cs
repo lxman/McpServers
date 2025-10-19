@@ -1,5 +1,4 @@
 using AzureServer.Services.Sql.DbManagement;
-using AzureServer.Services.Sql.DbManagement.Models;
 using AzureServer.Services.Sql.QueryExecution;
 using Microsoft.AspNetCore.Mvc;
 

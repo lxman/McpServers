@@ -167,7 +167,7 @@ public class BuiltInScraper : BaseJobScraper
                     if (elements.Count > 0)
                     {
                         contentFound = true;
-                        Logger.LogInformation($"Job content detected after smart wait");
+                        Logger.LogInformation("Job content detected after smart wait");
                         break;
                     }
                     
@@ -176,7 +176,7 @@ public class BuiltInScraper : BaseJobScraper
                     if (pageSource.Contains("Software Engineer") || pageSource.Contains("Developer") || pageSource.Contains("jobs"))
                     {
                         contentFound = true;
-                        Logger.LogInformation($"Job-related content detected in page source");
+                        Logger.LogInformation("Job-related content detected in page source");
                         break;
                     }
                     
@@ -431,7 +431,6 @@ public class BuiltInScraper : BaseJobScraper
                 }
                 catch (NoSuchElementException)
                 {
-                    continue;
                 }
             }
             
@@ -472,10 +471,8 @@ public class BuiltInScraper : BaseJobScraper
                 {
                     return "https://builtin.com/jobs/remote/dev-engineering";
                 }
-                else
-                {
-                    return "https://builtin.com/jobs/dev-engineering";
-                }
+
+                return "https://builtin.com/jobs/dev-engineering";
             }
             
             string searchTerm = Uri.EscapeDataString(request.SearchTerm);
@@ -486,10 +483,8 @@ public class BuiltInScraper : BaseJobScraper
             {
                 return $"{baseUrl}/jobs?q={searchTerm}&location={location}";
             }
-            else
-            {
-                return $"{baseUrl}/jobs?q={searchTerm}";
-            }
+
+            return $"{baseUrl}/jobs?q={searchTerm}";
         }
         
         return $"{baseUrl}/jobs";

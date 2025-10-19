@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 
 namespace MongoTools.Controllers;
 
@@ -204,7 +204,7 @@ public class DatabaseController(MongoDbService mongoDbService, ILogger<DatabaseC
                 {
                     switchDatabase = $"POST /api/database/switch with body {{ \"databaseName\": \"target_db\", \"serverName\": \"{serverName}\" }}",
                     browseDatabase = $"GET /api/database/{{databaseName}}/collections?serverName={serverName}",
-                    queryAnyDatabase = $"POST /api/database/query with database and collection names"
+                    queryAnyDatabase = "POST /api/database/query with database and collection names"
                 }
             });
         }

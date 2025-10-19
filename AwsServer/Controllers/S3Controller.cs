@@ -262,7 +262,7 @@ public class S3Controller(S3Service s3Service) : ControllerBase
             {
                 success = true,
                 bucketName,
-                versioningEnabled = response.VersioningConfig.Status == Amazon.S3.VersionStatus.Enabled,
+                versioningEnabled = response.VersioningConfig.Status == VersionStatus.Enabled,
                 status = response.VersioningConfig.Status?.Value
             });
         }

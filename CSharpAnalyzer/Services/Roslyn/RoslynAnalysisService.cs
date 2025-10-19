@@ -4,6 +4,7 @@ using CSharpAnalyzer.Models.Roslyn;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Formatting;
 using SymbolInfo = CSharpAnalyzer.Models.Roslyn.SymbolInfo;
 using TypeInfo = Microsoft.CodeAnalysis.TypeInfo;
 using RoslynSymbolInfo = Microsoft.CodeAnalysis.SymbolInfo;
@@ -153,7 +154,7 @@ public class RoslynAnalysisService
 
             // Format using Roslyn's formatting API
             var workspace = new AdhocWorkspace();
-            SyntaxNode formattedRoot = Microsoft.CodeAnalysis.Formatting.Formatter.Format(
+            SyntaxNode formattedRoot = Formatter.Format(
                 root, 
                 workspace, 
                 workspace.Options);

@@ -474,7 +474,7 @@ public class MongoDbService
 
     private IMongoDatabase EnsureConnected()
     {
-        return GetDatabase(DEFAULT_SERVER_NAME);
+        return GetDatabase();
     }
 
     public async Task<string> ListCollectionsAsync(string serverName = DEFAULT_SERVER_NAME)
@@ -729,7 +729,7 @@ public class MongoDbService
         }) ?? Enumerable.Empty<object>();
         
         List<object> profilesList = profiles.ToList();
-        debugInfo.Add($"");
+        debugInfo.Add("");
         debugInfo.Add($"Processed profiles count: {profilesList.Count}");
         
         // Include current connections from connection manager

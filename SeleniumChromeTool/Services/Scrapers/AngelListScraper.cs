@@ -149,7 +149,7 @@ public class AngelListScraper : BaseJobScraper
                     if (elements.Count > 0)
                     {
                         contentFound = true;
-                        Logger.LogInformation($"AngelList job content detected after smart wait");
+                        Logger.LogInformation("AngelList job content detected after smart wait");
                         break;
                     }
                     
@@ -158,7 +158,7 @@ public class AngelListScraper : BaseJobScraper
                     if (pageSource.Contains("-at-") || pageSource.Contains("startup-job") || pageSource.Contains("job-posting"))
                     {
                         contentFound = true;
-                        Logger.LogInformation($"AngelList job patterns detected in page source");
+                        Logger.LogInformation("AngelList job patterns detected in page source");
                         break;
                     }
                     
@@ -214,7 +214,6 @@ public class AngelListScraper : BaseJobScraper
                 }
                 catch (NoSuchElementException)
                 {
-                    continue;
                 }
             }
             

@@ -1,5 +1,4 @@
 using AzureServer.Services.EventHubs;
-using AzureServer.Services.EventHubs.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;

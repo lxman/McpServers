@@ -1,5 +1,4 @@
 using AzureServer.Services.KeyVault;
-using AzureServer.Services.KeyVault.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;

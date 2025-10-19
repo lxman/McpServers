@@ -914,7 +914,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
                 byte[] baseBytes = baseIp.GetAddressBytes();
                 for (var i = 1; i <= Math.Min(10, Math.Pow(2, 32 - prefixLength)); i++)
                 {
-                    var ip = new IPAddress(new byte[] 
+                    var ip = new IPAddress(new[] 
                     { 
                         baseBytes[0], 
                         baseBytes[1], 
@@ -936,7 +936,7 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
                 
                 for (int i = startBytes[3]; i <= endBytes[3] && i <= startBytes[3] + 20; i++)
                 {
-                    var ip = new IPAddress(new byte[] { startBytes[0], startBytes[1], startBytes[2], (byte)i });
+                    var ip = new IPAddress(new[] { startBytes[0], startBytes[1], startBytes[2], (byte)i });
                     targets.Add(ip.ToString());
                 }
             }
@@ -1017,8 +1017,8 @@ public class TrafficGenerationService(ILogger<TrafficGenerationService> logger) 
                 interfaces.Add(new
                 {
                     Index = i,
-                    Name = device.Name,
-                    Description = device.Description,
+                    device.Name,
+                    device.Description,
                     MacAddress = device.MacAddress?.ToString() ?? "Unknown",
                     IsLoopback = device.Name?.ToLower().Contains("loopback") ?? false
                 });

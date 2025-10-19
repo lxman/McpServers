@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.RegularExpressions;
 using MailKit;
 using MailKit.Net.Imap;
@@ -19,7 +20,7 @@ public class EmailJobAlertService
     {
         _logger = logger;
         _imapServer = configuration["EmailSettings:ImapServer"] ?? "";
-        _imapPort = configuration.GetValue<int>("EmailSettings:ImapPort", 993);
+        _imapPort = configuration.GetValue("EmailSettings:ImapPort", 993);
         _username = configuration["EmailSettings:Username"] ?? "";
         _password = configuration["EmailSettings:Password"] ?? "";
     }
@@ -84,7 +85,7 @@ public class EmailJobAlertService
                     try
                     {
                         MimeMessage? msg = await client.Inbox.GetMessageAsync(id);
-                        _logger.LogInformation($"Recent email from: {msg.From.FirstOrDefault()?.ToString()}, Subject: {msg.Subject}");
+                        _logger.LogInformation($"Recent email from: {msg.From.FirstOrDefault()}, Subject: {msg.Subject}");
                     }
                     catch (Exception ex)
                     {
@@ -403,7 +404,7 @@ public class EmailJobAlertService
         text = Regex.Replace(text, @"<[^>]*>", "");
         
         // Decode HTML entities
-        text = System.Net.WebUtility.HtmlDecode(text);
+        text = WebUtility.HtmlDecode(text);
         
         // Clean up whitespace
         text = Regex.Replace(text, @"\s+", " ");
@@ -545,7 +546,6 @@ public class EmailJobAlertService
                 catch (Exception ex)
                 {
                     _logger.LogDebug($"URL {url} failed: {ex.Message}");
-                    continue;
                 }
             }
             

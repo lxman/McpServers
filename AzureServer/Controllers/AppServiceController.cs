@@ -1,5 +1,4 @@
 using AzureServer.Services.AppService;
-using AzureServer.Services.AppService.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;

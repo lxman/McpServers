@@ -1,4 +1,3 @@
-using AwsServer.Configuration;
 using AwsServer.Controllers.Requests;
 using AwsServer.QuickSight;
 using Microsoft.AspNetCore.Mvc;

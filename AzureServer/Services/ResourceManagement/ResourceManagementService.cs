@@ -1,6 +1,5 @@
 ﻿using Azure;
 using Azure.Core;
-using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
 using AzureServer.Services.Core;
 using AzureServer.Services.ResourceManagement.Models;

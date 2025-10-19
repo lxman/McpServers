@@ -1,5 +1,7 @@
-﻿using Amazon.S3;
+﻿using System.Net;
+using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.S3.Util;
 using AwsServer.Configuration;
 using AwsServer.S3.Models;
 
@@ -266,7 +268,7 @@ public class S3Service
     public async Task<bool> BucketExistsAsync(string bucketName)
     {
         await EnsureInitializedAsync();
-        return await Amazon.S3.Util.AmazonS3Util.DoesS3BucketExistV2Async(_s3Client!, bucketName);
+        return await AmazonS3Util.DoesS3BucketExistV2Async(_s3Client!, bucketName);
     }
     
     /// <summary>
@@ -281,7 +283,7 @@ public class S3Service
             await _s3Client!.GetObjectMetadataAsync(bucketName, key);
             return true;
         }
-        catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
             return false;
         }

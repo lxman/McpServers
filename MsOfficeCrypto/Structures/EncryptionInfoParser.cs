@@ -196,7 +196,7 @@ namespace MsOfficeCrypto.Structures
                 var xmlData = new byte[data.Length - 8];
                 Array.Copy(data, 8, xmlData, 0, xmlData.Length);
                 
-                string xmlString = System.Text.Encoding.UTF8.GetString(xmlData);
+                string xmlString = Encoding.UTF8.GetString(xmlData);
                 XDocument doc = XDocument.Parse(xmlString);
 
                 // Define namespaces
@@ -266,7 +266,7 @@ namespace MsOfficeCrypto.Structures
                     EncryptedVerifierHash = Convert.FromBase64String(encryptedVerifierHashValue)
                 };
 
-                Console.WriteLine($"Debug: Agile parsing complete");
+                Console.WriteLine("Debug: Agile parsing complete");
 
                 return (header, verifier);
             }

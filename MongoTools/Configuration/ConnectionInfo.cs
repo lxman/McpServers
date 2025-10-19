@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using MongoTools.Common;
 
 namespace MongoTools.Configuration;
@@ -53,7 +54,7 @@ public class ConnectionInfo
         catch
         {
             // If URI parsing fails, just mask potential password patterns
-            return System.Text.RegularExpressions.Regex.Replace(connectionString, 
+            return Regex.Replace(connectionString, 
                 @"(:\/\/[^:]+:)[^@]+(@)", "$1***$2");
         }
 

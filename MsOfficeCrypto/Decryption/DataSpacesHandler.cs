@@ -398,9 +398,9 @@ namespace MsOfficeCrypto.Decryption
                 // This is a simplified implementation
                 
                 // Use AES-128 ECB as default for DataSpaces
-                using var aes = System.Security.Cryptography.Aes.Create();
-                aes.Mode = System.Security.Cryptography.CipherMode.ECB;
-                aes.Padding = System.Security.Cryptography.PaddingMode.PKCS7;
+                using var aes = Aes.Create();
+                aes.Mode = CipherMode.ECB;
+                aes.Padding = PaddingMode.PKCS7;
                 
                 // Derive key from password (simplified)
                 byte[] key = DeriveDataSpacesKey(password, transform.ConfigurationData);
@@ -432,7 +432,7 @@ namespace MsOfficeCrypto.Decryption
         {
             // Simplified key derivation - real implementation would parse config data
             byte[] passwordBytes = Encoding.Unicode.GetBytes(password);
-            using var sha1 = System.Security.Cryptography.SHA1.Create();
+            using var sha1 = SHA1.Create();
             byte[] hash = sha1.ComputeHash(passwordBytes);
             
             // Return first 16 bytes for AES-128

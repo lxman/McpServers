@@ -1,6 +1,6 @@
-using SeleniumChromeTool.Models;
-using System.Text.RegularExpressions;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using SeleniumChromeTool.Models;
 
 namespace SeleniumChromeTool.Services.Scrapers
 {
@@ -100,7 +100,7 @@ namespace SeleniumChromeTool.Services.Scrapers
                 List<EnhancedJobListing> jobs = await _apiService.FetchJobsByIdsAsync(discoveredJobIds.ToArray(), request.UserId);
                 
                 Logger.LogInformation($"🎯 Successfully fetched {jobs.Count} jobs using proven API method");
-                Logger.LogInformation($"📊 Method: Google Custom Search API + SimplifyJobs Direct API");
+                Logger.LogInformation("📊 Method: Google Custom Search API + SimplifyJobs Direct API");
                 
                 return jobs;
             }
@@ -189,7 +189,7 @@ namespace SeleniumChromeTool.Services.Scrapers
                     // If we need more results and there are more available, make additional API calls
                     if (jobIds.Count < maxResults && itemsArray.Count == 10)
                     {
-                        Logger.LogInformation($"📄 Need more results, making additional API call...");
+                        Logger.LogInformation("📄 Need more results, making additional API call...");
                         
                         string nextRequestUrl = $"{CUSTOM_SEARCH_API_URL}?" +
                                                 $"key={Uri.EscapeDataString(GOOGLE_API_KEY)}&" +

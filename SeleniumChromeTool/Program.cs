@@ -1,9 +1,12 @@
+using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
-using Serilog;
 using SeleniumChromeTool.Models;
 using SeleniumChromeTool.Services;
-using SeleniumChromeTool.Services.Scrapers;
 using SeleniumChromeTool.Services.Enhanced;
+using SeleniumChromeTool.Services.Scrapers;
+using Serilog;
+using Serilog.Events;
 
 namespace SeleniumChromeTool;
 
@@ -14,8 +17,8 @@ public class Program
         // Configure Serilog
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
-            .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
-            .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("System", LogEventLevel.Warning)
             .Enrich.FromLogContext()
             .WriteTo.Console(outputTemplate: 
                 "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
@@ -35,7 +38,7 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(c =>
         {
-            c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo 
+            c.SwaggerDoc("v1", new OpenApiInfo 
             { 
                 Title = "Job Scraping API", 
                 Version = "v1.0",
@@ -53,14 +56,14 @@ public class Program
         // Register MongoDB client and database
         builder.Services.AddSingleton<IMongoClient>(serviceProvider =>
         {
-            MongoDbSettings settings = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<MongoDbSettings>>().Value;
+            MongoDbSettings settings = serviceProvider.GetRequiredService<IOptions<MongoDbSettings>>().Value;
             return new MongoClient(settings.ConnectionString);
         });
 
         builder.Services.AddSingleton<IMongoDatabase>(serviceProvider =>
         {
             var client = serviceProvider.GetRequiredService<IMongoClient>();
-            MongoDbSettings settings = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<MongoDbSettings>>().Value;
+            MongoDbSettings settings = serviceProvider.GetRequiredService<IOptions<MongoDbSettings>>().Value;
             return client.GetDatabase(settings.DatabaseName);
         });
 

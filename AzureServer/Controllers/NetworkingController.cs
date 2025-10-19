@@ -1,5 +1,4 @@
 using AzureServer.Services.Networking.Interfaces;
-using AzureServer.Services.Networking.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;

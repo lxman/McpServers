@@ -1,3 +1,4 @@
+using System.Net.Security;
 using DesktopCommanderMcp.McpTools;
 using DesktopCommanderMcp.Services;
 using DesktopCommanderMcp.Services.AdvancedFileEditing;
@@ -51,7 +52,7 @@ builder.Services.AddHttpClient("directory-client", client =>
             }
         
             // For all other hosts, use default validation
-            return errors == System.Net.Security.SslPolicyErrors.None;
+            return errors == SslPolicyErrors.None;
         }
     });
 

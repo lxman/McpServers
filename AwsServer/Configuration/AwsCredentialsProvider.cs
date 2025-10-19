@@ -27,10 +27,8 @@ public class AwsCredentialsProvider(AwsConfiguration config)
             {
                 return new SessionAWSCredentials(config.AccessKeyId, config.SecretAccessKey, config.SessionToken);
             }
-            else
-            {
-                return new BasicAWSCredentials(config.AccessKeyId, config.SecretAccessKey);
-            }
+
+            return new BasicAWSCredentials(config.AccessKeyId, config.SecretAccessKey);
         }
         
         // If profile is specified, try AWS credential file
@@ -69,10 +67,8 @@ public class AwsCredentialsProvider(AwsConfiguration config)
                     return new SessionAWSCredentials(envConfig.AccessKeyId!, 
                         envConfig.SecretAccessKey!, envConfig.SessionToken);
                 }
-                else
-                {
-                    return new BasicAWSCredentials(envConfig.AccessKeyId!, envConfig.SecretAccessKey!);
-                }
+
+                return new BasicAWSCredentials(envConfig.AccessKeyId!, envConfig.SecretAccessKey!);
             }
         }
         catch (Exception)

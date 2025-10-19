@@ -1,3 +1,4 @@
+using System.Text.Json;
 using PlaywrightServer.Services;
 using Scalar.AspNetCore;
 
@@ -8,7 +9,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.WriteIndented = true;
-        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     });
 
 // Register Playwright services

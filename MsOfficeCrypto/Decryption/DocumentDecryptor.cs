@@ -137,7 +137,7 @@ namespace MsOfficeCrypto.Decryption
                 return new DocumentDecryptor(encryptionInfo, encryptedPackageData, dataSpacesHandler);
             try
             {
-                using RootStorage rootStorage = OpenMcdf.RootStorage.OpenRead(filePath);
+                using RootStorage rootStorage = RootStorage.OpenRead(filePath);
                 if (DataSpacesHandler.IsDataSpacesEncrypted(rootStorage))
                 {
                     dataSpacesHandler = new DataSpacesHandler(rootStorage);
@@ -165,12 +165,12 @@ namespace MsOfficeCrypto.Decryption
                 cancellationToken.ThrowIfCancellationRequested();
 
                 byte[] decryptionKey =
-                    PasswordDerivation.DeriveKey(password, _encryptionInfo.Verifier!.Salt!, (int)_encryptionInfo.Header!.KeySize, 0);
+                    PasswordDerivation.DeriveKey(password, _encryptionInfo.Verifier!.Salt!, (int)_encryptionInfo.Header!.KeySize);
                 string algorithm = _encryptionInfo.Header?.GetAlgorithmName() ?? "Unknown";
 
                 return algorithm switch
                 {
-                    "AES-128" => AesHandler.Decrypt(_encryptedPackageData, decryptionKey, 128),
+                    "AES-128" => AesHandler.Decrypt(_encryptedPackageData, decryptionKey),
                     "AES-192" => AesHandler.Decrypt(_encryptedPackageData, decryptionKey, 192),
                     "AES-256" => AesHandler.Decrypt(_encryptedPackageData, decryptionKey, 256),
                     _ => throw new UnsupportedEncryptionException($"Unsupported algorithm: {algorithm}")

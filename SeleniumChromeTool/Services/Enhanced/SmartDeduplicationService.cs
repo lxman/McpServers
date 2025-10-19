@@ -1,5 +1,5 @@
-using SeleniumChromeTool.Models;
 using System.Text.RegularExpressions;
+using SeleniumChromeTool.Models;
 
 namespace SeleniumChromeTool.Services.Enhanced;
 
@@ -473,7 +473,6 @@ public class SmartDeduplicationService
         if (string.IsNullOrEmpty(text)) return [];
 
         HashSet<string> words = Regex.Matches(text.ToLower(), @"\b\w{4,}\b")
-            .Cast<Match>()
             .Select(m => m.Value)
             .Where(w => !IsStopWord(w))
             .ToHashSet();

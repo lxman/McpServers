@@ -1,9 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Text.RegularExpressions;
 using Amazon.CloudWatchLogs;
 using Amazon.CloudWatchLogs.Model;
 using AwsServer.Controllers.Models;
 using AwsServer.Controllers.Requests;
 using AwsServer.Controllers.Responses;
+using Microsoft.AspNetCore.Mvc;
 using LogEvent = AwsServer.Controllers.Models.LogEvent;
 
 namespace AwsServer.Controllers;
@@ -185,7 +186,7 @@ public class EnhancedCloudWatchController(
                 logGroupName,
                 timeRangeMinutes = minutes,
                 errorCount = errors.Count,
-                errors = errors
+                errors
             });
         }
         catch (Exception ex)
@@ -266,8 +267,8 @@ public class EnhancedCloudWatchController(
 
             // Filter by pattern (simple wildcard matching)
             var searchPattern = pattern.Replace("*", ".*").Replace("?", ".");
-            var regex = new System.Text.RegularExpressions.Regex(searchPattern, 
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var regex = new Regex(searchPattern, 
+                RegexOptions.IgnoreCase);
 
             var matchingGroups = allLogGroups
                 .Where(lg => regex.IsMatch(lg.LogGroupName))

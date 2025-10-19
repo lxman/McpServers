@@ -100,7 +100,7 @@ public class DeviceConfiguration
     public int ViewportWidth { get; set; }
     public int ViewportHeight { get; set; }
     public string UserAgent { get; set; } = "";
-    public bool IsMobile { get; set; } = false;
-    public bool HasTouch { get; set; } = false;
+    public bool IsMobile { get; set; }
+    public bool HasTouch { get; set; }
     public float DeviceScaleFactor { get; set; } = 1.0f;
 }

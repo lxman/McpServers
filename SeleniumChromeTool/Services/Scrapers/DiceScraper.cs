@@ -107,7 +107,7 @@ public class DiceScraper : BaseJobScraper
                     if (elements.Count > 0)
                     {
                         contentFound = true;
-                        Logger.LogInformation($"Dice job content detected after smart wait");
+                        Logger.LogInformation("Dice job content detected after smart wait");
                         break;
                     }
                     
@@ -116,7 +116,7 @@ public class DiceScraper : BaseJobScraper
                     if (pageSource.Contains("job-search-serp-card") || pageSource.Contains("Search Results"))
                     {
                         contentFound = true;
-                        Logger.LogInformation($"Dice search results detected in page source");
+                        Logger.LogInformation("Dice search results detected in page source");
                         break;
                     }
                     
@@ -183,7 +183,6 @@ public class DiceScraper : BaseJobScraper
                 }
                 catch (NoSuchElementException)
                 {
-                    continue;
                 }
             }
             

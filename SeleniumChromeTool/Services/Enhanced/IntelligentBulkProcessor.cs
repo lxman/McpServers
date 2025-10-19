@@ -168,7 +168,7 @@ public class IntelligentBulkProcessor
             result.ConsiderCount = result.ProcessedJobs.Count(j => j.MatchScore is >= 40 and < 60);
             result.LowPriorityCount = result.ProcessedJobs.Count(j => j.MatchScore < 40);
 
-            _logger.LogInformation($"Bulk processing completed:");
+            _logger.LogInformation("Bulk processing completed:");
             _logger.LogInformation($"  Total Jobs: {result.ProcessedJobs.Count}");
             _logger.LogInformation($"  High Priority (80%+): {result.HighPriorityCount}");
             _logger.LogInformation($"  Application Ready (60%+): {result.ApplicationReadyCount}");
@@ -198,12 +198,11 @@ public class IntelligentBulkProcessor
         // Dynamic batch sizing based on target
         if (targetJobCount <= 10)
             return 5;
-        else if (targetJobCount <= 20)
+        if (targetJobCount <= 20)
             return 8;
-        else if (targetJobCount <= 50)
+        if (targetJobCount <= 50)
             return 10;
-        else
-            return 15;
+        return 15;
     }
 
     private int CalculateAdaptiveDelay(int pageNumber, int jobsInBatch)

@@ -18,7 +18,7 @@ public class ConnectionManager : IDisposable
     private readonly Timer? _healthCheckTimer;
     private readonly ILogger<ConnectionManager> _logger;
     private string _defaultServer = "default";
-    private bool _disposed = false;
+    private bool _disposed;
 
     public ConnectionManager(ILogger<ConnectionManager> logger)
     {

@@ -1,7 +1,9 @@
 ﻿using System;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using MsOfficeCrypto.Exceptions;
+
 // ReSharper disable InconsistentNaming
 
 namespace MsOfficeCrypto.Algorithms
@@ -244,7 +246,7 @@ namespace MsOfficeCrypto.Algorithms
 
             // Step 1: Process the document in 4096-byte segments
             const int SEGMENT_LENGTH = 4096;
-            var output = new System.IO.MemoryStream();
+            var output = new MemoryStream();
             long remaining = totalSize;
             var offset = 0;  // Start at the beginning - NO 8-byte header to skip
             var blockNumber = 0;

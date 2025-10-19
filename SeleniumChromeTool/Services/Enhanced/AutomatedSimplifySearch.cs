@@ -154,7 +154,7 @@ public class AutomatedSimplifySearch
             results.SearchEndTime = DateTime.UtcNow;
             results.TotalSearchDuration = results.SearchEndTime - results.SearchStartTime;
 
-            _logger.LogInformation($"Comprehensive search completed:");
+            _logger.LogInformation("Comprehensive search completed:");
             _logger.LogInformation($"  Total Jobs Found: {results.TotalJobsFound}");
             _logger.LogInformation($"  High Priority (80%+): {results.HighPriorityJobs.Count}");
             _logger.LogInformation($"  Application Ready (60%+): {results.ApplicationReadyJobs.Count}");
