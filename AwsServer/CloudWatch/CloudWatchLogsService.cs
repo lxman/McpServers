@@ -145,7 +145,7 @@ public class CloudWatchLogsService : IDisposable
         EnsureInitialized();
         
         string? nextToken = null;
-        int eventCount = 0;
+        var eventCount = 0;
         
         do
         {

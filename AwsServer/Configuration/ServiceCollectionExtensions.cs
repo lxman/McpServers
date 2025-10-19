@@ -17,7 +17,8 @@ public static class ServiceCollectionExtensions
         // Register AWS service implementations
         services.AddAWSService<IAmazonCloudWatchLogs>();
         services.AddSingleton<S3Service>();
-        services.AddSingleton<CloudWatchLogsService>(); // New simplified service
+        services.AddSingleton<CloudWatchLogsService>();
+        services.AddSingleton<CloudWatchMetricsService>();  // New metrics service
         services.AddSingleton<EcsService>();
         services.AddSingleton<EcrService>();
         services.AddSingleton<QuickSightService>();
