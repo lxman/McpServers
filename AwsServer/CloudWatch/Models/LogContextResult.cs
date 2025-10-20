@@ -11,6 +11,6 @@ public class LogContextResult
     public OutputLogEvent? TargetEvent { get; set; }
     public int EventsBefore { get; set; }
     public int EventsAfter { get; set; }
-    public List<OutputLogEvent> ContextEvents { get; set; } = new();
+    public List<OutputLogEvent> ContextEvents { get; set; } = [];
     public int TotalContextEvents { get; set; }
 }

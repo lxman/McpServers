@@ -1,10 +1,13 @@
+using System.Text.Json;
 using Amazon.CloudWatchLogs;
 using Amazon.CloudWatchLogs.Model;
 using Amazon.Runtime;
 using AwsServer.Configuration;
 using AwsServer.Configuration.Models;
 using AwsServer.CloudWatch.Models;
+using System.Text.RegularExpressions;
 using InvalidOperationException = System.InvalidOperationException;
+
 
 namespace AwsServer.CloudWatch;
 
@@ -14,13 +17,13 @@ namespace AwsServer.CloudWatch;
 /// </summary>
 public class CloudWatchLogsService : IDisposable
 {
+    public bool IsInitialized => _initialized && _logsClient != null;
+    
     private readonly ILogger<CloudWatchLogsService> _logger;
     private readonly AwsDiscoveryService _discoveryService;
     private AmazonCloudWatchLogsClient? _logsClient;
     private AwsConfiguration? _config;
     private bool _initialized;
-    
-    public bool IsInitialized => _initialized && _logsClient != null;
     
     public CloudWatchLogsService(
         ILogger<CloudWatchLogsService> logger,
@@ -218,7 +221,7 @@ public class CloudWatchLogsService : IDisposable
                 return new LogGroupResult
                 {
                     LogGroupName = logGroupName,
-                    Events = new List<FilteredLogEvent>(),
+                    Events = [],
                     Success = false,
                     Error = ex.Message,
                     EventCount = 0
@@ -413,13 +416,13 @@ public class CloudWatchLogsService : IDisposable
         var totalDuration = 0;
         string? nextToken = null;
         
-        var startTimestamp = DateTime.UtcNow;
+        DateTime startTimestamp = DateTime.UtcNow;
         
         do
         {
-            var pageStart = DateTime.UtcNow;
+            DateTime pageStart = DateTime.UtcNow;
             
-            var response = await FilterLogsAsync(
+            FilterLogEventsResponse response = await FilterLogsAsync(
                 logGroupName, filterPattern, startTime, endTime,
                 Math.Min(pageSize, maxResults - allEvents.Count), nextToken);
             
@@ -466,7 +469,7 @@ public class CloudWatchLogsService : IDisposable
         EnsureInitialized();
         
         // Sample first page
-        var sampleResponse = await FilterLogsAsync(
+        FilterLogEventsResponse sampleResponse = await FilterLogsAsync(
             logGroupName, filterPattern, startTime, endTime, 1000);
         
         // If less than a full page, that's our count
@@ -484,12 +487,12 @@ public class CloudWatchLogsService : IDisposable
         // Try using Insights for better estimate
         try
         {
-            var queryString = string.IsNullOrEmpty(filterPattern)
+            string queryString = string.IsNullOrEmpty(filterPattern)
                 ? "stats count() as count"
                 : $"filter @message like /{filterPattern}/ | stats count() as count";
             
-            var insightsResponse = await RunInsightsQueryAsync(
-                new List<string> { logGroupName },
+            GetQueryResultsResponse insightsResponse = await RunInsightsQueryAsync(
+                [logGroupName],
                 queryString,
                 startTime ?? DateTime.UtcNow.AddHours(-1),
                 endTime ?? DateTime.UtcNow,
@@ -497,7 +500,7 @@ public class CloudWatchLogsService : IDisposable
             
             if (insightsResponse.Results.Count > 0 && insightsResponse.Results[0].Count > 0)
             {
-                var countField = insightsResponse.Results[0].FirstOrDefault(f => f.Field == "count");
+                ResultField? countField = insightsResponse.Results[0].FirstOrDefault(f => f.Field == "count");
                 if (countField != null && long.TryParse(countField.Value, out long count))
                 {
                     return new EventCountEstimate
@@ -543,7 +546,7 @@ public class CloudWatchLogsService : IDisposable
     {
         EnsureInitialized();
         
-        var response = await FilterLogsAsync(
+        FilterLogEventsResponse response = await FilterLogsAsync(
             logGroupName, filterPattern, startTime, endTime, limit);
         
         var structuredEvents = new List<StructuredLogEvent>();
@@ -555,7 +558,7 @@ public class CloudWatchLogsService : IDisposable
             ["unknown"] = 0
         };
         
-        foreach (var evt in response.Events)
+        foreach (FilteredLogEvent? evt in response.Events)
         {
             var structured = new StructuredLogEvent
             {
@@ -571,10 +574,10 @@ public class CloudWatchLogsService : IDisposable
             {
                 try
                 {
-                    var jsonDoc = System.Text.Json.JsonDocument.Parse(evt.Message);
+                    JsonDocument jsonDoc = System.Text.Json.JsonDocument.Parse(evt.Message);
                     structured.ParsedData = new Dictionary<string, object?>();
                     
-                    foreach (var prop in jsonDoc.RootElement.EnumerateObject())
+                    foreach (JsonProperty prop in jsonDoc.RootElement.EnumerateObject())
                     {
                         structured.ParsedData[prop.Name] = prop.Value.ValueKind switch
                         {
@@ -599,7 +602,7 @@ public class CloudWatchLogsService : IDisposable
             // Try key-value parsing (e.g., "key1=value1 key2=value2")
             if (structured.Format == "unknown" && parseKeyValue && evt.Message.Contains('='))
             {
-                var kvPairs = ParseKeyValuePairs(evt.Message);
+                Dictionary<string, string> kvPairs = ParseKeyValuePairs(evt.Message);
                 if (kvPairs.Count > 0)
                 {
                     structured.ParsedData = kvPairs.ToDictionary(k => k.Key, k => (object?)k.Value);
@@ -640,15 +643,15 @@ public class CloudWatchLogsService : IDisposable
         var result = new Dictionary<string, string>();
         
         // Simple key=value parser
-        var parts = message.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        string[] parts = message.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
         
-        foreach (var part in parts)
+        foreach (string part in parts)
         {
-            var kvIndex = part.IndexOf('=');
+            int kvIndex = part.IndexOf('=');
             if (kvIndex > 0 && kvIndex < part.Length - 1)
             {
-                var key = part.Substring(0, kvIndex);
-                var value = part.Substring(kvIndex + 1).Trim('"', '\'');
+                string key = part.Substring(0, kvIndex);
+                string value = part.Substring(kvIndex + 1).Trim('"', '\'');
                 result[key] = value;
             }
         }
@@ -951,6 +954,144 @@ public class CloudWatchLogsService : IDisposable
         return DateTimeOffset.FromUnixTimeMilliseconds(milliseconds).UtcDateTime;
     }
     
+    
+    /// <summary>
+    /// Calculate pagination metadata from current response state.
+    /// </summary>
+    /// <param name="currentPageSize">Number of items in current response</param>
+    /// <param name="limit">Maximum items per page (limit parameter)</param>
+    /// <param name="pageNumber">Current page number (1-based)</param>
+    /// <param name="hasNextToken">Whether a next token exists</param>
+    /// <param name="estimatedTotal">Optional estimated total count</param>
+    /// <param name="confidence">Optional confidence level for estimate</param>
+    /// <returns>Populated PaginationMetadata object</returns>
+    public Common.Models.PaginationMetadata CalculatePaginationMetadata(
+        int currentPageSize,
+        int limit,
+        int pageNumber,
+        bool hasNextToken,
+        long? estimatedTotal = null,
+        string? confidence = null)
+    {
+        int? estimatedPages = null;
+        if (estimatedTotal.HasValue && limit > 0)
+        {
+            estimatedPages = (int)Math.Ceiling((double)estimatedTotal.Value / limit);
+        }
+        
+        bool isExact = confidence == "Exact" || confidence?.Contains("Exact") == true;
+        
+        string summary;
+        int startItem = ((pageNumber - 1) * limit) + 1;
+        int endItem = startItem + currentPageSize - 1;
+        
+        if (estimatedTotal.HasValue)
+        {
+            string totalDisplay = isExact ? $"{estimatedTotal}" : $"~{estimatedTotal}";
+            summary = $"Showing results {startItem}-{endItem} of {totalDisplay}";
+        }
+        else
+        {
+            summary = $"Showing results {startItem}-{endItem}";
+        }
+        
+        return new Common.Models.PaginationMetadata
+        {
+            CurrentPage = pageNumber,
+            ItemsInPage = currentPageSize,
+            ItemsPerPage = limit,
+            EstimatedTotal = estimatedTotal,
+            EstimatedPages = estimatedPages,
+            IsExactCount = isExact,
+            Summary = summary,
+            Confidence = confidence,
+            HasMore = hasNextToken
+        };
+    }
+    
+    /// <summary>
+    /// Get an accurate count estimate for filtered logs.
+    /// Attempts to use CloudWatch Insights for accurate counts when possible,
+    /// falls back to sampling-based estimation.
+    /// </summary>
+    /// <param name="logGroupName">Log group to estimate</param>
+    /// <param name="filterPattern">Filter pattern to apply</param>
+    /// <param name="startTime">Start time for the query</param>
+    /// <param name="endTime">End time for the query</param>
+    /// <param name="useFastEstimate">If true, uses quick sampling instead of Insights</param>
+    /// <returns>Tuple of (estimatedCount, confidence)</returns>
+    public async Task<(long? count, string confidence)> GetCountEstimateAsync(
+        string logGroupName,
+        string? filterPattern,
+        DateTime? startTime,
+        DateTime? endTime,
+        bool useFastEstimate = false)
+    {
+        try
+        {
+            if (useFastEstimate)
+            {
+                // Quick sample-based estimate
+                FilterLogEventsResponse sampleResponse = await FilterLogsAsync(
+                    logGroupName, filterPattern, startTime, endTime, 100);
+                
+                if (string.IsNullOrEmpty(sampleResponse.NextToken))
+                {
+                    // Less than one page - exact count
+                    return (sampleResponse.Events.Count, "Exact");
+                }
+                
+                // Rough estimate based on sample
+                return (sampleResponse.Events.Count * 10, "Low (Quick sample)");
+            }
+            
+            // Try using Insights for accurate count
+            try
+            {
+                string queryString = string.IsNullOrEmpty(filterPattern)
+                    ? "stats count() as count"
+                    : $"filter @message like /{Regex.Escape(filterPattern)}/ | stats count() as count";
+                
+                GetQueryResultsResponse insightsResponse = await RunInsightsQueryAsync(
+                    [logGroupName],
+                    queryString,
+                    startTime ?? DateTime.UtcNow.AddHours(-1),
+                    endTime ?? DateTime.UtcNow,
+                    TimeSpan.FromSeconds(30));
+                
+                if (insightsResponse.Results.Count > 0 && insightsResponse.Results[0].Count > 0)
+                {
+                    ResultField? countField = insightsResponse.Results[0].FirstOrDefault(f => f.Field == "count");
+                    if (countField != null && long.TryParse(countField.Value, out long count))
+                    {
+                        return (count, "High (Insights)");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Could not use Insights for count estimation, falling back to sampling");
+            }
+            
+            // Fallback to sample-based estimation
+            FilterLogEventsResponse fallbackResponse = await FilterLogsAsync(
+                logGroupName, filterPattern, startTime, endTime, 1000);
+            
+            if (string.IsNullOrEmpty(fallbackResponse.NextToken))
+            {
+                return (fallbackResponse.Events.Count, "Exact");
+            }
+            
+            // Estimate based on larger sample
+            return (fallbackResponse.Events.Count * 5, "Medium (Sample-based)");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error estimating count for {LogGroup}", logGroupName);
+            return (null, "Unknown");
+        }
+    }
+
     #endregion
     
     public void Dispose()

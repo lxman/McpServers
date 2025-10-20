@@ -8,7 +8,7 @@ namespace AwsServer.Controllers.Responses;
 /// </summary>
 public class MultiGroupLogsResponse
 {
-    public List<LogGroupResultDto> LogGroupResults { get; set; } = new();
+    public List<LogGroupResultDto> LogGroupResults { get; set; } = [];
     public int TotalEvents { get; set; }
     public int TotalDurationMs { get; set; }
     public int SuccessfulQueries { get; set; }

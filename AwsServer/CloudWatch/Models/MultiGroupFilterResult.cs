@@ -7,7 +7,7 @@ namespace AwsServer.CloudWatch.Models;
 /// </summary>
 public class MultiGroupFilterResult
 {
-    public List<LogGroupResult> LogGroupResults { get; set; } = new();
+    public List<LogGroupResult> LogGroupResults { get; set; } = [];
     public int TotalEvents { get; set; }
     public int TotalDurationMs { get; set; }
     public int SuccessfulQueries { get; set; }
@@ -20,7 +20,7 @@ public class MultiGroupFilterResult
 public class LogGroupResult
 {
     public required string LogGroupName { get; set; }
-    public List<FilteredLogEvent> Events { get; set; } = new();
+    public List<FilteredLogEvent> Events { get; set; } = [];
     public bool Success { get; set; }
     public string? Error { get; set; }
     public int QueryDurationMs { get; set; }

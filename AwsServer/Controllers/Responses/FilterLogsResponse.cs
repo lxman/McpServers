@@ -1,4 +1,5 @@
-﻿using AwsServer.Controllers.Models;
+using AwsServer.Common.Models;
+using AwsServer.Controllers.Models;
 
 namespace AwsServer.Controllers.Responses;
 
@@ -9,4 +10,5 @@ public class FilterLogsResponse
     public bool HasMore { get; set; }
     public int SearchedLogStreams { get; set; }
     public int TotalEventsReturned { get; set; }
+    public PaginationMetadata? Pagination { get; set; }
 }
