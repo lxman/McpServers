@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+using System.Diagnostics;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using Azure;
 using Azure.Core;
 using Azure.Monitor.Query;
@@ -43,6 +45,9 @@ public class MonitorService(
 
     public async Task<LogQueryResult> QueryLogsAsync(string workspaceId, string query, TimeSpan? timeSpan = null)
     {
+        var sw = Stopwatch.StartNew();
+        var queryStart = DateTime.UtcNow;
+        
         try
         {
             (LogsQueryClient logsClient, _) = await GetQueryClientsAsync();
@@ -59,6 +64,8 @@ public class MonitorService(
             if (response.Value.Status == LogsQueryResultStatus.Success)
             {
                 var result = new LogQueryResult();
+                int totalRows = 0;
+                var allMessages = new List<string>();
                 
                 foreach (LogsTable? table in response.Value.AllTables)
                 {
@@ -82,11 +89,40 @@ public class MonitorService(
                         for (var i = 0; i < table.Columns.Count; i++)
                         {
                             rowDict[table.Columns[i].Name] = row[i];
+                            
+                            // Collect message-like columns for format analysis
+                            if (table.Columns[i].Name.Contains("Message", StringComparison.OrdinalIgnoreCase) ||
+                                table.Columns[i].Name.Contains("Content", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (row[i] != null)
+                                {
+                                    allMessages.Add(row[i].ToString() ?? string.Empty);
+                                }
+                            }
                         }
                         tableDto.Rows.Add(rowDict);
+                        totalRows++;
                     }
 
                     result.Tables.Add(tableDto);
+                }
+
+                sw.Stop();
+                
+                // Add metadata
+                result.Metadata = new QueryMetadata
+                {
+                    QueryStartTime = queryStart,
+                    QueryEndTime = DateTime.UtcNow,
+                    DurationMs = sw.ElapsedMilliseconds,
+                    TotalRows = totalRows,
+                    TotalTables = result.Tables.Count
+                };
+                
+                // Add format analysis if we have message data
+                if (allMessages.Count > 0)
+                {
+                    result.FormatAnalysis = AnalyzeLogFormats(allMessages);
                 }
 
                 return result;
@@ -101,6 +137,7 @@ public class MonitorService(
         {
             logger.LogError(ex, "Error querying logs");
             return new LogQueryResult { Error = ex.Message };
+
         }
     }
 
@@ -275,6 +312,9 @@ public class MonitorService(
     public async Task<MetricQueryResult> QueryMetricsAsync(string resourceId, IEnumerable<string> metricNames, 
         DateTime startTime, DateTime endTime, TimeSpan? interval = null, IEnumerable<string>? aggregations = null)
     {
+        var sw = Stopwatch.StartNew();
+        var queryStart = DateTime.UtcNow;
+        
         try
         {
             (_, MetricsQueryClient metricsClient) = await GetQueryClientsAsync();
@@ -307,6 +347,8 @@ public class MonitorService(
                 Namespace = response.Value.Namespace,
                 ResourceRegion = response.Value.ResourceRegion
             };
+            
+            int totalDataPoints = 0;
 
             foreach (MetricResult? metric in response.Value.Metrics)
             {
@@ -335,6 +377,7 @@ public class MonitorService(
                             Total = value.Total,
                             Count = value.Count
                         });
+                        totalDataPoints++;
                     }
 
                     metricData.TimeSeries.Add(timeSeriesData);
@@ -342,6 +385,19 @@ public class MonitorService(
 
                 result.Metrics.Add(metricData);
             }
+            
+            sw.Stop();
+            
+            // Add metadata
+            result.Metadata = new MetricQueryMetadata
+            {
+                QueryStartTime = queryStart,
+                QueryEndTime = DateTime.UtcNow,
+                DurationMs = sw.ElapsedMilliseconds,
+                TotalMetrics = result.Metrics.Count,
+                TotalDataPoints = totalDataPoints,
+                Interval = interval
+            };
 
             return result;
         }
@@ -349,6 +405,7 @@ public class MonitorService(
         {
             logger.LogError(ex, "Error querying metrics");
             return new MetricQueryResult { Error = ex.Message };
+
         }
     }
 
@@ -583,4 +640,115 @@ public class MonitorService(
             _ => MetricAggregationType.Average
         };
     }
+
+    /// <summary>
+    /// Analyze log message formats to help AI understand log structure
+    /// </summary>
+    private static LogFormatAnalysis AnalyzeLogFormats(List<string> messages)
+    {
+        var formatCounts = new Dictionary<string, int>
+        {
+            ["JSON"] = 0,
+            ["KeyValue"] = 0,
+            ["PlainText"] = 0
+        };
+
+        var jsonSampleKeys = new HashSet<string>();
+        var keyValuePatterns = new HashSet<string>();
+
+        // Sample up to 100 messages for analysis
+        var sampleSize = Math.Min(100, messages.Count);
+        
+        for (int i = 0; i < sampleSize; i++)
+        {
+            string msg = messages[i];
+            if (string.IsNullOrWhiteSpace(msg)) continue;
+
+            // Check for JSON format
+            if (IsJsonFormat(msg, jsonSampleKeys))
+            {
+                formatCounts["JSON"]++;
+            }
+            // Check for key-value format (key=value or key:value patterns)
+            else if (IsKeyValueFormat(msg, keyValuePatterns))
+            {
+                formatCounts["KeyValue"]++;
+            }
+            else
+            {
+                formatCounts["PlainText"]++;
+            }
+        }
+
+        // Determine dominant format
+        var dominantEntry = formatCounts.OrderByDescending(kvp => kvp.Value).First();
+        var totalMessages = formatCounts.Values.Sum();
+        var dominantPercentage = totalMessages > 0 
+            ? (double)dominantEntry.Value / totalMessages * 100 
+            : 0;
+
+        return new LogFormatAnalysis
+        {
+            FormatCounts = formatCounts,
+            DominantFormat = dominantEntry.Key,
+            DominantFormatPercentage = Math.Round(dominantPercentage, 2),
+            JsonSampleKeys = jsonSampleKeys.Count > 0 
+                ? jsonSampleKeys.Take(20).ToList() 
+                : null,
+            KeyValuePatterns = keyValuePatterns.Count > 0 
+                ? keyValuePatterns.Take(20).ToList() 
+                : null
+        };
+    }
+
+    private static bool IsJsonFormat(string message, HashSet<string> sampleKeys)
+    {
+        if (!message.TrimStart().StartsWith("{") && !message.TrimStart().StartsWith("["))
+            return false;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(message);
+            
+            // Collect sample keys from JSON objects
+            if (doc.RootElement.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var prop in doc.RootElement.EnumerateObject())
+                {
+                    if (sampleKeys.Count < 20)
+                    {
+                        sampleKeys.Add(prop.Name);
+                    }
+                }
+            }
+            
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsKeyValueFormat(string message, HashSet<string> patterns)
+    {
+        // Look for common key-value patterns
+        var kvRegex = new Regex(@"(\w+)\s*[:=]\s*([^\s,;]+)", RegexOptions.Compiled);
+        var matches = kvRegex.Matches(message);
+
+        if (matches.Count >= 2) // Need at least 2 key-value pairs to consider it structured
+        {
+            foreach (Match match in matches.Cast<Match>().Take(5))
+            {
+                if (patterns.Count < 20)
+                {
+                    patterns.Add(match.Groups[1].Value); // Add the key name
+                }
+            }
+            return true;
+        }
+
+        return false;
+    }
+
 }

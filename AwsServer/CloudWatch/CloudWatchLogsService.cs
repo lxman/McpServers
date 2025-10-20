@@ -268,7 +268,9 @@ public class CloudWatchLogsService : IDisposable
         string? customErrorPattern = null)
     {
         // Default error pattern matches common error indicators
-        string errorPattern = customErrorPattern ?? "?ERROR ?Exception ?FATAL ?CRITICAL ?Failed ?\"level\":\"error\"";
+        // CloudWatch filter pattern: space-separated terms are OR'd together
+        string errorPattern = customErrorPattern ?? "ERROR Exception FATAL CRITICAL Failed \"level\":\"error\"";
+
         
         DateTime startTime = DateTime.UtcNow.AddMinutes(-minutes);
         return await FilterLogsAsync(logGroupName, errorPattern, startTime, null, limit);
@@ -283,7 +285,9 @@ public class CloudWatchLogsService : IDisposable
         int limit = 100,
         string? customErrorPattern = null)
     {
-        string errorPattern = customErrorPattern ?? "?ERROR ?Exception ?FATAL ?CRITICAL ?Failed ?\"level\":\"error\"";
+        // Same pattern as single group
+        string errorPattern = customErrorPattern ?? "ERROR Exception FATAL CRITICAL Failed \"level\":\"error\"";
+
         DateTime startTime = DateTime.UtcNow.AddMinutes(-minutes);
         return await FilterLogsMultiGroupAsync(logGroupNames, errorPattern, startTime, null, limit);
     }
