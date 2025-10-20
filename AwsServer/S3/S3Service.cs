@@ -14,12 +14,13 @@ namespace AwsServer.S3;
 /// </summary>
 public class S3Service
 {
+    public bool IsInitialized { get; private set; }
+
     private readonly ILogger<S3Service> _logger;
     private readonly AwsDiscoveryService _discoveryService;
     private AmazonS3Client? _s3Client;
     private AwsConfiguration? _config;
-    private bool _isInitialized;
-    
+
     public S3Service(
         ILogger<S3Service> logger,
         AwsDiscoveryService discoveryService)
@@ -327,7 +328,7 @@ public class S3Service
                 };
                 
                 await InitializeAsync(config);
-                _isInitialized = true;
+                IsInitialized = true;
                 _logger.LogInformation("S3 service auto-initialized successfully");
             }
         }
@@ -343,11 +344,11 @@ public class S3Service
     private async Task EnsureInitializedAsync()
     {
         // Wait for auto-initialization to complete
-        if (!_isInitialized && _s3Client == null)
+        if (!IsInitialized && _s3Client == null)
         {
             // Wait up to 5 seconds for auto-initialization
             DateTime timeout = DateTime.UtcNow.AddSeconds(5);
-            while (!_isInitialized && DateTime.UtcNow < timeout)
+            while (!IsInitialized && DateTime.UtcNow < timeout)
             {
                 await Task.Delay(100);
             }

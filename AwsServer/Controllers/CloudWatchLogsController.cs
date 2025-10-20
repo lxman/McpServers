@@ -1,6 +1,7 @@
 using Amazon.CloudWatchLogs;
 using Amazon.CloudWatchLogs.Model;
 using AwsServer.CloudWatch;
+using AwsServer.CloudWatch.Models;
 using AwsServer.Controllers.Models;
 using AwsServer.Controllers.Responses;
 using Microsoft.AspNetCore.Mvc;
@@ -442,6 +443,330 @@ public class CloudWatchLogsController(
     
     #endregion
     
+
+    #region Multi-Group and Convenience Endpoints
+    
+    /// <summary>
+    /// Filter logs across multiple log groups simultaneously.
+    /// Useful for cross-service troubleshooting and correlation.
+    /// 
+    /// GET /api/cloudwatch/logs/filter-multi?logGroupNames=group1,group2&filterPattern=[ERROR]&minutes=30
+    /// </summary>
+    [HttpGet("filter-multi")]
+    [ProducesResponseType(typeof(MultiGroupLogsResponse), 200)]
+    public async Task<IActionResult> FilterLogsMultiGroup(
+        [FromQuery] string logGroupNames,
+        [FromQuery] string? filterPattern = null,
+        [FromQuery] int? minutes = null,
+        [FromQuery] DateTime? startTime = null,
+        [FromQuery] DateTime? endTime = null,
+        [FromQuery] int limit = 100)
+    {
+        try
+        {
+            List<string>? groups = ParseCommaSeparated(logGroupNames);
+            if (groups == null || groups.Count == 0)
+            {
+                return BadRequest(new { error = "At least one log group name is required" });
+            }
+
+            if (minutes.HasValue)
+            {
+                startTime = DateTime.UtcNow.AddMinutes(-minutes.Value);
+                endTime = null;
+            }
+
+            MultiGroupFilterResult result = await service.FilterLogsMultiGroupAsync(
+                groups, filterPattern, startTime, endTime, limit);
+            
+            return Ok(new MultiGroupLogsResponse
+            {
+                LogGroupResults = result.LogGroupResults.Select(r => new LogGroupResultDto
+                {
+                    LogGroupName = r.LogGroupName,
+                    Events = r.Events.Select(e => new LogEventDto
+                    {
+                        Timestamp = CloudWatchLogsService.FromUnixMilliseconds(e.Timestamp ?? 0),
+                        Message = e.Message,
+                        LogStreamName = e.LogStreamName,
+                        EventId = e.EventId
+                    }).ToList(),
+                    Success = r.Success,
+                    Error = r.Error,
+                    QueryDurationMs = r.QueryDurationMs,
+                    EventCount = r.EventCount
+                }).ToList(),
+                TotalEvents = result.TotalEvents,
+                TotalDurationMs = result.TotalDurationMs,
+                SuccessfulQueries = result.SuccessfulQueries,
+                FailedQueries = result.FailedQueries
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error filtering logs across multiple log groups");
+            return StatusCode(500, new { error = ex.Message, type = ex.GetType().Name });
+        }
+    }
+    
+    /// <summary>
+    /// Quick filter for recent logs across multiple log groups.
+    /// 
+    /// GET /api/cloudwatch/logs/recent-multi?logGroupNames=group1,group2&minutes=30&filterPattern=[ERROR]
+    /// </summary>
+    [HttpGet("recent-multi")]
+    [ProducesResponseType(typeof(MultiGroupLogsResponse), 200)]
+    public async Task<IActionResult> GetRecentLogsMultiGroup(
+        [FromQuery] string logGroupNames,
+        [FromQuery] int minutes = 30,
+        [FromQuery] string? filterPattern = null,
+        [FromQuery] int limit = 100)
+    {
+        try
+        {
+            List<string>? groups = ParseCommaSeparated(logGroupNames);
+            if (groups == null || groups.Count == 0)
+            {
+                return BadRequest(new { error = "At least one log group name is required" });
+            }
+
+            MultiGroupFilterResult result = await service.FilterRecentLogsMultiGroupAsync(
+                groups, minutes, filterPattern, limit);
+            
+            return Ok(new MultiGroupLogsResponse
+            {
+                LogGroupResults = result.LogGroupResults.Select(r => new LogGroupResultDto
+                {
+                    LogGroupName = r.LogGroupName,
+                    Events = r.Events.Select(e => new LogEventDto
+                    {
+                        Timestamp = CloudWatchLogsService.FromUnixMilliseconds(e.Timestamp ?? 0),
+                        Message = e.Message,
+                        LogStreamName = e.LogStreamName,
+                        EventId = e.EventId
+                    }).ToList(),
+                    Success = r.Success,
+                    Error = r.Error,
+                    QueryDurationMs = r.QueryDurationMs,
+                    EventCount = r.EventCount
+                }).ToList(),
+                TotalEvents = result.TotalEvents,
+                TotalDurationMs = result.TotalDurationMs,
+                SuccessfulQueries = result.SuccessfulQueries,
+                FailedQueries = result.FailedQueries
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error filtering recent logs across multiple log groups");
+            return StatusCode(500, new { error = ex.Message, type = ex.GetType().Name });
+        }
+    }
+    
+    /// <summary>
+    /// Search for error-level logs in a single log group.
+    /// Automatically applies common error patterns (ERROR, Exception, FATAL, CRITICAL, Failed).
+    /// 
+    /// GET /api/cloudwatch/logs/errors?logGroupName=/aws/lambda/my-function&minutes=60
+    /// </summary>
+    [HttpGet("errors")]
+    [ProducesResponseType(typeof(FilterLogsResponse), 200)]
+    public async Task<IActionResult> GetErrorLogs(
+        [FromQuery] string logGroupName,
+        [FromQuery] int minutes = 60,
+        [FromQuery] int limit = 100,
+        [FromQuery] string? customErrorPattern = null)
+    {
+        try
+        {
+            FilterLogEventsResponse response = await service.FilterErrorLogsAsync(
+                logGroupName, minutes, limit, customErrorPattern);
+            
+            return Ok(new FilterLogsResponse
+            {
+                Events = response.Events.Select(e => new LogEventDto
+                {
+                    Timestamp = CloudWatchLogsService.FromUnixMilliseconds(e.Timestamp ?? 0),
+                    Message = e.Message,
+                    LogStreamName = e.LogStreamName,
+                    EventId = e.EventId
+                }).ToList(),
+                NextToken = response.NextToken,
+                HasMore = !string.IsNullOrEmpty(response.NextToken),
+                SearchedLogStreams = response.SearchedLogStreams?.Count ?? 0,
+                TotalEventsReturned = response.Events.Count
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error filtering error logs for {LogGroup}", logGroupName);
+            return StatusCode(500, new { error = ex.Message, type = ex.GetType().Name });
+        }
+    }
+    
+    /// <summary>
+    /// Search for error-level logs across multiple log groups.
+    /// 
+    /// GET /api/cloudwatch/logs/errors-multi?logGroupNames=group1,group2&minutes=60
+    /// </summary>
+    [HttpGet("errors-multi")]
+    [ProducesResponseType(typeof(MultiGroupLogsResponse), 200)]
+    public async Task<IActionResult> GetErrorLogsMultiGroup(
+        [FromQuery] string logGroupNames,
+        [FromQuery] int minutes = 60,
+        [FromQuery] int limit = 100,
+        [FromQuery] string? customErrorPattern = null)
+    {
+        try
+        {
+            List<string>? groups = ParseCommaSeparated(logGroupNames);
+            if (groups == null || groups.Count == 0)
+            {
+                return BadRequest(new { error = "At least one log group name is required" });
+            }
+
+            MultiGroupFilterResult result = await service.FilterErrorLogsMultiGroupAsync(
+                groups, minutes, limit, customErrorPattern);
+            
+            return Ok(new MultiGroupLogsResponse
+            {
+                LogGroupResults = result.LogGroupResults.Select(r => new LogGroupResultDto
+                {
+                    LogGroupName = r.LogGroupName,
+                    Events = r.Events.Select(e => new LogEventDto
+                    {
+                        Timestamp = CloudWatchLogsService.FromUnixMilliseconds(e.Timestamp ?? 0),
+                        Message = e.Message,
+                        LogStreamName = e.LogStreamName,
+                        EventId = e.EventId
+                    }).ToList(),
+                    Success = r.Success,
+                    Error = r.Error,
+                    QueryDurationMs = r.QueryDurationMs,
+                    EventCount = r.EventCount
+                }).ToList(),
+                TotalEvents = result.TotalEvents,
+                TotalDurationMs = result.TotalDurationMs,
+                SuccessfulQueries = result.SuccessfulQueries,
+                FailedQueries = result.FailedQueries
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error filtering error logs across multiple log groups");
+            return StatusCode(500, new { error = ex.Message, type = ex.GetType().Name });
+        }
+    }
+    
+    /// <summary>
+    /// Search for a specific pattern across multiple log groups.
+    /// Useful for finding trace IDs, specific error messages, etc.
+    /// 
+    /// GET /api/cloudwatch/logs/search-pattern?logGroupNames=group1,group2&pattern=SCRAM-SHA-1&minutes=60
+    /// </summary>
+    [HttpGet("search-pattern")]
+    [ProducesResponseType(typeof(MultiGroupLogsResponse), 200)]
+    public async Task<IActionResult> SearchPattern(
+        [FromQuery] string logGroupNames,
+        [FromQuery] string pattern,
+        [FromQuery] int minutes = 60,
+        [FromQuery] int limit = 100)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                return BadRequest(new { error = "Pattern is required" });
+            }
+
+            List<string>? groups = ParseCommaSeparated(logGroupNames);
+            if (groups == null || groups.Count == 0)
+            {
+                return BadRequest(new { error = "At least one log group name is required" });
+            }
+
+            MultiGroupFilterResult result = await service.SearchPatternMultiGroupAsync(
+                groups, pattern, minutes, limit);
+            
+            return Ok(new MultiGroupLogsResponse
+            {
+                LogGroupResults = result.LogGroupResults.Select(r => new LogGroupResultDto
+                {
+                    LogGroupName = r.LogGroupName,
+                    Events = r.Events.Select(e => new LogEventDto
+                    {
+                        Timestamp = CloudWatchLogsService.FromUnixMilliseconds(e.Timestamp ?? 0),
+                        Message = e.Message,
+                        LogStreamName = e.LogStreamName,
+                        EventId = e.EventId
+                    }).ToList(),
+                    Success = r.Success,
+                    Error = r.Error,
+                    QueryDurationMs = r.QueryDurationMs,
+                    EventCount = r.EventCount
+                }).ToList(),
+                TotalEvents = result.TotalEvents,
+                TotalDurationMs = result.TotalDurationMs,
+                SuccessfulQueries = result.SuccessfulQueries,
+                FailedQueries = result.FailedQueries
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error searching pattern across multiple log groups");
+            return StatusCode(500, new { error = ex.Message, type = ex.GetType().Name });
+        }
+    }
+    
+    /// <summary>
+    /// Get log context around a specific timestamp in a log stream.
+    /// Returns N lines before and after the specified timestamp for debugging.
+    /// 
+    /// GET /api/cloudwatch/logs/context?logGroupName=/aws/lambda/my-function&logStreamName=2024/10/19/stream&timestamp=1729372800000&contextLines=50
+    /// </summary>
+    [HttpGet("context")]
+    [ProducesResponseType(typeof(LogContextResponse), 200)]
+    public async Task<IActionResult> GetLogContext(
+        [FromQuery] string logGroupName,
+        [FromQuery] string logStreamName,
+        [FromQuery] long timestamp,
+        [FromQuery] int contextLines = 50)
+    {
+        try
+        {
+            LogContextResult result = await service.GetLogContextAsync(
+                logGroupName, logStreamName, timestamp, contextLines);
+            
+            return Ok(new LogContextResponse
+            {
+                TargetTimestamp = result.TargetTimestamp,
+                TargetEvent = result.TargetEvent != null ? new LogEventDto
+                {
+                    Timestamp = result.TargetEvent.Timestamp ?? DateTime.MinValue,
+                    Message = result.TargetEvent.Message,
+                    LogStreamName = logStreamName
+                } : null,
+                EventsBefore = result.EventsBefore,
+                EventsAfter = result.EventsAfter,
+                ContextEvents = result.ContextEvents.Select(e => new LogEventDto
+                {
+                    Timestamp = e.Timestamp ?? DateTime.MinValue,
+                    Message = e.Message,
+                    LogStreamName = logStreamName
+                }).ToList(),
+                TotalContextEvents = result.TotalContextEvents
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting log context for {LogGroup}/{LogStream}", logGroupName, logStreamName);
+            return StatusCode(500, new { error = ex.Message, type = ex.GetType().Name });
+        }
+    }
+    
+    #endregion
+    
+
     #region Helper Methods
     
     private static List<string>? ParseCommaSeparated(string? value)

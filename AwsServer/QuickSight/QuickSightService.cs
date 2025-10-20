@@ -11,12 +11,13 @@ namespace AwsServer.QuickSight;
 /// </summary>
 public class QuickSightService
 {
+    public bool IsInitialized { get; private set; }
+
     private readonly ILogger<QuickSightService> _logger;
     private readonly AwsDiscoveryService _discoveryService;
     private AmazonQuickSightClient? _quickSightClient;
     private AwsConfiguration? _config;
-    private bool _isInitialized;
-    
+
     public QuickSightService(
         ILogger<QuickSightService> logger,
         AwsDiscoveryService discoveryService)
@@ -57,14 +58,14 @@ public class QuickSightService
                 ? new AmazonQuickSightClient(credentials, clientConfig)
                 : new AmazonQuickSightClient(clientConfig);
             
-            _isInitialized = true;
+            IsInitialized = true;
             _logger.LogInformation("QuickSight client initialized successfully");
             return true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to initialize QuickSight client");
-            _isInitialized = false;
+            IsInitialized = false;
             return false;
         }
     }
@@ -101,11 +102,11 @@ public class QuickSightService
     /// </summary>
     private async Task EnsureInitializedAsync()
     {
-        if (!_isInitialized || _quickSightClient == null)
+        if (!IsInitialized || _quickSightClient == null)
         {
             await AutoInitializeAsync();
             
-            if (!_isInitialized || _quickSightClient == null)
+            if (!IsInitialized || _quickSightClient == null)
             {
                 throw new InvalidOperationException(
                     "QuickSight client is not initialized. Call InitializeQuickSight first.");

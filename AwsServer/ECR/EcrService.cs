@@ -12,12 +12,13 @@ namespace AwsServer.ECR;
 /// </summary>
 public class EcrService
 {
+    public bool IsInitialized { get; private set; }
+
     private readonly ILogger<EcrService> _logger;
     private readonly AwsDiscoveryService _discoveryService;
     private AmazonECRClient? _ecrClient;
     private AwsConfiguration? _config;
-    private bool _isInitialized;
-    
+
     public EcrService(
         ILogger<EcrService> logger,
         AwsDiscoveryService discoveryService)
@@ -419,7 +420,7 @@ public class EcrService
                 };
                 
                 await InitializeAsync(config);
-                _isInitialized = true;
+                IsInitialized = true;
                 _logger.LogInformation("S3 service auto-initialized successfully");
             }
         }
@@ -435,11 +436,11 @@ public class EcrService
     private async Task EnsureInitializedAsync()
     {
         // Wait for auto-initialization to complete
-        if (!_isInitialized && _ecrClient == null)
+        if (!IsInitialized && _ecrClient == null)
         {
             // Wait up to 5 seconds for auto-initialization
             DateTime timeout = DateTime.UtcNow.AddSeconds(5);
-            while (!_isInitialized && DateTime.UtcNow < timeout)
+            while (!IsInitialized && DateTime.UtcNow < timeout)
             {
                 await Task.Delay(100);
             }

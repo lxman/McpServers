@@ -3,6 +3,7 @@ using Amazon.CloudWatchLogs.Model;
 using Amazon.Runtime;
 using AwsServer.Configuration;
 using AwsServer.Configuration.Models;
+using AwsServer.CloudWatch.Models;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace AwsServer.CloudWatch;
@@ -171,6 +172,488 @@ public class CloudWatchLogsService : IDisposable
     
     #endregion
     
+    #region Multi-Group and Convenience Methods
+    
+    /// <summary>
+    /// Filter logs across multiple log groups simultaneously.
+    /// This is useful for cross-service troubleshooting.
+    /// </summary>
+    /// <param name="logGroupNames">List of log group names to search</param>
+    /// <param name="filterPattern">CloudWatch filter pattern</param>
+    /// <param name="startTime">Start time for the query</param>
+    /// <param name="endTime">End time for the query</param>
+    /// <param name="limit">Maximum number of events to return per log group</param>
+    /// <returns>Consolidated results from all log groups with timing metadata</returns>
+    public async Task<MultiGroupFilterResult> FilterLogsMultiGroupAsync(
+        List<string> logGroupNames,
+        string? filterPattern = null,
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        int limit = 100)
+    {
+        EnsureInitialized();
+        
+        DateTime startTimestamp = DateTime.UtcNow;
+        IEnumerable<Task<LogGroupResult>> tasks = logGroupNames.Select(async logGroupName =>
+        {
+            try
+            {
+                DateTime groupStartTime = DateTime.UtcNow;
+                FilterLogEventsResponse response = await FilterLogsAsync(
+                    logGroupName, filterPattern, startTime, endTime, limit);
+                TimeSpan duration = DateTime.UtcNow - groupStartTime;
+                
+                return new LogGroupResult
+                {
+                    LogGroupName = logGroupName,
+                    Events = response.Events,
+                    Success = true,
+                    QueryDurationMs = (int)duration.TotalMilliseconds,
+                    EventCount = response.Events.Count
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error filtering logs for log group {LogGroup}", logGroupName);
+                return new LogGroupResult
+                {
+                    LogGroupName = logGroupName,
+                    Events = new List<FilteredLogEvent>(),
+                    Success = false,
+                    Error = ex.Message,
+                    EventCount = 0
+                };
+            }
+        });
+        
+        LogGroupResult[] results = await Task.WhenAll(tasks);
+        TimeSpan totalDuration = DateTime.UtcNow - startTimestamp;
+        
+        return new MultiGroupFilterResult
+        {
+            LogGroupResults = results.ToList(),
+            TotalEvents = results.Sum(r => r.EventCount),
+            TotalDurationMs = (int)totalDuration.TotalMilliseconds,
+            SuccessfulQueries = results.Count(r => r.Success),
+            FailedQueries = results.Count(r => !r.Success)
+        };
+    }
+    
+    /// <summary>
+    /// Quick filter for recent logs across multiple log groups.
+    /// Convenience endpoint that sets the time range automatically.
+    /// </summary>
+    public async Task<MultiGroupFilterResult> FilterRecentLogsMultiGroupAsync(
+        List<string> logGroupNames,
+        int minutes = 30,
+        string? filterPattern = null,
+        int limit = 100)
+    {
+        DateTime startTime = DateTime.UtcNow.AddMinutes(-minutes);
+        return await FilterLogsMultiGroupAsync(logGroupNames, filterPattern, startTime, null, limit);
+    }
+    
+    /// <summary>
+    /// Search for error-level logs in a log group.
+    /// Automatically applies common error patterns.
+    /// </summary>
+    /// <param name="logGroupName">Log group to search</param>
+    /// <param name="minutes">How many minutes back to search</param>
+    /// <param name="limit">Maximum number of events to return</param>
+    /// <param name="customErrorPattern">Optional custom error pattern (overrides default)</param>
+    public async Task<FilterLogEventsResponse> FilterErrorLogsAsync(
+        string logGroupName,
+        int minutes = 60,
+        int limit = 100,
+        string? customErrorPattern = null)
+    {
+        // Default error pattern matches common error indicators
+        string errorPattern = customErrorPattern ?? "?ERROR ?Exception ?FATAL ?CRITICAL ?Failed ?\"level\":\"error\"";
+        
+        DateTime startTime = DateTime.UtcNow.AddMinutes(-minutes);
+        return await FilterLogsAsync(logGroupName, errorPattern, startTime, null, limit);
+    }
+    
+    /// <summary>
+    /// Search for error-level logs across multiple log groups.
+    /// </summary>
+    public async Task<MultiGroupFilterResult> FilterErrorLogsMultiGroupAsync(
+        List<string> logGroupNames,
+        int minutes = 60,
+        int limit = 100,
+        string? customErrorPattern = null)
+    {
+        string errorPattern = customErrorPattern ?? "?ERROR ?Exception ?FATAL ?CRITICAL ?Failed ?\"level\":\"error\"";
+        DateTime startTime = DateTime.UtcNow.AddMinutes(-minutes);
+        return await FilterLogsMultiGroupAsync(logGroupNames, errorPattern, startTime, null, limit);
+    }
+    
+    /// <summary>
+    /// Search for a specific pattern across multiple log groups.
+    /// Useful for finding specific error messages, trace IDs, etc.
+    /// </summary>
+    public async Task<MultiGroupFilterResult> SearchPatternMultiGroupAsync(
+        List<string> logGroupNames,
+        string searchPattern,
+        int minutes = 60,
+        int limit = 100)
+    {
+        DateTime startTime = DateTime.UtcNow.AddMinutes(-minutes);
+        return await FilterLogsMultiGroupAsync(logGroupNames, searchPattern, startTime, null, limit);
+    }
+    
+    /// <summary>
+    /// Get log context around a specific timestamp in a log stream.
+    /// Returns N lines before and after the specified timestamp.
+    /// </summary>
+    /// <param name="logGroupName">Log group name</param>
+    /// <param name="logStreamName">Log stream name</param>
+    /// <param name="timestamp">Target timestamp (Unix milliseconds)</param>
+    /// <param name="contextLines">Number of lines to retrieve before and after (default: 50)</param>
+    public async Task<LogContextResult> GetLogContextAsync(
+        string logGroupName,
+        string logStreamName,
+        long timestamp,
+        int contextLines = 50)
+    {
+        EnsureInitialized();
+        
+        DateTime targetTime = FromUnixMilliseconds(timestamp);
+        
+        // Get logs before the target time
+        var beforeRequest = new GetLogEventsRequest
+        {
+            LogGroupName = logGroupName,
+            LogStreamName = logStreamName,
+            EndTime = targetTime,
+            Limit = contextLines,
+            StartFromHead = false // Read backwards from end time
+        };
+        
+        // Get logs after the target time  
+        var afterRequest = new GetLogEventsRequest
+        {
+            LogGroupName = logGroupName,
+            LogStreamName = logStreamName,
+            StartTime = targetTime,
+            Limit = contextLines + 1, // +1 to include the target event
+            StartFromHead = true
+        };
+        
+        Task<GetLogEventsResponse>? beforeTask = _logsClient!.GetLogEventsAsync(beforeRequest);
+        Task<GetLogEventsResponse>? afterTask = _logsClient!.GetLogEventsAsync(afterRequest);
+        
+        await Task.WhenAll(beforeTask, afterTask);
+        
+        List<OutputLogEvent>? beforeEvents = beforeTask.Result.Events;
+        List<OutputLogEvent>? afterEvents = afterTask.Result.Events;
+        
+        // Find the target event
+        OutputLogEvent? targetEvent = afterEvents.FirstOrDefault(e => e.Timestamp == DateTimeOffset.FromUnixTimeMilliseconds(timestamp).UtcDateTime);
+        
+        // Combine events (before + target + after)
+        var allEvents = new List<OutputLogEvent>();
+        allEvents.AddRange(beforeEvents);
+        if (targetEvent != null)
+        {
+            allEvents.Add(targetEvent);
+            allEvents.AddRange(afterEvents.Where(e => e.Timestamp != DateTimeOffset.FromUnixTimeMilliseconds(timestamp).UtcDateTime));
+        }
+        else
+        {
+            allEvents.AddRange(afterEvents);
+        }
+        
+        // Sort by timestamp
+        allEvents = allEvents.OrderBy(e => e.Timestamp).ToList();
+        
+        return new LogContextResult
+        {
+            TargetTimestamp = timestamp,
+            TargetEvent = targetEvent,
+            EventsBefore = beforeEvents.Count,
+            EventsAfter = afterEvents.Count(e => e.Timestamp != DateTimeOffset.FromUnixTimeMilliseconds(timestamp).UtcDateTime),
+            ContextEvents = allEvents,
+            TotalContextEvents = allEvents.Count
+        };
+    }
+    
+    #endregion
+
+    
+    
+    #region Pagination Helpers
+    
+    /// <summary>
+    /// Batch retrieve all logs matching filter, automatically paginating through all results.
+    /// Use with caution - can return large amounts of data.
+    /// </summary>
+    /// <param name="logGroupName">Log group to query</param>
+    /// <param name="filterPattern">Filter pattern</param>
+    /// <param name="startTime">Start time</param>
+    /// <param name="endTime">End time</param>
+    /// <param name="maxResults">Maximum total results to retrieve (default: 10000)</param>
+    /// <param name="pageSize">Page size for each request (default: 1000)</param>
+    public async Task<BatchLogsResult> BatchRetrieveLogsAsync(
+        string logGroupName,
+        string? filterPattern = null,
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        int maxResults = 10000,
+        int pageSize = 1000)
+    {
+        EnsureInitialized();
+        
+        var allEvents = new List<FilteredLogEvent>();
+        var pageCount = 0;
+        var totalDuration = 0;
+        string? nextToken = null;
+        
+        var startTimestamp = DateTime.UtcNow;
+        
+        do
+        {
+            var pageStart = DateTime.UtcNow;
+            
+            var response = await FilterLogsAsync(
+                logGroupName, filterPattern, startTime, endTime,
+                Math.Min(pageSize, maxResults - allEvents.Count), nextToken);
+            
+            var pageDuration = (int)(DateTime.UtcNow - pageStart).TotalMilliseconds;
+            totalDuration += pageDuration;
+            
+            allEvents.AddRange(response.Events);
+            nextToken = response.NextToken;
+            pageCount++;
+            
+            _logger.LogDebug("Page {PageNumber}: Retrieved {EventCount} events in {Duration}ms", 
+                pageCount, response.Events.Count, pageDuration);
+            
+            if (allEvents.Count >= maxResults)
+            {
+                _logger.LogInformation("Reached max results limit of {MaxResults}", maxResults);
+                break;
+            }
+            
+        } while (!string.IsNullOrEmpty(nextToken));
+        
+        return new BatchLogsResult
+        {
+            Events = allEvents,
+            TotalEvents = allEvents.Count,
+            PageCount = pageCount,
+            TotalDurationMs = totalDuration,
+            AverageDurationPerPageMs = pageCount > 0 ? totalDuration / pageCount : 0,
+            HasMoreResults = !string.IsNullOrEmpty(nextToken),
+            NextToken = nextToken
+        };
+    }
+    
+    /// <summary>
+    /// Estimate total count of events matching a filter.
+    /// Uses sampling and CloudWatch Logs Insights for estimation.
+    /// </summary>
+    public async Task<EventCountEstimate> EstimateEventCountAsync(
+        string logGroupName,
+        string? filterPattern = null,
+        DateTime? startTime = null,
+        DateTime? endTime = null)
+    {
+        EnsureInitialized();
+        
+        // Sample first page
+        var sampleResponse = await FilterLogsAsync(
+            logGroupName, filterPattern, startTime, endTime, 1000);
+        
+        // If less than a full page, that's our count
+        if (string.IsNullOrEmpty(sampleResponse.NextToken))
+        {
+            return new EventCountEstimate
+            {
+                EstimatedCount = sampleResponse.Events.Count,
+                IsExact = true,
+                SampleSize = sampleResponse.Events.Count,
+                Confidence = "Exact"
+            };
+        }
+        
+        // Try using Insights for better estimate
+        try
+        {
+            var queryString = string.IsNullOrEmpty(filterPattern)
+                ? "stats count() as count"
+                : $"filter @message like /{filterPattern}/ | stats count() as count";
+            
+            var insightsResponse = await RunInsightsQueryAsync(
+                new List<string> { logGroupName },
+                queryString,
+                startTime ?? DateTime.UtcNow.AddHours(-1),
+                endTime ?? DateTime.UtcNow,
+                TimeSpan.FromSeconds(30));
+            
+            if (insightsResponse.Results.Count > 0 && insightsResponse.Results[0].Count > 0)
+            {
+                var countField = insightsResponse.Results[0].FirstOrDefault(f => f.Field == "count");
+                if (countField != null && long.TryParse(countField.Value, out long count))
+                {
+                    return new EventCountEstimate
+                    {
+                        EstimatedCount = count,
+                        IsExact = true,
+                        SampleSize = (int)count,
+                        Confidence = "High (Insights)"
+                    };
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not use Insights for count estimation");
+        }
+        
+        // Fallback to sample-based estimation
+        return new EventCountEstimate
+        {
+            EstimatedCount = sampleResponse.Events.Count * 10, // Rough estimate
+            IsExact = false,
+            SampleSize = sampleResponse.Events.Count,
+            Confidence = "Low (Sample-based)"
+        };
+    }
+    
+    #endregion
+    
+    #region Log Format Detection
+    
+    /// <summary>
+    /// Detect and parse structured log formats (JSON, key-value pairs, etc.)
+    /// </summary>
+    public async Task<StructuredLogsResult> GetStructuredLogsAsync(
+        string logGroupName,
+        string? filterPattern = null,
+        DateTime? startTime = null,
+        DateTime? endTime = null,
+        int limit = 100,
+        bool parseJson = true,
+        bool parseKeyValue = true)
+    {
+        EnsureInitialized();
+        
+        var response = await FilterLogsAsync(
+            logGroupName, filterPattern, startTime, endTime, limit);
+        
+        var structuredEvents = new List<StructuredLogEvent>();
+        var formatStats = new Dictionary<string, int>
+        {
+            ["json"] = 0,
+            ["key-value"] = 0,
+            ["plain-text"] = 0,
+            ["unknown"] = 0
+        };
+        
+        foreach (var evt in response.Events)
+        {
+            var structured = new StructuredLogEvent
+            {
+                Timestamp = FromUnixMilliseconds(evt.Timestamp ?? 0),
+                LogStreamName = evt.LogStreamName,
+                EventId = evt.EventId,
+                RawMessage = evt.Message,
+                Format = "unknown"
+            };
+            
+            // Try JSON parsing
+            if (parseJson && evt.Message.TrimStart().StartsWith("{"))
+            {
+                try
+                {
+                    var jsonDoc = System.Text.Json.JsonDocument.Parse(evt.Message);
+                    structured.ParsedData = new Dictionary<string, object?>();
+                    
+                    foreach (var prop in jsonDoc.RootElement.EnumerateObject())
+                    {
+                        structured.ParsedData[prop.Name] = prop.Value.ValueKind switch
+                        {
+                            System.Text.Json.JsonValueKind.String => prop.Value.GetString(),
+                            System.Text.Json.JsonValueKind.Number => prop.Value.GetDouble(),
+                            System.Text.Json.JsonValueKind.True => true,
+                            System.Text.Json.JsonValueKind.False => false,
+                            System.Text.Json.JsonValueKind.Null => null,
+                            _ => prop.Value.ToString()
+                        };
+                    }
+                    
+                    structured.Format = "json";
+                    formatStats["json"]++;
+                }
+                catch
+                {
+                    // Not valid JSON
+                }
+            }
+            
+            // Try key-value parsing (e.g., "key1=value1 key2=value2")
+            if (structured.Format == "unknown" && parseKeyValue && evt.Message.Contains('='))
+            {
+                var kvPairs = ParseKeyValuePairs(evt.Message);
+                if (kvPairs.Count > 0)
+                {
+                    structured.ParsedData = kvPairs.ToDictionary(k => k.Key, k => (object?)k.Value);
+                    structured.Format = "key-value";
+                    formatStats["key-value"]++;
+                }
+            }
+            
+            // Default to plain text
+            if (structured.Format == "unknown")
+            {
+                if (string.IsNullOrWhiteSpace(evt.Message))
+                {
+                    formatStats["unknown"]++;
+                }
+                else
+                {
+                    structured.Format = "plain-text";
+                    formatStats["plain-text"]++;
+                }
+            }
+            
+            structuredEvents.Add(structured);
+        }
+        
+        return new StructuredLogsResult
+        {
+            Events = structuredEvents,
+            TotalEvents = structuredEvents.Count,
+            FormatStatistics = formatStats,
+            NextToken = response.NextToken,
+            HasMore = !string.IsNullOrEmpty(response.NextToken)
+        };
+    }
+    
+    private static Dictionary<string, string> ParseKeyValuePairs(string message)
+    {
+        var result = new Dictionary<string, string>();
+        
+        // Simple key=value parser
+        var parts = message.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        
+        foreach (var part in parts)
+        {
+            var kvIndex = part.IndexOf('=');
+            if (kvIndex > 0 && kvIndex < part.Length - 1)
+            {
+                var key = part.Substring(0, kvIndex);
+                var value = part.Substring(kvIndex + 1).Trim('"', '\'');
+                result[key] = value;
+            }
+        }
+        
+        return result;
+    }
+    
+    #endregion
+
     #region CloudWatch Logs Insights
     
     /// <summary>

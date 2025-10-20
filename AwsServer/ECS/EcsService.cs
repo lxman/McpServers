@@ -12,12 +12,13 @@ namespace AwsServer.ECS;
 /// </summary>
 public class EcsService
 {
+    public bool IsInitialized { get; private set; }
+
     private readonly ILogger<EcsService> _logger;
     private readonly AwsDiscoveryService _discoveryService;
     private AmazonECSClient? _ecsClient;
     private AwsConfiguration? _config;
-    private bool _isInitialized;
-    
+
     public EcsService(
         ILogger<EcsService> logger,
         AwsDiscoveryService discoveryService)
@@ -365,7 +366,7 @@ public class EcsService
                 };
                 
                 await InitializeAsync(config);
-                _isInitialized = true;
+                IsInitialized = true;
                 _logger.LogInformation("S3 service auto-initialized successfully");
             }
         }
@@ -381,11 +382,11 @@ public class EcsService
     private async Task EnsureInitializedAsync()
     {
         // Wait for auto-initialization to complete
-        if (!_isInitialized && _ecsClient == null)
+        if (!IsInitialized && _ecsClient == null)
         {
             // Wait up to 5 seconds for auto-initialization
             DateTime timeout = DateTime.UtcNow.AddSeconds(5);
-            while (!_isInitialized && DateTime.UtcNow < timeout)
+            while (!IsInitialized && DateTime.UtcNow < timeout)
             {
                 await Task.Delay(100);
             }
