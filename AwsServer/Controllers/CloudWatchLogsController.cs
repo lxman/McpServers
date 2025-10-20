@@ -44,7 +44,9 @@ public class CloudWatchLogsController(
         [FromQuery] DateTime? endTime = null,
         [FromQuery] int limit = 100,
         [FromQuery] string? nextToken = null,
-        [FromQuery] string? logStreamNames = null)
+        [FromQuery] string? logStreamNames = null,
+        [FromQuery] bool includePagination = false,
+        [FromQuery] bool useQuickEstimate = true)
     {
         try
         {
@@ -53,6 +55,35 @@ public class CloudWatchLogsController(
             FilterLogEventsResponse response = await service.FilterLogsAsync(
                 logGroupName, filterPattern, startTime, endTime,
                 limit, nextToken, streams);
+            
+            // Calculate pagination metadata if requested
+            Common.Models.PaginationMetadata? pagination = null;
+            if (includePagination)
+            {
+                // Get count estimate (only on first page to avoid extra overhead)
+                long? estimatedCount = null;
+                string confidence = "Unknown";
+                
+                if (string.IsNullOrEmpty(nextToken))
+                {
+                    var estimate = await service.GetCountEstimateAsync(
+                        logGroupName, filterPattern, startTime, endTime, useQuickEstimate);
+                    estimatedCount = estimate.count;
+                    confidence = estimate.confidence;
+                }
+                
+                // Note: Page number is difficult to track with opaque tokens
+                // For now, we'll assume page 1 if no token, otherwise page 2+
+                int pageNumber = string.IsNullOrEmpty(nextToken) ? 1 : 2;
+                
+                pagination = service.CalculatePaginationMetadata(
+                    response.Events.Count,
+                    limit,
+                    pageNumber,
+                    !string.IsNullOrEmpty(response.NextToken),
+                    estimatedCount,
+                    confidence);
+            }
             
             return Ok(new FilterLogsResponse
             {
@@ -66,7 +97,8 @@ public class CloudWatchLogsController(
                 NextToken = response.NextToken,
                 HasMore = !string.IsNullOrEmpty(response.NextToken),
                 SearchedLogStreams = response.SearchedLogStreams?.Count ?? 0,
-                TotalEventsReturned = response.Events.Count
+                TotalEventsReturned = response.Events.Count,
+                Pagination = pagination
             });
         }
         catch (Exception ex)
@@ -75,7 +107,7 @@ public class CloudWatchLogsController(
             return StatusCode(500, new { error = ex.Message, type = ex.GetType().Name });
         }
     }
-    
+
     /// <summary>
     /// Quick filter for recent logs (last N minutes).
     /// Convenience endpoint that sets the time range automatically.
