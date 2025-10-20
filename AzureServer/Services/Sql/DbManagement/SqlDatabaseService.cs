@@ -23,20 +23,20 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var servers = new List<ServerDto>();
 
             if (!string.IsNullOrEmpty(subscriptionId))
             {
-                var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+                SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
                 if (!string.IsNullOrEmpty(resourceGroupName))
                 {
                     // List servers in specific resource group
                     ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
-                    var sqlServers = resourceGroup.GetSqlServers();
+                    SqlServerCollection? sqlServers = resourceGroup.GetSqlServers();
 
-                    await foreach (var server in sqlServers.GetAllAsync())
+                    await foreach (SqlServerResource? server in sqlServers.GetAllAsync())
                     {
                         servers.Add(MapSqlServer(server));
                     }
@@ -44,7 +44,7 @@ public class SqlDatabaseService(
                 else
                 {
                     // List all servers in subscription
-                    await foreach (var server in subscription.GetSqlServersAsync())
+                    await foreach (SqlServerResource? server in subscription.GetSqlServersAsync())
                     {
                         servers.Add(MapSqlServer(server));
                     }
@@ -53,9 +53,9 @@ public class SqlDatabaseService(
             else
             {
                 // List servers across all subscriptions
-                await foreach (var subscription in client.GetSubscriptions().GetAllAsync())
+                await foreach (SubscriptionResource? subscription in client.GetSubscriptions().GetAllAsync())
                 {
-                    await foreach (var server in subscription.GetSqlServersAsync())
+                    await foreach (SqlServerResource? server in subscription.GetSqlServersAsync())
                     {
                         servers.Add(MapSqlServer(server));
                     }
@@ -76,16 +76,16 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
-            var servers = resourceGroup.GetSqlServers();
+            SqlServerCollection? servers = resourceGroup.GetSqlServers();
 
             SqlServerResource server = await servers.GetAsync(serverName);
 
@@ -108,14 +108,14 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             SqlServerResource server = await resourceGroup.GetSqlServers().GetAsync(serverName);
 
@@ -144,19 +144,19 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             SqlServerResource server = await resourceGroup.GetSqlServers().GetAsync(serverName);
 
             var databases = new List<DatabaseDto>();
-            await foreach (var database in server.GetSqlDatabases().GetAllAsync())
+            await foreach (SqlDatabaseResource? database in server.GetSqlDatabases().GetAllAsync())
             {
                 // Skip system databases
                 if (database.Data.Name != "master")
@@ -179,14 +179,14 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             SqlServerResource server = await resourceGroup.GetSqlServers().GetAsync(serverName);
 
@@ -213,14 +213,14 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             SqlServerResource server = await resourceGroup.GetSqlServers().GetAsync(serverName);
 
@@ -232,7 +232,7 @@ public class SqlDatabaseService(
 
             if (tags is not null)
             {
-                foreach (var tag in tags)
+                foreach (KeyValuePair<string, string> tag in tags)
                 {
                     databaseData.Tags.Add(tag.Key, tag.Value);
                 }
@@ -241,7 +241,7 @@ public class SqlDatabaseService(
             ArmOperation<SqlDatabaseResource> operation = await server.GetSqlDatabases().CreateOrUpdateAsync(
                 WaitUntil.Completed, databaseName, databaseData);
 
-            var database = operation.Value;
+            SqlDatabaseResource? database = operation.Value;
 
             logger.LogInformation("Created database {DatabaseName} on server {ServerName}", databaseName, serverName);
             return MapSqlDatabase(database, serverName, resourceGroupName);
@@ -257,14 +257,14 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             SqlServerResource server = await resourceGroup.GetSqlServers().GetAsync(serverName);
             SqlDatabaseResource database = await server.GetSqlDatabases().GetAsync(databaseName);
@@ -294,19 +294,19 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             SqlServerResource server = await resourceGroup.GetSqlServers().GetAsync(serverName);
 
             var rules = new List<FirewallRuleDto>();
-            await foreach (var rule in server.GetSqlFirewallRules().GetAllAsync())
+            await foreach (SqlFirewallRuleResource? rule in server.GetSqlFirewallRules().GetAllAsync())
             {
                 rules.Add(MapFirewallRule(rule, serverName, resourceGroupName));
             }
@@ -325,14 +325,14 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             SqlServerResource server = await resourceGroup.GetSqlServers().GetAsync(serverName);
 
@@ -358,14 +358,14 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             SqlServerResource server = await resourceGroup.GetSqlServers().GetAsync(serverName);
 
@@ -378,7 +378,7 @@ public class SqlDatabaseService(
             ArmOperation<SqlFirewallRuleResource> operation = await server.GetSqlFirewallRules().CreateOrUpdateAsync(
                 WaitUntil.Completed, ruleName, ruleData);
 
-            var rule = operation.Value;
+            SqlFirewallRuleResource? rule = operation.Value;
 
             logger.LogInformation("Created firewall rule {RuleName} on server {ServerName}", ruleName, serverName);
             return MapFirewallRule(rule, serverName, resourceGroupName);
@@ -394,14 +394,14 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             SqlServerResource server = await resourceGroup.GetSqlServers().GetAsync(serverName);
             SqlFirewallRuleResource rule = await server.GetSqlFirewallRules().GetAsync(ruleName);
@@ -431,19 +431,19 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             SqlServerResource server = await resourceGroup.GetSqlServers().GetAsync(serverName);
 
             var pools = new List<ElasticPoolDto>();
-            await foreach (var pool in server.GetElasticPools().GetAllAsync())
+            await foreach (ElasticPoolResource? pool in server.GetElasticPools().GetAllAsync())
             {
                 pools.Add(MapElasticPool(pool, serverName, resourceGroupName));
             }
@@ -462,14 +462,14 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             SqlServerResource server = await resourceGroup.GetSqlServers().GetAsync(serverName);
 
@@ -498,24 +498,24 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var servers = new List<ServerDto>();
 
             if (!string.IsNullOrEmpty(subscriptionId))
             {
-                var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+                SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
                 if (!string.IsNullOrEmpty(resourceGroupName))
                 {
                     ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
-                    await foreach (var server in resourceGroup.GetPostgreSqlServers().GetAllAsync())
+                    await foreach (PostgreSqlServerResource? server in resourceGroup.GetPostgreSqlServers().GetAllAsync())
                     {
                         servers.Add(MapPostgreSqlServer(server));
                     }
                 }
                 else
                 {
-                    await foreach (var server in subscription.GetPostgreSqlServersAsync())
+                    await foreach (PostgreSqlServerResource? server in subscription.GetPostgreSqlServersAsync())
                     {
                         servers.Add(MapPostgreSqlServer(server));
                     }
@@ -523,9 +523,9 @@ public class SqlDatabaseService(
             }
             else
             {
-                await foreach (var subscription in client.GetSubscriptions().GetAllAsync())
+                await foreach (SubscriptionResource? subscription in client.GetSubscriptions().GetAllAsync())
                 {
-                    await foreach (var server in subscription.GetPostgreSqlServersAsync())
+                    await foreach (PostgreSqlServerResource? server in subscription.GetPostgreSqlServersAsync())
                     {
                         servers.Add(MapPostgreSqlServer(server));
                     }
@@ -546,19 +546,19 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             PostgreSqlServerResource server = await resourceGroup.GetPostgreSqlServers().GetAsync(serverName);
 
             var databases = new List<DatabaseDto>();
-            await foreach (var database in server.GetPostgreSqlDatabases().GetAllAsync())
+            await foreach (PostgreSqlDatabaseResource? database in server.GetPostgreSqlDatabases().GetAllAsync())
             {
                 databases.Add(MapPostgreSqlDatabase(database, serverName, resourceGroupName));
             }
@@ -577,14 +577,14 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
 
             // Try Flexible Server first (newer deployment model)
@@ -626,26 +626,26 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var servers = new List<ServerDto>();
 
             if (!string.IsNullOrEmpty(subscriptionId))
             {
-                var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+                SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
                 if (!string.IsNullOrEmpty(resourceGroupName))
                 {
                     ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
-                    await foreach (var server in resourceGroup.GetPostgreSqlFlexibleServers().GetAllAsync())
+                    await foreach (PostgreSqlFlexibleServerResource? server in resourceGroup.GetPostgreSqlFlexibleServers().GetAllAsync())
                     {
                         servers.Add(MapPostgreSqlFlexibleServer(server));
                     }
                 }
                 else
                 {
-                    await foreach (var resourceGroup in subscription.GetResourceGroups().GetAllAsync())
+                    await foreach (ResourceGroupResource? resourceGroup in subscription.GetResourceGroups().GetAllAsync())
                     {
-                        await foreach (var server in resourceGroup.GetPostgreSqlFlexibleServers().GetAllAsync())
+                        await foreach (PostgreSqlFlexibleServerResource? server in resourceGroup.GetPostgreSqlFlexibleServers().GetAllAsync())
                         {
                             servers.Add(MapPostgreSqlFlexibleServer(server));
                         }
@@ -654,11 +654,11 @@ public class SqlDatabaseService(
             }
             else
             {
-                await foreach (var subscription in client.GetSubscriptions().GetAllAsync())
+                await foreach (SubscriptionResource? subscription in client.GetSubscriptions().GetAllAsync())
                 {
-                    await foreach (var resourceGroup in subscription.GetResourceGroups().GetAllAsync())
+                    await foreach (ResourceGroupResource? resourceGroup in subscription.GetResourceGroups().GetAllAsync())
                     {
-                        await foreach (var server in resourceGroup.GetPostgreSqlFlexibleServers().GetAllAsync())
+                        await foreach (PostgreSqlFlexibleServerResource? server in resourceGroup.GetPostgreSqlFlexibleServers().GetAllAsync())
                         {
                             servers.Add(MapPostgreSqlFlexibleServer(server));
                         }
@@ -684,24 +684,24 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var servers = new List<ServerDto>();
 
             if (!string.IsNullOrEmpty(subscriptionId))
             {
-                var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+                SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
                 if (!string.IsNullOrEmpty(resourceGroupName))
                 {
                     ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
-                    await foreach (var server in resourceGroup.GetMySqlServers().GetAllAsync())
+                    await foreach (MySqlServerResource? server in resourceGroup.GetMySqlServers().GetAllAsync())
                     {
                         servers.Add(MapMySqlServer(server));
                     }
                 }
                 else
                 {
-                    await foreach (var server in subscription.GetMySqlServersAsync())
+                    await foreach (MySqlServerResource? server in subscription.GetMySqlServersAsync())
                     {
                         servers.Add(MapMySqlServer(server));
                     }
@@ -709,9 +709,9 @@ public class SqlDatabaseService(
             }
             else
             {
-                await foreach (var subscription in client.GetSubscriptions().GetAllAsync())
+                await foreach (SubscriptionResource? subscription in client.GetSubscriptions().GetAllAsync())
                 {
-                    await foreach (var server in subscription.GetMySqlServersAsync())
+                    await foreach (MySqlServerResource? server in subscription.GetMySqlServersAsync())
                     {
                         servers.Add(MapMySqlServer(server));
                     }
@@ -732,19 +732,19 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
             MySqlServerResource server = await resourceGroup.GetMySqlServers().GetAsync(serverName);
 
             var databases = new List<DatabaseDto>();
-            await foreach (var database in server.GetMySqlDatabases().GetAllAsync())
+            await foreach (MySqlDatabaseResource? database in server.GetMySqlDatabases().GetAllAsync())
             {
                 databases.Add(MapMySqlDatabase(database, serverName, resourceGroupName));
             }
@@ -763,14 +763,14 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 subscriptionId = (await client.GetDefaultSubscriptionAsync()).Data.SubscriptionId;
             }
 
-            var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+            SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
 
             // Try Flexible Server first (newer deployment model)
@@ -812,26 +812,26 @@ public class SqlDatabaseService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var servers = new List<ServerDto>();
 
             if (!string.IsNullOrEmpty(subscriptionId))
             {
-                var subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
+                SubscriptionResource? subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
                 if (!string.IsNullOrEmpty(resourceGroupName))
                 {
                     ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
-                    await foreach (var server in resourceGroup.GetMySqlFlexibleServers().GetAllAsync())
+                    await foreach (MySqlFlexibleServerResource? server in resourceGroup.GetMySqlFlexibleServers().GetAllAsync())
                     {
                         servers.Add(MapMySqlFlexibleServer(server));
                     }
                 }
                 else
                 {
-                    await foreach (var resourceGroup in subscription.GetResourceGroups().GetAllAsync())
+                    await foreach (ResourceGroupResource? resourceGroup in subscription.GetResourceGroups().GetAllAsync())
                     {
-                        await foreach (var server in resourceGroup.GetMySqlFlexibleServers().GetAllAsync())
+                        await foreach (MySqlFlexibleServerResource? server in resourceGroup.GetMySqlFlexibleServers().GetAllAsync())
                         {
                             servers.Add(MapMySqlFlexibleServer(server));
                         }
@@ -840,11 +840,11 @@ public class SqlDatabaseService(
             }
             else
             {
-                await foreach (var subscription in client.GetSubscriptions().GetAllAsync())
+                await foreach (SubscriptionResource? subscription in client.GetSubscriptions().GetAllAsync())
                 {
-                    await foreach (var resourceGroup in subscription.GetResourceGroups().GetAllAsync())
+                    await foreach (ResourceGroupResource? resourceGroup in subscription.GetResourceGroups().GetAllAsync())
                     {
-                        await foreach (var server in resourceGroup.GetMySqlFlexibleServers().GetAllAsync())
+                        await foreach (MySqlFlexibleServerResource? server in resourceGroup.GetMySqlFlexibleServers().GetAllAsync())
                         {
                             servers.Add(MapMySqlFlexibleServer(server));
                         }

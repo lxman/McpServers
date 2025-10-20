@@ -1,4 +1,5 @@
 using AzureServer.Services.ServiceBus;
+using AzureServer.Services.ServiceBus.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;
@@ -14,7 +15,7 @@ public class ServiceBusController(IServiceBusService serviceBusService, ILogger<
     {
         try
         {
-            var namespaces = await serviceBusService.ListNamespacesAsync(resourceGroupName, subscriptionId);
+            IEnumerable<ServiceBusNamespaceDto> namespaces = await serviceBusService.ListNamespacesAsync(resourceGroupName, subscriptionId);
             return Ok(new { success = true, namespaces = namespaces.ToArray() });
         }
         catch (Exception ex)
@@ -32,7 +33,7 @@ public class ServiceBusController(IServiceBusService serviceBusService, ILogger<
     {
         try
         {
-            var ns = await serviceBusService.GetNamespaceAsync(resourceGroupName, namespaceName, subscriptionId);
+            ServiceBusNamespaceDto? ns = await serviceBusService.GetNamespaceAsync(resourceGroupName, namespaceName, subscriptionId);
             if (ns is null)
                 return NotFound(new { success = false, error = $"Namespace {namespaceName} not found" });
 
@@ -53,7 +54,7 @@ public class ServiceBusController(IServiceBusService serviceBusService, ILogger<
     {
         try
         {
-            var ns = await serviceBusService.CreateNamespaceAsync(
+            ServiceBusNamespaceDto ns = await serviceBusService.CreateNamespaceAsync(
                 resourceGroupName, namespaceName, request.Location, request.SubscriptionId, request.Sku);
             return Ok(new { success = true, @namespace = ns });
         }
@@ -90,7 +91,7 @@ public class ServiceBusController(IServiceBusService serviceBusService, ILogger<
     {
         try
         {
-            var queues = await serviceBusService.ListQueuesAsync(resourceGroupName, namespaceName, subscriptionId);
+            IEnumerable<ServiceBusQueueDto> queues = await serviceBusService.ListQueuesAsync(resourceGroupName, namespaceName, subscriptionId);
             return Ok(new { success = true, queues = queues.ToArray() });
         }
         catch (Exception ex)

@@ -1,4 +1,5 @@
 using AzureServer.Services.KeyVault;
+using AzureServer.Services.KeyVault.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;
@@ -12,7 +13,7 @@ public class KeyVaultController(IKeyVaultService keyVaultService, ILogger<KeyVau
     {
         try
         {
-            var secrets = await keyVaultService.ListSecretsAsync(vaultName);
+            IEnumerable<SecretPropertiesDto> secrets = await keyVaultService.ListSecretsAsync(vaultName);
             return Ok(new { success = true, secrets = secrets.ToArray() });
         }
         catch (Exception ex)
@@ -27,7 +28,7 @@ public class KeyVaultController(IKeyVaultService keyVaultService, ILogger<KeyVau
     {
         try
         {
-            var secret = await keyVaultService.GetSecretAsync(vaultName, secretName, version);
+            SecretDto? secret = await keyVaultService.GetSecretAsync(vaultName, secretName, version);
             if (secret is null)
                 return NotFound(new { success = false, error = $"Secret {secretName} not found in vault {vaultName}" });
 
@@ -51,7 +52,7 @@ public class KeyVaultController(IKeyVaultService keyVaultService, ILogger<KeyVau
             DateTime? expiresOn = string.IsNullOrEmpty(request.ExpiresOn) ? null : DateTime.Parse(request.ExpiresOn);
             DateTime? notBefore = string.IsNullOrEmpty(request.NotBefore) ? null : DateTime.Parse(request.NotBefore);
 
-            var secret = await keyVaultService.SetSecretAsync(
+            SecretDto secret = await keyVaultService.SetSecretAsync(
                 vaultName, secretName, request.Value,
                 request.ContentType, expiresOn, notBefore, request.Tags);
 
@@ -69,7 +70,7 @@ public class KeyVaultController(IKeyVaultService keyVaultService, ILogger<KeyVau
     {
         try
         {
-            var deletedSecret = await keyVaultService.DeleteSecretAsync(vaultName, secretName);
+            DeletedSecretDto deletedSecret = await keyVaultService.DeleteSecretAsync(vaultName, secretName);
             return Ok(new { success = true, deletedSecret });
         }
         catch (Exception ex)
@@ -84,7 +85,7 @@ public class KeyVaultController(IKeyVaultService keyVaultService, ILogger<KeyVau
     {
         try
         {
-            var versions = await keyVaultService.GetSecretVersionsAsync(vaultName, secretName);
+            IEnumerable<SecretPropertiesDto> versions = await keyVaultService.GetSecretVersionsAsync(vaultName, secretName);
             return Ok(new { success = true, versions = versions.ToArray() });
         }
         catch (Exception ex)
@@ -99,7 +100,7 @@ public class KeyVaultController(IKeyVaultService keyVaultService, ILogger<KeyVau
     {
         try
         {
-            var deletedSecrets = await keyVaultService.ListDeletedSecretsAsync(vaultName);
+            IEnumerable<DeletedSecretDto> deletedSecrets = await keyVaultService.ListDeletedSecretsAsync(vaultName);
             return Ok(new { success = true, deletedSecrets = deletedSecrets.ToArray() });
         }
         catch (Exception ex)
@@ -114,7 +115,7 @@ public class KeyVaultController(IKeyVaultService keyVaultService, ILogger<KeyVau
     {
         try
         {
-            var deletedSecret = await keyVaultService.GetDeletedSecretAsync(vaultName, secretName);
+            DeletedSecretDto? deletedSecret = await keyVaultService.GetDeletedSecretAsync(vaultName, secretName);
             if (deletedSecret is null)
                 return NotFound(new { success = false, error = $"Deleted secret {secretName} not found in vault {vaultName}" });
 
@@ -132,7 +133,7 @@ public class KeyVaultController(IKeyVaultService keyVaultService, ILogger<KeyVau
     {
         try
         {
-            var properties = await keyVaultService.RecoverDeletedSecretAsync(vaultName, secretName);
+            SecretPropertiesDto properties = await keyVaultService.RecoverDeletedSecretAsync(vaultName, secretName);
             return Ok(new { success = true, properties });
         }
         catch (Exception ex)
@@ -168,7 +169,7 @@ public class KeyVaultController(IKeyVaultService keyVaultService, ILogger<KeyVau
             DateTime? expiresOn = string.IsNullOrEmpty(request.ExpiresOn) ? null : DateTime.Parse(request.ExpiresOn);
             DateTime? notBefore = string.IsNullOrEmpty(request.NotBefore) ? null : DateTime.Parse(request.NotBefore);
 
-            var properties = await keyVaultService.UpdateSecretPropertiesAsync(
+            SecretPropertiesDto properties = await keyVaultService.UpdateSecretPropertiesAsync(
                 vaultName, secretName, request.Version, request.Enabled,
                 expiresOn, notBefore, request.ContentType, request.Tags);
 

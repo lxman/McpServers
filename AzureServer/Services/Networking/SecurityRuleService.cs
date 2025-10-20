@@ -1,4 +1,5 @@
 ﻿using Azure;
+using Azure.Core;
 using Azure.ResourceManager;
 using Azure.ResourceManager.Network;
 using Azure.ResourceManager.Network.Models;
@@ -14,12 +15,12 @@ public class SecurityRuleService(ArmClientFactory armClientFactory, ILogger<Secu
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = NetworkSecurityGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName);
-            var nsg = armClient.GetNetworkSecurityGroupResource(resourceId);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = NetworkSecurityGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName);
+            NetworkSecurityGroupResource? nsg = armClient.GetNetworkSecurityGroupResource(resourceId);
             
             var rules = new List<SecurityRuleDto>();
-            await foreach (var rule in nsg.GetSecurityRules())
+            await foreach (SecurityRuleResource? rule in nsg.GetSecurityRules())
             {
                 rules.Add(MappingService.MapToSecurityRuleDto(rule.Data));
             }
@@ -37,8 +38,8 @@ public class SecurityRuleService(ArmClientFactory armClientFactory, ILogger<Secu
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = SecurityRuleResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName, ruleName);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = SecurityRuleResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName, ruleName);
             Response<SecurityRuleResource>? response = await armClient.GetSecurityRuleResource(resourceId).GetAsync();
             
             return response.HasValue ? MappingService.MapToSecurityRuleDto(response.Value.Data) : null;
@@ -58,11 +59,11 @@ public class SecurityRuleService(ArmClientFactory armClientFactory, ILogger<Secu
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var nsgResourceId = NetworkSecurityGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName);
-            var nsg = armClient.GetNetworkSecurityGroupResource(nsgResourceId);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? nsgResourceId = NetworkSecurityGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName);
+            NetworkSecurityGroupResource? nsg = armClient.GetNetworkSecurityGroupResource(nsgResourceId);
 
-            var ruleData = MappingService.MapToSecurityRuleData(request);
+            SecurityRuleData ruleData = MappingService.MapToSecurityRuleData(request);
 
             ArmOperation<SecurityRuleResource>? operation = await nsg.GetSecurityRules().CreateOrUpdateAsync(
                 WaitUntil.Completed, request.Name, ruleData);
@@ -80,9 +81,9 @@ public class SecurityRuleService(ArmClientFactory armClientFactory, ILogger<Secu
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = SecurityRuleResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName, ruleName);
-            var rule = armClient.GetSecurityRuleResource(resourceId);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = SecurityRuleResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName, ruleName);
+            SecurityRuleResource? rule = armClient.GetSecurityRuleResource(resourceId);
             
             await rule.DeleteAsync(WaitUntil.Completed);
             return true;
@@ -98,12 +99,12 @@ public class SecurityRuleService(ArmClientFactory armClientFactory, ILogger<Secu
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = SecurityRuleResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName, ruleName);
-            var rule = armClient.GetSecurityRuleResource(resourceId);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = SecurityRuleResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName, ruleName);
+            SecurityRuleResource? rule = armClient.GetSecurityRuleResource(resourceId);
             
             Response<SecurityRuleResource>? response = await rule.GetAsync();
-            var ruleData = response.Value.Data;
+            SecurityRuleData? ruleData = response.Value.Data;
 
             if (!string.IsNullOrEmpty(request.Description))
                 ruleData.Description = request.Description;

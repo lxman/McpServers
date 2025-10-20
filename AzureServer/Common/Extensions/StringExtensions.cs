@@ -29,7 +29,7 @@ public static class StringExtensions
         if (string.IsNullOrEmpty(value) || value.Length <= maxLength)
             return value;
             
-        var truncated = value[..maxLength];
+        string truncated = value[..maxLength];
         return addEllipsis ? truncated + "..." : truncated;
     }
     
@@ -42,7 +42,7 @@ public static class StringExtensions
             return string.Empty;
 
         // Azure DevOps user fields often come in format "Display Name <email@domain.com>"
-        var angleIndex = userField.IndexOf('<');
+        int angleIndex = userField.IndexOf('<');
         if (angleIndex > 0)
         {
             return userField[..angleIndex].Trim();
@@ -59,8 +59,8 @@ public static class StringExtensions
         if (string.IsNullOrEmpty(userField))
             return string.Empty;
 
-        var startIndex = userField.IndexOf('<');
-        var endIndex = userField.IndexOf('>');
+        int startIndex = userField.IndexOf('<');
+        int endIndex = userField.IndexOf('>');
         
         if (startIndex >= 0 && endIndex > startIndex)
         {
@@ -78,7 +78,7 @@ public static class StringExtensions
         if (string.IsNullOrEmpty(value))
             return string.Empty;
             
-        var invalidChars = Path.GetInvalidFileNameChars();
+        char[] invalidChars = Path.GetInvalidFileNameChars();
         return string.Concat(value.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
     }
 }

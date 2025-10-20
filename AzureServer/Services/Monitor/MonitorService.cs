@@ -3,6 +3,7 @@ using Azure;
 using Azure.Core;
 using Azure.Monitor.Query;
 using Azure.Monitor.Query.Models;
+using Azure.ResourceManager;
 using Azure.ResourceManager.ApplicationInsights;
 using Azure.ResourceManager.Monitor;
 using Azure.ResourceManager.OperationalInsights;
@@ -24,13 +25,13 @@ public class MonitorService(
     private async Task<(LogsQueryClient logs, MetricsQueryClient metrics)> GetQueryClientsAsync()
     {
         // Check if we need to recreate the query clients
-        var clientInfo = armClientFactory.GetCurrentClientInfo();
+        ArmClientInfo? clientInfo = armClientFactory.GetCurrentClientInfo();
     
         if (_logsClient is not null && _metricsClient is not null && clientInfo is not null) 
             return (_logsClient, _metricsClient);
     
         // Use the factory to get the credential
-        var credential = await armClientFactory.GetCredentialAsync();
+        TokenCredential credential = await armClientFactory.GetCredentialAsync();
     
         _logsClient = new LogsQueryClient(credential);
         _metricsClient = new MetricsQueryClient(credential);
@@ -44,9 +45,9 @@ public class MonitorService(
     {
         try
         {
-            (var logsClient, _) = await GetQueryClientsAsync();
+            (LogsQueryClient logsClient, _) = await GetQueryClientsAsync();
             
-            var timeRange = timeSpan.HasValue 
+            QueryTimeRange timeRange = timeSpan.HasValue 
                 ? new QueryTimeRange(timeSpan.Value) 
                 : QueryTimeRange.All;
 
@@ -59,14 +60,14 @@ public class MonitorService(
             {
                 var result = new LogQueryResult();
                 
-                foreach (var table in response.Value.AllTables)
+                foreach (LogsTable? table in response.Value.AllTables)
                 {
                     var tableDto = new LogTable
                     {
                         Name = table.Name
                     };
 
-                    foreach (var column in table.Columns)
+                    foreach (LogsTableColumn? column in table.Columns)
                     {
                         tableDto.Columns.Add(new LogColumn
                         {
@@ -75,7 +76,7 @@ public class MonitorService(
                         });
                     }
 
-                    foreach (var row in table.Rows)
+                    foreach (LogsTableRow? row in table.Rows)
                     {
                         var rowDict = new Dictionary<string, object?>();
                         for (var i = 0; i < table.Columns.Count; i++)
@@ -107,12 +108,12 @@ public class MonitorService(
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var workspaceIds = new List<string>();
 
             if (!string.IsNullOrEmpty(subscriptionId))
             {
-                var subscription = armClient.GetSubscriptionResource(
+                SubscriptionResource? subscription = armClient.GetSubscriptionResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
                 workspaceIds.AddRange(subscription.GetOperationalInsightsWorkspaces()
@@ -121,7 +122,7 @@ public class MonitorService(
             else
             {
                 // List across all subscriptions
-                await foreach (var subscription in armClient.GetSubscriptions())
+                await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
                 {
                     workspaceIds.AddRange(subscription.GetOperationalInsightsWorkspaces()
                         .Select(workspace => workspace.Data.CustomerId.ToString() ?? string.Empty));
@@ -142,17 +143,17 @@ public class MonitorService(
         try
         {
             var query = "search * | distinct $table | project TableName = $table";
-            var result = await QueryLogsAsync(workspaceId, query, TimeSpan.FromDays(1));
+            LogQueryResult result = await QueryLogsAsync(workspaceId, query, TimeSpan.FromDays(1));
 
             if (result.Error is not null)
                 return [];
 
             var streams = new List<string>();
-            foreach (var table in result.Tables)
+            foreach (LogTable table in result.Tables)
             {
-                foreach (var row in table.Rows)
+                foreach (Dictionary<string, object?> row in table.Rows)
                 {
-                    if (row.TryGetValue("TableName", out var value) && value is not null)
+                    if (row.TryGetValue("TableName", out object? value) && value is not null)
                     {
                         streams.Add(value.ToString() ?? "");
                     }
@@ -179,7 +180,7 @@ public class MonitorService(
                 | project TimeGenerated, Message = tostring(pack_all())
                 | order by TimeGenerated desc";
 
-            var result = await QueryLogsAsync(workspaceId, query, timeSpan ?? TimeSpan.FromHours(24));
+            LogQueryResult result = await QueryLogsAsync(workspaceId, query, timeSpan ?? TimeSpan.FromHours(24));
             
             if (result.Error is not null || result.Tables.Count == 0)
                 return [];
@@ -190,13 +191,13 @@ public class MonitorService(
             var matches = new List<LogMatch>();
             var allMessages = new List<(DateTime timestamp, string message)>();
 
-            var table = result.Tables[0];
-            foreach (var row in table.Rows)
+            LogTable table = result.Tables[0];
+            foreach (Dictionary<string, object?> row in table.Rows)
             {
-                if (!row.TryGetValue("TimeGenerated", out var tsValue) ||
-                    !row.TryGetValue("Message", out var msgValue) ||
+                if (!row.TryGetValue("TimeGenerated", out object? tsValue) ||
+                    !row.TryGetValue("Message", out object? msgValue) ||
                     tsValue is null || msgValue is null) continue;
-                var timestamp = tsValue switch
+                DateTime timestamp = tsValue switch
                 {
                     DateTimeOffset dto => dto.DateTime,
                     DateTime dt => dt,
@@ -216,12 +217,12 @@ public class MonitorService(
                     LineNumber = i + 1
                 };
 
-                for (var j = Math.Max(0, i - contextLines); j < i; j++)
+                for (int j = Math.Max(0, i - contextLines); j < i; j++)
                 {
                     match.ContextBefore.Add(allMessages[j].message);
                 }
 
-                for (var j = i + 1; j < Math.Min(allMessages.Count, i + contextLines + 1); j++)
+                for (int j = i + 1; j < Math.Min(allMessages.Count, i + contextLines + 1); j++)
                 {
                     match.ContextAfter.Add(allMessages[j].message);
                 }
@@ -243,15 +244,15 @@ public class MonitorService(
         int maxMatches = 100, int maxStreamsPerGroup = 5)
     {
         var allMatches = new List<LogMatch>();
-        var remainingMatches = maxMatches;
+        int remainingMatches = maxMatches;
 
-        foreach (var workspaceId in workspaceIds.Take(maxStreamsPerGroup))
+        foreach (string workspaceId in workspaceIds.Take(maxStreamsPerGroup))
         {
             if (remainingMatches <= 0) break;
 
             try
             {
-                var matches = await SearchLogsWithRegexAsync(
+                List<LogMatch> matches = await SearchLogsWithRegexAsync(
                     workspaceId, 
                     regexPattern, 
                     timeSpan, 
@@ -276,7 +277,7 @@ public class MonitorService(
     {
         try
         {
-            (_, var metricsClient) = await GetQueryClientsAsync();
+            (_, MetricsQueryClient metricsClient) = await GetQueryClientsAsync();
             
             var options = new MetricsQueryOptions
             {
@@ -290,7 +291,7 @@ public class MonitorService(
 
             if (aggregations is not null)
             {
-                foreach (var agg in aggregations)
+                foreach (string agg in aggregations)
                 {
                     options.Aggregations.Add(ParseAggregation(agg));
                 }
@@ -307,7 +308,7 @@ public class MonitorService(
                 ResourceRegion = response.Value.ResourceRegion
             };
 
-            foreach (var metric in response.Value.Metrics)
+            foreach (MetricResult? metric in response.Value.Metrics)
             {
                 var metricData = new MetricData
                 {
@@ -316,14 +317,14 @@ public class MonitorService(
                     Unit = metric.Unit.ToString()
                 };
 
-                foreach (var timeSeries in metric.TimeSeries)
+                foreach (MetricTimeSeriesElement? timeSeries in metric.TimeSeries)
                 {
                     var timeSeriesData = new TimeSeriesData();
 
                     // Note: MetadataValues property doesn't exist in current SDK
                     // Skip metadata collection
 
-                    foreach (var value in timeSeries.Values)
+                    foreach (Azure.Monitor.Query.Models.MetricValue? value in timeSeries.Values)
                     {
                         timeSeriesData.Data.Add(new MetricValue
                         {
@@ -381,22 +382,22 @@ public class MonitorService(
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var components = new List<ApplicationInsightsDto>();
 
             if (!string.IsNullOrEmpty(resourceGroupName) && !string.IsNullOrEmpty(subscriptionId))
             {
-                var resourceGroup = armClient.GetResourceGroupResource(
+                ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}"));
                 
-                await foreach (var component in resourceGroup.GetApplicationInsightsComponents())
+                await foreach (ApplicationInsightsComponentResource? component in resourceGroup.GetApplicationInsightsComponents())
                 {
                     components.Add(MapToDto(component));
                 }
             }
             else if (!string.IsNullOrEmpty(subscriptionId))
             {
-                var subscription = armClient.GetSubscriptionResource(
+                SubscriptionResource? subscription = armClient.GetSubscriptionResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
                 components.AddRange(subscription.GetApplicationInsightsComponents().Select(MapToDto));
@@ -404,7 +405,7 @@ public class MonitorService(
             else
             {
                 // List across all subscriptions
-                await foreach (var subscription in armClient.GetSubscriptions())
+                await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
                 {
                     components.AddRange(subscription.GetApplicationInsightsComponents().Select(MapToDto));
                 }
@@ -424,12 +425,12 @@ public class MonitorService(
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 // Try to find in any subscription
-                await foreach (var subscription in armClient.GetSubscriptions())
+                await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
                 {
                     try
                     {
@@ -448,7 +449,7 @@ public class MonitorService(
                 return null;
             }
 
-            var targetResourceGroup = armClient.GetResourceGroupResource(
+            ResourceGroupResource? targetResourceGroup = armClient.GetResourceGroupResource(
                 new ResourceIdentifier($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}"));
             
             Response<ApplicationInsightsComponentResource> response = await targetResourceGroup
@@ -473,22 +474,22 @@ public class MonitorService(
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var alerts = new List<AlertRuleDto>();
 
             if (!string.IsNullOrEmpty(resourceGroupName) && !string.IsNullOrEmpty(subscriptionId))
             {
-                var resourceGroup = armClient.GetResourceGroupResource(
+                ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}"));
                 
-                await foreach (var alert in resourceGroup.GetScheduledQueryRules())
+                await foreach (ScheduledQueryRuleResource? alert in resourceGroup.GetScheduledQueryRules())
                 {
                     alerts.Add(MapAlertToDto(alert));
                 }
             }
             else if (!string.IsNullOrEmpty(subscriptionId))
             {
-                var subscription = armClient.GetSubscriptionResource(
+                SubscriptionResource? subscription = armClient.GetSubscriptionResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
                 alerts.AddRange(subscription.GetScheduledQueryRules().Select(MapAlertToDto));
@@ -496,7 +497,7 @@ public class MonitorService(
             else
             {
                 // List across all subscriptions
-                await foreach (var subscription in armClient.GetSubscriptions())
+                await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
                 {
                     alerts.AddRange(subscription.GetScheduledQueryRules().Select(MapAlertToDto));
                 }

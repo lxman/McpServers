@@ -17,17 +17,17 @@ public class NetworkSecurityGroupService(ArmClientFactory armClientFactory, ILog
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var nsgs = new List<NetworkSecurityGroupDto>();
 
             switch (string.IsNullOrEmpty(subscriptionId))
             {
                 case false when !string.IsNullOrEmpty(resourceGroupName):
                 {
-                    var resourceGroup = armClient.GetResourceGroupResource(
+                    ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
                         ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
                 
-                    await foreach (var nsg in resourceGroup.GetNetworkSecurityGroups())
+                    await foreach (NetworkSecurityGroupResource? nsg in resourceGroup.GetNetworkSecurityGroups())
                     {
                         nsgs.Add(MappingService.MapToNetworkSecurityGroupDto(nsg.Data));
                     }
@@ -36,10 +36,10 @@ public class NetworkSecurityGroupService(ArmClientFactory armClientFactory, ILog
                 }
                 case false:
                 {
-                    var subscription = armClient.GetSubscriptionResource(
+                    SubscriptionResource? subscription = armClient.GetSubscriptionResource(
                         new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
-                    await foreach (var nsg in subscription.GetNetworkSecurityGroupsAsync())
+                    await foreach (NetworkSecurityGroupResource? nsg in subscription.GetNetworkSecurityGroupsAsync())
                     {
                         nsgs.Add(MappingService.MapToNetworkSecurityGroupDto(nsg.Data));
                     }
@@ -48,9 +48,9 @@ public class NetworkSecurityGroupService(ArmClientFactory armClientFactory, ILog
                 }
                 default:
                 {
-                    await foreach (var subscription in armClient.GetSubscriptions())
+                    await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
                     {
-                        await foreach (var nsg in subscription.GetNetworkSecurityGroupsAsync())
+                        await foreach (NetworkSecurityGroupResource? nsg in subscription.GetNetworkSecurityGroupsAsync())
                         {
                             nsgs.Add(MappingService.MapToNetworkSecurityGroupDto(nsg.Data));
                         }
@@ -73,8 +73,8 @@ public class NetworkSecurityGroupService(ArmClientFactory armClientFactory, ILog
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = NetworkSecurityGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = NetworkSecurityGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName);
             Response<NetworkSecurityGroupResource>? response = await armClient.GetNetworkSecurityGroupResource(resourceId).GetAsync();
             
             return response.HasValue ? MappingService.MapToNetworkSecurityGroupDto(response.Value.Data) : null;
@@ -94,8 +94,8 @@ public class NetworkSecurityGroupService(ArmClientFactory armClientFactory, ILog
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceGroup = armClient.GetResourceGroupResource(
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
                 ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
 
             var nsgData = new NetworkSecurityGroupData
@@ -105,7 +105,7 @@ public class NetworkSecurityGroupService(ArmClientFactory armClientFactory, ILog
 
             if (request.SecurityRules is not null)
             {
-                foreach (var rule in request.SecurityRules)
+                foreach (SecurityRuleCreateRequest rule in request.SecurityRules)
                 {
                     nsgData.SecurityRules.Add(MappingService.MapToSecurityRuleData(rule));
                 }
@@ -113,7 +113,7 @@ public class NetworkSecurityGroupService(ArmClientFactory armClientFactory, ILog
 
             if (request.Tags is not null)
             {
-                foreach (var tag in request.Tags)
+                foreach (KeyValuePair<string, string> tag in request.Tags)
                     nsgData.Tags.Add(tag.Key, tag.Value);
             }
 
@@ -133,9 +133,9 @@ public class NetworkSecurityGroupService(ArmClientFactory armClientFactory, ILog
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = NetworkSecurityGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName);
-            var nsg = armClient.GetNetworkSecurityGroupResource(resourceId);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = NetworkSecurityGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName);
+            NetworkSecurityGroupResource? nsg = armClient.GetNetworkSecurityGroupResource(resourceId);
             
             await nsg.DeleteAsync(WaitUntil.Completed);
             return true;
@@ -151,17 +151,17 @@ public class NetworkSecurityGroupService(ArmClientFactory armClientFactory, ILog
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = NetworkSecurityGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName);
-            var nsg = armClient.GetNetworkSecurityGroupResource(resourceId);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = NetworkSecurityGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nsgName);
+            NetworkSecurityGroupResource? nsg = armClient.GetNetworkSecurityGroupResource(resourceId);
             
             Response<NetworkSecurityGroupResource>? response = await nsg.GetAsync();
-            var nsgData = response.Value.Data;
+            NetworkSecurityGroupData? nsgData = response.Value.Data;
 
             if (request.SecurityRules is not null)
             {
                 nsgData.SecurityRules.Clear();
-                foreach (var rule in request.SecurityRules)
+                foreach (SecurityRuleCreateRequest rule in request.SecurityRules)
                 {
                     nsgData.SecurityRules.Add(MappingService.MapToSecurityRuleData(rule));
                 }
@@ -170,7 +170,7 @@ public class NetworkSecurityGroupService(ArmClientFactory armClientFactory, ILog
             if (request.Tags is not null)
             {
                 nsgData.Tags.Clear();
-                foreach (var tag in request.Tags)
+                foreach (KeyValuePair<string, string> tag in request.Tags)
                     nsgData.Tags.Add(tag.Key, tag.Value);
             }
 

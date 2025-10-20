@@ -22,7 +22,7 @@ public class EventHubsService(
     private async Task<EventHubProducerClient> GetProducerClientAsync(string namespaceName, string eventHubName)
     {
         var key = $"{namespaceName}/{eventHubName}";
-        if (_producerClients.TryGetValue(key, out var existingClient))
+        if (_producerClients.TryGetValue(key, out EventHubProducerClient? existingClient))
             return existingClient;
 
         var fullyQualifiedNamespace = $"{namespaceName}.servicebus.windows.net";
@@ -35,7 +35,7 @@ public class EventHubsService(
     private async Task<EventHubConsumerClient> GetConsumerClientAsync(string namespaceName, string eventHubName, string consumerGroup)
     {
         var key = $"{namespaceName}/{eventHubName}/{consumerGroup}";
-        if (_consumerClients.TryGetValue(key, out var existingClient))
+        if (_consumerClients.TryGetValue(key, out EventHubConsumerClient? existingClient))
             return existingClient;
 
         var fullyQualifiedNamespace = $"{namespaceName}.servicebus.windows.net";
@@ -51,19 +51,19 @@ public class EventHubsService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var namespaces = new List<EventHubsNamespaceDto>();
 
             if (!string.IsNullOrEmpty(resourceGroupName))
             {
                 // List namespaces in specific resource group
-                var subscription = string.IsNullOrEmpty(subscriptionId)
+                SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                     ? await client.GetDefaultSubscriptionAsync()
                     : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
                 ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
                 
-                await foreach (var ns in resourceGroup.GetEventHubsNamespaces())
+                await foreach (EventHubsNamespaceResource? ns in resourceGroup.GetEventHubsNamespaces())
                 {
                     namespaces.Add(MapNamespace(ns));
                 }
@@ -71,11 +71,11 @@ public class EventHubsService(
             else
             {
                 // List all namespaces across all resource groups
-                var subscription = string.IsNullOrEmpty(subscriptionId)
+                SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                     ? await client.GetDefaultSubscriptionAsync()
                     : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
-                await foreach (var ns in subscription.GetEventHubsNamespacesAsync())
+                await foreach (EventHubsNamespaceResource? ns in subscription.GetEventHubsNamespacesAsync())
                 {
                     namespaces.Add(MapNamespace(ns));
                 }
@@ -95,8 +95,8 @@ public class EventHubsService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -121,8 +121,8 @@ public class EventHubsService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -150,8 +150,8 @@ public class EventHubsService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -176,8 +176,8 @@ public class EventHubsService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -185,7 +185,7 @@ public class EventHubsService(
             EventHubsNamespaceResource ns = await resourceGroup.GetEventHubsNamespaceAsync(namespaceName);
 
             var eventHubs = new List<EventHubDto>();
-            await foreach (var eventHub in ns.GetEventHubs())
+            await foreach (EventHubResource? eventHub in ns.GetEventHubs())
             {
                 eventHubs.Add(MapEventHub(eventHub));
             }
@@ -204,8 +204,8 @@ public class EventHubsService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -231,8 +231,8 @@ public class EventHubsService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -262,8 +262,8 @@ public class EventHubsService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -289,8 +289,8 @@ public class EventHubsService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -299,7 +299,7 @@ public class EventHubsService(
             EventHubResource eventHub = await ns.GetEventHubAsync(eventHubName);
 
             var consumerGroups = new List<ConsumerGroupDto>();
-            await foreach (var cg in eventHub.GetEventHubsConsumerGroups())
+            await foreach (EventHubsConsumerGroupResource? cg in eventHub.GetEventHubsConsumerGroups())
             {
                 consumerGroups.Add(MapConsumerGroup(cg));
             }
@@ -318,8 +318,8 @@ public class EventHubsService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -346,8 +346,8 @@ public class EventHubsService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -373,8 +373,8 @@ public class EventHubsService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -401,13 +401,13 @@ public class EventHubsService(
     {
         try
         {
-            var producer = await GetProducerClientAsync(namespaceName, eventHubName);
+            EventHubProducerClient producer = await GetProducerClientAsync(namespaceName, eventHubName);
             
             var eventData = new EventData(eventBody);
             
             if (properties != null)
             {
-                foreach (var kvp in properties)
+                foreach (KeyValuePair<string, object> kvp in properties)
                 {
                     eventData.Properties.Add(kvp.Key, kvp.Value);
                 }
@@ -429,12 +429,12 @@ public class EventHubsService(
     {
         try
         {
-            var producer = await GetProducerClientAsync(namespaceName, eventHubName);
+            EventHubProducerClient producer = await GetProducerClientAsync(namespaceName, eventHubName);
             
-            using var eventBatch = await producer.CreateBatchAsync();
+            using EventDataBatch? eventBatch = await producer.CreateBatchAsync();
             var sentMessages = new List<string>();
 
-            foreach (var body in eventBodies)
+            foreach (string body in eventBodies)
             {
                 var eventData = new EventData(body);
                 if (eventBatch.TryAdd(eventData)) continue;
@@ -442,7 +442,7 @@ public class EventHubsService(
                 await producer.SendAsync(eventBatch);
                 sentMessages.Add($"Batch sent with {eventBatch.Count} events");
                     
-                using var newBatch = await producer.CreateBatchAsync();
+                using EventDataBatch? newBatch = await producer.CreateBatchAsync();
                 newBatch.TryAdd(eventData);
             }
 
@@ -467,12 +467,12 @@ public class EventHubsService(
     {
         try
         {
-            var consumer = await GetConsumerClientAsync(namespaceName, eventHubName, consumerGroup);
+            EventHubConsumerClient consumer = await GetConsumerClientAsync(namespaceName, eventHubName, consumerGroup);
             
             var events = new List<EventDataDto>();
-            var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(maxWaitTimeSeconds)).Token;
+            CancellationToken cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(maxWaitTimeSeconds)).Token;
 
-            await foreach (var partitionEvent in consumer.ReadEventsAsync(cancellationToken))
+            await foreach (PartitionEvent partitionEvent in consumer.ReadEventsAsync(cancellationToken))
             {
                 events.Add(MapEventData(partitionEvent));
                 
@@ -499,8 +499,8 @@ public class EventHubsService(
     {
         try
         {
-            var producer = await GetProducerClientAsync(namespaceName, eventHubName);
-            var properties = await producer.GetEventHubPropertiesAsync();
+            EventHubProducerClient producer = await GetProducerClientAsync(namespaceName, eventHubName);
+            EventHubProperties? properties = await producer.GetEventHubPropertiesAsync();
 
             return new EventHubPropertiesDto
             {
@@ -520,8 +520,8 @@ public class EventHubsService(
     {
         try
         {
-            var producer = await GetProducerClientAsync(namespaceName, eventHubName);
-            var properties = await producer.GetPartitionPropertiesAsync(partitionId);
+            EventHubProducerClient producer = await GetProducerClientAsync(namespaceName, eventHubName);
+            PartitionProperties? properties = await producer.GetPartitionPropertiesAsync(partitionId);
 
             return new PartitionPropertiesDto
             {

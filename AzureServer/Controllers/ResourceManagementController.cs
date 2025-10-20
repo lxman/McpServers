@@ -1,4 +1,5 @@
 using AzureServer.Services.ResourceManagement;
+using AzureServer.Services.ResourceManagement.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;
@@ -12,7 +13,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            var subscriptions = await resourceService.GetSubscriptionsAsync();
+            IEnumerable<SubscriptionDto> subscriptions = await resourceService.GetSubscriptionsAsync();
             return Ok(new { success = true, subscriptions = subscriptions.ToArray() });
         }
         catch (Exception ex)
@@ -27,7 +28,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            var subscription = await resourceService.GetSubscriptionAsync(subscriptionId);
+            SubscriptionDto? subscription = await resourceService.GetSubscriptionAsync(subscriptionId);
             if (subscription is null)
                 return NotFound(new { success = false, error = $"Subscription {subscriptionId} not found" });
 
@@ -45,7 +46,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            var resourceGroups = await resourceService.GetResourceGroupsAsync(subscriptionId);
+            IEnumerable<ResourceGroupDto> resourceGroups = await resourceService.GetResourceGroupsAsync(subscriptionId);
             return Ok(new { success = true, resourceGroups = resourceGroups.ToArray() });
         }
         catch (Exception ex)
@@ -60,7 +61,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            var resourceGroup = await resourceService.GetResourceGroupAsync(subscriptionId, resourceGroupName);
+            ResourceGroupDto? resourceGroup = await resourceService.GetResourceGroupAsync(subscriptionId, resourceGroupName);
             if (resourceGroup is null)
                 return NotFound(new { success = false, error = $"Resource group {resourceGroupName} not found" });
 
@@ -80,7 +81,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            var resources = (await resourceService.GetResourcesAsync(subscriptionId, resourceGroupName)).ToList();
+            List<GenericResourceDto> resources = (await resourceService.GetResourcesAsync(subscriptionId, resourceGroupName)).ToList();
             return Ok(new { success = true, resources = resources.ToArray(), count = resources.Count });
         }
         catch (Exception ex)
@@ -97,7 +98,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            var resources = (await resourceService.GetResourcesByTypeAsync(resourceType, subscriptionId)).ToList();
+            List<GenericResourceDto> resources = (await resourceService.GetResourcesByTypeAsync(resourceType, subscriptionId)).ToList();
             return Ok(new { success = true, resourceType, resources = resources.ToArray(), count = resources.Count });
         }
         catch (Exception ex)
@@ -112,7 +113,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            var resource = await resourceService.GetResourceAsync(request.ResourceId);
+            GenericResourceDto? resource = await resourceService.GetResourceAsync(request.ResourceId);
             if (resource is null)
                 return NotFound(new { success = false, error = $"Resource {request.ResourceId} not found" });
 
@@ -130,7 +131,7 @@ public class ResourceManagementController(IResourceManagementService resourceSer
     {
         try
         {
-            var countByType = await resourceService.GetResourceCountByTypeAsync(subscriptionId);
+            Dictionary<string, int> countByType = await resourceService.GetResourceCountByTypeAsync(subscriptionId);
             var sortedCounts = countByType
                 .OrderByDescending(kvp => kvp.Value)
                 .Select(kvp => new { resourceType = kvp.Key, count = kvp.Value })

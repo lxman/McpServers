@@ -25,22 +25,22 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services)
     {
         // Create a temporary service provider for discovery
-        var tempProvider = services.BuildServiceProvider();
-        var loggerFactory = tempProvider.GetService<ILoggerFactory>() ?? 
-                            LoggerFactory.Create(builder => builder.AddDebug());
+        ServiceProvider tempProvider = services.BuildServiceProvider();
+        ILoggerFactory loggerFactory = tempProvider.GetService<ILoggerFactory>() ?? 
+                                       LoggerFactory.Create(builder => builder.AddDebug());
 
         // Register credential discovery and selection services
         services.AddSingleton<CredentialDiscoveryService>(provider =>
         {
-            var logger = provider.GetService<ILogger<CredentialDiscoveryService>>() ??
-                         loggerFactory.CreateLogger<CredentialDiscoveryService>();
+            ILogger<CredentialDiscoveryService> logger = provider.GetService<ILogger<CredentialDiscoveryService>>() ??
+                                                         loggerFactory.CreateLogger<CredentialDiscoveryService>();
             return new CredentialDiscoveryService(logger);
         });
 
         services.AddSingleton<CredentialSelectionService>(provider =>
         {
-            var logger = provider.GetService<ILogger<CredentialSelectionService>>() ??
-                         loggerFactory.CreateLogger<CredentialSelectionService>();
+            ILogger<CredentialSelectionService> logger = provider.GetService<ILogger<CredentialSelectionService>>() ??
+                                                         loggerFactory.CreateLogger<CredentialSelectionService>();
             var discoveryService = provider.GetRequiredService<CredentialDiscoveryService>();
             return new CredentialSelectionService(logger, discoveryService);
         });
@@ -48,8 +48,8 @@ public static class ServiceCollectionExtensions
         // Register ArmClientFactory as a singleton for managing ArmClient instances
         services.AddSingleton<ArmClientFactory>(provider =>
         {
-            var logger = provider.GetService<ILogger<ArmClientFactory>>() ??
-                         loggerFactory.CreateLogger<ArmClientFactory>();
+            ILogger<ArmClientFactory> logger = provider.GetService<ILogger<ArmClientFactory>>() ??
+                                               loggerFactory.CreateLogger<ArmClientFactory>();
             var credentialService = provider.GetRequiredService<CredentialSelectionService>();
             return new ArmClientFactory(credentialService, logger);
         });
@@ -58,8 +58,8 @@ public static class ServiceCollectionExtensions
         // Register Entra authentication services
         services.AddSingleton<EntraAuthConfigLoader>(provider =>
         {
-            var logger = provider.GetService<ILogger<EntraAuthConfigLoader>>() ??
-                         loggerFactory.CreateLogger<EntraAuthConfigLoader>();
+            ILogger<EntraAuthConfigLoader> logger = provider.GetService<ILogger<EntraAuthConfigLoader>>() ??
+                                                    loggerFactory.CreateLogger<EntraAuthConfigLoader>();
             return new EntraAuthConfigLoader(logger);
         });
 
@@ -71,14 +71,14 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<EntraCredentialService>(provider =>
         {
-            var logger = provider.GetService<ILogger<EntraCredentialService>>() ??
-                         loggerFactory.CreateLogger<EntraCredentialService>();
+            ILogger<EntraCredentialService> logger = provider.GetService<ILogger<EntraCredentialService>>() ??
+                                                     loggerFactory.CreateLogger<EntraCredentialService>();
             var config = provider.GetRequiredService<EntraAuthConfig>();
             return new EntraCredentialService(logger, config);
         });
 
         // Discover Azure DevOps environments only (ARM credentials now handled by CredentialSelectionService)
-        var discoveryLogger = loggerFactory.CreateLogger<AzureEnvironmentDiscovery>();
+        ILogger<AzureEnvironmentDiscovery> discoveryLogger = loggerFactory.CreateLogger<AzureEnvironmentDiscovery>();
         var discovery = new AzureEnvironmentDiscovery(discoveryLogger);
         
         // Safe discovery with graceful error handling
@@ -105,8 +105,8 @@ public static class ServiceCollectionExtensions
         // Configure Azure Resource Management service using ArmClientFactory
         services.AddScoped<IResourceManagementService>(provider =>
         {
-            var logger = provider.GetService<ILogger<ResourceManagementService>>() ??
-                         loggerFactory.CreateLogger<ResourceManagementService>();
+            ILogger<ResourceManagementService> logger = provider.GetService<ILogger<ResourceManagementService>>() ??
+                                                        loggerFactory.CreateLogger<ResourceManagementService>();
             var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
             return new ResourceManagementService(armClientFactory, logger);
         });
@@ -114,8 +114,8 @@ public static class ServiceCollectionExtensions
         // Configure Azure Cost Management service using CredentialSelectionService
         services.AddScoped<ICostManagementService>(provider =>
         {
-            var logger = provider.GetService<ILogger<CostManagementService>>() ??
-                         loggerFactory.CreateLogger<CostManagementService>();
+            ILogger<CostManagementService> logger = provider.GetService<ILogger<CostManagementService>>() ??
+                                                    loggerFactory.CreateLogger<CostManagementService>();
             var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
             return new CostManagementService(armClientFactory, logger);
         });
@@ -123,8 +123,8 @@ public static class ServiceCollectionExtensions
         // Configure Azure Storage service using CredentialSelectionService
         services.AddScoped<IStorageService>(provider =>
         {
-            var logger = provider.GetService<ILogger<StorageService>>() ??
-                         loggerFactory.CreateLogger<StorageService>();
+            ILogger<StorageService> logger = provider.GetService<ILogger<StorageService>>() ??
+                                             loggerFactory.CreateLogger<StorageService>();
             var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
             return new StorageService(armClientFactory, logger);
         });
@@ -132,8 +132,8 @@ public static class ServiceCollectionExtensions
         // Configure Azure File Storage service using CredentialSelectionService (doesn't use ArmClient)
         services.AddScoped<IFileStorageService>(provider =>
         {
-            var logger = provider.GetService<ILogger<FileStorageService>>() ??
-                         loggerFactory.CreateLogger<FileStorageService>();
+            ILogger<FileStorageService> logger = provider.GetService<ILogger<FileStorageService>>() ??
+                                                 loggerFactory.CreateLogger<FileStorageService>();
             var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
             return new FileStorageService(armClientFactory, logger);
         });
@@ -141,8 +141,8 @@ public static class ServiceCollectionExtensions
         // Configure Azure Key Vault service using CredentialSelectionService (doesn't use ArmClient)
         services.AddScoped<IKeyVaultService>(provider =>
         {
-            var logger = provider.GetService<ILogger<KeyVaultService>>() ??
-                         loggerFactory.CreateLogger<KeyVaultService>();
+            ILogger<KeyVaultService> logger = provider.GetService<ILogger<KeyVaultService>>() ??
+                                              loggerFactory.CreateLogger<KeyVaultService>();
             var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
             return new KeyVaultService(armClientFactory, logger);
         });
@@ -150,8 +150,8 @@ public static class ServiceCollectionExtensions
         // Configure Azure SQL Database Management service using CredentialSelectionService
         services.AddScoped<ISqlDatabaseService>(provider =>
         {
-            var logger = provider.GetService<ILogger<SqlDatabaseService>>() ??
-                         loggerFactory.CreateLogger<SqlDatabaseService>();
+            ILogger<SqlDatabaseService> logger = provider.GetService<ILogger<SqlDatabaseService>>() ??
+                                                 loggerFactory.CreateLogger<SqlDatabaseService>();
             var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
             return new SqlDatabaseService(armClientFactory, logger);
         });
@@ -159,8 +159,8 @@ public static class ServiceCollectionExtensions
         // Configure SQL Query Execution service using CredentialSelectionService (doesn't use ArmClient)
         services.AddScoped<ISqlQueryService>(provider =>
         {
-            var logger = provider.GetService<ILogger<SqlQueryService>>() ??
-                         loggerFactory.CreateLogger<SqlQueryService>();
+            ILogger<SqlQueryService> logger = provider.GetService<ILogger<SqlQueryService>>() ??
+                                              loggerFactory.CreateLogger<SqlQueryService>();
             var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
             return new SqlQueryService(armClientFactory, logger);
         });
@@ -168,8 +168,8 @@ public static class ServiceCollectionExtensions
         // Configure Azure App Service using ArmClientFactory
         services.AddScoped<IAppServiceService>(provider =>
         {
-            var logger = provider.GetService<ILogger<AppServiceService>>() ??
-                         loggerFactory.CreateLogger<AppServiceService>();
+            ILogger<AppServiceService> logger = provider.GetService<ILogger<AppServiceService>>() ??
+                                                loggerFactory.CreateLogger<AppServiceService>();
             var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
             return new AppServiceService(armClientFactory, logger);
         });
@@ -177,8 +177,8 @@ public static class ServiceCollectionExtensions
         // Configure Azure Monitor service using ArmClientFactory
         services.AddScoped<IMonitorService>(provider =>
         {
-            var logger = provider.GetService<ILogger<MonitorService>>() ??
-                         loggerFactory.CreateLogger<MonitorService>();
+            ILogger<MonitorService> logger = provider.GetService<ILogger<MonitorService>>() ??
+                                             loggerFactory.CreateLogger<MonitorService>();
             var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
             return new MonitorService(armClientFactory, logger);
         });
@@ -186,8 +186,8 @@ public static class ServiceCollectionExtensions
         // Configure Azure Service Bus service using ArmClientFactory
         services.AddScoped<IServiceBusService>(provider =>
         {
-            var logger = provider.GetService<ILogger<ServiceBusService>>() ??
-                         loggerFactory.CreateLogger<ServiceBusService>();
+            ILogger<ServiceBusService> logger = provider.GetService<ILogger<ServiceBusService>>() ??
+                                                loggerFactory.CreateLogger<ServiceBusService>();
             var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
             return new ServiceBusService(armClientFactory, logger);
         });
@@ -195,8 +195,8 @@ public static class ServiceCollectionExtensions
         // Configure Azure Event Hubs service using ArmClientFactory
         services.AddScoped<IEventHubsService>(provider =>
         {
-            var logger = provider.GetService<ILogger<EventHubsService>>() ??
-                         loggerFactory.CreateLogger<EventHubsService>();
+            ILogger<EventHubsService> logger = provider.GetService<ILogger<EventHubsService>>() ??
+                                               loggerFactory.CreateLogger<EventHubsService>();
             var armClientFactory = provider.GetRequiredService<ArmClientFactory>();
             return new EventHubsService(armClientFactory, logger);
         });
@@ -210,9 +210,9 @@ public static class ServiceCollectionExtensions
             // Register DevOps credential manager for primary organization
             services.AddSingleton<DevOpsCredentialManager>(provider =>
             {
-                var logger = provider.GetService<ILogger<DevOpsCredentialManager>>() ??
-                             loggerFactory.CreateLogger<DevOpsCredentialManager>();
-                var primaryEnv = devOpsEnvironments.First();
+                ILogger<DevOpsCredentialManager> logger = provider.GetService<ILogger<DevOpsCredentialManager>>() ??
+                                                          loggerFactory.CreateLogger<DevOpsCredentialManager>();
+                DevOpsEnvironmentInfo primaryEnv = devOpsEnvironments.First();
                 return new DevOpsCredentialManager(primaryEnv, logger);
             });
 
@@ -221,8 +221,8 @@ public static class ServiceCollectionExtensions
             {
                 services.AddSingleton<IMultiOrgDevOpsFactory>(provider =>
                 {
-                    var logger = provider.GetService<ILogger<MultiOrgDevOpsFactory>>() ??
-                                 loggerFactory.CreateLogger<MultiOrgDevOpsFactory>();
+                    ILogger<MultiOrgDevOpsFactory> logger = provider.GetService<ILogger<MultiOrgDevOpsFactory>>() ??
+                                                            loggerFactory.CreateLogger<MultiOrgDevOpsFactory>();
                     return new MultiOrgDevOpsFactory(devOpsEnvironments, logger);
                 });
             }
@@ -231,8 +231,8 @@ public static class ServiceCollectionExtensions
             services.AddScoped<IDevOpsService>(provider =>
             {
                 var manager = provider.GetRequiredService<DevOpsCredentialManager>();
-                var logger = provider.GetService<ILogger<DevOpsService>>() ??
-                             loggerFactory.CreateLogger<DevOpsService>();
+                ILogger<DevOpsService> logger = provider.GetService<ILogger<DevOpsService>>() ??
+                                                loggerFactory.CreateLogger<DevOpsService>();
                 return new DevOpsService(manager, logger);
             });
         }
@@ -241,8 +241,8 @@ public static class ServiceCollectionExtensions
             // Register a service that provides helpful guidance
             services.AddSingleton<IDevOpsService>(provider =>
             {
-                var logger = provider.GetService<ILogger<DevOpsService>>() ??
-                             loggerFactory.CreateLogger<DevOpsService>();
+                ILogger<DevOpsService> logger = provider.GetService<ILogger<DevOpsService>>() ??
+                                                loggerFactory.CreateLogger<DevOpsService>();
                 return new NoCredentialsDevOpsService(logger);
             });
         }
@@ -277,28 +277,28 @@ public class MultiOrgDevOpsFactory(
 
     public IDevOpsService CreateServiceForOrganization(string organizationUrl)
     {
-        var manager = CreateManagerForOrganization(organizationUrl);
-        var logger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<DevOpsService>();
+        DevOpsCredentialManager manager = CreateManagerForOrganization(organizationUrl);
+        ILogger<DevOpsService> logger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<DevOpsService>();
         return new DevOpsService(manager, logger);
     }
 
     public DevOpsCredentialManager CreateManagerForOrganization(string organizationUrl)
     {
-        if (_managerCache.TryGetValue(organizationUrl, out var cached))
+        if (_managerCache.TryGetValue(organizationUrl, out DevOpsCredentialManager? cached))
             return cached;
 
-        var environment = environments.FirstOrDefault(e => 
+        DevOpsEnvironmentInfo? environment = environments.FirstOrDefault(e => 
             e.OrganizationUrl.Equals(organizationUrl, StringComparison.OrdinalIgnoreCase));
         
         if (environment is null)
         {
-            var available = string.Join(", ", environments.Select(e => e.OrganizationUrl));
+            string available = string.Join(", ", environments.Select(e => e.OrganizationUrl));
             throw new InvalidOperationException(
                 $"Organization '{organizationUrl}' not found in discovered environments. " +
                 $"Available: {available}");
         }
 
-        var logger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<DevOpsCredentialManager>();
+        ILogger<DevOpsCredentialManager> logger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<DevOpsCredentialManager>();
         var manager = new DevOpsCredentialManager(environment, logger);
 
         _managerCache[organizationUrl] = manager;

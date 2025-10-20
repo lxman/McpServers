@@ -1,4 +1,5 @@
 using AzureServer.Services.Networking.Interfaces;
+using AzureServer.Services.Networking.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;
@@ -20,7 +21,7 @@ public class NetworkingController(
     {
         try
         {
-            var vnets = await virtualNetworkService.ListVirtualNetworksAsync(subscriptionId, resourceGroupName);
+            IEnumerable<VirtualNetworkDto> vnets = await virtualNetworkService.ListVirtualNetworksAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, virtualNetworks = vnets.ToArray() });
         }
         catch (Exception ex)
@@ -38,7 +39,7 @@ public class NetworkingController(
     {
         try
         {
-            var vnet = await virtualNetworkService.GetVirtualNetworkAsync(resourceGroupName, vnetName, subscriptionId);
+            VirtualNetworkDto? vnet = await virtualNetworkService.GetVirtualNetworkAsync(resourceGroupName, vnetName, subscriptionId);
             if (vnet is null)
                 return NotFound(new { success = false, error = $"Virtual network {vnetName} not found" });
 
@@ -59,7 +60,7 @@ public class NetworkingController(
     {
         try
         {
-            var subnets = await subnetService.ListSubnetsAsync(resourceGroupName, vnetName, subscriptionId);
+            IEnumerable<SubnetDto> subnets = await subnetService.ListSubnetsAsync(resourceGroupName, vnetName, subscriptionId);
             return Ok(new { success = true, subnets = subnets.ToArray() });
         }
         catch (Exception ex)
@@ -76,7 +77,7 @@ public class NetworkingController(
     {
         try
         {
-            var nsgs = await networkSecurityGroupService.ListNetworkSecurityGroupsAsync(subscriptionId, resourceGroupName);
+            IEnumerable<NetworkSecurityGroupDto> nsgs = await networkSecurityGroupService.ListNetworkSecurityGroupsAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, networkSecurityGroups = nsgs.ToArray() });
         }
         catch (Exception ex)
@@ -94,7 +95,7 @@ public class NetworkingController(
     {
         try
         {
-            var nsg = await networkSecurityGroupService.GetNetworkSecurityGroupAsync(resourceGroupName, nsgName, subscriptionId);
+            NetworkSecurityGroupDto? nsg = await networkSecurityGroupService.GetNetworkSecurityGroupAsync(resourceGroupName, nsgName, subscriptionId);
             if (nsg is null)
                 return NotFound(new { success = false, error = $"Network security group {nsgName} not found" });
 
@@ -114,7 +115,7 @@ public class NetworkingController(
     {
         try
         {
-            var publicIps = await publicIpAddressService.ListPublicIpAddressesAsync(subscriptionId, resourceGroupName);
+            IEnumerable<PublicIPAddressDto> publicIps = await publicIpAddressService.ListPublicIpAddressesAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, publicIpAddresses = publicIps.ToArray() });
         }
         catch (Exception ex)
@@ -131,7 +132,7 @@ public class NetworkingController(
     {
         try
         {
-            var loadBalancers = await loadBalancerService.ListLoadBalancersAsync(subscriptionId, resourceGroupName);
+            IEnumerable<LoadBalancerDto> loadBalancers = await loadBalancerService.ListLoadBalancersAsync(subscriptionId, resourceGroupName);
             return Ok(new { success = true, loadBalancers = loadBalancers.ToArray() });
         }
         catch (Exception ex)

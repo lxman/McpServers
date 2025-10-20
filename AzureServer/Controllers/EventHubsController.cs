@@ -1,4 +1,5 @@
 using AzureServer.Services.EventHubs;
+using AzureServer.Services.EventHubs.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;
@@ -14,7 +15,7 @@ public class EventHubsController(IEventHubsService eventHubsService, ILogger<Eve
     {
         try
         {
-            var namespaces = await eventHubsService.ListNamespacesAsync(resourceGroupName, subscriptionId);
+            IEnumerable<EventHubsNamespaceDto> namespaces = await eventHubsService.ListNamespacesAsync(resourceGroupName, subscriptionId);
             return Ok(new { success = true, namespaces = namespaces.ToArray() });
         }
         catch (Exception ex)
@@ -32,7 +33,7 @@ public class EventHubsController(IEventHubsService eventHubsService, ILogger<Eve
     {
         try
         {
-            var ns = await eventHubsService.GetNamespaceAsync(resourceGroupName, namespaceName, subscriptionId);
+            EventHubsNamespaceDto? ns = await eventHubsService.GetNamespaceAsync(resourceGroupName, namespaceName, subscriptionId);
             if (ns is null)
                 return NotFound(new { success = false, error = $"Namespace {namespaceName} not found" });
 
@@ -53,7 +54,7 @@ public class EventHubsController(IEventHubsService eventHubsService, ILogger<Eve
     {
         try
         {
-            var ns = await eventHubsService.CreateNamespaceAsync(
+            EventHubsNamespaceDto ns = await eventHubsService.CreateNamespaceAsync(
                 resourceGroupName, namespaceName, request.Location, request.SubscriptionId, request.Sku);
             return Ok(new { success = true, @namespace = ns });
         }

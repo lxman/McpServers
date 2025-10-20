@@ -1,4 +1,5 @@
 using AzureServer.Services.Storage;
+using AzureServer.Services.Storage.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;
@@ -13,7 +14,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var accounts = await storageService.ListStorageAccountsAsync(subscriptionId);
+            IEnumerable<StorageAccountDto> accounts = await storageService.ListStorageAccountsAsync(subscriptionId);
             return Ok(new { success = true, storageAccounts = accounts.ToArray() });
         }
         catch (Exception ex)
@@ -28,7 +29,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var account = await storageService.GetStorageAccountAsync(subscriptionId, resourceGroupName, accountName);
+            StorageAccountDto? account = await storageService.GetStorageAccountAsync(subscriptionId, resourceGroupName, accountName);
             if (account is null)
                 return NotFound(new { success = false, error = $"Storage account {accountName} not found" });
 
@@ -47,7 +48,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var containers = await storageService.ListContainersAsync(accountName, prefix);
+            IEnumerable<BlobContainerDto> containers = await storageService.ListContainersAsync(accountName, prefix);
             return Ok(new { success = true, containers = containers.ToArray() });
         }
         catch (Exception ex)
@@ -62,7 +63,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var container = await storageService.GetContainerAsync(accountName, containerName);
+            BlobContainerDto? container = await storageService.GetContainerAsync(accountName, containerName);
             if (container is null)
                 return NotFound(new { success = false, error = $"Container {containerName} not found" });
 
@@ -83,7 +84,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var container = await storageService.CreateContainerAsync(accountName, containerName, request?.Metadata);
+            BlobContainerDto container = await storageService.CreateContainerAsync(accountName, containerName, request?.Metadata);
             return Ok(new { success = true, container });
         }
         catch (Exception ex)
@@ -98,7 +99,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var deleted = await storageService.DeleteContainerAsync(accountName, containerName);
+            bool deleted = await storageService.DeleteContainerAsync(accountName, containerName);
             return Ok(new { success = true, deleted, message = deleted ? "Container deleted successfully" : "Container not found" });
         }
         catch (Exception ex)
@@ -113,7 +114,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var exists = await storageService.ContainerExistsAsync(accountName, containerName);
+            bool exists = await storageService.ContainerExistsAsync(accountName, containerName);
             return Ok(new { success = true, exists });
         }
         catch (Exception ex)
@@ -133,7 +134,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var blobs = await storageService.ListBlobsAsync(accountName, containerName, prefix, maxResults);
+            IEnumerable<BlobItemDto> blobs = await storageService.ListBlobsAsync(accountName, containerName, prefix, maxResults);
             return Ok(new { success = true, blobs = blobs.ToArray() });
         }
         catch (Exception ex)
@@ -148,7 +149,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var properties = await storageService.GetBlobPropertiesAsync(accountName, containerName, blobName);
+            BlobPropertiesDto? properties = await storageService.GetBlobPropertiesAsync(accountName, containerName, blobName);
             if (properties is null)
                 return NotFound(new { success = false, error = $"Blob {blobName} not found" });
 
@@ -166,7 +167,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var content = await storageService.DownloadBlobAsTextAsync(accountName, containerName, blobName);
+            string content = await storageService.DownloadBlobAsTextAsync(accountName, containerName, blobName);
             return Ok(new { success = true, content, blobName, containerName, accountName });
         }
         catch (Exception ex)
@@ -185,7 +186,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var blob = await storageService.UploadBlobFromTextAsync(
+            BlobItemDto blob = await storageService.UploadBlobFromTextAsync(
                 accountName, containerName, blobName, request.Content, request.ContentType);
             return Ok(new { success = true, blob, message = "Blob uploaded successfully" });
         }
@@ -201,7 +202,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var deleted = await storageService.DeleteBlobAsync(accountName, containerName, blobName);
+            bool deleted = await storageService.DeleteBlobAsync(accountName, containerName, blobName);
             return Ok(new { success = true, deleted, message = deleted ? "Blob deleted successfully" : "Blob not found" });
         }
         catch (Exception ex)
@@ -216,7 +217,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var exists = await storageService.BlobExistsAsync(accountName, containerName, blobName);
+            bool exists = await storageService.BlobExistsAsync(accountName, containerName, blobName);
             return Ok(new { success = true, exists });
         }
         catch (Exception ex)
@@ -231,7 +232,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var blob = await storageService.CopyBlobAsync(
+            BlobItemDto blob = await storageService.CopyBlobAsync(
                 request.SourceAccountName, request.SourceContainerName, request.SourceBlobName,
                 request.DestAccountName, request.DestContainerName, request.DestBlobName);
 
@@ -257,7 +258,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var metadata = await storageService.GetBlobMetadataAsync(accountName, containerName, blobName);
+            Dictionary<string, string> metadata = await storageService.GetBlobMetadataAsync(accountName, containerName, blobName);
             return Ok(new { success = true, metadata });
         }
         catch (Exception ex)
@@ -296,7 +297,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var sasToken = await storageService.GenerateBlobSasUrlAsync(
+            SasTokenDto sasToken = await storageService.GenerateBlobSasUrlAsync(
                 accountName, containerName, blobName, request.ExpirationHours, request.Permissions);
             return Ok(new { success = true, sasToken });
         }
@@ -315,7 +316,7 @@ public class StorageController(IStorageService storageService, ILogger<StorageCo
     {
         try
         {
-            var sasToken = await storageService.GenerateContainerSasUrlAsync(
+            SasTokenDto sasToken = await storageService.GenerateContainerSasUrlAsync(
                 accountName, containerName, request.ExpirationHours, request.Permissions);
             return Ok(new { success = true, sasToken });
         }

@@ -2,6 +2,7 @@ using System.Security.Cryptography.X509Certificates;
 using Azure.Core;
 using Azure.Identity;
 using Azure.ResourceManager;
+using Azure.ResourceManager.Resources;
 using AzureServer.Authentication.models;
 
 namespace AzureServer.Authentication;
@@ -62,10 +63,10 @@ public class EntraCredentialService(
             
             // Test the credential and get token info
             var tokenContext = new TokenRequestContext(["https://management.azure.com/.default"]);
-            var token = await credential.GetTokenAsync(tokenContext, cancellationToken);
+            AccessToken token = await credential.GetTokenAsync(tokenContext, cancellationToken);
 
             // Get account information
-            var credentialInfo = await EnrichCredentialInfoAsync(
+            CredentialInfo credentialInfo = await EnrichCredentialInfoAsync(
                 credential, 
                 "interactive-browser",
                 "Interactive Browser");
@@ -190,8 +191,8 @@ public class EntraCredentialService(
             });
 
             // Wait for callback with timeout
-            var timeout = Task.Delay(10000);
-            var completedTask = await Task.WhenAny(deviceCodeReceived.Task, timeout);
+            Task timeout = Task.Delay(10000);
+            Task completedTask = await Task.WhenAny(deviceCodeReceived.Task, timeout);
 
             if (completedTask == timeout || capturedDeviceCode is null)
             {
@@ -237,7 +238,7 @@ public class EntraCredentialService(
     {
         try
         {
-            if (!_credentialCache.TryGetValue(credentialId, out var credential))
+            if (!_credentialCache.TryGetValue(credentialId, out TokenCredential? credential))
             {
                 return new AuthenticationResult
                 {
@@ -250,10 +251,10 @@ public class EntraCredentialService(
 
             // Wait for user to complete authentication
             var tokenContext = new TokenRequestContext(["https://management.azure.com/.default"]);
-            var token = await credential.GetTokenAsync(tokenContext, cancellationToken);
+            AccessToken token = await credential.GetTokenAsync(tokenContext, cancellationToken);
 
             // Get account information
-            var credentialInfo = await EnrichCredentialInfoAsync(
+            CredentialInfo credentialInfo = await EnrichCredentialInfoAsync(
                 credential,
                 "device-code", 
                 "Device Code Flow");
@@ -321,10 +322,10 @@ public class EntraCredentialService(
 
             // Test the credential
             var tokenContext = new TokenRequestContext(["https://management.azure.com/.default"]);
-            var token = await credential.GetTokenAsync(tokenContext, cancellationToken);
+            AccessToken token = await credential.GetTokenAsync(tokenContext, cancellationToken);
 
             // Get service principal information
-            var credentialInfo = await EnrichCredentialInfoAsync(
+            CredentialInfo credentialInfo = await EnrichCredentialInfoAsync(
                 credential,
                 "client-secret",
                 "Service Principal (Client Secret)");
@@ -412,10 +413,10 @@ public class EntraCredentialService(
 
             // Test the credential
             var tokenContext = new TokenRequestContext(["https://management.azure.com/.default"]);
-            var token = await credential.GetTokenAsync(tokenContext, cancellationToken);
+            AccessToken token = await credential.GetTokenAsync(tokenContext, cancellationToken);
 
             // Get service principal information
-            var credentialInfo = await EnrichCredentialInfoAsync(
+            CredentialInfo credentialInfo = await EnrichCredentialInfoAsync(
                 credential,
                 "certificate",
                 "Service Principal (Certificate)");
@@ -486,10 +487,10 @@ public class EntraCredentialService(
 
             // Test the credential
             var tokenContext = new TokenRequestContext(["https://management.azure.com/.default"]);
-            var token = await credential.GetTokenAsync(tokenContext, cancellationToken);
+            AccessToken token = await credential.GetTokenAsync(tokenContext, cancellationToken);
 
             // Get managed identity information
-            var credentialInfo = await EnrichCredentialInfoAsync(
+            CredentialInfo credentialInfo = await EnrichCredentialInfoAsync(
                 credential,
                 "managed-identity",
                 "Managed Identity");
@@ -565,8 +566,8 @@ public class EntraCredentialService(
             // Get tenant information
             try
             {
-                var tenants = armClient.GetTenants();
-                var tenant = tenants.FirstOrDefault();
+                TenantCollection? tenants = armClient.GetTenants();
+                TenantResource? tenant = tenants.FirstOrDefault();
                 if (tenant is not null)
                 {
                     info.TenantId = tenant.Data.TenantId?.ToString();
@@ -581,11 +582,11 @@ public class EntraCredentialService(
             // Get subscription information (limit for performance)
             try
             {
-                var subscriptions = armClient.GetSubscriptions();
+                SubscriptionCollection? subscriptions = armClient.GetSubscriptions();
                 var count = 0;
                 const int maxSubscriptions = 10;
                 
-                await foreach (var subscription in subscriptions)
+                await foreach (SubscriptionResource? subscription in subscriptions)
                 {
                     if (count >= maxSubscriptions) break;
                     info.SubscriptionIds.Add(subscription.Data.SubscriptionId ?? string.Empty);

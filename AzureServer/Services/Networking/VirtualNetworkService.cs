@@ -17,17 +17,17 @@ public class VirtualNetworkService(ArmClientFactory armClientFactory, ILogger<Vi
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var vnets = new List<VirtualNetworkDto>();
 
             switch (string.IsNullOrEmpty(subscriptionId))
             {
                 case false when !string.IsNullOrEmpty(resourceGroupName):
                 {
-                    var resourceGroup = armClient.GetResourceGroupResource(
+                    ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
                         ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
                 
-                    await foreach (var vnet in resourceGroup.GetVirtualNetworks())
+                    await foreach (VirtualNetworkResource? vnet in resourceGroup.GetVirtualNetworks())
                     {
                         vnets.Add(MappingService.MapToVirtualNetworkDto(vnet.Data));
                     }
@@ -36,10 +36,10 @@ public class VirtualNetworkService(ArmClientFactory armClientFactory, ILogger<Vi
                 }
                 case false:
                 {
-                    var subscription = armClient.GetSubscriptionResource(
+                    SubscriptionResource? subscription = armClient.GetSubscriptionResource(
                         new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
-                    await foreach (var vnet in subscription.GetVirtualNetworksAsync())
+                    await foreach (VirtualNetworkResource? vnet in subscription.GetVirtualNetworksAsync())
                     {
                         vnets.Add(MappingService.MapToVirtualNetworkDto(vnet.Data));
                     }
@@ -48,9 +48,9 @@ public class VirtualNetworkService(ArmClientFactory armClientFactory, ILogger<Vi
                 }
                 default:
                 {
-                    await foreach (var subscription in armClient.GetSubscriptions())
+                    await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
                     {
-                        await foreach (var vnet in subscription.GetVirtualNetworksAsync())
+                        await foreach (VirtualNetworkResource? vnet in subscription.GetVirtualNetworksAsync())
                         {
                             vnets.Add(MappingService.MapToVirtualNetworkDto(vnet.Data));
                         }
@@ -73,8 +73,8 @@ public class VirtualNetworkService(ArmClientFactory armClientFactory, ILogger<Vi
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = VirtualNetworkResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = VirtualNetworkResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName);
             Response<VirtualNetworkResource>? response = await armClient.GetVirtualNetworkResource(resourceId).GetAsync();
             
             return response.HasValue ? MappingService.MapToVirtualNetworkDto(response.Value.Data) : null;
@@ -94,8 +94,8 @@ public class VirtualNetworkService(ArmClientFactory armClientFactory, ILogger<Vi
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceGroup = armClient.GetResourceGroupResource(
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
                 ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
 
             var vnetData = new VirtualNetworkData
@@ -104,7 +104,7 @@ public class VirtualNetworkService(ArmClientFactory armClientFactory, ILogger<Vi
                 AddressSpace = new VirtualNetworkAddressSpace()
             };
 
-            foreach (var prefix in request.AddressPrefixes)
+            foreach (string prefix in request.AddressPrefixes)
             {
                 vnetData.AddressSpace.AddressPrefixes.Add(prefix);
             }
@@ -117,7 +117,7 @@ public class VirtualNetworkService(ArmClientFactory armClientFactory, ILogger<Vi
 
             if (request.Tags is not null)
             {
-                foreach (var tag in request.Tags)
+                foreach (KeyValuePair<string, string> tag in request.Tags)
                     vnetData.Tags.Add(tag.Key, tag.Value);
             }
 
@@ -137,9 +137,9 @@ public class VirtualNetworkService(ArmClientFactory armClientFactory, ILogger<Vi
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = VirtualNetworkResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName);
-            var vnet = armClient.GetVirtualNetworkResource(resourceId);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = VirtualNetworkResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName);
+            VirtualNetworkResource? vnet = armClient.GetVirtualNetworkResource(resourceId);
             
             await vnet.DeleteAsync(WaitUntil.Completed);
             return true;
@@ -155,17 +155,17 @@ public class VirtualNetworkService(ArmClientFactory armClientFactory, ILogger<Vi
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = VirtualNetworkResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName);
-            var vnet = armClient.GetVirtualNetworkResource(resourceId);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = VirtualNetworkResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName);
+            VirtualNetworkResource? vnet = armClient.GetVirtualNetworkResource(resourceId);
             
             Response<VirtualNetworkResource>? response = await vnet.GetAsync();
-            var vnetData = response.Value.Data;
+            VirtualNetworkData? vnetData = response.Value.Data;
 
             if (request.AddressPrefixes is not null)
             {
                 vnetData.AddressSpace.AddressPrefixes.Clear();
-                foreach (var prefix in request.AddressPrefixes)
+                foreach (string prefix in request.AddressPrefixes)
                 {
                     vnetData.AddressSpace.AddressPrefixes.Add(prefix);
                 }
@@ -180,7 +180,7 @@ public class VirtualNetworkService(ArmClientFactory armClientFactory, ILogger<Vi
             if (request.Tags is not null)
             {
                 vnetData.Tags.Clear();
-                foreach (var tag in request.Tags)
+                foreach (KeyValuePair<string, string> tag in request.Tags)
                     vnetData.Tags.Add(tag.Key, tag.Value);
             }
 

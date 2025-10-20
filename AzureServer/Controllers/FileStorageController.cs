@@ -1,4 +1,5 @@
 using AzureServer.Services.Storage;
+using AzureServer.Services.Storage.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;
@@ -12,7 +13,7 @@ public class FileStorageController(IFileStorageService fileStorageService, ILogg
     {
         try
         {
-            var shares = await fileStorageService.ListFileSharesAsync(accountName, prefix);
+            IEnumerable<FileShareDto> shares = await fileStorageService.ListFileSharesAsync(accountName, prefix);
             return Ok(new { success = true, shares = shares.ToArray() });
         }
         catch (Exception ex)
@@ -27,7 +28,7 @@ public class FileStorageController(IFileStorageService fileStorageService, ILogg
     {
         try
         {
-            var share = await fileStorageService.GetFileShareAsync(accountName, shareName);
+            FileShareDto? share = await fileStorageService.GetFileShareAsync(accountName, shareName);
             if (share is null)
                 return NotFound(new { success = false, error = $"File share {shareName} not found" });
 
@@ -48,7 +49,7 @@ public class FileStorageController(IFileStorageService fileStorageService, ILogg
     {
         try
         {
-            var share = await fileStorageService.CreateFileShareAsync(
+            FileShareDto share = await fileStorageService.CreateFileShareAsync(
                 accountName, shareName, request?.QuotaInGB, request?.Metadata);
             return Ok(new { success = true, share });
         }
@@ -64,7 +65,7 @@ public class FileStorageController(IFileStorageService fileStorageService, ILogg
     {
         try
         {
-            var deleted = await fileStorageService.DeleteFileShareAsync(accountName, shareName);
+            bool deleted = await fileStorageService.DeleteFileShareAsync(accountName, shareName);
             return Ok(new { success = true, deleted });
         }
         catch (Exception ex)
@@ -79,7 +80,7 @@ public class FileStorageController(IFileStorageService fileStorageService, ILogg
     {
         try
         {
-            var exists = await fileStorageService.FileShareExistsAsync(accountName, shareName);
+            bool exists = await fileStorageService.FileShareExistsAsync(accountName, shareName);
             return Ok(new { success = true, exists });
         }
         catch (Exception ex)
@@ -97,7 +98,7 @@ public class FileStorageController(IFileStorageService fileStorageService, ILogg
     {
         try
         {
-            var created = await fileStorageService.CreateDirectoryAsync(accountName, shareName, request.DirectoryPath);
+            bool created = await fileStorageService.CreateDirectoryAsync(accountName, shareName, request.DirectoryPath);
             return Ok(new { success = true, created });
         }
         catch (Exception ex)
@@ -115,7 +116,7 @@ public class FileStorageController(IFileStorageService fileStorageService, ILogg
     {
         try
         {
-            var deleted = await fileStorageService.DeleteDirectoryAsync(accountName, shareName, directoryPath);
+            bool deleted = await fileStorageService.DeleteDirectoryAsync(accountName, shareName, directoryPath);
             return Ok(new { success = true, deleted });
         }
         catch (Exception ex)

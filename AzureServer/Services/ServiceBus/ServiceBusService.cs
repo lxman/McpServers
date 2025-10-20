@@ -20,7 +20,7 @@ public class ServiceBusService(
 
     private async Task<ServiceBusAdministrationClient> GetAdministrationClientAsync(string namespaceName)
     {
-        if (_adminClients.TryGetValue(namespaceName, out var existingClient))
+        if (_adminClients.TryGetValue(namespaceName, out ServiceBusAdministrationClient? existingClient))
             return existingClient;
 
         var fullyQualifiedNamespace = $"{namespaceName}.servicebus.windows.net";
@@ -32,7 +32,7 @@ public class ServiceBusService(
 
     private async Task<ServiceBusClient> GetDataClientAsync(string namespaceName)
     {
-        if (_dataClients.TryGetValue(namespaceName, out var existingClient))
+        if (_dataClients.TryGetValue(namespaceName, out ServiceBusClient? existingClient))
             return existingClient;
 
         var fullyQualifiedNamespace = $"{namespaceName}.servicebus.windows.net";
@@ -48,19 +48,19 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var namespaces = new List<ServiceBusNamespaceDto>();
 
             if (!string.IsNullOrEmpty(resourceGroupName))
             {
                 // List namespaces in specific resource group
-                var subscription = string.IsNullOrEmpty(subscriptionId)
+                SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                     ? await client.GetDefaultSubscriptionAsync()
                     : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
                 ResourceGroupResource resourceGroup = await subscription.GetResourceGroupAsync(resourceGroupName);
                 
-                await foreach (var ns in resourceGroup.GetServiceBusNamespaces())
+                await foreach (ServiceBusNamespaceResource? ns in resourceGroup.GetServiceBusNamespaces())
                 {
                     namespaces.Add(MapNamespace(ns));
                 }
@@ -68,11 +68,11 @@ public class ServiceBusService(
             else
             {
                 // List all namespaces across all resource groups
-                var subscription = string.IsNullOrEmpty(subscriptionId)
+                SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                     ? await client.GetDefaultSubscriptionAsync()
                     : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
-                await foreach (var ns in subscription.GetServiceBusNamespacesAsync())
+                await foreach (ServiceBusNamespaceResource? ns in subscription.GetServiceBusNamespacesAsync())
                 {
                     namespaces.Add(MapNamespace(ns));
                 }
@@ -92,8 +92,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -118,8 +118,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -147,8 +147,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -173,8 +173,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -182,7 +182,7 @@ public class ServiceBusService(
             ServiceBusNamespaceResource ns = await resourceGroup.GetServiceBusNamespaceAsync(namespaceName);
 
             var queues = new List<ServiceBusQueueDto>();
-            await foreach (var queue in ns.GetServiceBusQueues())
+            await foreach (ServiceBusQueueResource? queue in ns.GetServiceBusQueues())
             {
                 queues.Add(MapQueue(queue));
             }
@@ -201,8 +201,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -228,8 +228,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -259,8 +259,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -286,8 +286,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -295,7 +295,7 @@ public class ServiceBusService(
             ServiceBusNamespaceResource ns = await resourceGroup.GetServiceBusNamespaceAsync(namespaceName);
 
             var topics = new List<ServiceBusTopicDto>();
-            await foreach (var topic in ns.GetServiceBusTopics())
+            await foreach (ServiceBusTopicResource? topic in ns.GetServiceBusTopics())
             {
                 topics.Add(MapTopic(topic));
             }
@@ -314,8 +314,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -341,8 +341,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -367,8 +367,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -394,8 +394,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -404,7 +404,7 @@ public class ServiceBusService(
             ServiceBusTopicResource topic = await ns.GetServiceBusTopicAsync(topicName);
 
             var subscriptions = new List<ServiceBusSubscriptionDto>();
-            await foreach (var sub in topic.GetServiceBusSubscriptions())
+            await foreach (ServiceBusSubscriptionResource? sub in topic.GetServiceBusSubscriptions())
             {
                 subscriptions.Add(MapSubscription(sub));
             }
@@ -423,8 +423,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -451,8 +451,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -481,8 +481,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
-            var subscription = string.IsNullOrEmpty(subscriptionId)
+            ArmClient client = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = string.IsNullOrEmpty(subscriptionId)
                 ? await client.GetDefaultSubscriptionAsync()
                 : await client.GetSubscriptionResource(ResourceIdentifier.Parse($"/subscriptions/{subscriptionId}")).GetAsync();
 
@@ -509,14 +509,14 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await GetDataClientAsync(namespaceName);
-            var sender = client.CreateSender(queueOrTopicName);
+            ServiceBusClient client = await GetDataClientAsync(namespaceName);
+            ServiceBusSender? sender = client.CreateSender(queueOrTopicName);
 
             var message = new ServiceBusMessage(messageBody);
             
             if (properties != null)
             {
-                foreach (var kvp in properties)
+                foreach (KeyValuePair<string, object> kvp in properties)
                 {
                     message.ApplicationProperties.Add(kvp.Key, kvp.Value);
                 }
@@ -524,7 +524,7 @@ public class ServiceBusService(
 
             await sender.SendMessageAsync(message);
             
-            var messageId = message.MessageId;
+            string? messageId = message.MessageId;
             logger.LogInformation("Sent message {MessageId} to {QueueOrTopic} in namespace {NamespaceName}", 
                 messageId, queueOrTopicName, namespaceName);
 
@@ -541,15 +541,15 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await GetDataClientAsync(namespaceName);
-            var receiver = client.CreateReceiver(queueName);
+            ServiceBusClient client = await GetDataClientAsync(namespaceName);
+            ServiceBusReceiver? receiver = client.CreateReceiver(queueName);
 
             var messages = new List<ServiceBusMessageDto>();
             IReadOnlyList<ServiceBusReceivedMessage> receivedMessages = await receiver.ReceiveMessagesAsync(
                 maxMessages, 
                 TimeSpan.FromSeconds(maxWaitTimeSeconds));
 
-            foreach (var message in receivedMessages)
+            foreach (ServiceBusReceivedMessage message in receivedMessages)
             {
                 messages.Add(MapReceivedMessage(message));
                 await receiver.CompleteMessageAsync(message);
@@ -569,13 +569,13 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await GetDataClientAsync(namespaceName);
-            var receiver = client.CreateReceiver(queueName);
+            ServiceBusClient client = await GetDataClientAsync(namespaceName);
+            ServiceBusReceiver? receiver = client.CreateReceiver(queueName);
 
             var messages = new List<ServiceBusMessageDto>();
             IReadOnlyList<ServiceBusReceivedMessage> peekedMessages = await receiver.PeekMessagesAsync(maxMessages);
 
-            foreach (var message in peekedMessages)
+            foreach (ServiceBusReceivedMessage message in peekedMessages)
             {
                 messages.Add(MapReceivedMessage(message));
             }
@@ -594,7 +594,7 @@ public class ServiceBusService(
     {
         try
         {
-            var adminClient = await GetAdministrationClientAsync(namespaceName);
+            ServiceBusAdministrationClient adminClient = await GetAdministrationClientAsync(namespaceName);
             QueueRuntimeProperties properties = await adminClient.GetQueueRuntimePropertiesAsync(queueName);
 
             logger.LogInformation("Queue {QueueName} has {Count} active messages", queueName, properties.ActiveMessageCount);
@@ -611,8 +611,8 @@ public class ServiceBusService(
     {
         try
         {
-            var client = await GetDataClientAsync(namespaceName);
-            var receiver = client.CreateReceiver(queueName);
+            ServiceBusClient client = await GetDataClientAsync(namespaceName);
+            ServiceBusReceiver? receiver = client.CreateReceiver(queueName);
 
             var purgedCount = 0;
             var hasMore = true;
@@ -627,7 +627,7 @@ public class ServiceBusService(
                 }
                 else
                 {
-                    foreach (var message in messages)
+                    foreach (ServiceBusReceivedMessage message in messages)
                     {
                         await receiver.CompleteMessageAsync(message);
                         purgedCount++;

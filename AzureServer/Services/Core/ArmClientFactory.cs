@@ -31,7 +31,7 @@ public class ArmClientFactory(
         if (_armClient is not null)
         {
             // Check if credentials have changed
-            (_, var result) = await credentialService.GetCredentialAsync();
+            (_, CredentialSelectionResult result) = await credentialService.GetCredentialAsync();
             if (result.SelectedCredential?.Id == _currentCredential?.Id)
             {
                 return _armClient;
@@ -50,7 +50,7 @@ public class ArmClientFactory(
             // Double-check pattern - another thread might have created it
             if (_armClient is not null)
             {
-                (_, var recheckResult) = await credentialService.GetCredentialAsync();
+                (_, CredentialSelectionResult recheckResult) = await credentialService.GetCredentialAsync();
                 if (recheckResult.SelectedCredential?.Id == _currentCredential?.Id)
                 {
                     return _armClient;
@@ -58,7 +58,7 @@ public class ArmClientFactory(
             }
 
             // Get the credential and create the ArmClient
-            (var credential, var credResult) = await credentialService.GetCredentialAsync();
+            (TokenCredential? credential, CredentialSelectionResult credResult) = await credentialService.GetCredentialAsync();
             
             if (credResult.Status == SelectionStatus.NoCredentialsFound)
             {
@@ -105,8 +105,8 @@ public class ArmClientFactory(
     /// </summary>
     public async Task<(ArmClient armClient, TokenCredential credential)> GetClientAndCredentialAsync()
     {
-        var armClient = await GetArmClientAsync();
-        var credential = _credential ?? throw new InvalidOperationException("Credential not available");
+        ArmClient armClient = await GetArmClientAsync();
+        TokenCredential credential = _credential ?? throw new InvalidOperationException("Credential not available");
         return (armClient, credential);
     }
 
