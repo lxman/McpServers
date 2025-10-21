@@ -1,5 +1,5 @@
 using System.Text.Json;
-using PlaywrightServer.Services;
+using Playwright.Core.Services;
 using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);

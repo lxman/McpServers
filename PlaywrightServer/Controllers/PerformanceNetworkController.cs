@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using PlaywrightServer.Models;
-using PlaywrightServer.Services;
+using Playwright.Core.Models;
+using Playwright.Core.Services;
 
 namespace PlaywrightServer.Controllers;
 

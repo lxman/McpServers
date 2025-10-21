@@ -16,4 +16,8 @@
       <Folder Include="Controllers\" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Playwright.Core\Playwright.Core.csproj" />
+    </ItemGroup>
+
 </Project>

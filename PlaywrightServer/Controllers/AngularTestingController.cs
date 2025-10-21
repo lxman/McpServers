@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using PlaywrightServer.Services;
+using Playwright.Core.Services;
 
 namespace PlaywrightServer.Controllers;
 

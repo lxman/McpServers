@@ -4,7 +4,7 @@
       "name": "Redis Tools",
       "url": "https://localhost:7183",
       "port": 7183,
-      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\RedisBrowser",
+      "projectPath": "<Path to project>",
       "startCommand": "dotnet run --launch-profile https --configuration Release",
       "requiresInit": false
     },
@@ -12,7 +12,7 @@
       "name": "Document Server",
       "url": "https://localhost:7255",
       "port": 7255,
-      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\DocumentServer",
+      "projectPath": "<Path to project>",
       "startCommand": "dotnet run --launch-profile https --configuration Release",
       "requiresInit": false
     },
@@ -20,7 +20,7 @@
       "name": "Mongo Tools",
       "url": "https://localhost:7099",
       "port": 7099,
-      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\MongoTools",
+      "projectPath": "<Path to project>",
       "startCommand": "dotnet run --launch-profile https --configuration Release",
       "requiresInit": false
     },
@@ -28,15 +28,7 @@
       "name": "C# Analyzer Tools",
       "url": "https://localhost:7214",
       "port": 7214,
-      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\CSharpAnalyzer",
-      "startCommand": "dotnet run --launch-profile https --configuration Release",
-      "requiresInit": false
-    },
-    "playwright": {
-      "name": "Playwright Browser Tools",
-      "url": "https://localhost:7060",
-      "port": 7060,
-      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\PlaywrightServer",
+      "projectPath": "<Path to project>",
       "startCommand": "dotnet run --launch-profile https --configuration Release",
       "requiresInit": false
     },
@@ -44,7 +36,7 @@
       "name": "Azure Tools",
       "url": "https://localhost:7084",
       "port": 7084,
-      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\AzureServer",
+      "projectPath": "<Path to project>",
       "startCommand": "dotnet run --launch-profile https --configuration Release",
       "requiresInit": false
     },
@@ -52,7 +44,7 @@
       "name": "AWS Tools",
       "url": "https://localhost:7188",
       "port": 7188,
-      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\AwsServer",
+      "projectPath": "<Path to project>",
       "startCommand": "dotnet run --launch-profile https --configuration Release",
       "requiresInit": false
     },
@@ -60,7 +52,7 @@
       "name": "Go Analyzer Tools",
       "url": "http://localhost:7300",
       "port": 7300,
-      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\go-analyzer-mcp",
+      "projectPath": "<Path to project>",
       "initCommands": [
         "go mod tidy",
         "go mod download",
@@ -74,7 +66,7 @@
       "name": "Typescript Analyzer Tools",
       "url": "http://localhost:7302",
       "port": 7302,
-      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\typescript-analyzer-mcp",
+      "projectPath": "<Path to project>",
       "initCommands": [
         "npm install",
         "npx tsoa spec-and-routes",
@@ -87,7 +79,7 @@
       "name": "Python Analyzer Tools",
       "url": "http://localhost:7301",
       "port": 7301,
-      "projectPath": "C:\\Users\\jorda\\RiderProjects\\McpServers\\python-analyzer-mcp",
+      "projectPath": "<Path to project>",
       "initCommands": [
         "python -m venv .venv",
         ".venv\\Scripts\\pip.exe install -r requirements.txt"
