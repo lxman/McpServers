@@ -9,7 +9,10 @@ namespace AzureServer.Controllers;
 public class MonitorController(IMonitorService monitorService, ILogger<MonitorController> logger) : ControllerBase
 {
     [HttpPost("logs/query")]
-    public async Task<ActionResult> QueryLogs([FromBody] QueryLogsRequest request)
+    public async Task<ActionResult> QueryLogs(
+        [FromBody] QueryLogsRequest request,
+        [FromQuery] bool useQuickEstimate = true,
+        [FromQuery] int? maxResults = 1000)
     {
         try
         {
@@ -17,10 +20,32 @@ public class MonitorController(IMonitorService monitorService, ILogger<MonitorCo
                 ? TimeSpan.FromHours(request.TimeRangeHours.Value) 
                 : TimeSpan.FromHours(24);
 
-            LogQueryResult result = await monitorService.QueryLogsAsync(request.WorkspaceId, request.Query, timeSpan);
+            // Apply result limiting to the query
+            string limitedQuery = $"{request.Query} | take {maxResults ?? 1000}";
+
+            LogQueryResult result = await monitorService.QueryLogsAsync(
+                request.WorkspaceId, 
+                limitedQuery, 
+                timeSpan);
             
             if (result.Error is not null)
                 return BadRequest(new { success = false, error = result.Error });
+
+            // Always add pagination metadata
+            var estimate = await monitorService.GetLogCountEstimateAsync(
+                request.WorkspaceId, 
+                request.Query, // Use the original query for count, not a limited one
+                timeSpan, 
+                useQuickEstimate);
+            
+            int totalRows = result.Tables.Sum(t => t.Rows.Count);
+            result.Pagination = monitorService.CalculatePaginationMetadata(
+                totalRows,
+                maxResults ?? 1000,
+                1, // Page number (for future multipage support)
+                false, // Has next token
+                estimate.count,
+                estimate.confidence);
 
             return Ok(new { success = true, result });
         }

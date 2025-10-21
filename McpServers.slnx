@@ -10,6 +10,8 @@
   <Project Path="McpUtilitiesServer\McpUtilitiesServer.csproj" Type="Classic C#" />
   <Project Path="MongoTools\MongoTools.csproj" Type="Classic C#" />
   <Project Path="MsOfficeCrypto\MsOfficeCrypto.csproj" Type="Classic C#" />
+  <Project Path="Playwright.Core\Playwright.Core.csproj" Type="Classic C#" />
+  <Project Path="PlaywrightServerMcp\PlaywrightServerMcp.csproj" Type="Classic C#" />
   <Project Path="PlaywrightServer\PlaywrightServer.csproj" Type="Classic C#" />
   <Project Path="RedisBrowser\RedisBrowser.csproj" Type="Classic C#" />
   <Project Path="RegistryTools\RegistryTools.csproj" Type="Classic C#" />

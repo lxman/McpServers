@@ -1,4 +1,5 @@
-﻿using AzureServer.Services.Monitor.Models;
+﻿using AzureServer.Common.Models;
+using AzureServer.Services.Monitor.Models;
 
 namespace AzureServer.Services.Monitor;
 
@@ -32,4 +33,18 @@ public interface IMonitorService
     Task<AlertRuleDto?> CreateAlertAsync(string subscriptionId, string resourceGroupName, string alertName, 
         string description, string severity, string workspaceId, string query, string evaluationFrequency, 
         string windowSize);
+
+    PaginationMetadata CalculatePaginationMetadata(
+        int currentPageSize,
+        int limit,
+        int pageNumber,
+        bool hasNextToken,
+        long? estimatedTotal = null,
+        string? confidence = null);
+
+    Task<(long? count, string confidence)> GetLogCountEstimateAsync(
+        string workspaceId,
+        string query,
+        TimeSpan timeSpan,
+        bool useFastEstimate = false);
 }

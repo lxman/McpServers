@@ -1,4 +1,5 @@
 namespace AzureServer.Services.Monitor.Models;
+using AzureServer.Common.Models;
 
 public class LogQueryResult
 {
@@ -15,4 +16,9 @@ public class LogQueryResult
     /// Format analysis for log messages
     /// </summary>
     public LogFormatAnalysis? FormatAnalysis { get; set; }
+    
+    /// <summary>
+    /// Pagination metadata for the query results
+    /// </summary>
+    public PaginationMetadata? Pagination { get; set; }
 }

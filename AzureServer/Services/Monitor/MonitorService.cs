@@ -10,6 +10,7 @@ using Azure.ResourceManager.ApplicationInsights;
 using Azure.ResourceManager.Monitor;
 using Azure.ResourceManager.OperationalInsights;
 using Azure.ResourceManager.Resources;
+using AzureServer.Common.Models;
 using AzureServer.Services.Core;
 using AzureServer.Services.Monitor.Models;
 using MetricValue = AzureServer.Services.Monitor.Models.MetricValue;
@@ -24,29 +25,10 @@ public class MonitorService(
     private LogsQueryClient? _logsClient;
     private MetricsQueryClient? _metricsClient;
 
-    private async Task<(LogsQueryClient logs, MetricsQueryClient metrics)> GetQueryClientsAsync()
-    {
-        // Check if we need to recreate the query clients
-        ArmClientInfo? clientInfo = armClientFactory.GetCurrentClientInfo();
-    
-        if (_logsClient is not null && _metricsClient is not null && clientInfo is not null) 
-            return (_logsClient, _metricsClient);
-    
-        // Use the factory to get the credential
-        TokenCredential credential = await armClientFactory.GetCredentialAsync();
-    
-        _logsClient = new LogsQueryClient(credential);
-        _metricsClient = new MetricsQueryClient(credential);
-    
-        logger.LogInformation("Created new query clients using credential from factory");
-    
-        return (_logsClient, _metricsClient);
-    }
-
     public async Task<LogQueryResult> QueryLogsAsync(string workspaceId, string query, TimeSpan? timeSpan = null)
     {
         var sw = Stopwatch.StartNew();
-        var queryStart = DateTime.UtcNow;
+        DateTime queryStart = DateTime.UtcNow;
         
         try
         {
@@ -61,77 +43,75 @@ public class MonitorService(
                 query,
                 timeRange);
 
-            if (response.Value.Status == LogsQueryResultStatus.Success)
-            {
-                var result = new LogQueryResult();
-                int totalRows = 0;
-                var allMessages = new List<string>();
-                
-                foreach (LogsTable? table in response.Value.AllTables)
+            if (response.Value.Status != LogsQueryResultStatus.Success)
+                return new LogQueryResult
                 {
-                    var tableDto = new LogTable
-                    {
-                        Name = table.Name
-                    };
+                    Error = $"Query failed with status: {response.Value.Status}"
+                };
+            var result = new LogQueryResult();
+            var totalRows = 0;
+            var allMessages = new List<string>();
+                
+            foreach (LogsTable? table in response.Value.AllTables)
+            {
+                var tableDto = new LogTable
+                {
+                    Name = table.Name
+                };
 
-                    foreach (LogsTableColumn? column in table.Columns)
+                foreach (LogsTableColumn? column in table.Columns)
+                {
+                    tableDto.Columns.Add(new LogColumn
                     {
-                        tableDto.Columns.Add(new LogColumn
-                        {
-                            Name = column.Name,
-                            Type = column.Type.ToString()
-                        });
-                    }
+                        Name = column.Name,
+                        Type = column.Type.ToString()
+                    });
+                }
 
-                    foreach (LogsTableRow? row in table.Rows)
+                foreach (LogsTableRow? row in table.Rows)
+                {
+                    var rowDict = new Dictionary<string, object?>();
+                    for (var i = 0; i < table.Columns.Count; i++)
                     {
-                        var rowDict = new Dictionary<string, object?>();
-                        for (var i = 0; i < table.Columns.Count; i++)
-                        {
-                            rowDict[table.Columns[i].Name] = row[i];
+                        rowDict[table.Columns[i].Name] = row[i];
                             
-                            // Collect message-like columns for format analysis
-                            if (table.Columns[i].Name.Contains("Message", StringComparison.OrdinalIgnoreCase) ||
-                                table.Columns[i].Name.Contains("Content", StringComparison.OrdinalIgnoreCase))
+                        // Collect message-like columns for format analysis
+                        if (table.Columns[i].Name.Contains("Message", StringComparison.OrdinalIgnoreCase) ||
+                            table.Columns[i].Name.Contains("Content", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (row[i] != null)
                             {
-                                if (row[i] != null)
-                                {
-                                    allMessages.Add(row[i].ToString() ?? string.Empty);
-                                }
+                                allMessages.Add(row[i].ToString() ?? string.Empty);
                             }
                         }
-                        tableDto.Rows.Add(rowDict);
-                        totalRows++;
                     }
-
-                    result.Tables.Add(tableDto);
+                    tableDto.Rows.Add(rowDict);
+                    totalRows++;
                 }
 
-                sw.Stop();
-                
-                // Add metadata
-                result.Metadata = new QueryMetadata
-                {
-                    QueryStartTime = queryStart,
-                    QueryEndTime = DateTime.UtcNow,
-                    DurationMs = sw.ElapsedMilliseconds,
-                    TotalRows = totalRows,
-                    TotalTables = result.Tables.Count
-                };
-                
-                // Add format analysis if we have message data
-                if (allMessages.Count > 0)
-                {
-                    result.FormatAnalysis = AnalyzeLogFormats(allMessages);
-                }
-
-                return result;
+                result.Tables.Add(tableDto);
             }
 
-            return new LogQueryResult
+            sw.Stop();
+                
+            // Add metadata
+            result.Metadata = new QueryMetadata
             {
-                Error = $"Query failed with status: {response.Value.Status}"
+                QueryStartTime = queryStart,
+                QueryEndTime = DateTime.UtcNow,
+                DurationMs = sw.ElapsedMilliseconds,
+                TotalRows = totalRows,
+                TotalTables = result.Tables.Count
             };
+                
+            // Add format analysis if we have message data
+            if (allMessages.Count > 0)
+            {
+                result.FormatAnalysis = AnalyzeLogFormats(allMessages);
+            }
+
+            return result;
+
         }
         catch (Exception ex)
         {
@@ -179,7 +159,7 @@ public class MonitorService(
     {
         try
         {
-            var query = "search * | distinct $table | project TableName = $table";
+            const string query = "search * | distinct $table | project TableName = $table";
             LogQueryResult result = await QueryLogsAsync(workspaceId, query, TimeSpan.FromDays(1));
 
             if (result.Error is not null)
@@ -313,7 +293,7 @@ public class MonitorService(
         DateTime startTime, DateTime endTime, TimeSpan? interval = null, IEnumerable<string>? aggregations = null)
     {
         var sw = Stopwatch.StartNew();
-        var queryStart = DateTime.UtcNow;
+        DateTime queryStart = DateTime.UtcNow;
         
         try
         {
@@ -348,7 +328,7 @@ public class MonitorService(
                 ResourceRegion = response.Value.ResourceRegion
             };
             
-            int totalDataPoints = 0;
+            var totalDataPoints = 0;
 
             foreach (MetricResult? metric in response.Value.Metrics)
             {
@@ -593,6 +573,112 @@ public class MonitorService(
             throw;
         }
     }
+    
+    /// <summary>
+    /// Calculate pagination metadata for query results
+    /// </summary>
+    public PaginationMetadata CalculatePaginationMetadata(
+        int currentPageSize,
+        int limit,
+        int pageNumber,
+        bool hasNextToken,
+        long? estimatedTotal = null,
+        string? confidence = null)
+    {
+        int? estimatedPages = null;
+        if (estimatedTotal.HasValue && limit > 0)
+        {
+            estimatedPages = (int)Math.Ceiling((double)estimatedTotal.Value / limit);
+        }
+        
+        bool isExact = confidence == "Exact" || confidence?.Contains("Exact") == true;
+        
+        string summary;
+        int startItem = ((pageNumber - 1) * limit) + 1;
+        int endItem = startItem + currentPageSize - 1;
+        
+        if (estimatedTotal.HasValue)
+        {
+            string totalDisplay = isExact ? $"{estimatedTotal}" : $"~{estimatedTotal}";
+            summary = $"Showing results {startItem}-{endItem} of {totalDisplay}";
+        }
+        else
+        {
+            summary = $"Showing results {startItem}-{endItem}";
+        }
+        
+        return new PaginationMetadata
+        {
+            CurrentPage = pageNumber,
+            ItemsInPage = currentPageSize,
+            ItemsPerPage = limit,
+            EstimatedTotal = estimatedTotal,
+            EstimatedPages = estimatedPages,
+            IsExactCount = isExact,
+            Summary = summary,
+            Confidence = confidence,
+            HasMore = hasNextToken
+        };
+    }
+
+    /// <summary>
+    /// Get an estimate of the total log count for a query
+    /// </summary>
+    public async Task<(long? count, string confidence)> GetLogCountEstimateAsync(
+        string workspaceId,
+        string query,
+        TimeSpan timeSpan,
+        bool useFastEstimate = false)
+    {
+        try
+        {
+            if (useFastEstimate)
+            {
+                // Quick sample-based estimate
+                LogQueryResult sampleResult = await QueryLogsAsync(workspaceId, query + " | take 100", timeSpan);
+                int totalRows = sampleResult.Tables.Sum(t => t.Rows.Count);
+                return totalRows < 100
+                    ? (totalRows, "Exact")
+                    : (totalRows * 10, "Low (Quick sample)");
+            }
+            
+            // Try accurate count using KQL
+            string countQuery = query + " | count";
+            LogQueryResult countResult = await QueryLogsAsync(workspaceId, countQuery, timeSpan);
+
+            if (countResult.Tables.Count <= 0 || countResult.Tables[0].Rows.Count <= 0) return (null, "Unknown");
+            Dictionary<string, object?> firstRow = countResult.Tables[0].Rows[0];
+            // The count result typically has a column named "Count"
+            if (!firstRow.TryGetValue("Count", out object? countValue)) return (null, "Unknown");
+            var count = Convert.ToInt64(countValue);
+            return (count, "High (KQL count)");
+
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Error estimating log count for workspace {WorkspaceId}", workspaceId);
+            return (null, "Unknown");
+        }
+    }
+
+    private async Task<(LogsQueryClient logs, MetricsQueryClient metrics)> GetQueryClientsAsync()
+    {
+        // Check if we need to recreate the query clients
+        ArmClientInfo? clientInfo = armClientFactory.GetCurrentClientInfo();
+    
+        if (_logsClient is not null && _metricsClient is not null && clientInfo is not null) 
+            return (_logsClient, _metricsClient);
+    
+        // Use the factory to get the credential
+        TokenCredential credential = await armClientFactory.GetCredentialAsync();
+    
+        _logsClient = new LogsQueryClient(credential);
+        _metricsClient = new MetricsQueryClient(credential);
+    
+        logger.LogInformation("Created new query clients using credential from factory");
+    
+        return (_logsClient, _metricsClient);
+    }
 
     private static ApplicationInsightsDto MapToDto(ApplicationInsightsComponentResource component)
     {
@@ -657,9 +743,9 @@ public class MonitorService(
         var keyValuePatterns = new HashSet<string>();
 
         // Sample up to 100 messages for analysis
-        var sampleSize = Math.Min(100, messages.Count);
+        int sampleSize = Math.Min(100, messages.Count);
         
-        for (int i = 0; i < sampleSize; i++)
+        for (var i = 0; i < sampleSize; i++)
         {
             string msg = messages[i];
             if (string.IsNullOrWhiteSpace(msg)) continue;
@@ -681,9 +767,9 @@ public class MonitorService(
         }
 
         // Determine dominant format
-        var dominantEntry = formatCounts.OrderByDescending(kvp => kvp.Value).First();
-        var totalMessages = formatCounts.Values.Sum();
-        var dominantPercentage = totalMessages > 0 
+        KeyValuePair<string, int> dominantEntry = formatCounts.OrderByDescending(kvp => kvp.Value).First();
+        int totalMessages = formatCounts.Values.Sum();
+        double dominantPercentage = totalMessages > 0 
             ? (double)dominantEntry.Value / totalMessages * 100 
             : 0;
 
@@ -708,20 +794,18 @@ public class MonitorService(
 
         try
         {
-            using var doc = JsonDocument.Parse(message);
+            using JsonDocument doc = JsonDocument.Parse(message);
             
             // Collect sample keys from JSON objects
-            if (doc.RootElement.ValueKind == JsonValueKind.Object)
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return true;
+            foreach (JsonProperty prop in doc.RootElement.EnumerateObject())
             {
-                foreach (var prop in doc.RootElement.EnumerateObject())
+                if (sampleKeys.Count < 20)
                 {
-                    if (sampleKeys.Count < 20)
-                    {
-                        sampleKeys.Add(prop.Name);
-                    }
+                    sampleKeys.Add(prop.Name);
                 }
             }
-            
+
             return true;
         }
         catch
@@ -734,21 +818,18 @@ public class MonitorService(
     {
         // Look for common key-value patterns
         var kvRegex = new Regex(@"(\w+)\s*[:=]\s*([^\s,;]+)", RegexOptions.Compiled);
-        var matches = kvRegex.Matches(message);
+        MatchCollection matches = kvRegex.Matches(message);
 
-        if (matches.Count >= 2) // Need at least 2 key-value pairs to consider it structured
+        if (matches.Count < 2) return false; // Need at least 2 key-value pairs to consider it structured
+        foreach (Match match in matches.Cast<Match>().Take(5))
         {
-            foreach (Match match in matches.Cast<Match>().Take(5))
+            if (patterns.Count < 20)
             {
-                if (patterns.Count < 20)
-                {
-                    patterns.Add(match.Groups[1].Value); // Add the key name
-                }
+                patterns.Add(match.Groups[1].Value); // Add the key name
             }
-            return true;
         }
+        return true;
 
-        return false;
     }
 
 }
