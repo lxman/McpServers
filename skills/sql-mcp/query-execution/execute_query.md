@@ -50,3 +50,5 @@ execute_query("default", "SELECT * FROM LargeTable", null, 100)
 - Use parameters to prevent SQL injection
 - Check `isTruncated` for partial results
 - Results are dynamic objects (flexible schema)
+- **Response size protection**: If response exceeds 20,000 token limit (~80KB), response is blocked with error (see [../COMMON.md#response-size-limits](../COMMON.md#response-size-limits))
+- **Large result workarounds**: Reduce maxRows parameter, add WHERE clause to filter, select fewer columns, or use LIMIT/TOP in SQL

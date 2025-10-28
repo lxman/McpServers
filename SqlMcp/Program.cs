@@ -65,6 +65,7 @@ builder.Services.AddSingleton<IQueryExecutor, QueryExecutor>();
 builder.Services.AddSingleton<ISchemaInspector, SchemaInspector>();
 builder.Services.AddSingleton<ITransactionManager, TransactionManager>();
 builder.Services.AddSingleton<IAuditLogger, AuditLogger>();
+builder.Services.AddSingleton<ResponseSizeGuard>();
 
 // Configure MCP server
 builder.Services.AddMcpServer()

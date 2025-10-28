@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using SqlMcp.Common;
 using SqlMcp.Models;
+using SqlMcp.Services;
 using SqlMcp.Services.Interfaces;
 
 namespace SqlMcp.Tools;
@@ -11,6 +12,7 @@ namespace SqlMcp.Tools;
 [McpServerToolType]
 public class SqlSchemaTools(
     ISchemaInspector schemaInspector,
+    ResponseSizeGuard responseSizeGuard,
     ILogger<SqlSchemaTools> logger)
 {
     [McpServerTool, DisplayName("list_tables")]
@@ -21,7 +23,28 @@ public class SqlSchemaTools(
         try
         {
             IEnumerable<TableInfo> tables = await schemaInspector.GetTablesAsync(connectionName);
-            return JsonSerializer.Serialize(new { success = true, tables }, SerializerOptions.JsonOptionsIndented);
+            var responseObject = new { success = true, tables };
+
+            // Check response size before returning
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "list_tables");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                int tableCount = tables.Count();
+                return responseSizeGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Database contains {tableCount} tables, resulting in {sizeCheck.EstimatedTokens:N0} estimated tokens.",
+                    "Try these workarounds:\n" +
+                    "  1. Query specific tables by name using get_table_schema\n" +
+                    "  2. Use SQL to filter tables: SELECT name FROM sys.tables WHERE name LIKE 'prefix%'\n" +
+                    "  3. Break down by schema if database supports it\n" +
+                    "  4. Get table count first: SELECT COUNT(*) FROM information_schema.tables",
+                    new {
+                        totalTables = tableCount
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {

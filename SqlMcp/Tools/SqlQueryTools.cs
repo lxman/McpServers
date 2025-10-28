@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using SqlMcp.Common;
 using SqlMcp.Models;
+using SqlMcp.Services;
 using SqlMcp.Services.Interfaces;
 
 namespace SqlMcp.Tools;
@@ -11,6 +12,7 @@ namespace SqlMcp.Tools;
 [McpServerToolType]
 public class SqlQueryTools(
     IQueryExecutor queryExecutor,
+    ResponseSizeGuard responseSizeGuard,
     ILogger<SqlQueryTools> logger)
 {
     [McpServerTool, DisplayName("execute_query")]
@@ -24,7 +26,30 @@ public class SqlQueryTools(
         try
         {
             QueryResult result = await queryExecutor.ExecuteQueryAsync(connectionName, sql, parameters, maxRows);
-            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
+
+            // Check response size before returning
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(result, "execute_query");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                int rowCount = result.Data?.Count() ?? 0;
+                return responseSizeGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Query returned {rowCount} rows with {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
+                    "Try these workarounds:\n" +
+                    "  1. Reduce maxRows parameter (try 100, 50, or 10)\n" +
+                    "  2. Add WHERE clause to filter results\n" +
+                    "  3. Use COUNT(*) first to check result size\n" +
+                    "  4. Select fewer columns (only what you need)\n" +
+                    "  5. Add TOP/LIMIT clause in SQL itself",
+                    new {
+                        rowsReturned = rowCount,
+                        currentMaxRows = maxRows,
+                        suggestedMaxRows = Math.Max(10, maxRows / 10)
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
