@@ -43,6 +43,7 @@ http_put(
 - **Use case:** Update existing resources
 - **Idempotent:** Safe to retry
 - **Full replacement:** Typically replaces entire resource
+- **Response size protection:** If response exceeds 20,000 token limit (~80KB), response is blocked with error (see [../COMMON.md#response-size-limits](../COMMON.md#response-size-limits))
 
 ---
 

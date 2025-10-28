@@ -44,6 +44,7 @@ http_post(
 - **Content-Type:** Automatically set to application/json
 - **Use case:** Create resources, submit forms
 - **Authentication:** Use [http_request](http_request.md) for auth headers
+- **Response size protection:** If response exceeds 20,000 token limit (~80KB), response is blocked with error (see [../COMMON.md#response-size-limits](../COMMON.md#response-size-limits))
 
 ---
 

@@ -71,6 +71,7 @@ http_request(
 - **Headers:** Must be valid JSON string
 - **Methods:** GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS
 - **Flexibility:** Full control over request
+- **Response size protection:** If response exceeds 20,000 token limit (~80KB), response is blocked with error (see [../COMMON.md#response-size-limits](../COMMON.md#response-size-limits))
 
 ---
 

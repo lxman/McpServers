@@ -44,6 +44,8 @@ http_get(url: "https://api.example.com/users")
 - **Authentication:** Use [http_request](http_request.md) for custom headers
 - **Timeouts:** Default 30 seconds
 - **Error handling:** Check statusCode (4xx/5xx indicate errors)
+- **Response size protection:** If response exceeds 20,000 token limit (~80KB), response is blocked with error (see [../COMMON.md#response-size-limits](../COMMON.md#response-size-limits))
+- **Large response workaround:** Use more specific API endpoints, add query parameters for filtering, or use pagination parameters
 
 ---
 

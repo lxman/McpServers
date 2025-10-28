@@ -243,6 +243,67 @@ Page 3: read_file(path, startLine=1001, maxLines=500)
   → Returns lines 1001-1500, hasMore: false
 ```
 
+### Response Size Limits
+
+To prevent protocol violations and maintain performance, Desktop Commander protects against oversized responses.
+
+**Limits:**
+- **Safe Limit:** 20,000 tokens (~80,000 characters)
+- **Hard Limit:** 25,000 tokens (~100,000 characters - MCP protocol maximum)
+- **Buffer:** 5,000 token safety margin
+
+**Protected Tools:**
+- `search_files` - File searches that return many results
+- `find_in_file` - Content searches with many matches
+- `execute_command` - Commands producing large output
+- `get_session_output` - Accumulated session output
+- `http_get/post/put/delete/request` - Large HTTP responses
+
+**When Response Exceeds Limit:**
+
+Tools return an error response with helpful information:
+
+```json
+{
+  "success": false,
+  "error": "Response too large",
+  "message": "Found 849 files, but even 500 results is too large...",
+  "details": {
+    "characterCount": 178258,
+    "estimatedTokens": 44564,
+    "safeTokenLimit": 20000,
+    "percentOfLimit": 222.8
+  },
+  "suggestion": "Try using summaryOnly=true or reduce maxResults to 100"
+}
+```
+
+**Workarounds:**
+
+1. **Use summary/count modes:** `summaryOnly`, `countOnly` parameters
+2. **Reduce batch size:** Lower `maxResults`, `maxMatches` parameters
+3. **Use pagination:** Iterate with `skip` parameter
+4. **Filter results:** More specific patterns or filters
+5. **Redirect to files:** (for commands) Output to file, then read incrementally
+
+**Example - Handling Large Search:**
+```
+# Initial attempt fails:
+search_files(pattern="*.cs", maxResults=500)
+→ Error: Response too large (44,564 tokens)
+
+# Strategy 1: Get overview first
+search_files(pattern="*.cs", summaryOnly=true)
+→ Success: Returns count and top directories
+
+# Strategy 2: Use smaller batches
+search_files(pattern="*.cs", maxResults=50, skip=0)
+→ Success: Returns first 50 files
+
+search_files(pattern="*.cs", maxResults=50, skip=50)
+→ Success: Returns next 50 files
+```
+
 ---
 
 ## Error Handling

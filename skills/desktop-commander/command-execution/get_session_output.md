@@ -43,6 +43,8 @@ Get accumulated output from a session buffer.
 - **Buffered:** Output accumulates in session buffer
 - **Use case:** Monitor long-running processes, interactive applications
 - **Clear:** Output buffer not cleared after reading
+- **Response size protection:** If accumulated output exceeds 20,000 token limit, response is blocked with error (see [../COMMON.md#response-size-limits](../COMMON.md#response-size-limits))
+- **Large output workaround:** Close session and create new one to clear buffer, or redirect command output to files
 
 ---
 

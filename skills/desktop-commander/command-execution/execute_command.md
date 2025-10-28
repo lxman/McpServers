@@ -64,6 +64,8 @@ execute_command(
 - **Security:** Command checked against [blocked commands](../security-config/INDEX.md)
 - **Exit codes:** 0 = success, non-zero = error
 - **Timeout:** Command killed if exceeds timeout
+- **Response size protection:** If command output exceeds 20,000 token limit, response is blocked with error (see [../COMMON.md#response-size-limits](../COMMON.md#response-size-limits))
+- **Large output workarounds:** Redirect to file (`command > output.txt`), use filters (`command | head -n 100`), or pipe to specific patterns (`command | findstr "pattern"`)
 
 ---
 
