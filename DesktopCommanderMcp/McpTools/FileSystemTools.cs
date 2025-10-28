@@ -168,25 +168,32 @@ public class FileSystemTools(
     [McpServerTool, DisplayName("list_directory")]
     [Description("List directory contents. See file-operations/SKILL.md")]
     public Task<string> ListDirectory(
-        [Description("Full path to the directory")] string path)
+        [Description("Full path to the directory")] string path,
+        [Description("Number of items to skip (for pagination, default: 0)")] int skip = 0,
+        [Description("Maximum number of items to return (1-1000, default: 500)")] int take = 500)
     {
         try
         {
             path = Path.GetFullPath(path);
-            
+
             if (!Directory.Exists(path))
             {
                 return Task.FromResult(JsonSerializer.Serialize(
-                    new { success = false, error = "Directory not found", path }, 
+                    new { success = false, error = "Directory not found", path },
                     SerializerOptions.JsonOptionsIndented));
             }
 
-            var directoryInfo = new DirectoryInfo(path);
-            var items = new List<object>();
+            // Clamp take value to reasonable limits
+            take = Math.Clamp(take, 1, 1000);
+            skip = Math.Max(0, skip);
 
+            var directoryInfo = new DirectoryInfo(path);
+            var allItems = new List<object>();
+
+            // Add directories first
             foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
             {
-                items.Add(new
+                allItems.Add(new
                 {
                     name = dir.Name,
                     type = "directory",
@@ -195,9 +202,10 @@ public class FileSystemTools(
                 });
             }
 
+            // Then add files
             foreach (FileInfo file in directoryInfo.GetFiles())
             {
-                items.Add(new
+                allItems.Add(new
                 {
                     name = file.Name,
                     type = "file",
@@ -207,22 +215,63 @@ public class FileSystemTools(
                 });
             }
 
+            // Apply pagination
+            int totalItems = allItems.Count;
+            var paginatedItems = allItems.Skip(skip).Take(take).ToList();
+            int itemsReturned = paginatedItems.Count;
+            bool hasMore = skip + itemsReturned < totalItems;
+
             var result = new
             {
                 success = true,
                 path,
-                items,
+                items = paginatedItems,
                 directoryCount = directoryInfo.GetDirectories().Length,
-                fileCount = directoryInfo.GetFiles().Length
+                fileCount = directoryInfo.GetFiles().Length,
+                totalItems,
+                itemsReturned,
+                skip,
+                take,
+                hasMore,
+                nextSkip = hasMore ? (int?)(skip + itemsReturned) : null,
+                message = hasMore
+                    ? $"Showing {itemsReturned} of {totalItems} items (skip={skip}). Use skip={skip + itemsReturned} to see more."
+                    : totalItems > take
+                        ? $"Showing items {skip + 1}-{skip + itemsReturned} of {totalItems} total."
+                        : $"Showing all {totalItems} items."
             };
 
-            return Task.FromResult(JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented));
+            // Check response size before returning
+            string jsonResult = JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
+
+            // Estimate token count (rough approximation: 1 token ≈ 4 characters)
+            int estimatedTokens = jsonResult.Length / 4;
+            const int maxTokens = 20000; // Safe limit below the 25000 hard limit
+
+            if (estimatedTokens > maxTokens)
+            {
+                // Response is too large, return helpful error
+                var errorResult = new
+                {
+                    success = false,
+                    error = "Response too large",
+                    message = $"This directory contains {totalItems} items and the response would exceed the token limit. " +
+                             $"Please use pagination with a smaller 'take' parameter (e.g., take=50 or take=100).",
+                    totalItems,
+                    requestedTake = take,
+                    suggestedTake = Math.Max(1, take / 10), // Suggest 10% of current take
+                    path
+                };
+                return Task.FromResult(JsonSerializer.Serialize(errorResult, SerializerOptions.JsonOptionsIndented));
+            }
+
+            return Task.FromResult(jsonResult);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing directory: {Path}", path);
             return Task.FromResult(JsonSerializer.Serialize(
-                new { success = false, error = ex.Message }, 
+                new { success = false, error = ex.Message },
                 SerializerOptions.JsonOptionsIndented));
         }
     }
