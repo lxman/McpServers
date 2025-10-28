@@ -7,7 +7,23 @@ using SqlMcp.Services;
 using SqlMcp.Services.Interfaces;
 using SqlMcp.Tools;
 
-HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+// Set the base path to the directory where the DLL is located
+// This ensures appsettings.json is found even when the working directory is different
+string executablePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+string executableDir = Path.GetDirectoryName(executablePath) ?? Directory.GetCurrentDirectory();
+
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+{
+    Args = args,
+    ContentRootPath = executableDir
+});
+
+// Log diagnostic information about working directory and configuration
+string currentDir = Directory.GetCurrentDirectory();
+string appSettingsPath = Path.Combine(executableDir, "appsettings.json");
+bool appSettingsExists = File.Exists(appSettingsPath);
+
+
 
 // Configure Serilog for file logging (STDIO servers cannot log to console)
 string logPath = Path.Combine(Path.GetTempPath(), "SqlMcp", "logs", "sqlmcp-.log");
@@ -22,6 +38,22 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Logging.ClearProviders();
 builder.Logging.AddSerilog(Log.Logger);
+
+// Log diagnostic information to help troubleshoot configuration issues
+Log.Information("=== SqlMcp Startup Diagnostics ===");
+Log.Information("Current Working Directory: {CurrentDir}", currentDir);
+Log.Information("Executable Directory (ContentRootPath): {ExecDir}", executableDir);
+
+Log.Information("Looking for appsettings.json at: {AppSettingsPath}", appSettingsPath);
+Log.Information("appsettings.json exists: {Exists}", appSettingsExists);
+Log.Information("Log file location: {LogPath}", logPath);
+
+// Log configuration source paths
+var configSources = builder.Configuration.Sources
+    .Select(s => s.GetType().Name)
+    .ToList();
+Log.Information("Configuration sources: {Sources}", string.Join(", ", configSources));
+
 
 // Configure SqlMcp settings
 builder.Services.Configure<SqlConfiguration>(
