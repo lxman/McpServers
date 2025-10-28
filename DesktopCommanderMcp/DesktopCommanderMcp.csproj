@@ -24,7 +24,7 @@
         <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0-rc.2.25502.107" />
         <PackageReference Include="ModelContextProtocol" Version="0.4.0-preview.2" />
         <PackageReference Include="NPOI" Version="2.7.5" />
-        <PackageReference Include="PdfPig" Version="0.1.12-alpha-20251015-3592f" />
+        <PackageReference Include="PdfPig" Version="0.1.12-alpha-20251026-94d51" />
         <PackageReference Include="PDFsharp" Version="6.2.2" />
         <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
         <PackageReference Include="TesseractOCR" Version="5.5.1" />
@@ -35,6 +35,9 @@
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
       <None Update="servers.example.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="appsettings.json">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
     </ItemGroup>

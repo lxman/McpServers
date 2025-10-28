@@ -19,19 +19,9 @@ public class HttpTools(IHttpClientFactory httpClientFactory, ILogger<HttpTools> 
     }
 
     [McpServerTool, DisplayName("http_get")]
-    [Description("""
-                 Make a GET request to an MCP server endpoint.
-                     
-                 Use this to:
-                 - Call /description on any MCP server to see its capabilities
-                 - Query endpoints that return data
-                 - Check server health/status
-
-                 Example: To see what Redis tools are available, call:
-                   url: 'https://localhost:7183/description'
-                 """)]
+    [Description("GET request to endpoint. See http-operations/SKILL.md")]
     public async Task<string> HttpGet(
-        [Description("Full URL to request (e.g., 'https://localhost:7183/description')")] string url)
+        string url)
     {
         try
         {
@@ -77,21 +67,10 @@ public class HttpTools(IHttpClientFactory httpClientFactory, ILogger<HttpTools> 
     }
 
     [McpServerTool, DisplayName("http_post")]
-    [Description("""
-                 Make a POST request to an MCP server endpoint with a JSON body.
-                     
-                 Use this to:
-                 - Call MCP server tool endpoints
-                 - Send data to server operations
-                 - Execute server commands
-
-                 Example: To execute a Redis command:
-                   url: 'https://localhost:7183/api/redis/execute'
-                   jsonBody: '{"command":"PING"}'
-                 """)]
+    [Description("POST request with JSON body. See http-operations/SKILL.md")]
     public async Task<string> HttpPost(
-        [Description("Full URL to request")] string url,
-        [Description("JSON body to send (as a string)")] string jsonBody)
+        string url,
+        string jsonBody)
     {
         try
         {
@@ -138,17 +117,10 @@ public class HttpTools(IHttpClientFactory httpClientFactory, ILogger<HttpTools> 
     }
 
     [McpServerTool, DisplayName("http_put")]
-    [Description("""
-                 Make a PUT request to an MCP server endpoint with a JSON body.
-                     
-                 Use this to:
-                 - Update resources on MCP servers
-                 - Modify server configurations
-                 - Execute update operations
-                 """)]
+    [Description("PUT request with JSON body. See http-operations/SKILL.md")]
     public async Task<string> HttpPut(
-        [Description("Full URL to request")] string url,
-        [Description("JSON body to send (as a string)")] string jsonBody)
+        string url,
+        string jsonBody)
     {
         try
         {
@@ -193,16 +165,9 @@ public class HttpTools(IHttpClientFactory httpClientFactory, ILogger<HttpTools> 
     }
 
     [McpServerTool, DisplayName("http_delete")]
-    [Description("""
-                 Make a DELETE request to an MCP server endpoint.
-                     
-                 Use this to:
-                 - Delete resources on MCP servers
-                 - Remove data or cancel operations
-                 - Clean up server state
-                 """)]
+    [Description("DELETE request to endpoint. See http-operations/SKILL.md")]
     public async Task<string> HttpDelete(
-        [Description("Full URL to request")] string url)
+        string url)
     {
         try
         {
@@ -246,19 +211,12 @@ public class HttpTools(IHttpClientFactory httpClientFactory, ILogger<HttpTools> 
     }
 
     [McpServerTool, DisplayName("http_request")]
-    [Description("""
-                 Make a custom HTTP request with full control over method, headers, and body.
-                     
-                 Use this for:
-                 - Custom HTTP methods (PATCH, OPTIONS, etc.)
-                 - Requests requiring custom headers
-                 - Advanced HTTP operations
-                 """)]
+    [Description("Custom HTTP request with headers. See http-operations/SKILL.md")]
     public async Task<string> HttpRequest(
-        [Description("HTTP method (GET, POST, PUT, DELETE, PATCH, etc.)")] string method,
-        [Description("Full URL to request")] string url,
-        [Description("JSON body to send (optional, empty string for no body)")] string jsonBody = "",
-        [Description("Custom headers as JSON object (optional, e.g., '{\"X-Custom\":\"value\"}')")] string headersJson = "")
+        string method,
+        string url,
+        string jsonBody = "",
+        string headersJson = "")
     {
         try
         {

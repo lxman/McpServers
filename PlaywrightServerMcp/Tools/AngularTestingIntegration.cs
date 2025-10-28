@@ -15,7 +15,7 @@ namespace PlaywrightServerMcp.Tools;
 /// Implements ANG-011 Unit Test Integration - Basic
 /// </summary>
 [McpServerToolType]
-public partial class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
+public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
 {
     private readonly PlaywrightSessionManager _sessionManager = sessionManager;
     
@@ -28,14 +28,14 @@ public partial class AngularTestingIntegration(PlaywrightSessionManager sessionM
     };
 
     [McpServerTool]
-    [Description("Execute Angular unit tests with comprehensive result parsing and analysis")]
+    [Description("Execute Angular unit tests with comprehensive result parsing and analysis. See skills/playwright-mcp/tools/angular/testing-integration.md.")]
     public async Task<string> ExecuteAngularUnitTests(
-        [Description("Test execution configuration - 'watch' for watch mode, 'ci' for CI mode, or custom options")] string mode = "single-run",
-        [Description("Specific test pattern or file to run (optional)")] string testPattern = "",
-        [Description("Enable code coverage (default: true)")] bool codeCoverage = true,
-        [Description("Browser to use for testing (chrome, firefox, edge)")] string browser = "chrome",
-        [Description("Working directory (defaults to current directory)")] string workingDirectory = "",
-        [Description("Session ID for context")] string sessionId = "default")
+        string mode = "single-run",
+        string testPattern = "",
+        bool codeCoverage = true,
+        string browser = "chrome",
+        string workingDirectory = "",
+        string sessionId = "default")
     {
         try
         {
@@ -247,7 +247,9 @@ public partial class AngularTestingIntegration(PlaywrightSessionManager sessionM
                 if (File.Exists(packageJsonPath))
                 {
                     string packageJson = await File.ReadAllTextAsync(packageJsonPath);
-                    Match versionMatch = Regex.Match(packageJson, @"""@angular/core"":\s*""([^""]+)""");
+                    Match versionMatch = Regex.Match(packageJson, """
+                                                                  "@angular/core":\s*"([^"]+)"
+                                                                  """);
                     if (versionMatch.Success)
                     {
                         envInfo.AngularVersion = versionMatch.Groups[1].Value;

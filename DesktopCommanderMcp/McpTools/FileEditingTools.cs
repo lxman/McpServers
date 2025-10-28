@@ -21,14 +21,14 @@ public class FileEditingTools(
     ILogger<FileEditingTools> logger)
 {
     [McpServerTool, DisplayName("prepare_replace_lines")]
-    [Description("PHASE 1: Prepare to replace a range of lines in a file. Returns an approval token for review.")]
+    [Description("PHASE 1: Prepare line replacement. See file-editing/SKILL.md")]
     public async Task<string> PrepareReplaceLines(
-        [Description("Full path to the file")] string filePath,
-        [Description("Starting line number (1-based)")] int startLine,
-        [Description("Ending line number (inclusive)")] int endLine,
-        [Description("New content to replace the lines with")] string newContent,
-        [Description("Version token from previous read operation")] string versionToken,
-        [Description("Create backup before editing (default: false)")] bool createBackup = false)
+        string filePath,
+        int startLine,
+        int endLine,
+        string newContent,
+        string versionToken,
+        bool createBackup = false)
     {
         try
         {
@@ -54,14 +54,14 @@ public class FileEditingTools(
     }
 
     [McpServerTool, DisplayName("prepare_insert_after_line")]
-    [Description("PHASE 1: Prepare to insert content after a specific line. Returns an approval token for review.")]
+    [Description("PHASE 1: Prepare content insertion. See file-editing/SKILL.md")]
     public async Task<string> PrepareInsertAfterLine(
-        [Description("Full path to the file")] string filePath,
-        [Description("Line number to insert after")] int afterLine,
-        [Description("Content to insert")] string content,
-        [Description("Version token from previous read operation")] string versionToken,
-        [Description("Maintain indentation from target line (default: true)")] bool maintainIndentation = true,
-        [Description("Create backup before editing (default: false)")] bool createBackup = false)
+        string filePath,
+        int afterLine,
+        string content,
+        string versionToken,
+        bool maintainIndentation = true,
+        bool createBackup = false)
     {
         try
         {
@@ -87,13 +87,13 @@ public class FileEditingTools(
     }
 
     [McpServerTool, DisplayName("prepare_delete_lines")]
-    [Description("PHASE 1: Prepare to delete a range of lines. Returns an approval token for review.")]
+    [Description("PHASE 1: Prepare line deletion. See file-editing/SKILL.md")]
     public async Task<string> PrepareDeleteLines(
-        [Description("Full path to the file")] string filePath,
-        [Description("Starting line number (1-based)")] int startLine,
-        [Description("Ending line number (inclusive)")] int endLine,
-        [Description("Version token from previous read operation")] string versionToken,
-        [Description("Create backup before editing (default: false)")] bool createBackup = false)
+        string filePath,
+        int startLine,
+        int endLine,
+        string versionToken,
+        bool createBackup = false)
     {
         try
         {
@@ -118,15 +118,15 @@ public class FileEditingTools(
     }
 
     [McpServerTool, DisplayName("prepare_replace_in_file")]
-    [Description("PHASE 1: Prepare to replace text patterns in a file. Returns an approval token for review.")]
+    [Description("PHASE 1: Prepare text pattern replacement. See file-editing/SKILL.md")]
     public async Task<string> PrepareReplaceInFile(
-        [Description("Full path to the file")] string filePath,
-        [Description("Text pattern to search for")] string searchPattern,
-        [Description("Replacement text")] string replaceWith,
-        [Description("Version token from previous read operation")] string versionToken,
-        [Description("Case sensitive search (default: false)")] bool caseSensitive = false,
-        [Description("Use regular expressions (default: false)")] bool useRegex = false,
-        [Description("Create backup before editing (default: false)")] bool createBackup = false)
+        string filePath,
+        string searchPattern,
+        string replaceWith,
+        string versionToken,
+        bool caseSensitive = false,
+        bool useRegex = false,
+        bool createBackup = false)
     {
         try
         {
@@ -153,10 +153,10 @@ public class FileEditingTools(
     }
 
     [McpServerTool, DisplayName("approve_edit")]
-    [Description("PHASE 2: Approve and apply a pending edit. Requires confirmation string 'APPROVE'.")]
+    [Description("PHASE 2: Apply pending edit (requires 'APPROVE'). See file-editing/SKILL.md")]
     public async Task<string> ApproveEdit(
-        [Description("Approval token from the prepare operation")] string approvalToken,
-        [Description("Must be exactly 'APPROVE' to confirm")] string confirmation)
+        string approvalToken,
+        string confirmation)
     {
         try
         {
@@ -207,9 +207,9 @@ public class FileEditingTools(
     }
 
     [McpServerTool, DisplayName("cancel_edit")]
-    [Description("Cancel a pending edit that hasn't been approved yet")]
+    [Description("Cancel pending edit. See file-editing/SKILL.md")]
     public Task<string> CancelEdit(
-        [Description("Approval token from the prepare operation")] string approvalToken)
+        string approvalToken)
     {
         try
         {
@@ -232,7 +232,7 @@ public class FileEditingTools(
     }
 
     [McpServerTool, DisplayName("list_pending_edits")]
-    [Description("List all pending edits awaiting approval")]
+    [Description("List pending edits awaiting approval. See file-editing/SKILL.md")]
     public Task<string> ListPendingEdits()
     {
         try
@@ -256,12 +256,12 @@ public class FileEditingTools(
     }
 
     [McpServerTool, DisplayName("find_in_file")]
-    [Description("Find lines in a file matching a pattern")]
+    [Description("Find lines matching pattern. See file-operations/SKILL.md")]
     public async Task<string> FindInFile(
-        [Description("Full path to the file")] string filePath,
-        [Description("Text pattern to search for")] string pattern,
-        [Description("Case sensitive search (default: false)")] bool caseSensitive = false,
-        [Description("Use regular expressions (default: false)")] bool useRegex = false)
+        string filePath,
+        string pattern,
+        bool caseSensitive = false,
+        bool useRegex = false)
     {
         try
         {
@@ -325,9 +325,9 @@ public class FileEditingTools(
     }
 
     [McpServerTool, DisplayName("analyze_indentation")]
-    [Description("Analyze indentation patterns in a file to determine if spaces or tabs are used")]
+    [Description("Analyze file indentation patterns. See file-operations/SKILL.md")]
     public async Task<string> AnalyzeIndentation(
-        [Description("Full path to the file")] string filePath)
+        string filePath)
     {
         try
         {
@@ -390,11 +390,11 @@ public class FileEditingTools(
     }
 
     [McpServerTool, DisplayName("cleanup_backup_files")]
-    [Description("Clean up backup files in a directory based on age and pattern")]
+    [Description("Clean up backup files by age/pattern. See maintenance/SKILL.md")]
     public Task<string> CleanupBackupFiles(
-        [Description("Directory path to clean")] string directoryPath,
-        [Description("Delete backups older than this many hours (0 = all)")] int olderThanHours = 24,
-        [Description("File pattern to match (default: '*.backup.*')")] string pattern = "*.backup.*")
+        string directoryPath,
+        int olderThanHours = 24,
+        string pattern = "*.backup.*")
     {
         try
         {

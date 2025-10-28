@@ -16,7 +16,7 @@ namespace DesktopCommanderMcp.McpTools;
 public class DirectoryTools(ServerRegistry registry, ILogger<DirectoryTools> logger)
 {
     [McpServerTool, DisplayName("list_servers")]
-    [Description("Get the directory of available MCP server APIs and their current status")]
+    [Description("Get directory of MCP server APIs and status. See service-management/SKILL.md")]
     public string ListServers()
     {
         logger.LogInformation("list_servers called");

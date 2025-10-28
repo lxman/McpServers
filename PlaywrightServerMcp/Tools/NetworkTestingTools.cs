@@ -20,15 +20,15 @@ public partial class NetworkTestingTools(PlaywrightSessionManager sessionManager
     private static readonly ConcurrentDictionary<string, List<InterceptRule>> InterceptRules = new();
 
     [McpServerTool]
-    [Description("Mock API responses for testing with advanced features")]
+    [Description("Mock API responses for testing with advanced features. See skills/playwright-mcp/tools/network-testing-tools.md.")]
     public async Task<string> MockApiResponse(
-        [Description("URL pattern to match (supports wildcards like */api/users* or exact URLs)")] string urlPattern,
-        [Description("Response body (JSON, XML, or plain text)")] string responseBody,
-        [Description("HTTP status code")] int statusCode = 200,
-        [Description("HTTP method to mock (GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD, or * for all)")] string method = "GET",
-        [Description("Additional response headers as JSON object")] string? headers = null,
-        [Description("Response delay in milliseconds")] int delayMs = 0,
-        [Description("Session ID")] string sessionId = "default")
+        string urlPattern,
+        string responseBody,
+        int statusCode = 200,
+        string method = "GET",
+        string? headers = null,
+        int delayMs = 0,
+        string sessionId = "default")
     {
         try
         {
@@ -139,16 +139,16 @@ public partial class NetworkTestingTools(PlaywrightSessionManager sessionManager
     }
 
     [McpServerTool]
-    [Description("Intercept and modify network requests")]
+    [Description("Intercept and modify network requests. See skills/playwright-mcp/tools/network-testing-tools.md.")]
     public async Task<string> InterceptRequests(
-        [Description("URL pattern to intercept (supports wildcards)")] string urlPattern,
-        [Description("Action to take: 'block', 'modify', 'log', or 'delay'")] string action = "block",
-        [Description("HTTP method to intercept (* for all, or GET, POST, etc.)")] string method = "*",
-        [Description("Modified response body (for 'modify' action)")] string? modifiedBody = null,
-        [Description("Modified response headers as JSON (for 'modify' action)")] string? modifiedHeaders = null,
-        [Description("Modified status code (for 'modify' action)")] int? modifiedStatusCode = null,
-        [Description("Delay in milliseconds (for 'delay' action)")] int delayMs = 1000,
-        [Description("Session ID")] string sessionId = "default")
+        string urlPattern,
+        string action = "block",
+        string method = "*",
+        string? modifiedBody = null,
+        string? modifiedHeaders = null,
+        int? modifiedStatusCode = null,
+        int delayMs = 1000,
+        string sessionId = "default")
     {
         try
         {
@@ -281,12 +281,12 @@ public partial class NetworkTestingTools(PlaywrightSessionManager sessionManager
     }
 
     [McpServerTool]
-    [Description("Handle file downloads with support for multiple concurrent downloads")]
+    [Description("Handle file downloads with support for multiple concurrent downloads. See skills/playwright-mcp/tools/network-testing-tools.md.")]
     public async Task<string> WaitForDownload(
-        [Description("Selector of element that triggers download")] string triggerSelector,
-        [Description("Timeout in seconds to wait for download")] int timeoutSeconds = 30,
-        [Description("Expected filename pattern (optional, for verification)")] string? expectedFileName = null,
-        [Description("Session ID")] string sessionId = "default")
+        string triggerSelector,
+        int timeoutSeconds = 30,
+        string? expectedFileName = null,
+        string sessionId = "default")
     {
         try
         {
@@ -406,11 +406,11 @@ public partial class NetworkTestingTools(PlaywrightSessionManager sessionManager
     }
 
     [McpServerTool]
-    [Description("Clean up downloaded files and remove tracking")]
+    [Description("Clean up downloaded files and remove tracking. See skills/playwright-mcp/tools/network-testing-tools.md.")]
     public async Task<string> CleanupDownloads(
-        [Description("Specific download ID to clean up (optional, if not provided cleans all for session)")] string? downloadId = null,
-        [Description("Delete files from disk")] bool deleteFiles = true,
-        [Description("Session ID")] string sessionId = "default")
+        string? downloadId = null,
+        bool deleteFiles = true,
+        string sessionId = "default")
     {
         try
         {
@@ -504,9 +504,9 @@ public partial class NetworkTestingTools(PlaywrightSessionManager sessionManager
     }
 
     [McpServerTool]
-    [Description("List all active downloads for a session")]
+    [Description("List all active downloads for a session. See skills/playwright-mcp/tools/network-testing-tools.md.")]
     public async Task<string> ListActiveDownloads(
-        [Description("Session ID")] string sessionId = "default")
+        string sessionId = "default")
     {
         try
         {
@@ -543,9 +543,9 @@ public partial class NetworkTestingTools(PlaywrightSessionManager sessionManager
     }
 
     [McpServerTool]
-    [Description("List and manage active mock rules")]
+    [Description("List and manage active mock rules. See skills/playwright-mcp/tools/network-testing-tools.md.")]
     public async Task<string> ListMockRules(
-        [Description("Session ID")] string sessionId = "default")
+        string sessionId = "default")
     {
         try
         {
@@ -581,9 +581,9 @@ public partial class NetworkTestingTools(PlaywrightSessionManager sessionManager
     }
 
     [McpServerTool]
-    [Description("List and manage active intercept rules")]
+    [Description("List and manage active intercept rules. See skills/playwright-mcp/tools/network-testing-tools.md.")]
     public async Task<string> ListInterceptRules(
-        [Description("Session ID")] string sessionId = "default")
+        string sessionId = "default")
     {
         try
         {
@@ -619,10 +619,10 @@ public partial class NetworkTestingTools(PlaywrightSessionManager sessionManager
     }
 
     [McpServerTool]
-    [Description("Generate HAR file for network analysis")]
+    [Description("Generate HAR file for network analysis. See skills/playwright-mcp/tools/network-testing-tools.md.")]
     public async Task<string> GenerateHarFile(
-        [Description("Output path for HAR file")] string outputPath,
-        [Description("Session ID")] string sessionId = "default")
+        string outputPath,
+        string sessionId = "default")
     {
         try
         {
@@ -683,31 +683,33 @@ public partial class NetworkTestingTools(PlaywrightSessionManager sessionManager
             await Task.Delay(2000); // Wait 2 seconds to capture some network activity
             
             // Get network activity using JavaScript evaluation
-            var networkData = await session.Page.EvaluateAsync<object>(@"
-                (() => {
-                    const perfEntries = performance.getEntriesByType('navigation')
-                        .concat(performance.getEntriesByType('resource'));
-                    
-                    return perfEntries.map(entry => ({
-                        name: entry.name,
-                        startTime: entry.startTime,
-                        duration: entry.duration,
-                        transferSize: entry.transferSize || 0,
-                        encodedBodySize: entry.encodedBodySize || 0,
-                        decodedBodySize: entry.decodedBodySize || 0,
-                        initiatorType: entry.initiatorType || 'unknown',
-                        nextHopProtocol: entry.nextHopProtocol || 'unknown',
-                        responseStart: entry.responseStart || 0,
-                        responseEnd: entry.responseEnd || 0,
-                        domainLookupStart: entry.domainLookupStart || 0,
-                        domainLookupEnd: entry.domainLookupEnd || 0,
-                        connectStart: entry.connectStart || 0,
-                        connectEnd: entry.connectEnd || 0,
-                        secureConnectionStart: entry.secureConnectionStart || 0,
-                        requestStart: entry.requestStart || 0
-                    }));
-                })()
-            ");
+            var networkData = await session.Page.EvaluateAsync<object>("""
+
+                                                                                       (() => {
+                                                                                           const perfEntries = performance.getEntriesByType('navigation')
+                                                                                               .concat(performance.getEntriesByType('resource'));
+                                                                                           
+                                                                                           return perfEntries.map(entry => ({
+                                                                                               name: entry.name,
+                                                                                               startTime: entry.startTime,
+                                                                                               duration: entry.duration,
+                                                                                               transferSize: entry.transferSize || 0,
+                                                                                               encodedBodySize: entry.encodedBodySize || 0,
+                                                                                               decodedBodySize: entry.decodedBodySize || 0,
+                                                                                               initiatorType: entry.initiatorType || 'unknown',
+                                                                                               nextHopProtocol: entry.nextHopProtocol || 'unknown',
+                                                                                               responseStart: entry.responseStart || 0,
+                                                                                               responseEnd: entry.responseEnd || 0,
+                                                                                               domainLookupStart: entry.domainLookupStart || 0,
+                                                                                               domainLookupEnd: entry.domainLookupEnd || 0,
+                                                                                               connectStart: entry.connectStart || 0,
+                                                                                               connectEnd: entry.connectEnd || 0,
+                                                                                               secureConnectionStart: entry.secureConnectionStart || 0,
+                                                                                               requestStart: entry.requestStart || 0
+                                                                                           }));
+                                                                                       })()
+                                                                                   
+                                                                       """);
 
             // Create HAR-like structure
             var harData = new

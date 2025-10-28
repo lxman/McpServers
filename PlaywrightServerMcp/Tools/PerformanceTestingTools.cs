@@ -25,11 +25,11 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     private static readonly ConcurrentDictionary<string, List<MemorySnapshot>> _memorySnapshots = new();
 
     [McpServerTool]
-    [Description("Start JavaScript and CSS coverage tracking")]
+    [Description("Start JavaScript and CSS coverage tracking. See skills/playwright-mcp/tools/performance-testing-tools.md.")]
     public async Task<string> StartCoverageTracking(
-        [Description("Enable JavaScript coverage")] bool js = true,
-        [Description("Enable CSS coverage")] bool css = true,
-        [Description("Session ID")] string sessionId = "default")
+        bool js = true,
+        bool css = true,
+        string sessionId = "default")
     {
         try
         {
@@ -50,20 +50,24 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             {
                 // Note: Coverage API might not be available in all Playwright versions
                 // This is a simplified implementation
-                await session.Page.EvaluateAsync(@"
-                    if (window.coverage) {
-                        window.coverage.startJSCoverage();
-                    }
-                ");
+                await session.Page.EvaluateAsync("""
+
+                                                                     if (window.coverage) {
+                                                                         window.coverage.startJSCoverage();
+                                                                     }
+                                                                 
+                                                 """);
             }
 
             if (css)
             {
-                await session.Page.EvaluateAsync(@"
-                    if (window.coverage) {
-                        window.coverage.startCSSCoverage();
-                    }
-                ");
+                await session.Page.EvaluateAsync("""
+
+                                                                     if (window.coverage) {
+                                                                         window.coverage.startCSSCoverage();
+                                                                     }
+                                                                 
+                                                 """);
             }
 
             _coverageSessions.TryAdd(sessionId, coverageSession);
@@ -85,9 +89,9 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Stop coverage tracking and return results")]
+    [Description("Stop coverage tracking and return results. See skills/playwright-mcp/tools/performance-testing-tools.md.")]
     public async Task<string> StopCoverageTracking(
-        [Description("Session ID")] string sessionId = "default")
+        string sessionId = "default")
     {
         try
         {
@@ -101,37 +105,39 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             }
 
             // Since we can't use the actual Coverage API, we'll simulate coverage data
-            var jsCode = @"
-                (() => {
-                    const simulateCoverage = () => {
-                    const scripts = Array.from(document.querySelectorAll('script[src]'));
-                    const stylesheets = Array.from(document.querySelectorAll('link[rel=""stylesheet""]'));
-                    
-                    const jsCoverage = scripts.map((script, index) => ({
-                        url: script.src,
-                        totalBytes: Math.floor(Math.random() * 50000) + 10000,
-                        usedBytes: Math.floor(Math.random() * 30000) + 5000,
-                        ranges: [
-                            { start: 0, end: Math.floor(Math.random() * 1000) + 500, count: 1 },
-                            { start: Math.floor(Math.random() * 2000) + 1000, end: Math.floor(Math.random() * 3000) + 2000, count: 1 }
-                        ]
-                    }));
-                    
-                    const cssCoverage = stylesheets.map((stylesheet, index) => ({
-                        url: stylesheet.href,
-                        totalBytes: Math.floor(Math.random() * 20000) + 5000,
-                        usedBytes: Math.floor(Math.random() * 15000) + 3000,
-                        ranges: [
-                            { start: 0, end: Math.floor(Math.random() * 500) + 200, count: 1 }
-                        ]
-                    }));
-                    
-                    return { jsCoverage, cssCoverage };
-                };
-                
-                return simulateCoverage();
-                })();
-            ";
+            var jsCode = """
+
+                                         (() => {
+                                             const simulateCoverage = () => {
+                                             const scripts = Array.from(document.querySelectorAll('script[src]'));
+                                             const stylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
+                                             
+                                             const jsCoverage = scripts.map((script, index) => ({
+                                                 url: script.src,
+                                                 totalBytes: Math.floor(Math.random() * 50000) + 10000,
+                                                 usedBytes: Math.floor(Math.random() * 30000) + 5000,
+                                                 ranges: [
+                                                     { start: 0, end: Math.floor(Math.random() * 1000) + 500, count: 1 },
+                                                     { start: Math.floor(Math.random() * 2000) + 1000, end: Math.floor(Math.random() * 3000) + 2000, count: 1 }
+                                                 ]
+                                             }));
+                                             
+                                             const cssCoverage = stylesheets.map((stylesheet, index) => ({
+                                                 url: stylesheet.href,
+                                                 totalBytes: Math.floor(Math.random() * 20000) + 5000,
+                                                 usedBytes: Math.floor(Math.random() * 15000) + 3000,
+                                                 ranges: [
+                                                     { start: 0, end: Math.floor(Math.random() * 500) + 200, count: 1 }
+                                                 ]
+                                             }));
+                                             
+                                             return { jsCoverage, cssCoverage };
+                                         };
+                                         
+                                         return simulateCoverage();
+                                         })();
+                                     
+                         """;
 
             var coverageData = await session.Page.EvaluateAsync<dynamic>(jsCode);
             
@@ -311,10 +317,10 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Monitor memory usage and performance metrics")]
+    [Description("Monitor memory usage and performance metrics. See skills/playwright-mcp/tools/performance-testing-tools.md.")]
     public async Task<string> MonitorMemoryUsage(
-        [Description("Duration in seconds")] int durationSeconds = 30,
-        [Description("Session ID")] string sessionId = "default")
+        int durationSeconds = 30,
+        string sessionId = "default")
     {
         try
         {
@@ -326,64 +332,66 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             DateTime startTime = DateTime.UtcNow;
 
             // JavaScript code to monitor memory usage
-            var jsCode = @"
-                (() => {
-                    const monitorMemory = () => {
-                    const snapshots = [];
-                    let intervalId;
-                    
-                    const takeSnapshot = () => {
-                        const snapshot = {
-                            timestamp: Date.now(),
-                            jsHeapSizeLimit: 0,
-                            totalJsHeapSize: 0,
-                            usedJsHeapSize: 0,
-                            cpuUsage: 0,
-                            domNodes: document.querySelectorAll('*').length,
-                            jsListeners: 0
-                        };
-                        
-                        // Get memory information if available
-                        if (window.performance && window.performance.memory) {
-                            const memory = window.performance.memory;
-                            snapshot.jsHeapSizeLimit = memory.jsHeapSizeLimit;
-                            snapshot.totalJsHeapSize = memory.totalJSHeapSize;
-                            snapshot.usedJsHeapSize = memory.usedJSHeapSize;
-                        }
-                        
-                        // Estimate event listeners (approximate)
-                        const allElements = document.querySelectorAll('*');
-                        let listenerCount = 0;
-                        allElements.forEach(element => {
-                            // This is a rough approximation
-                            if (element.onclick || element.onmouseover || element.onkeydown) {
-                                listenerCount++;
-                            }
-                        });
-                        snapshot.jsListeners = listenerCount;
-                        
-                        snapshots.push(snapshot);
-                    };
-                    
-                    // Take initial snapshot
-                    takeSnapshot();
-                    
-                    // Set up interval for monitoring
-                    intervalId = setInterval(takeSnapshot, 1000);
-                    
-                    // Store monitoring data globally
-                    window.memoryMonitoring = {
-                        snapshots: snapshots,
-                        startTime: Date.now(),
-                        intervalId: intervalId
-                    };
-                    
-                    return { started: true, monitoringId: intervalId };
-                };
-                
-                return monitorMemory();
-                })();
-            ";
+            var jsCode = """
+
+                                         (() => {
+                                             const monitorMemory = () => {
+                                             const snapshots = [];
+                                             let intervalId;
+                                             
+                                             const takeSnapshot = () => {
+                                                 const snapshot = {
+                                                     timestamp: Date.now(),
+                                                     jsHeapSizeLimit: 0,
+                                                     totalJsHeapSize: 0,
+                                                     usedJsHeapSize: 0,
+                                                     cpuUsage: 0,
+                                                     domNodes: document.querySelectorAll('*').length,
+                                                     jsListeners: 0
+                                                 };
+                                                 
+                                                 // Get memory information if available
+                                                 if (window.performance && window.performance.memory) {
+                                                     const memory = window.performance.memory;
+                                                     snapshot.jsHeapSizeLimit = memory.jsHeapSizeLimit;
+                                                     snapshot.totalJsHeapSize = memory.totalJSHeapSize;
+                                                     snapshot.usedJsHeapSize = memory.usedJSHeapSize;
+                                                 }
+                                                 
+                                                 // Estimate event listeners (approximate)
+                                                 const allElements = document.querySelectorAll('*');
+                                                 let listenerCount = 0;
+                                                 allElements.forEach(element => {
+                                                     // This is a rough approximation
+                                                     if (element.onclick || element.onmouseover || element.onkeydown) {
+                                                         listenerCount++;
+                                                     }
+                                                 });
+                                                 snapshot.jsListeners = listenerCount;
+                                                 
+                                                 snapshots.push(snapshot);
+                                             };
+                                             
+                                             // Take initial snapshot
+                                             takeSnapshot();
+                                             
+                                             // Set up interval for monitoring
+                                             intervalId = setInterval(takeSnapshot, 1000);
+                                             
+                                             // Store monitoring data globally
+                                             window.memoryMonitoring = {
+                                                 snapshots: snapshots,
+                                                 startTime: Date.now(),
+                                                 intervalId: intervalId
+                                             };
+                                             
+                                             return { started: true, monitoringId: intervalId };
+                                         };
+                                         
+                                         return monitorMemory();
+                                         })();
+                                     
+                         """;
 
             // Start monitoring
             await session.Page.EvaluateAsync(jsCode);
@@ -392,53 +400,55 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             await Task.Delay(durationSeconds * 1000);
 
             // Stop monitoring and collect results (wrapped in IIFE to fix syntax error)
-            var resultsJs = $@"
-                (() => {{
-                    const stopMonitoring = () => {{
-                        if (window.memoryMonitoring) {{
-                            clearInterval(window.memoryMonitoring.intervalId);
-                            
-                            const snapshots = window.memoryMonitoring.snapshots;
-                            const duration = (Date.now() - window.memoryMonitoring.startTime) / 1000;
-                            
-                            // Calculate statistics
-                            const memoryUsages = snapshots.map(s => s.usedJsHeapSize).filter(v => v > 0);
-                            const domNodeCounts = snapshots.map(s => s.domNodes);
-                            
-                            const stats = {{
-                                duration: duration,
-                                totalSnapshots: snapshots.length,
-                                memoryStats: {{
-                                    initial: memoryUsages.length > 0 ? memoryUsages[0] : 0,
-                                    final: memoryUsages.length > 0 ? memoryUsages[memoryUsages.length - 1] : 0,
-                                    peak: memoryUsages.length > 0 ? Math.max(...memoryUsages) : 0,
-                                    average: memoryUsages.length > 0 ? memoryUsages.reduce((a, b) => a + b, 0) / memoryUsages.length : 0,
-                                    change: memoryUsages.length > 1 ? memoryUsages[memoryUsages.length - 1] - memoryUsages[0] : 0
-                                }},
-                                domStats: {{
-                                    initial: domNodeCounts.length > 0 ? domNodeCounts[0] : 0,
-                                    final: domNodeCounts.length > 0 ? domNodeCounts[domNodeCounts.length - 1] : 0,
-                                    peak: domNodeCounts.length > 0 ? Math.max(...domNodeCounts) : 0,
-                                    average: domNodeCounts.length > 0 ? domNodeCounts.reduce((a, b) => a + b, 0) / domNodeCounts.length : 0,
-                                    change: domNodeCounts.length > 1 ? domNodeCounts[domNodeCounts.length - 1] - domNodeCounts[0] : 0
-                                }}
-                            }};
-                            
-                            return {{
-                                sessionId: '{sessionId}',
-                                startTime: new Date(window.memoryMonitoring.startTime).toISOString(),
-                                endTime: new Date().toISOString(),
-                                snapshots: snapshots,
-                                statistics: stats,
-                                recommendations: []
-                            }};
-                        }}
-                        return {{ error: 'Monitoring not active' }};
-                    }};
-                    
-                    return stopMonitoring();
-                }})();
-            ";
+            var resultsJs = $$"""
+
+                                              (() => {
+                                                  const stopMonitoring = () => {
+                                                      if (window.memoryMonitoring) {
+                                                          clearInterval(window.memoryMonitoring.intervalId);
+                                                          
+                                                          const snapshots = window.memoryMonitoring.snapshots;
+                                                          const duration = (Date.now() - window.memoryMonitoring.startTime) / 1000;
+                                                          
+                                                          // Calculate statistics
+                                                          const memoryUsages = snapshots.map(s => s.usedJsHeapSize).filter(v => v > 0);
+                                                          const domNodeCounts = snapshots.map(s => s.domNodes);
+                                                          
+                                                          const stats = {
+                                                              duration: duration,
+                                                              totalSnapshots: snapshots.length,
+                                                              memoryStats: {
+                                                                  initial: memoryUsages.length > 0 ? memoryUsages[0] : 0,
+                                                                  final: memoryUsages.length > 0 ? memoryUsages[memoryUsages.length - 1] : 0,
+                                                                  peak: memoryUsages.length > 0 ? Math.max(...memoryUsages) : 0,
+                                                                  average: memoryUsages.length > 0 ? memoryUsages.reduce((a, b) => a + b, 0) / memoryUsages.length : 0,
+                                                                  change: memoryUsages.length > 1 ? memoryUsages[memoryUsages.length - 1] - memoryUsages[0] : 0
+                                                              },
+                                                              domStats: {
+                                                                  initial: domNodeCounts.length > 0 ? domNodeCounts[0] : 0,
+                                                                  final: domNodeCounts.length > 0 ? domNodeCounts[domNodeCounts.length - 1] : 0,
+                                                                  peak: domNodeCounts.length > 0 ? Math.max(...domNodeCounts) : 0,
+                                                                  average: domNodeCounts.length > 0 ? domNodeCounts.reduce((a, b) => a + b, 0) / domNodeCounts.length : 0,
+                                                                  change: domNodeCounts.length > 1 ? domNodeCounts[domNodeCounts.length - 1] - domNodeCounts[0] : 0
+                                                              }
+                                                          };
+                                                          
+                                                          return {
+                                                              sessionId: '{{sessionId}}',
+                                                              startTime: new Date(window.memoryMonitoring.startTime).toISOString(),
+                                                              endTime: new Date().toISOString(),
+                                                              snapshots: snapshots,
+                                                              statistics: stats,
+                                                              recommendations: []
+                                                          };
+                                                      }
+                                                      return { error: 'Monitoring not active' };
+                                                  };
+                                                  
+                                                  return stopMonitoring();
+                                              })();
+                                          
+                              """;
 
             var result = await session.Page.EvaluateAsync<object>(resultsJs);
             var resultDict = JsonSerializer.Deserialize<Dictionary<string, object>>(JsonSerializer.Serialize(result));
@@ -535,9 +545,9 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Get performance metrics (Core Web Vitals, load times)")]
+    [Description("Get performance metrics (Core Web Vitals, load times). See skills/playwright-mcp/tools/performance-testing-tools.md.")]
     public async Task<string> GetPerformanceMetrics(
-        [Description("Session ID")] string sessionId = "default")
+        string sessionId = "default")
     {
         try
         {
@@ -545,127 +555,129 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var jsCode = @"
-                (() => {
-                    const getPerformanceMetrics = () => {
-                    const metrics = {
-                        timestamp: Date.now(),
-                        url: window.location.href,
-                        navigation: {},
-                        coreWebVitals: {},
-                        resources: [],
-                        timing: {},
-                        recommendations: []
-                    };
-                    
-                    // Get navigation timing
-                    if (window.performance && window.performance.timing) {
-                        const timing = window.performance.timing;
-                        metrics.navigation = {
-                            navigationStart: timing.navigationStart,
-                            domainLookupStart: timing.domainLookupStart,
-                            domainLookupEnd: timing.domainLookupEnd,
-                            connectStart: timing.connectStart,
-                            connectEnd: timing.connectEnd,
-                            requestStart: timing.requestStart,
-                            responseStart: timing.responseStart,
-                            responseEnd: timing.responseEnd,
-                            domLoading: timing.domLoading,
-                            domInteractive: timing.domInteractive,
-                            domContentLoadedEventStart: timing.domContentLoadedEventStart,
-                            domContentLoadedEventEnd: timing.domContentLoadedEventEnd,
-                            domComplete: timing.domComplete,
-                            loadEventStart: timing.loadEventStart,
-                            loadEventEnd: timing.loadEventEnd
-                        };
-                        
-                        // Calculate key metrics
-                        metrics.timing = {
-                            dnsLookup: timing.domainLookupEnd - timing.domainLookupStart,
-                            tcpConnection: timing.connectEnd - timing.connectStart,
-                            ttfb: timing.responseStart - timing.requestStart,
-                            domProcessing: timing.domComplete - timing.domLoading,
-                            pageLoad: timing.loadEventEnd - timing.navigationStart
-                        };
-                    }
-                    
-                    // Get Core Web Vitals approximations
-                    if (window.performance && window.performance.getEntriesByType) {
-                        const paintEntries = window.performance.getEntriesByType('paint');
-                        const navigationEntries = window.performance.getEntriesByType('navigation');
-                        
-                        paintEntries.forEach(entry => {
-                            if (entry.name === 'first-contentful-paint') {
-                                metrics.coreWebVitals.fcp = entry.startTime;
-                            }
-                            if (entry.name === 'largest-contentful-paint') {
-                                metrics.coreWebVitals.lcp = entry.startTime;
-                            }
-                        });
-                        
-                        if (navigationEntries.length > 0) {
-                            const nav = navigationEntries[0];
-                            metrics.coreWebVitals.fid = nav.domInteractive - nav.responseEnd;
-                            metrics.coreWebVitals.cls = 0; // Would need layout shift API
-                        }
-                    }
-                    
-                    // Get resource timing
-                    if (window.performance && window.performance.getEntriesByType) {
-                        const resourceEntries = window.performance.getEntriesByType('resource');
-                        metrics.resources = resourceEntries.slice(0, 20).map(entry => ({
-                            name: entry.name,
-                            type: entry.initiatorType,
-                            duration: entry.duration,
-                            size: entry.transferSize || 0,
-                            startTime: entry.startTime,
-                            responseEnd: entry.responseEnd
-                        }));
-                    }
-                    
-                    // Generate recommendations
-                    if (metrics.timing.pageLoad > 3000) {
-                        metrics.recommendations.push({
-                            type: 'performance',
-                            severity: 'high',
-                            message: `Slow page load time (${(metrics.timing.pageLoad / 1000).toFixed(2)}s)`,
-                            suggestion: 'Optimize images, minify resources, or enable compression'
-                        });
-                    }
-                    
-                    if (metrics.timing.ttfb > 500) {
-                        metrics.recommendations.push({
-                            type: 'performance',
-                            severity: 'medium',
-                            message: `High Time to First Byte (${metrics.timing.ttfb}ms)`,
-                            suggestion: 'Optimize server response time or use CDN'
-                        });
-                    }
-                    
-                    if (metrics.coreWebVitals.fcp > 2500) {
-                        metrics.recommendations.push({
-                            type: 'performance',
-                            severity: 'high',
-                            message: `Poor First Contentful Paint (${metrics.coreWebVitals.fcp}ms)`,
-                            suggestion: 'Optimize critical rendering path and reduce blocking resources'
-                        });
-                    }
-                    
-                    if (metrics.coreWebVitals.lcp > 4000) {
-                        metrics.recommendations.push({
-                            type: 'performance',
-                            severity: 'high',
-                            message: `Poor Largest Contentful Paint (${metrics.coreWebVitals.lcp}ms)`,
-                            suggestion: 'Optimize largest content elements and reduce server response time'
-                        });
-                    }
-                    
-                    return metrics;
-                };
-                
-                return getPerformanceMetrics();
-                })();
-            ";
+            var jsCode = """
+
+                                         (() => {
+                                             const getPerformanceMetrics = () => {
+                                             const metrics = {
+                                                 timestamp: Date.now(),
+                                                 url: window.location.href,
+                                                 navigation: {},
+                                                 coreWebVitals: {},
+                                                 resources: [],
+                                                 timing: {},
+                                                 recommendations: []
+                                             };
+                                             
+                                             // Get navigation timing
+                                             if (window.performance && window.performance.timing) {
+                                                 const timing = window.performance.timing;
+                                                 metrics.navigation = {
+                                                     navigationStart: timing.navigationStart,
+                                                     domainLookupStart: timing.domainLookupStart,
+                                                     domainLookupEnd: timing.domainLookupEnd,
+                                                     connectStart: timing.connectStart,
+                                                     connectEnd: timing.connectEnd,
+                                                     requestStart: timing.requestStart,
+                                                     responseStart: timing.responseStart,
+                                                     responseEnd: timing.responseEnd,
+                                                     domLoading: timing.domLoading,
+                                                     domInteractive: timing.domInteractive,
+                                                     domContentLoadedEventStart: timing.domContentLoadedEventStart,
+                                                     domContentLoadedEventEnd: timing.domContentLoadedEventEnd,
+                                                     domComplete: timing.domComplete,
+                                                     loadEventStart: timing.loadEventStart,
+                                                     loadEventEnd: timing.loadEventEnd
+                                                 };
+                                                 
+                                                 // Calculate key metrics
+                                                 metrics.timing = {
+                                                     dnsLookup: timing.domainLookupEnd - timing.domainLookupStart,
+                                                     tcpConnection: timing.connectEnd - timing.connectStart,
+                                                     ttfb: timing.responseStart - timing.requestStart,
+                                                     domProcessing: timing.domComplete - timing.domLoading,
+                                                     pageLoad: timing.loadEventEnd - timing.navigationStart
+                                                 };
+                                             }
+                                             
+                                             // Get Core Web Vitals approximations
+                                             if (window.performance && window.performance.getEntriesByType) {
+                                                 const paintEntries = window.performance.getEntriesByType('paint');
+                                                 const navigationEntries = window.performance.getEntriesByType('navigation');
+                                                 
+                                                 paintEntries.forEach(entry => {
+                                                     if (entry.name === 'first-contentful-paint') {
+                                                         metrics.coreWebVitals.fcp = entry.startTime;
+                                                     }
+                                                     if (entry.name === 'largest-contentful-paint') {
+                                                         metrics.coreWebVitals.lcp = entry.startTime;
+                                                     }
+                                                 });
+                                                 
+                                                 if (navigationEntries.length > 0) {
+                                                     const nav = navigationEntries[0];
+                                                     metrics.coreWebVitals.fid = nav.domInteractive - nav.responseEnd;
+                                                     metrics.coreWebVitals.cls = 0; // Would need layout shift API
+                                                 }
+                                             }
+                                             
+                                             // Get resource timing
+                                             if (window.performance && window.performance.getEntriesByType) {
+                                                 const resourceEntries = window.performance.getEntriesByType('resource');
+                                                 metrics.resources = resourceEntries.slice(0, 20).map(entry => ({
+                                                     name: entry.name,
+                                                     type: entry.initiatorType,
+                                                     duration: entry.duration,
+                                                     size: entry.transferSize || 0,
+                                                     startTime: entry.startTime,
+                                                     responseEnd: entry.responseEnd
+                                                 }));
+                                             }
+                                             
+                                             // Generate recommendations
+                                             if (metrics.timing.pageLoad > 3000) {
+                                                 metrics.recommendations.push({
+                                                     type: 'performance',
+                                                     severity: 'high',
+                                                     message: `Slow page load time (${(metrics.timing.pageLoad / 1000).toFixed(2)}s)`,
+                                                     suggestion: 'Optimize images, minify resources, or enable compression'
+                                                 });
+                                             }
+                                             
+                                             if (metrics.timing.ttfb > 500) {
+                                                 metrics.recommendations.push({
+                                                     type: 'performance',
+                                                     severity: 'medium',
+                                                     message: `High Time to First Byte (${metrics.timing.ttfb}ms)`,
+                                                     suggestion: 'Optimize server response time or use CDN'
+                                                 });
+                                             }
+                                             
+                                             if (metrics.coreWebVitals.fcp > 2500) {
+                                                 metrics.recommendations.push({
+                                                     type: 'performance',
+                                                     severity: 'high',
+                                                     message: `Poor First Contentful Paint (${metrics.coreWebVitals.fcp}ms)`,
+                                                     suggestion: 'Optimize critical rendering path and reduce blocking resources'
+                                                 });
+                                             }
+                                             
+                                             if (metrics.coreWebVitals.lcp > 4000) {
+                                                 metrics.recommendations.push({
+                                                     type: 'performance',
+                                                     severity: 'high',
+                                                     message: `Poor Largest Contentful Paint (${metrics.coreWebVitals.lcp}ms)`,
+                                                     suggestion: 'Optimize largest content elements and reduce server response time'
+                                                 });
+                                             }
+                                             
+                                             return metrics;
+                                         };
+                                         
+                                         return getPerformanceMetrics();
+                                         })();
+                                     
+                         """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
             return JsonSerializer.Serialize(result, JsonOptions);
@@ -677,10 +689,10 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Monitor system performance (CPU, memory) during test execution")]
+    [Description("Monitor system performance (CPU, memory) during test execution. See skills/playwright-mcp/tools/performance-testing-tools.md.")]
     public async Task<string> MonitorSystemPerformance(
-        [Description("Duration in seconds")] int durationSeconds = 30,
-        [Description("Session ID")] string sessionId = "default")
+        int durationSeconds = 30,
+        string sessionId = "default")
     {
         try
         {
@@ -744,10 +756,10 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Run Lighthouse performance audits")]
+    [Description("Run Lighthouse performance audits. See skills/playwright-mcp/tools/performance-testing-tools.md.")]
     public async Task<string> RunLighthouseAudit(
-        [Description("Optional audit category: performance, accessibility, best-practices, seo, or 'all'")] string? category = null,
-        [Description("Session ID")] string sessionId = "default")
+        string? category = null,
+        string sessionId = "default")
     {
         try
         {
@@ -764,42 +776,44 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             // Performance metrics using Performance API
             if (auditCategory == "performance" || auditCategory == "all")
             {
-                var performanceMetrics = await session.Page.EvaluateAsync<object>(@"
-                    (() => {
-                        const performance = window.performance;
-                        const navigation = performance.getEntriesByType('navigation')[0];
-                        const timing = performance.timing;
-                        
-                        // Core Web Vitals approximation
-                        const paintEntries = performance.getEntriesByType('paint');
-                        const fcp = paintEntries.find(entry => entry.name === 'first-contentful-paint');
-                        const lcp = paintEntries.find(entry => entry.name === 'largest-contentful-paint');
-                        
-                        return {
-                            // Core timing metrics
-                            domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
-                            loadComplete: timing.loadEventEnd - timing.navigationStart,
-                            firstPaint: paintEntries.find(e => e.name === 'first-paint')?.startTime || 0,
-                            firstContentfulPaint: fcp?.startTime || 0,
-                            largestContentfulPaint: lcp?.startTime || 0,
-                            
-                            // Resource timing
-                            dnsLookup: timing.domainLookupEnd - timing.domainLookupStart,
-                            tcpConnect: timing.connectEnd - timing.connectStart,
-                            serverResponse: timing.responseEnd - timing.requestStart,
-                            
-                            // Memory usage
-                            jsHeapSize: performance.memory ? performance.memory.usedJSHeapSize : 0,
-                            jsHeapLimit: performance.memory ? performance.memory.totalJSHeapSize : 0,
-                            
-                            // DOM metrics
-                            domNodes: document.querySelectorAll('*').length,
-                            imageCount: document.querySelectorAll('img').length,
-                            scriptCount: document.querySelectorAll('script').length,
-                            stylesheetCount: document.querySelectorAll('link[rel=""stylesheet""]').length
-                        };
-                    })()
-                ");
+                var performanceMetrics = await session.Page.EvaluateAsync<object>("""
+
+                                        (() => {
+                                            const performance = window.performance;
+                                            const navigation = performance.getEntriesByType('navigation')[0];
+                                            const timing = performance.timing;
+                                            
+                                            // Core Web Vitals approximation
+                                            const paintEntries = performance.getEntriesByType('paint');
+                                            const fcp = paintEntries.find(entry => entry.name === 'first-contentful-paint');
+                                            const lcp = paintEntries.find(entry => entry.name === 'largest-contentful-paint');
+                                            
+                                            return {
+                                                // Core timing metrics
+                                                domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
+                                                loadComplete: timing.loadEventEnd - timing.navigationStart,
+                                                firstPaint: paintEntries.find(e => e.name === 'first-paint')?.startTime || 0,
+                                                firstContentfulPaint: fcp?.startTime || 0,
+                                                largestContentfulPaint: lcp?.startTime || 0,
+                                                
+                                                // Resource timing
+                                                dnsLookup: timing.domainLookupEnd - timing.domainLookupStart,
+                                                tcpConnect: timing.connectEnd - timing.connectStart,
+                                                serverResponse: timing.responseEnd - timing.requestStart,
+                                                
+                                                // Memory usage
+                                                jsHeapSize: performance.memory ? performance.memory.usedJSHeapSize : 0,
+                                                jsHeapLimit: performance.memory ? performance.memory.totalJSHeapSize : 0,
+                                                
+                                                // DOM metrics
+                                                domNodes: document.querySelectorAll('*').length,
+                                                imageCount: document.querySelectorAll('img').length,
+                                                scriptCount: document.querySelectorAll('script').length,
+                                                stylesheetCount: document.querySelectorAll('link[rel="stylesheet"]').length
+                                            };
+                                        })()
+                                    
+                    """);
                 
                 results["performance"] = performanceMetrics;
             }
@@ -807,64 +821,66 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             // Basic accessibility checks
             if (auditCategory == "accessibility" || auditCategory == "all")
             {
-                var accessibilityMetrics = await session.Page.EvaluateAsync<object>(@"
-                    (() => {
-                        const issues = [];
-                        
-                        // Check for missing alt text
-                        const imagesWithoutAlt = Array.from(document.querySelectorAll('img:not([alt])'));
-                        if (imagesWithoutAlt.length > 0) {
-                            issues.push({
-                                type: 'missing_alt_text',
-                                count: imagesWithoutAlt.length,
-                                severity: 'high'
-                            });
-                        }
-                        
-                        // Check for missing form labels
-                        const inputsWithoutLabels = Array.from(document.querySelectorAll('input:not([aria-label]):not([aria-labelledby])'))
-                            .filter(input => !document.querySelector(`label[for='${input.id}']`));
-                        if (inputsWithoutLabels.length > 0) {
-                            issues.push({
-                                type: 'missing_form_labels',
-                                count: inputsWithoutLabels.length,
-                                severity: 'high'
-                            });
-                        }
-                        
-                        // Check for heading hierarchy
-                        const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'));
-                        const headingLevels = headings.map(h => parseInt(h.tagName.charAt(1)));
-                        let hasHeadingIssues = false;
-                        
-                        for (let i = 1; i < headingLevels.length; i++) {
-                            if (headingLevels[i] - headingLevels[i-1] > 1) {
-                                hasHeadingIssues = true;
-                                break;
-                            }
-                        }
-                        
-                        if (hasHeadingIssues) {
-                            issues.push({
-                                type: 'heading_hierarchy_issues',
-                                severity: 'medium'
-                            });
-                        }
-                        
-                        return {
-                            totalIssues: issues.length,
-                            issues: issues,
-                            score: Math.max(0, 100 - (issues.length * 20)),
-                            checks: {
-                                imagesWithAlt: document.querySelectorAll('img[alt]').length,
-                                totalImages: document.querySelectorAll('img').length,
-                                formsWithLabels: document.querySelectorAll('label').length,
-                                totalInputs: document.querySelectorAll('input').length,
-                                headingStructure: headings.length > 0 && !hasHeadingIssues
-                            }
-                        };
-                    })()
-                ");
+                var accessibilityMetrics = await session.Page.EvaluateAsync<object>("""
+
+                                        (() => {
+                                            const issues = [];
+                                            
+                                            // Check for missing alt text
+                                            const imagesWithoutAlt = Array.from(document.querySelectorAll('img:not([alt])'));
+                                            if (imagesWithoutAlt.length > 0) {
+                                                issues.push({
+                                                    type: 'missing_alt_text',
+                                                    count: imagesWithoutAlt.length,
+                                                    severity: 'high'
+                                                });
+                                            }
+                                            
+                                            // Check for missing form labels
+                                            const inputsWithoutLabels = Array.from(document.querySelectorAll('input:not([aria-label]):not([aria-labelledby])'))
+                                                .filter(input => !document.querySelector(`label[for='${input.id}']`));
+                                            if (inputsWithoutLabels.length > 0) {
+                                                issues.push({
+                                                    type: 'missing_form_labels',
+                                                    count: inputsWithoutLabels.length,
+                                                    severity: 'high'
+                                                });
+                                            }
+                                            
+                                            // Check for heading hierarchy
+                                            const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+                                            const headingLevels = headings.map(h => parseInt(h.tagName.charAt(1)));
+                                            let hasHeadingIssues = false;
+                                            
+                                            for (let i = 1; i < headingLevels.length; i++) {
+                                                if (headingLevels[i] - headingLevels[i-1] > 1) {
+                                                    hasHeadingIssues = true;
+                                                    break;
+                                                }
+                                            }
+                                            
+                                            if (hasHeadingIssues) {
+                                                issues.push({
+                                                    type: 'heading_hierarchy_issues',
+                                                    severity: 'medium'
+                                                });
+                                            }
+                                            
+                                            return {
+                                                totalIssues: issues.length,
+                                                issues: issues,
+                                                score: Math.max(0, 100 - (issues.length * 20)),
+                                                checks: {
+                                                    imagesWithAlt: document.querySelectorAll('img[alt]').length,
+                                                    totalImages: document.querySelectorAll('img').length,
+                                                    formsWithLabels: document.querySelectorAll('label').length,
+                                                    totalInputs: document.querySelectorAll('input').length,
+                                                    headingStructure: headings.length > 0 && !hasHeadingIssues
+                                                }
+                                            };
+                                        })()
+                                    
+                    """);
                 
                 results["accessibility"] = accessibilityMetrics;
             }
@@ -872,36 +888,38 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             // Best practices checks
             if (auditCategory == "best-practices" || auditCategory == "all")
             {
-                var bestPracticesMetrics = await session.Page.EvaluateAsync<object>(@"
-                    (() => {
-                        const issues = [];
-                        
-                        // Check for HTTPS
-                        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-                            issues.push({
-                                type: 'not_https',
-                                severity: 'high'
-                            });
-                        }
-                        
-                        // Check for console errors
-                        const errorCount = 0; // Would need additional setup to track
-                        
-                        // Check for deprecated APIs (basic check)
-                        const hasDeprecatedApis = false; // Would need more sophisticated detection
-                        
-                        return {
-                            totalIssues: issues.length,
-                            issues: issues,
-                            score: Math.max(0, 100 - (issues.length * 25)),
-                            checks: {
-                                httpsUsed: location.protocol === 'https:' || location.hostname === 'localhost',
-                                noConsoleErrors: errorCount === 0,
-                                noDeprecatedApis: !hasDeprecatedApis
-                            }
-                        };
-                    })()
-                ");
+                var bestPracticesMetrics = await session.Page.EvaluateAsync<object>("""
+
+                                        (() => {
+                                            const issues = [];
+                                            
+                                            // Check for HTTPS
+                                            if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+                                                issues.push({
+                                                    type: 'not_https',
+                                                    severity: 'high'
+                                                });
+                                            }
+                                            
+                                            // Check for console errors
+                                            const errorCount = 0; // Would need additional setup to track
+                                            
+                                            // Check for deprecated APIs (basic check)
+                                            const hasDeprecatedApis = false; // Would need more sophisticated detection
+                                            
+                                            return {
+                                                totalIssues: issues.length,
+                                                issues: issues,
+                                                score: Math.max(0, 100 - (issues.length * 25)),
+                                                checks: {
+                                                    httpsUsed: location.protocol === 'https:' || location.hostname === 'localhost',
+                                                    noConsoleErrors: errorCount === 0,
+                                                    noDeprecatedApis: !hasDeprecatedApis
+                                                }
+                                            };
+                                        })()
+                                    
+                    """);
                 
                 results["bestPractices"] = bestPracticesMetrics;
             }
@@ -951,9 +969,9 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Start performance tracing")]
+    [Description("Start performance tracing. See skills/playwright-mcp/tools/performance-testing-tools.md.")]
     public async Task<string> StartPerformanceTrace(
-        [Description("Session ID")] string sessionId = "default")
+        string sessionId = "default")
     {
         try
         {
@@ -1032,31 +1050,33 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             object initialMetrics = await GetBrowserPerformanceMetrics(session.Page);
             
             // Get initial page state
-            var initialPageState = await session.Page.EvaluateAsync<object>(@"
-                (() => {
-                    const performance = window.performance;
-                    const timing = performance.timing;
-                    
-                    return {
-                        url: window.location.href,
-                        title: document.title,
-                        timestamp: Date.now(),
-                        navigation: {
-                            type: performance.navigation?.type || 0,
-                            redirectCount: performance.navigation?.redirectCount || 0
-                        },
-                        timing: {
-                            navigationStart: timing.navigationStart,
-                            loadEventEnd: timing.loadEventEnd,
-                            domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
-                            loadComplete: timing.loadEventEnd - timing.navigationStart
-                        },
-                        resources: performance.getEntriesByType('resource').length,
-                        marks: performance.getEntriesByType('mark').length,
-                        measures: performance.getEntriesByType('measure').length
-                    };
-                })()
-            ");
+            var initialPageState = await session.Page.EvaluateAsync<object>("""
+
+                                                                                            (() => {
+                                                                                                const performance = window.performance;
+                                                                                                const timing = performance.timing;
+                                                                                                
+                                                                                                return {
+                                                                                                    url: window.location.href,
+                                                                                                    title: document.title,
+                                                                                                    timestamp: Date.now(),
+                                                                                                    navigation: {
+                                                                                                        type: performance.navigation?.type || 0,
+                                                                                                        redirectCount: performance.navigation?.redirectCount || 0
+                                                                                                    },
+                                                                                                    timing: {
+                                                                                                        navigationStart: timing.navigationStart,
+                                                                                                        loadEventEnd: timing.loadEventEnd,
+                                                                                                        domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
+                                                                                                        loadComplete: timing.loadEventEnd - timing.navigationStart
+                                                                                                    },
+                                                                                                    resources: performance.getEntriesByType('resource').length,
+                                                                                                    marks: performance.getEntriesByType('mark').length,
+                                                                                                    measures: performance.getEntriesByType('measure').length
+                                                                                                };
+                                                                                            })()
+                                                                                        
+                                                                            """);
 
             var result = new
             {
@@ -1102,9 +1122,9 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Stop performance tracing and return results")]
+    [Description("Stop performance tracing and return results. See skills/playwright-mcp/tools/performance-testing-tools.md.")]
     public async Task<string> StopPerformanceTrace(
-        [Description("Session ID")] string sessionId = "default")
+        string sessionId = "default")
     {
         try
         {
@@ -1134,66 +1154,68 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             object finalMetrics = await GetBrowserPerformanceMetrics(session.Page);
             
             // Get comprehensive performance data
-            var performanceData = await session.Page.EvaluateAsync<object>(@"
-                (() => {
-                    const performance = window.performance;
-                    const timing = performance.timing;
-                    
-                    // Get all performance entries
-                    const navigation = performance.getEntriesByType('navigation')[0];
-                    const resources = performance.getEntriesByType('resource');
-                    const marks = performance.getEntriesByType('mark');
-                    const measures = performance.getEntriesByType('measure');
-                    const paints = performance.getEntriesByType('paint');
-                    
-                    // Calculate key metrics
-                    const metrics = {
-                        // Core timing metrics
-                        dnsLookup: timing.domainLookupEnd - timing.domainLookupStart,
-                        tcpConnect: timing.connectEnd - timing.connectStart,
-                        serverResponse: timing.responseEnd - timing.requestStart,
-                        domProcessing: timing.domComplete - timing.domLoading,
-                        
-                        // Page load metrics
-                        domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
-                        loadComplete: timing.loadEventEnd - timing.navigationStart,
-                        
-                        // Paint metrics
-                        firstPaint: paints.find(p => p.name === 'first-paint')?.startTime || 0,
-                        firstContentfulPaint: paints.find(p => p.name === 'first-contentful-paint')?.startTime || 0,
-                        
-                        // Resource counts
-                        totalResources: resources.length,
-                        imageResources: resources.filter(r => r.initiatorType === 'img').length,
-                        scriptResources: resources.filter(r => r.initiatorType === 'script').length,
-                        cssResources: resources.filter(r => r.initiatorType === 'css').length,
-                        
-                        // Performance marks and measures
-                        customMarks: marks.length,
-                        customMeasures: measures.length
-                    };
-                    
-                    return {
-                        timestamp: Date.now(),
-                        url: window.location.href,
-                        title: document.title,
-                        metrics: metrics,
-                        resources: resources.map(r => ({
-                            name: r.name,
-                            duration: r.duration,
-                            size: r.transferSize || 0,
-                            type: r.initiatorType
-                        })),
-                        marks: marks,
-                        measures: measures,
-                        navigation: navigation ? {
-                            duration: navigation.duration,
-                            loadEventEnd: navigation.loadEventEnd,
-                            domContentLoadedEventEnd: navigation.domContentLoadedEventEnd
-                        } : null
-                    };
-                })()
-            ");
+            var performanceData = await session.Page.EvaluateAsync<object>("""
+
+                                                                                           (() => {
+                                                                                               const performance = window.performance;
+                                                                                               const timing = performance.timing;
+                                                                                               
+                                                                                               // Get all performance entries
+                                                                                               const navigation = performance.getEntriesByType('navigation')[0];
+                                                                                               const resources = performance.getEntriesByType('resource');
+                                                                                               const marks = performance.getEntriesByType('mark');
+                                                                                               const measures = performance.getEntriesByType('measure');
+                                                                                               const paints = performance.getEntriesByType('paint');
+                                                                                               
+                                                                                               // Calculate key metrics
+                                                                                               const metrics = {
+                                                                                                   // Core timing metrics
+                                                                                                   dnsLookup: timing.domainLookupEnd - timing.domainLookupStart,
+                                                                                                   tcpConnect: timing.connectEnd - timing.connectStart,
+                                                                                                   serverResponse: timing.responseEnd - timing.requestStart,
+                                                                                                   domProcessing: timing.domComplete - timing.domLoading,
+                                                                                                   
+                                                                                                   // Page load metrics
+                                                                                                   domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
+                                                                                                   loadComplete: timing.loadEventEnd - timing.navigationStart,
+                                                                                                   
+                                                                                                   // Paint metrics
+                                                                                                   firstPaint: paints.find(p => p.name === 'first-paint')?.startTime || 0,
+                                                                                                   firstContentfulPaint: paints.find(p => p.name === 'first-contentful-paint')?.startTime || 0,
+                                                                                                   
+                                                                                                   // Resource counts
+                                                                                                   totalResources: resources.length,
+                                                                                                   imageResources: resources.filter(r => r.initiatorType === 'img').length,
+                                                                                                   scriptResources: resources.filter(r => r.initiatorType === 'script').length,
+                                                                                                   cssResources: resources.filter(r => r.initiatorType === 'css').length,
+                                                                                                   
+                                                                                                   // Performance marks and measures
+                                                                                                   customMarks: marks.length,
+                                                                                                   customMeasures: measures.length
+                                                                                               };
+                                                                                               
+                                                                                               return {
+                                                                                                   timestamp: Date.now(),
+                                                                                                   url: window.location.href,
+                                                                                                   title: document.title,
+                                                                                                   metrics: metrics,
+                                                                                                   resources: resources.map(r => ({
+                                                                                                       name: r.name,
+                                                                                                       duration: r.duration,
+                                                                                                       size: r.transferSize || 0,
+                                                                                                       type: r.initiatorType
+                                                                                                   })),
+                                                                                                   marks: marks,
+                                                                                                   measures: measures,
+                                                                                                   navigation: navigation ? {
+                                                                                                       duration: navigation.duration,
+                                                                                                       loadEventEnd: navigation.loadEventEnd,
+                                                                                                       domContentLoadedEventEnd: navigation.domContentLoadedEventEnd
+                                                                                                   } : null
+                                                                                               };
+                                                                                           })()
+                                                                                       
+                                                                           """);
 
             // Cleanup CDP session
             try
@@ -1234,26 +1256,28 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var jsCode = @"
-                (() => {
-                    const getBrowserMetrics = () => {
-                    const metrics = {
-                        domNodes: document.querySelectorAll('*').length,
-                        jsHeapSize: 0,
-                        eventListeners: 0,
-                        activeTimers: 0
-                    };
-                    
-                    if (window.performance && window.performance.memory) {
-                        metrics.jsHeapSize = window.performance.memory.usedJSHeapSize;
-                    }
-                    
-                    return metrics;
-                };
-                
-                return getBrowserMetrics();
-                })();
-            ";
+            var jsCode = """
+
+                                         (() => {
+                                             const getBrowserMetrics = () => {
+                                             const metrics = {
+                                                 domNodes: document.querySelectorAll('*').length,
+                                                 jsHeapSize: 0,
+                                                 eventListeners: 0,
+                                                 activeTimers: 0
+                                             };
+                                             
+                                             if (window.performance && window.performance.memory) {
+                                                 metrics.jsHeapSize = window.performance.memory.usedJSHeapSize;
+                                             }
+                                             
+                                             return metrics;
+                                         };
+                                         
+                                         return getBrowserMetrics();
+                                         })();
+                                     
+                         """;
 
             return await page.EvaluateAsync<object>(jsCode);
         }

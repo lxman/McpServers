@@ -18,10 +18,10 @@ public class ProcessTools(
     ILogger<ProcessTools> logger)
 {
     [McpServerTool, DisplayName("list_processes")]
-    [Description("List running processes with optional filtering")]
+    [Description("List running processes with filtering. See process-management/SKILL.md")]
     public Task<string> ListProcesses(
-        [Description("Filter by process name (optional)")] string? filter = null,
-        [Description("Maximum number of processes to return (default: 50)")] int limit = 50)
+        string? filter = null,
+        int limit = 50)
     {
         try
         {
@@ -66,9 +66,9 @@ public class ProcessTools(
     }
 
     [McpServerTool, DisplayName("get_process_info")]
-    [Description("Get detailed information about a specific process")]
+    [Description("Get detailed process information. See process-management/SKILL.md")]
     public Task<string> GetProcessInfo(
-        [Description("Process ID")] int processId)
+        int processId)
     {
         try
         {
@@ -109,10 +109,10 @@ public class ProcessTools(
     }
 
     [McpServerTool, DisplayName("kill_process")]
-    [Description("Terminate a process by ID")]
+    [Description("Terminate process by ID. See process-management/SKILL.md")]
     public Task<string> KillProcess(
-        [Description("Process ID")] int processId,
-        [Description("Force kill (kill entire process tree)")] bool force = false)
+        int processId,
+        bool force = false)
     {
         try
         {
@@ -156,10 +156,10 @@ public class ProcessTools(
     }
 
     [McpServerTool, DisplayName("kill_process_by_name")]
-    [Description("Terminate all processes matching a name")]
+    [Description("Terminate all processes by name. See process-management/SKILL.md")]
     public Task<string> KillProcessByName(
-        [Description("Process name (without .exe)")] string processName,
-        [Description("Confirmation string (must match process name exactly)")] string confirmation = "")
+        string processName,
+        string confirmation = "")
     {
         try
         {

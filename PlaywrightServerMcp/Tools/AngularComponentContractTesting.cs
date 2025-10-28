@@ -26,14 +26,14 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
     };
 
     [McpServerTool]
-    [Description("Validate Angular component contracts including inputs, outputs, and interfaces")]
+    [Description("Validate Angular component contracts including inputs, outputs, and interfaces. See skills/playwright-mcp/tools/angular/component-contract-testing.md.")]
     public async Task<string> ValidateComponentContracts(
-        [Description("Component selector or data-testid to test")] string componentSelector,
-        [Description("Validation scope: 'inputs', 'outputs', 'interfaces', or 'all' (default: 'all')")] string validationScope = "all",
-        [Description("Include performance testing in validation (default: true)")] bool includePerformanceTesting = true,
-        [Description("Generate improvement recommendations (default: true)")] bool generateRecommendations = true,
-        [Description("Maximum test execution time in seconds (default: 60)")] int timeoutSeconds = 60,
-        [Description("Session ID for browser context")] string sessionId = "default")
+        string componentSelector,
+        string validationScope = "all",
+        bool includePerformanceTesting = true,
+        bool generateRecommendations = true,
+        int timeoutSeconds = 60,
+        string sessionId = "default")
     {
         try
         {
@@ -124,66 +124,68 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
     {
         try
         {
-            var jsCode = @"
-                (() => {
-                    const envInfo = {
-                        angularDetected: false,
-                        angularVersion: '',
-                        devToolsAvailable: false,
-                        componentTestingSupported: false,
-                        signalsSupported: false,
-                        standaloneComponentsSupported: false,
-                        testingFramework: '',
-                        availableTestingLibraries: []
-                    };
+            var jsCode = """
 
-                    // Check for Angular
-                    if (window.ng) {
-                        envInfo.angularDetected = true;
-                        envInfo.devToolsAvailable = true;
-                        
-                        // Get Angular version
-                        try {
-                            const version = window.ng.version?.full || window.ng.getComponent?.(document.body)?.constructor?.ɵcmp?.factory?.toString().match(/Angular v([\d.]+)/)?.[1] || 'Unknown';
-                            envInfo.angularVersion = version;
-                            
-                            // Check version capabilities
-                            const versionNum = parseFloat(version);
-                            envInfo.signalsSupported = versionNum >= 16;
-                            envInfo.standaloneComponentsSupported = versionNum >= 14;
-                            envInfo.componentTestingSupported = true;
-                        } catch (e) {
-                            console.warn('Failed to get Angular version:', e);
-                        }
-                    } else if (document.querySelector('[ng-version]')) {
-                        envInfo.angularDetected = true;
-                        envInfo.angularVersion = document.querySelector('[ng-version]')?.getAttribute('ng-version') || 'Unknown';
-                        // Production mode - limited testing capabilities
-                        envInfo.componentTestingSupported = false;
-                    }
+                                         (() => {
+                                             const envInfo = {
+                                                 angularDetected: false,
+                                                 angularVersion: '',
+                                                 devToolsAvailable: false,
+                                                 componentTestingSupported: false,
+                                                 signalsSupported: false,
+                                                 standaloneComponentsSupported: false,
+                                                 testingFramework: '',
+                                                 availableTestingLibraries: []
+                                             };
 
-                    // Check for testing frameworks
-                    if (window.jasmine) {
-                        envInfo.testingFramework = 'jasmine';
-                        envInfo.availableTestingLibraries.push('jasmine');
-                    }
-                    if (window.jest) {
-                        envInfo.testingFramework = 'jest';
-                        envInfo.availableTestingLibraries.push('jest');
-                    }
-                    if (window.mocha) {
-                        envInfo.testingFramework = 'mocha';
-                        envInfo.availableTestingLibraries.push('mocha');
-                    }
+                                             // Check for Angular
+                                             if (window.ng) {
+                                                 envInfo.angularDetected = true;
+                                                 envInfo.devToolsAvailable = true;
+                                                 
+                                                 // Get Angular version
+                                                 try {
+                                                     const version = window.ng.version?.full || window.ng.getComponent?.(document.body)?.constructor?.ɵcmp?.factory?.toString().match(/Angular v([\d.]+)/)?.[1] || 'Unknown';
+                                                     envInfo.angularVersion = version;
+                                                     
+                                                     // Check version capabilities
+                                                     const versionNum = parseFloat(version);
+                                                     envInfo.signalsSupported = versionNum >= 16;
+                                                     envInfo.standaloneComponentsSupported = versionNum >= 14;
+                                                     envInfo.componentTestingSupported = true;
+                                                 } catch (e) {
+                                                     console.warn('Failed to get Angular version:', e);
+                                                 }
+                                             } else if (document.querySelector('[ng-version]')) {
+                                                 envInfo.angularDetected = true;
+                                                 envInfo.angularVersion = document.querySelector('[ng-version]')?.getAttribute('ng-version') || 'Unknown';
+                                                 // Production mode - limited testing capabilities
+                                                 envInfo.componentTestingSupported = false;
+                                             }
 
-                    // Check for Angular testing utilities
-                    if (window.ng?.testing) {
-                        envInfo.availableTestingLibraries.push('angular-testing');
-                    }
+                                             // Check for testing frameworks
+                                             if (window.jasmine) {
+                                                 envInfo.testingFramework = 'jasmine';
+                                                 envInfo.availableTestingLibraries.push('jasmine');
+                                             }
+                                             if (window.jest) {
+                                                 envInfo.testingFramework = 'jest';
+                                                 envInfo.availableTestingLibraries.push('jest');
+                                             }
+                                             if (window.mocha) {
+                                                 envInfo.testingFramework = 'mocha';
+                                                 envInfo.availableTestingLibraries.push('mocha');
+                                             }
 
-                    return envInfo;
-                })();
-            ";
+                                             // Check for Angular testing utilities
+                                             if (window.ng?.testing) {
+                                                 envInfo.availableTestingLibraries.push('angular-testing');
+                                             }
+
+                                             return envInfo;
+                                         })();
+                                     
+                         """;
 
             var environmentResult = await session.Page.EvaluateAsync<JsonElement>(jsCode);
 
@@ -215,183 +217,185 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
     {
         try
         {
-            var jsCode = $@"
-                (() => {{
-                    const contractInfo = {{
-                        componentName: '',
-                        componentPath: '',
-                        componentSelector: '{componentSelector}',
-                        isStandalone: false,
-                        inputs: [],
-                        outputs: [],
-                        publicMethods: [],
-                        publicProperties: [],
-                        changeDetection: {{
-                            strategy: 'Default',
-                            usesSignals: false,
-                            usesObservables: false,
-                            hasImmutableInputs: false,
-                            inputDependencies: []
-                        }},
-                        lifecycle: {{
-                            implementedHooks: [],
-                            hasOnInit: false,
-                            hasOnDestroy: false,
-                            hasOnChanges: false,
-                            properCleanup: false
-                        }}
-                    }};
+            var jsCode = $$"""
 
-                    let element;
-                    
-                    // Try to find element by data-testid first
-                    if ('{componentSelector}'.startsWith('[data-testid=')) {{
-                        const testId = '{componentSelector}'.match(/data-testid=[""']([^""']+)[""']/)?.[1];
-                        if (testId) {{
-                            element = document.querySelector(`[data-testid=""${{testId}}""]`);
-                        }}
-                    }}
-                    
-                    // Fallback to direct selector
-                    if (!element) {{
-                        element = document.querySelector('{componentSelector}');
-                    }}
+                                           (() => {
+                                               const contractInfo = {
+                                                   componentName: '',
+                                                   componentPath: '',
+                                                   componentSelector: '{{componentSelector}}',
+                                                   isStandalone: false,
+                                                   inputs: [],
+                                                   outputs: [],
+                                                   publicMethods: [],
+                                                   publicProperties: [],
+                                                   changeDetection: {
+                                                       strategy: 'Default',
+                                                       usesSignals: false,
+                                                       usesObservables: false,
+                                                       hasImmutableInputs: false,
+                                                       inputDependencies: []
+                                                   },
+                                                   lifecycle: {
+                                                       implementedHooks: [],
+                                                       hasOnInit: false,
+                                                       hasOnDestroy: false,
+                                                       hasOnChanges: false,
+                                                       properCleanup: false
+                                                   }
+                                               };
 
-                    if (!element) {{
-                        return contractInfo;
-                    }}
+                                               let element;
+                                               
+                                               // Try to find element by data-testid first
+                                               if ('{{componentSelector}}'.startsWith('[data-testid=')) {
+                                                   const testId = '{{componentSelector}}'.match(/data-testid=["']([^"']+)["']/)?.[1];
+                                                   if (testId) {
+                                                       element = document.querySelector(`[data-testid="${testId}"]`);
+                                                   }
+                                               }
+                                               
+                                               // Fallback to direct selector
+                                               if (!element) {
+                                                   element = document.querySelector('{{componentSelector}}');
+                                               }
 
-                    try {{
-                        // Get component instance if Angular DevTools available
-                        if (window.ng?.getComponent) {{
-                            const componentInstance = window.ng.getComponent(element);
-                            if (componentInstance) {{
-                                contractInfo.componentName = componentInstance.constructor.name;
-                                
-                                // Check if standalone component
-                                const componentDef = componentInstance.constructor.ɵcmp;
-                                if (componentDef) {{
-                                    contractInfo.isStandalone = componentDef.standalone === true;
-                                    
-                                    // Get change detection strategy
-                                    contractInfo.changeDetection.strategy = componentDef.onPush === 1 ? 'OnPush' : 'Default';
-                                    
-                                    // Extract inputs
-                                    if (componentDef.inputs) {{
-                                        for (const [key, value] of Object.entries(componentDef.inputs)) {{
-                                            const inputInfo = {{
-                                                name: key,
-                                                type: typeof componentInstance[key],
-                                                isRequired: false,
-                                                hasDefaultValue: componentInstance[key] !== undefined,
-                                                defaultValue: componentInstance[key]?.toString() || '',
-                                                allowedValues: [],
-                                                validationRules: '',
-                                                description: '',
-                                                hasTransform: false,
-                                                transformFunction: ''
-                                            }};
-                                            contractInfo.inputs.push(inputInfo);
-                                        }}
-                                    }}
-                                    
-                                    // Extract outputs
-                                    if (componentDef.outputs) {{
-                                        for (const [key, value] of Object.entries(componentDef.outputs)) {{
-                                            const outputInfo = {{
-                                                name: key,
-                                                type: 'EventEmitter',
-                                                eventType: 'CustomEvent',
-                                                isAsync: false,
-                                                description: '',
-                                                expectedPayloadProperties: [],
-                                                triggerConditions: ''
-                                            }};
-                                            contractInfo.outputs.push(outputInfo);
-                                        }}
-                                    }}
-                                }}
-                                
-                                // Extract public methods and properties
-                                const proto = Object.getPrototypeOf(componentInstance);
-                                const allProps = Object.getOwnPropertyNames(proto);
-                                
-                                for (const propName of allProps) {{
-                                    if (propName.startsWith('_') || propName === 'constructor') continue;
-                                    
-                                    const descriptor = Object.getOwnPropertyDescriptor(proto, propName);
-                                    if (descriptor) {{
-                                        if (typeof descriptor.value === 'function') {{
-                                            contractInfo.publicMethods.push({{
-                                                name: propName,
-                                                returnType: 'unknown',
-                                                parameters: [],
-                                                description: '',
-                                                isAsync: descriptor.value.constructor.name === 'AsyncFunction',
-                                                accessModifier: 'public'
-                                            }});
-                                        }} else if (descriptor.get || descriptor.set) {{
-                                            contractInfo.publicProperties.push({{
-                                                name: propName,
-                                                type: typeof componentInstance[propName],
-                                                isReadonly: !descriptor.set,
-                                                hasGetter: !!descriptor.get,
-                                                hasSetter: !!descriptor.set,
-                                                description: ''
-                                            }});
-                                        }}
-                                    }}
-                                }}
-                                
-                                // Check for lifecycle hooks
-                                const lifecycleHooks = ['ngOnInit', 'ngOnDestroy', 'ngOnChanges', 'ngAfterViewInit', 'ngAfterViewChecked', 'ngAfterContentInit', 'ngAfterContentChecked', 'ngDoCheck'];
-                                for (const hook of lifecycleHooks) {{
-                                    if (typeof componentInstance[hook] === 'function') {{
-                                        contractInfo.lifecycle.implementedHooks.push(hook);
-                                        
-                                        switch (hook) {{
-                                            case 'ngOnInit':
-                                                contractInfo.lifecycle.hasOnInit = true;
-                                                break;
-                                            case 'ngOnDestroy':
-                                                contractInfo.lifecycle.hasOnDestroy = true;
-                                                contractInfo.lifecycle.properCleanup = true; // Assume proper cleanup if ngOnDestroy exists
-                                                break;
-                                            case 'ngOnChanges':
-                                                contractInfo.lifecycle.hasOnChanges = true;
-                                                break;
-                                        }}
-                                    }}
-                                }}
-                                
-                                // Check for signals usage (Angular 16+)
-                                if (window.ng.getDirectiveMetadata) {{
-                                    try {{
-                                        // Look for signal usage in component
-                                        const componentString = componentInstance.constructor.toString();
-                                        contractInfo.changeDetection.usesSignals = /signal\(/.test(componentString) || /computed\(/.test(componentString) || /effect\(/.test(componentString);
-                                    }} catch (e) {{
-                                        // Ignore signal detection errors
-                                    }}
-                                }}
-                            }}
-                        }} else {{
-                            // Fallback for production mode
-                            contractInfo.componentName = element.tagName.toLowerCase();
-                            
-                            // Extract basic information from DOM
-                            const ngVersion = document.querySelector('[ng-version]')?.getAttribute('ng-version');
-                            if (ngVersion) {{
-                                contractInfo.componentPath = `Angular Component (v${{ngVersion}})`;
-                            }}
-                        }}
-                    }} catch (e) {{
-                        console.warn('Error extracting component contract info:', e);
-                    }}
+                                               if (!element) {
+                                                   return contractInfo;
+                                               }
 
-                    return contractInfo;
-                }})();
-            ";
+                                               try {
+                                                   // Get component instance if Angular DevTools available
+                                                   if (window.ng?.getComponent) {
+                                                       const componentInstance = window.ng.getComponent(element);
+                                                       if (componentInstance) {
+                                                           contractInfo.componentName = componentInstance.constructor.name;
+                                                           
+                                                           // Check if standalone component
+                                                           const componentDef = componentInstance.constructor.ɵcmp;
+                                                           if (componentDef) {
+                                                               contractInfo.isStandalone = componentDef.standalone === true;
+                                                               
+                                                               // Get change detection strategy
+                                                               contractInfo.changeDetection.strategy = componentDef.onPush === 1 ? 'OnPush' : 'Default';
+                                                               
+                                                               // Extract inputs
+                                                               if (componentDef.inputs) {
+                                                                   for (const [key, value] of Object.entries(componentDef.inputs)) {
+                                                                       const inputInfo = {
+                                                                           name: key,
+                                                                           type: typeof componentInstance[key],
+                                                                           isRequired: false,
+                                                                           hasDefaultValue: componentInstance[key] !== undefined,
+                                                                           defaultValue: componentInstance[key]?.toString() || '',
+                                                                           allowedValues: [],
+                                                                           validationRules: '',
+                                                                           description: '',
+                                                                           hasTransform: false,
+                                                                           transformFunction: ''
+                                                                       };
+                                                                       contractInfo.inputs.push(inputInfo);
+                                                                   }
+                                                               }
+                                                               
+                                                               // Extract outputs
+                                                               if (componentDef.outputs) {
+                                                                   for (const [key, value] of Object.entries(componentDef.outputs)) {
+                                                                       const outputInfo = {
+                                                                           name: key,
+                                                                           type: 'EventEmitter',
+                                                                           eventType: 'CustomEvent',
+                                                                           isAsync: false,
+                                                                           description: '',
+                                                                           expectedPayloadProperties: [],
+                                                                           triggerConditions: ''
+                                                                       };
+                                                                       contractInfo.outputs.push(outputInfo);
+                                                                   }
+                                                               }
+                                                           }
+                                                           
+                                                           // Extract public methods and properties
+                                                           const proto = Object.getPrototypeOf(componentInstance);
+                                                           const allProps = Object.getOwnPropertyNames(proto);
+                                                           
+                                                           for (const propName of allProps) {
+                                                               if (propName.startsWith('_') || propName === 'constructor') continue;
+                                                               
+                                                               const descriptor = Object.getOwnPropertyDescriptor(proto, propName);
+                                                               if (descriptor) {
+                                                                   if (typeof descriptor.value === 'function') {
+                                                                       contractInfo.publicMethods.push({
+                                                                           name: propName,
+                                                                           returnType: 'unknown',
+                                                                           parameters: [],
+                                                                           description: '',
+                                                                           isAsync: descriptor.value.constructor.name === 'AsyncFunction',
+                                                                           accessModifier: 'public'
+                                                                       });
+                                                                   } else if (descriptor.get || descriptor.set) {
+                                                                       contractInfo.publicProperties.push({
+                                                                           name: propName,
+                                                                           type: typeof componentInstance[propName],
+                                                                           isReadonly: !descriptor.set,
+                                                                           hasGetter: !!descriptor.get,
+                                                                           hasSetter: !!descriptor.set,
+                                                                           description: ''
+                                                                       });
+                                                                   }
+                                                               }
+                                                           }
+                                                           
+                                                           // Check for lifecycle hooks
+                                                           const lifecycleHooks = ['ngOnInit', 'ngOnDestroy', 'ngOnChanges', 'ngAfterViewInit', 'ngAfterViewChecked', 'ngAfterContentInit', 'ngAfterContentChecked', 'ngDoCheck'];
+                                                           for (const hook of lifecycleHooks) {
+                                                               if (typeof componentInstance[hook] === 'function') {
+                                                                   contractInfo.lifecycle.implementedHooks.push(hook);
+                                                                   
+                                                                   switch (hook) {
+                                                                       case 'ngOnInit':
+                                                                           contractInfo.lifecycle.hasOnInit = true;
+                                                                           break;
+                                                                       case 'ngOnDestroy':
+                                                                           contractInfo.lifecycle.hasOnDestroy = true;
+                                                                           contractInfo.lifecycle.properCleanup = true; // Assume proper cleanup if ngOnDestroy exists
+                                                                           break;
+                                                                       case 'ngOnChanges':
+                                                                           contractInfo.lifecycle.hasOnChanges = true;
+                                                                           break;
+                                                                   }
+                                                               }
+                                                           }
+                                                           
+                                                           // Check for signals usage (Angular 16+)
+                                                           if (window.ng.getDirectiveMetadata) {
+                                                               try {
+                                                                   // Look for signal usage in component
+                                                                   const componentString = componentInstance.constructor.toString();
+                                                                   contractInfo.changeDetection.usesSignals = /signal\(/.test(componentString) || /computed\(/.test(componentString) || /effect\(/.test(componentString);
+                                                               } catch (e) {
+                                                                   // Ignore signal detection errors
+                                                               }
+                                                           }
+                                                       }
+                                                   } else {
+                                                       // Fallback for production mode
+                                                       contractInfo.componentName = element.tagName.toLowerCase();
+                                                       
+                                                       // Extract basic information from DOM
+                                                       const ngVersion = document.querySelector('[ng-version]')?.getAttribute('ng-version');
+                                                       if (ngVersion) {
+                                                           contractInfo.componentPath = `Angular Component (v${ngVersion})`;
+                                                       }
+                                                   }
+                                               } catch (e) {
+                                                   console.warn('Error extracting component contract info:', e);
+                                               }
+
+                                               return contractInfo;
+                                           })();
+                                       
+                           """;
 
             var contractResult = await session.Page.EvaluateAsync<JsonElement>(jsCode);
 
@@ -659,34 +663,36 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
     {
         try
         {
-            var jsCode = $@"
-                (() => {{
-                    const element = document.querySelector('{contractInfo.ComponentSelector}');
-                    if (!element || !window.ng?.getComponent) {{
-                        return false;
-                    }}
+            var jsCode = $$"""
 
-                    const component = window.ng.getComponent(element);
-                    if (!component) {{
-                        return false;
-                    }}
+                                           (() => {
+                                               const element = document.querySelector('{{contractInfo.ComponentSelector}}');
+                                               if (!element || !window.ng?.getComponent) {
+                                                   return false;
+                                               }
 
-                    try {{
-                        // Set the input value
-                        component['{input.Name}'] = {JsonSerializer.Serialize(testCase.InputValue)};
-                        
-                        // Trigger change detection
-                        if (window.ng.applyChanges) {{
-                            window.ng.applyChanges(component);
-                        }}
-                        
-                        return true;
-                    }} catch (e) {{
-                        console.warn('Input validation error:', e);
-                        return false;
-                    }}
-                }})();
-            ";
+                                               const component = window.ng.getComponent(element);
+                                               if (!component) {
+                                                   return false;
+                                               }
+
+                                               try {
+                                                   // Set the input value
+                                                   component['{{input.Name}}'] = {{JsonSerializer.Serialize(testCase.InputValue)}};
+                                                   
+                                                   // Trigger change detection
+                                                   if (window.ng.applyChanges) {
+                                                       window.ng.applyChanges(component);
+                                                   }
+                                                   
+                                                   return true;
+                                               } catch (e) {
+                                                   console.warn('Input validation error:', e);
+                                                   return false;
+                                               }
+                                           })();
+                                       
+                           """;
 
             var result = await session.Page.EvaluateAsync<bool>(jsCode);
             return result;
@@ -701,59 +707,61 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
     {
         try
         {
-            var jsCode = $@"
-                (() => {{
-                    return new Promise((resolve) => {{
-                        const element = document.querySelector('{contractInfo.ComponentSelector}');
-                        if (!element) {{
-                            resolve({{ eventEmitted: false, payload: null, payloadValid: false }});
-                            return;
-                        }}
+            var jsCode = $$"""
 
-                        let eventCaptured = false;
-                        let capturedPayload = null;
+                                           (() => {
+                                               return new Promise((resolve) => {
+                                                   const element = document.querySelector('{{contractInfo.ComponentSelector}}');
+                                                   if (!element) {
+                                                       resolve({ eventEmitted: false, payload: null, payloadValid: false });
+                                                       return;
+                                                   }
 
-                        // Listen for the event
-                        const eventListener = (event) => {{
-                            eventCaptured = true;
-                            capturedPayload = event.detail || event;
-                            
-                            setTimeout(() => {{
-                                resolve({{
-                                    eventEmitted: eventCaptured,
-                                    payload: capturedPayload,
-                                    payloadValid: true // Basic validation - could be enhanced
-                                }});
-                            }}, 100);
-                        }};
+                                                   let eventCaptured = false;
+                                                   let capturedPayload = null;
 
-                        element.addEventListener('{output.Name}', eventListener);
+                                                   // Listen for the event
+                                                   const eventListener = (event) => {
+                                                       eventCaptured = true;
+                                                       capturedPayload = event.detail || event;
+                                                       
+                                                       setTimeout(() => {
+                                                           resolve({
+                                                               eventEmitted: eventCaptured,
+                                                               payload: capturedPayload,
+                                                               payloadValid: true // Basic validation - could be enhanced
+                                                           });
+                                                       }, 100);
+                                                   };
 
-                        // Try to trigger the event
-                        try {{
-                            if (window.ng?.getComponent) {{
-                                const component = window.ng.getComponent(element);
-                                if (component && component['{output.Name}']) {{
-                                    // Trigger the output if it's an EventEmitter
-                                    if (typeof component['{output.Name}'].emit === 'function') {{
-                                        component['{output.Name}'].emit({{ test: true }});
-                                    }}
-                                }}
-                            }}
-                        }} catch (e) {{
-                            console.warn('Output trigger error:', e);
-                        }}
+                                                   element.addEventListener('{{output.Name}}', eventListener);
 
-                        // Timeout after 2 seconds
-                        setTimeout(() => {{
-                            element.removeEventListener('{output.Name}', eventListener);
-                            if (!eventCaptured) {{
-                                resolve({{ eventEmitted: false, payload: null, payloadValid: false }});
-                            }}
-                        }}, 2000);
-                    }});
-                }})();
-            ";
+                                                   // Try to trigger the event
+                                                   try {
+                                                       if (window.ng?.getComponent) {
+                                                           const component = window.ng.getComponent(element);
+                                                           if (component && component['{{output.Name}}']) {
+                                                               // Trigger the output if it's an EventEmitter
+                                                               if (typeof component['{{output.Name}}'].emit === 'function') {
+                                                                   component['{{output.Name}}'].emit({ test: true });
+                                                               }
+                                                           }
+                                                       }
+                                                   } catch (e) {
+                                                       console.warn('Output trigger error:', e);
+                                                   }
+
+                                                   // Timeout after 2 seconds
+                                                   setTimeout(() => {
+                                                       element.removeEventListener('{{output.Name}}', eventListener);
+                                                       if (!eventCaptured) {
+                                                           resolve({ eventEmitted: false, payload: null, payloadValid: false });
+                                                       }
+                                                   }, 2000);
+                                               });
+                                           })();
+                                       
+                           """;
 
             var result = await session.Page.EvaluateAsync<JsonElement>(jsCode);
 
@@ -773,32 +781,34 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
     {
         try
         {
-            var jsCode = $@"
-                (() => {{
-                    const element = document.querySelector('{contractInfo.ComponentSelector}');
-                    if (!element || !window.ng?.getComponent) {{
-                        return {{ success: false, result: null, error: 'Component not accessible' }};
-                    }}
+            var jsCode = $$"""
 
-                    const component = window.ng.getComponent(element);
-                    if (!component) {{
-                        return {{ success: false, result: null, error: 'Component instance not found' }};
-                    }}
+                                           (() => {
+                                               const element = document.querySelector('{{contractInfo.ComponentSelector}}');
+                                               if (!element || !window.ng?.getComponent) {
+                                                   return { success: false, result: null, error: 'Component not accessible' };
+                                               }
 
-                    try {{
-                        if (typeof component['{method.Name}'] !== 'function') {{
-                            return {{ success: false, result: null, error: 'Method not found or not a function' }};
-                        }}
+                                               const component = window.ng.getComponent(element);
+                                               if (!component) {
+                                                   return { success: false, result: null, error: 'Component instance not found' };
+                                               }
 
-                        // Call the method with minimal parameters
-                        const result = component['{method.Name}']();
-                        
-                        return {{ success: true, result: result, error: '' }};
-                    }} catch (e) {{
-                        return {{ success: false, result: null, error: e.message }};
-                    }}
-                }})();
-            ";
+                                               try {
+                                                   if (typeof component['{{method.Name}}'] !== 'function') {
+                                                       return { success: false, result: null, error: 'Method not found or not a function' };
+                                                   }
+
+                                                   // Call the method with minimal parameters
+                                                   const result = component['{{method.Name}}']();
+                                                   
+                                                   return { success: true, result: result, error: '' };
+                                               } catch (e) {
+                                                   return { success: false, result: null, error: e.message };
+                                               }
+                                           })();
+                                       
+                           """;
 
             var result = await session.Page.EvaluateAsync<JsonElement>(jsCode);
 

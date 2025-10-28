@@ -26,13 +26,13 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
     };
 
     [McpServerTool]
-    [Description("Analyze Angular workspace configuration (angular.json) with comprehensive parsing and validation")]
+    [Description("Analyze Angular workspace configuration (angular.json) with comprehensive parsing and validation. See skills/playwright-mcp/tools/angular/configuration-analyzer.md.")]
     public async Task<string> AnalyzeAngularJsonConfig(
-        [Description("Working directory containing angular.json (defaults to current directory)")] string workingDirectory = "",
-        [Description("Include detailed dependency analysis")] bool includeDependencyAnalysis = true,
-        [Description("Include security vulnerability scanning")] bool includeSecurityScan = true,
-        [Description("Include architectural insights")] bool includeArchitecturalInsights = true,
-        [Description("Session ID for context")] string sessionId = "default")
+        string workingDirectory = "",
+        bool includeDependencyAnalysis = true,
+        bool includeSecurityScan = true,
+        bool includeArchitecturalInsights = true,
+        string sessionId = "default")
     {
         try
         {

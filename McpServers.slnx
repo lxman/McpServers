@@ -9,6 +9,7 @@
   <Project Path="AwsServer\AwsServer.csproj" Type="Classic C#" />
   <Project Path="AzureServer\AzureServer.csproj" Type="Classic C#" />
   <Project Path="CSharpAnalyzer\CSharpAnalyzer.csproj" Type="Classic C#" />
+  <Project Path="DebugMcp\DebugMcp.csproj" Type="Classic C#" />
   <Project Path="DesktopCommanderMcp\DesktopCommanderMcp.csproj" Type="Classic C#" />
   <Project Path="DocumentServer\DocumentServer.csproj" Type="Classic C#" />
   <Project Path="McpUtilitiesServer\McpUtilitiesServer.csproj" Type="Classic C#" />
@@ -18,5 +19,6 @@
   <Project Path="RedisBrowser\RedisBrowser.csproj" Type="Classic C#" />
   <Project Path="RegistryTools\RegistryTools.csproj" Type="Classic C#" />
   <Project Path="SeleniumChromeTool\SeleniumChromeTool.csproj" Type="Classic C#" />
+  <Project Path="SqlMcp\SqlMcp.csproj" Type="Classic C#" />
   <Project Path="TrafficGenerator\TrafficGenerator.csproj" Type="Classic C#" />
 </Solution>

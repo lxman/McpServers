@@ -16,12 +16,12 @@ public class HexAnalysisTools(
     ILogger<HexAnalysisTools> logger)
 {
     [McpServerTool, DisplayName("read_hex_bytes")]
-    [Description("Read bytes from a file in hexadecimal format")]
+    [Description("Read bytes in hex format. See binary-operations/SKILL.md")]
     public Task<string> ReadHexBytes(
-        [Description("Full path to the file")] string filePath,
-        [Description("Byte offset to start reading from")] long offset,
-        [Description("Number of bytes to read")] int length,
-        [Description("Output format: 'hex-ascii', 'hex-only', or 'ascii-only' (default: 'hex-ascii')")] string format = "hex-ascii")
+        string filePath,
+        long offset,
+        int length,
+        string format = "hex-ascii")
     {
         try
         {
@@ -49,12 +49,12 @@ public class HexAnalysisTools(
     }
 
     [McpServerTool, DisplayName("generate_hex_dump")]
-    [Description("Generate a classic hex dump of a file section")]
+    [Description("Generate classic hex dump. See binary-operations/SKILL.md")]
     public Task<string> GenerateHexDump(
-        [Description("Full path to the file")] string filePath,
-        [Description("Byte offset to start from (default: 0)")] long offset = 0,
-        [Description("Number of bytes to dump (default: 512)")] int length = 512,
-        [Description("Number of bytes per line (default: 16)")] int bytesPerLine = 16)
+        string filePath,
+        long offset = 0,
+        int length = 512,
+        int bytesPerLine = 16)
     {
         try
         {
@@ -89,12 +89,12 @@ public class HexAnalysisTools(
     }
 
     [McpServerTool, DisplayName("search_hex_pattern")]
-    [Description("Search for a hexadecimal pattern in a binary file")]
+    [Description("Search for hex pattern in binary file. See binary-operations/SKILL.md")]
     public Task<string> SearchHexPattern(
-        [Description("Full path to the file")] string filePath,
-        [Description("Hex pattern to search for (e.g., '48656C6C6F' for 'Hello')")] string hexPattern,
-        [Description("Byte offset to start search from (default: 0)")] long startOffset = 0,
-        [Description("Maximum number of results to return (default: 100)")] int maxResults = 100)
+        string filePath,
+        string hexPattern,
+        long startOffset = 0,
+        int maxResults = 100)
     {
         try
         {
@@ -126,13 +126,13 @@ public class HexAnalysisTools(
     }
 
     [McpServerTool, DisplayName("compare_binary_files")]
-    [Description("Compare two binary files byte-by-byte")]
+    [Description("Compare binary files byte-by-byte. See binary-operations/SKILL.md")]
     public Task<string> CompareBinaryFiles(
-        [Description("Full path to first file")] string file1Path,
-        [Description("Full path to second file")] string file2Path,
-        [Description("Byte offset to start comparison (default: 0)")] long offset = 0,
-        [Description("Number of bytes to compare (null = entire file)")] int? length = null,
-        [Description("Include matching bytes in results (default: false)")] bool showMatches = false)
+        string file1Path,
+        string file2Path,
+        long offset = 0,
+        int? length = null,
+        bool showMatches = false)
     {
         try
         {

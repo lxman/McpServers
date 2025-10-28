@@ -11,7 +11,7 @@
         <!-- <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0-preview.5.25277.114" /> -->
         <PackageReference Include="MimeKit" Version="4.14.0" />
         <PackageReference Include="MongoDB.Driver" Version="3.5.0" />
-        <PackageReference Include="Selenium.WebDriver" Version="4.37.0" />
+        <PackageReference Include="Selenium.WebDriver" Version="4.38.0" />
         <PackageReference Include="Serilog" Version="4.3.1-dev-02387" />
         <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
         <PackageReference Include="Serilog.Sinks.Console" Version="6.0.1-dev-00953" />

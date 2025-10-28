@@ -12,23 +12,23 @@ namespace PlaywrightServerMcp.Tools;
 public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager sessionManager)
 {
     [McpServerTool]
-    [Description("Launch a browser and create a new session. Returns session ID.")]
+    [Description("Launch a browser and create a new session. Returns session ID. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> LaunchBrowser(
-        [Description("Browser type: chrome, firefox, webkit")] string browserType = "chrome",
-        [Description("Run in headless mode")] bool headless = true,
-        [Description("Session ID for this browser instance")] string sessionId = "default",
-        [Description("Viewport width in pixels")] int viewportWidth = 1920,
-        [Description("Viewport height in pixels")] int viewportHeight = 1080,
-        [Description("Device to emulate (optional): iphone12, iphone13, ipad, galaxy_s21, pixel5")] string? deviceEmulation = null,
-        [Description("Custom user agent string (optional)")] string? userAgent = null,
-        [Description("Timezone (optional, e.g., 'America/New_York')")] string? timezone = null,
-        [Description("Locale (optional, e.g., 'en-US')")] string? locale = null,
-        [Description("Color scheme preference: light, dark, or null for system default")] string? colorScheme = null,
-        [Description("Reduce motion preference: reduce, no-preference, or null for system default")] string? reducedMotion = null,
-        [Description("Enable geolocation permissions")] bool enableGeolocation = false,
-        [Description("Enable camera permissions")] bool enableCamera = false,
-        [Description("Enable microphone permissions")] bool enableMicrophone = false,
-        [Description("Extra HTTP headers as JSON object (optional)")] string? extraHttpHeaders = null)
+        string browserType = "chrome",
+        bool headless = true,
+        string sessionId = "default",
+        int viewportWidth = 1920,
+        int viewportHeight = 1080,
+        string? deviceEmulation = null,
+        string? userAgent = null,
+        string? timezone = null,
+        string? locale = null,
+        string? colorScheme = null,
+        string? reducedMotion = null,
+        bool enableGeolocation = false,
+        bool enableCamera = false,
+        bool enableMicrophone = false,
+        string? extraHttpHeaders = null)
     {
         var browserOptions = new BrowserLaunchOptions
         {
@@ -62,10 +62,10 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
 
     
     [McpServerTool]
-    [Description("Navigate to a URL")]
+    [Description("Navigate to a URL. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> NavigateToUrl(
-        [Description("URL to navigate to")] string url,
-        [Description("Session ID")] string sessionId = "default")
+        string url,
+        string sessionId = "default")
     {
         try
         {
@@ -83,11 +83,11 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Fill a form field using CSS selector or data-testid")]
+    [Description("Fill a form field using CSS selector or data-testid. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> FillField(
-        [Description("Field selector (CSS selector or data-testid value)")] string selector,
-        [Description("Value to fill")] string value,
-        [Description("Session ID")] string sessionId = "default")
+        string selector,
+        string value,
+        string sessionId = "default")
     {
         try
         {
@@ -106,10 +106,10 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Click an element using CSS selector or data-testid")]
+    [Description("Click an element using CSS selector or data-testid. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> ClickElement(
-        [Description("Element selector (CSS selector or data-testid value)")] string selector,
-        [Description("Session ID")] string sessionId = "default")
+        string selector,
+        string sessionId = "default")
     {
         try
         {
@@ -128,10 +128,10 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Execute custom JavaScript on the page")]
+    [Description("Execute custom JavaScript on the page. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> ExecuteJavaScript(
-        [Description("JavaScript code to execute")] string jsCode,
-        [Description("Session ID")] string sessionId = "default")
+        string jsCode,
+        string sessionId = "default")
     {
         try
         {
@@ -149,11 +149,11 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Select an option from a dropdown")]
+    [Description("Select an option from a dropdown. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> SelectOption(
-        [Description("Dropdown selector")] string selector,
-        [Description("Option value to select")] string value,
-        [Description("Session ID")] string sessionId = "default")
+        string selector,
+        string value,
+        string sessionId = "default")
     {
         try
         {
@@ -172,11 +172,11 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Get console logs from a browser session")]
+    [Description("Get console logs from a browser session. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> GetConsoleLogs(
-        [Description("Session ID")] string sessionId = "default",
-        [Description("Filter by log type (log, error, warning, info, debug)")] string? logType = null,
-        [Description("Maximum number of logs to return")] int maxLogs = 100)
+        string sessionId = "default",
+        string? logType = null,
+        int maxLogs = 100)
     {
         try
         {
@@ -224,10 +224,10 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Get network activity from a browser session")]
+    [Description("Get network activity from a browser session. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> GetNetworkActivity(
-        [Description("Session ID")] string sessionId = "default",
-        [Description("Filter by URL pattern (optional)")] string? urlFilter = null)
+        string sessionId = "default",
+        string? urlFilter = null)
     {
         try
         {
@@ -282,9 +282,9 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Get session debug summary with counts and recent activity")]
+    [Description("Get session debug summary with counts and recent activity. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> GetSessionDebugSummary(
-        [Description("Session ID")] string sessionId = "default")
+        string sessionId = "default")
     {
         try
         {
@@ -331,11 +331,11 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Clear console and network logs for a browser session")]
+    [Description("Clear console and network logs for a browser session. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> ClearSessionLogs(
-        [Description("Session ID")] string sessionId = "default",
-        [Description("Clear console logs")] bool clearConsole = true,
-        [Description("Clear network logs")] bool clearNetwork = true)
+        string sessionId = "default",
+        bool clearConsole = true,
+        bool clearNetwork = true)
     {
         try
         {
@@ -368,9 +368,9 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Close browser session and cleanup resources")]
+    [Description("Close browser session and cleanup resources. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> CloseBrowser(
-        [Description("Session ID")] string sessionId = "default")
+        string sessionId = "default")
     {
         try
         {
@@ -389,11 +389,11 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Extract comprehensive CSS style information for a specific element")]
+    [Description("Extract comprehensive CSS style information for a specific element. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> InspectElementStyles(
-        [Description("Element selector (CSS selector or data-testid value)")] string selector,
-        [Description("Session ID")] string sessionId = "default",
-        [Description("Include all computed styles (default: false, only returns key visual properties)")] bool includeAllStyles = false)
+        string selector,
+        string sessionId = "default",
+        bool includeAllStyles = false)
     {
         try
         {
@@ -403,108 +403,112 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
 
             string finalSelector = DetermineSelector(selector);
             
-            var jsCode = $@"
-                (() => {{
-                    const element = document.querySelector('{finalSelector.Replace("'", "\\'")}');
-                    if (!element) {{
-                        return {{ error: 'Element not found' }};
-                    }}
-                    
-                    const computedStyles = window.getComputedStyle(element);
-                    const rect = element.getBoundingClientRect();
-                    
-                    const result = {{
-                        selector: '{finalSelector.Replace("'", "\\'")}',
-                        tagName: element.tagName.toLowerCase(),
-                        dimensions: {{
-                            width: rect.width,
-                            height: rect.height,
-                            top: rect.top,
-                            left: rect.left,
-                            right: rect.right,
-                            bottom: rect.bottom
-                        }},
-                        colors: {{
-                            color: computedStyles.color,
-                            backgroundColor: computedStyles.backgroundColor,
-                            borderColor: computedStyles.borderColor,
-                            borderTopColor: computedStyles.borderTopColor,
-                            borderRightColor: computedStyles.borderRightColor,
-                            borderBottomColor: computedStyles.borderBottomColor,
-                            borderLeftColor: computedStyles.borderLeftColor
-                        }},
-                        borders: {{
-                            borderWidth: computedStyles.borderWidth,
-                            borderStyle: computedStyles.borderStyle,
-                            borderTopWidth: computedStyles.borderTopWidth,
-                            borderRightWidth: computedStyles.borderRightWidth,
-                            borderBottomWidth: computedStyles.borderBottomWidth,
-                            borderLeftWidth: computedStyles.borderLeftWidth,
-                            borderRadius: computedStyles.borderRadius
-                        }},
-                        spacing: {{
-                            margin: computedStyles.margin,
-                            marginTop: computedStyles.marginTop,
-                            marginRight: computedStyles.marginRight,
-                            marginBottom: computedStyles.marginBottom,
-                            marginLeft: computedStyles.marginLeft,
-                            padding: computedStyles.padding,
-                            paddingTop: computedStyles.paddingTop,
-                            paddingRight: computedStyles.paddingRight,
-                            paddingBottom: computedStyles.paddingBottom,
-                            paddingLeft: computedStyles.paddingLeft
-                        }},
-                        typography: {{
-                            fontFamily: computedStyles.fontFamily,
-                            fontSize: computedStyles.fontSize,
-                            fontWeight: computedStyles.fontWeight,
-                            fontStyle: computedStyles.fontStyle,
-                            lineHeight: computedStyles.lineHeight,
-                            letterSpacing: computedStyles.letterSpacing,
-                            textAlign: computedStyles.textAlign,
-                            textDecoration: computedStyles.textDecoration,
-                            textTransform: computedStyles.textTransform
-                        }},
-                        layout: {{
-                            display: computedStyles.display,
-                            position: computedStyles.position,
-                            flexDirection: computedStyles.flexDirection,
-                            flexWrap: computedStyles.flexWrap,
-                            justifyContent: computedStyles.justifyContent,
-                            alignItems: computedStyles.alignItems,
-                            gridTemplateColumns: computedStyles.gridTemplateColumns,
-                            gridTemplateRows: computedStyles.gridTemplateRows,
-                            zIndex: computedStyles.zIndex,
-                            overflow: computedStyles.overflow
-                        }},
-                        visibility: {{
-                            visibility: computedStyles.visibility,
-                            opacity: computedStyles.opacity,
-                            transform: computedStyles.transform
-                        }},
-                        textContent: element.textContent?.trim().substring(0, 100) || '',
-                        classes: Array.from(element.classList),
-                        attributes: {{}}
-                    }};
-                    
-                    // Capture key attributes
-                    ['id', 'data-testid', 'role', 'aria-label', 'title', 'alt'].forEach(attr => {{
-                        if (element.hasAttribute(attr)) {{
-                            result.attributes[attr] = element.getAttribute(attr);
-                        }}
-                    }});
-                    
-                    {(includeAllStyles ? @"
-                    // Include all computed styles if requested
-                    result.allComputedStyles = {};
-                    for (let prop of computedStyles) {
-                        result.allComputedStyles[prop] = computedStyles.getPropertyValue(prop);
-                    }
-                    " : "")}
-                    
-                    return result;
-                }})()
-            ";
+            var jsCode = $$"""
+
+                                           (() => {
+                                               const element = document.querySelector('{{finalSelector.Replace("'", "\\'")}}');
+                                               if (!element) {
+                                                   return { error: 'Element not found' };
+                                               }
+                                               
+                                               const computedStyles = window.getComputedStyle(element);
+                                               const rect = element.getBoundingClientRect();
+                                               
+                                               const result = {
+                                                   selector: '{{finalSelector.Replace("'", "\\'")}}',
+                                                   tagName: element.tagName.toLowerCase(),
+                                                   dimensions: {
+                                                       width: rect.width,
+                                                       height: rect.height,
+                                                       top: rect.top,
+                                                       left: rect.left,
+                                                       right: rect.right,
+                                                       bottom: rect.bottom
+                                                   },
+                                                   colors: {
+                                                       color: computedStyles.color,
+                                                       backgroundColor: computedStyles.backgroundColor,
+                                                       borderColor: computedStyles.borderColor,
+                                                       borderTopColor: computedStyles.borderTopColor,
+                                                       borderRightColor: computedStyles.borderRightColor,
+                                                       borderBottomColor: computedStyles.borderBottomColor,
+                                                       borderLeftColor: computedStyles.borderLeftColor
+                                                   },
+                                                   borders: {
+                                                       borderWidth: computedStyles.borderWidth,
+                                                       borderStyle: computedStyles.borderStyle,
+                                                       borderTopWidth: computedStyles.borderTopWidth,
+                                                       borderRightWidth: computedStyles.borderRightWidth,
+                                                       borderBottomWidth: computedStyles.borderBottomWidth,
+                                                       borderLeftWidth: computedStyles.borderLeftWidth,
+                                                       borderRadius: computedStyles.borderRadius
+                                                   },
+                                                   spacing: {
+                                                       margin: computedStyles.margin,
+                                                       marginTop: computedStyles.marginTop,
+                                                       marginRight: computedStyles.marginRight,
+                                                       marginBottom: computedStyles.marginBottom,
+                                                       marginLeft: computedStyles.marginLeft,
+                                                       padding: computedStyles.padding,
+                                                       paddingTop: computedStyles.paddingTop,
+                                                       paddingRight: computedStyles.paddingRight,
+                                                       paddingBottom: computedStyles.paddingBottom,
+                                                       paddingLeft: computedStyles.paddingLeft
+                                                   },
+                                                   typography: {
+                                                       fontFamily: computedStyles.fontFamily,
+                                                       fontSize: computedStyles.fontSize,
+                                                       fontWeight: computedStyles.fontWeight,
+                                                       fontStyle: computedStyles.fontStyle,
+                                                       lineHeight: computedStyles.lineHeight,
+                                                       letterSpacing: computedStyles.letterSpacing,
+                                                       textAlign: computedStyles.textAlign,
+                                                       textDecoration: computedStyles.textDecoration,
+                                                       textTransform: computedStyles.textTransform
+                                                   },
+                                                   layout: {
+                                                       display: computedStyles.display,
+                                                       position: computedStyles.position,
+                                                       flexDirection: computedStyles.flexDirection,
+                                                       flexWrap: computedStyles.flexWrap,
+                                                       justifyContent: computedStyles.justifyContent,
+                                                       alignItems: computedStyles.alignItems,
+                                                       gridTemplateColumns: computedStyles.gridTemplateColumns,
+                                                       gridTemplateRows: computedStyles.gridTemplateRows,
+                                                       zIndex: computedStyles.zIndex,
+                                                       overflow: computedStyles.overflow
+                                                   },
+                                                   visibility: {
+                                                       visibility: computedStyles.visibility,
+                                                       opacity: computedStyles.opacity,
+                                                       transform: computedStyles.transform
+                                                   },
+                                                   textContent: element.textContent?.trim().substring(0, 100) || '',
+                                                   classes: Array.from(element.classList),
+                                                   attributes: {}
+                                               };
+                                               
+                                               // Capture key attributes
+                                               ['id', 'data-testid', 'role', 'aria-label', 'title', 'alt'].forEach(attr => {
+                                                   if (element.hasAttribute(attr)) {
+                                                       result.attributes[attr] = element.getAttribute(attr);
+                                                   }
+                                               });
+                                               
+                                               {{(includeAllStyles ? """
+
+                                                                                         // Include all computed styles if requested
+                                                                                         result.allComputedStyles = {};
+                                                                                         for (let prop of computedStyles) {
+                                                                                             result.allComputedStyles[prop] = computedStyles.getPropertyValue(prop);
+                                                                                         }
+                                                                                         
+                                                                     """ : "")}}
+                                               
+                                               return result;
+                                           })()
+                                       
+                           """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
             return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
@@ -516,10 +520,10 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Get detailed color analysis for elements (useful for design system validation)")]
+    [Description("Get detailed color analysis for elements (useful for design system validation). See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> AnalyzePageColors(
-        [Description("Optional CSS selector to limit analysis to specific container")] string? containerSelector = null,
-        [Description("Session ID")] string sessionId = "default")
+        string? containerSelector = null,
+        string sessionId = "default")
     {
         try
         {
@@ -529,80 +533,82 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
 
             string container = string.IsNullOrEmpty(containerSelector) ? "document.body" : $"document.querySelector('{containerSelector.Replace("'", "\\'")}')";
             
-            var jsCode = $@"
-                (() => {{
-                    const container = {container};
-                    if (!container) {{
-                        return {{ error: 'Container not found' }};
-                    }}
-                    
-                    const allElements = container.querySelectorAll('*');
-                    const colorMap = new Map();
-                    const colorUsage = [];
-                    
-                    allElements.forEach((element, index) => {{
-                        const computedStyles = window.getComputedStyle(element);
-                        const rect = element.getBoundingClientRect();
-                        
-                        // Skip elements that are not visible
-                        if (rect.width === 0 || rect.height === 0) return;
-                        
-                        const elementInfo = {{
-                            selector: element.tagName.toLowerCase() + (element.id ? '#' + element.id : '') + 
-                                     (element.className ? '.' + Array.from(element.classList).join('.') : ''),
-                            tagName: element.tagName.toLowerCase(),
-                            colors: {{
-                                color: computedStyles.color,
-                                backgroundColor: computedStyles.backgroundColor,
-                                borderColor: computedStyles.borderColor
-                            }},
-                            textContent: element.textContent?.trim().substring(0, 50) || '',
-                            isVisible: computedStyles.visibility === 'visible' && computedStyles.opacity !== '0'
-                        }};
-                        
-                        // Track unique colors
-                        [elementInfo.colors.color, elementInfo.colors.backgroundColor, elementInfo.colors.borderColor]
-                            .forEach(color => {{
-                                if (color && color !== 'rgba(0, 0, 0, 0)' && color !== 'transparent') {{
-                                    const normalizedColor = color;
-                                    if (!colorMap.has(normalizedColor)) {{
-                                        colorMap.set(normalizedColor, []);
-                                    }}
-                                    colorMap.get(normalizedColor).push({{
-                                        element: elementInfo.selector,
-                                        property: color === elementInfo.colors.color ? 'color' : 
-                                                 color === elementInfo.colors.backgroundColor ? 'backgroundColor' : 'borderColor'
-                                    }});
-                                }}
-                            }});
-                        
-                        if (elementInfo.isVisible) {{
-                            colorUsage.push(elementInfo);
-                        }}
-                    }});
-                    
-                    // Convert Map to object for JSON serialization
-                    const colorInventory = {{}};
-                    colorMap.forEach((usage, color) => {{
-                        colorInventory[color] = {{
-                            usageCount: usage.length,
-                            usedBy: usage.slice(0, 10) // Limit to first 10 instances
-                        }};
-                    }});
-                    
-                    return {{
-                        colorInventory: colorInventory,
-                        totalUniqueColors: colorMap.size,
-                        visibleElements: colorUsage.length,
-                        analysis: {{
-                            mostUsedColors: Object.entries(colorInventory)
-                                .sort((a, b) => b[1].usageCount - a[1].usageCount)
-                                .slice(0, 10)
-                                .map(([color, data]) => ({{{{ color, usageCount: data.usageCount }}}}))
-                        }}
-                    }};
-                }})()
-            ";
+            var jsCode = $$$"""
+
+                                            (() => {
+                                                const container = {{{container}}};
+                                                if (!container) {
+                                                    return { error: 'Container not found' };
+                                                }
+                                                
+                                                const allElements = container.querySelectorAll('*');
+                                                const colorMap = new Map();
+                                                const colorUsage = [];
+                                                
+                                                allElements.forEach((element, index) => {
+                                                    const computedStyles = window.getComputedStyle(element);
+                                                    const rect = element.getBoundingClientRect();
+                                                    
+                                                    // Skip elements that are not visible
+                                                    if (rect.width === 0 || rect.height === 0) return;
+                                                    
+                                                    const elementInfo = {
+                                                        selector: element.tagName.toLowerCase() + (element.id ? '#' + element.id : '') + 
+                                                                 (element.className ? '.' + Array.from(element.classList).join('.') : ''),
+                                                        tagName: element.tagName.toLowerCase(),
+                                                        colors: {
+                                                            color: computedStyles.color,
+                                                            backgroundColor: computedStyles.backgroundColor,
+                                                            borderColor: computedStyles.borderColor
+                                                        },
+                                                        textContent: element.textContent?.trim().substring(0, 50) || '',
+                                                        isVisible: computedStyles.visibility === 'visible' && computedStyles.opacity !== '0'
+                                                    };
+                                                    
+                                                    // Track unique colors
+                                                    [elementInfo.colors.color, elementInfo.colors.backgroundColor, elementInfo.colors.borderColor]
+                                                        .forEach(color => {
+                                                            if (color && color !== 'rgba(0, 0, 0, 0)' && color !== 'transparent') {
+                                                                const normalizedColor = color;
+                                                                if (!colorMap.has(normalizedColor)) {
+                                                                    colorMap.set(normalizedColor, []);
+                                                                }
+                                                                colorMap.get(normalizedColor).push({
+                                                                    element: elementInfo.selector,
+                                                                    property: color === elementInfo.colors.color ? 'color' : 
+                                                                             color === elementInfo.colors.backgroundColor ? 'backgroundColor' : 'borderColor'
+                                                                });
+                                                            }
+                                                        });
+                                                    
+                                                    if (elementInfo.isVisible) {
+                                                        colorUsage.push(elementInfo);
+                                                    }
+                                                });
+                                                
+                                                // Convert Map to object for JSON serialization
+                                                const colorInventory = {};
+                                                colorMap.forEach((usage, color) => {
+                                                    colorInventory[color] = {
+                                                        usageCount: usage.length,
+                                                        usedBy: usage.slice(0, 10) // Limit to first 10 instances
+                                                    };
+                                                });
+                                                
+                                                return {
+                                                    colorInventory: colorInventory,
+                                                    totalUniqueColors: colorMap.size,
+                                                    visibleElements: colorUsage.length,
+                                                    analysis: {
+                                                        mostUsedColors: Object.entries(colorInventory)
+                                                            .sort((a, b) => b[1].usageCount - a[1].usageCount)
+                                                            .slice(0, 10)
+                                                            .map(([color, data]) => ({{ color, usageCount: data.usageCount }}))
+                                                    }
+                                                };
+                                            })()
+                                        
+                            """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
             return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
@@ -614,10 +620,10 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Compare visual styles between multiple elements")]
+    [Description("Compare visual styles between multiple elements. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> CompareElementStyles(
-        [Description("Array of element selectors to compare (JSON format)")] string selectorsJson,
-        [Description("Session ID")] string sessionId = "default")
+        string selectorsJson,
+        string sessionId = "default")
     {
         try
         {
@@ -632,94 +638,96 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
             string[] finalSelectors = selectors.Select(DetermineSelector).ToArray();
             string selectorsJsArray = JsonSerializer.Serialize(finalSelectors);
             
-            var jsCode = $@"
-                const selectors = {selectorsJsArray};
-                const results = [];
-                const comparisons = [];
-                
-                // Get styles for each element
-                selectors.forEach((selector, index) => {{
-                    const element = document.querySelector(selector);
-                    if (!element) {{
-                        results.push({{ 
-                            selector: selector, 
-                            error: 'Element not found' 
-                        }});
-                        return;
-                    }}
-                    
-                    const computedStyles = window.getComputedStyle(element);
-                    const rect = element.getBoundingClientRect();
-                    
-                    results.push({{
-                        selector: selector,
-                        tagName: element.tagName.toLowerCase(),
-                        styles: {{
-                            color: computedStyles.color,
-                            backgroundColor: computedStyles.backgroundColor,
-                            fontSize: computedStyles.fontSize,
-                            fontWeight: computedStyles.fontWeight,
-                            fontFamily: computedStyles.fontFamily,
-                            borderColor: computedStyles.borderColor,
-                            borderWidth: computedStyles.borderWidth,
-                            borderStyle: computedStyles.borderStyle,
-                            margin: computedStyles.margin,
-                            padding: computedStyles.padding,
-                            display: computedStyles.display,
-                            position: computedStyles.position
-                        }},
-                        dimensions: {{
-                            width: rect.width,
-                            height: rect.height
-                        }},
-                        textContent: element.textContent?.trim().substring(0, 50) || ''
-                    }});
-                }});
-                
-                // Compare styles between elements
-                for (let i = 0; i < results.length; i++) {{
-                    for (let j = i + 1; j < results.length; j++) {{
-                        const a = results[i];
-                        const b = results[j];
-                        
-                        if (a.error || b.error) continue;
-                        
-                        const differences = [];
-                        const similarities = [];
-                        
-                        Object.keys(a.styles).forEach(property => {{
-                            if (a.styles[property] === b.styles[property]) {{
-                                similarities.push(property);
-                            }} else {{
-                                differences.push({{
-                                    property: property,
-                                    elementA: a.styles[property],
-                                    elementB: b.styles[property]
-                                }});
-                            }}
-                        }});
-                        
-                        comparisons.push({{
-                            elementA: a.selector,
-                            elementB: b.selector,
-                            differences: differences,
-                            similarities: similarities,
-                            similarityPercentage: Math.round((similarities.length / Object.keys(a.styles).length) * 100)
-                        }});
-                    }}
-                }}
-                
-                return {{
-                    elements: results,
-                    comparisons: comparisons,
-                    summary: {{
-                        totalElements: results.filter(r => !r.error).length,
-                        totalComparisons: comparisons.length,
-                        averageSimilarity: comparisons.length > 0 ? 
-                            Math.round(comparisons.reduce((sum, comp) => sum + comp.similarityPercentage, 0) / comparisons.length) : 0
-                    }}
-                }};
-            ";
+            var jsCode = $$"""
+
+                                           const selectors = {{selectorsJsArray}};
+                                           const results = [];
+                                           const comparisons = [];
+                                           
+                                           // Get styles for each element
+                                           selectors.forEach((selector, index) => {
+                                               const element = document.querySelector(selector);
+                                               if (!element) {
+                                                   results.push({ 
+                                                       selector: selector, 
+                                                       error: 'Element not found' 
+                                                   });
+                                                   return;
+                                               }
+                                               
+                                               const computedStyles = window.getComputedStyle(element);
+                                               const rect = element.getBoundingClientRect();
+                                               
+                                               results.push({
+                                                   selector: selector,
+                                                   tagName: element.tagName.toLowerCase(),
+                                                   styles: {
+                                                       color: computedStyles.color,
+                                                       backgroundColor: computedStyles.backgroundColor,
+                                                       fontSize: computedStyles.fontSize,
+                                                       fontWeight: computedStyles.fontWeight,
+                                                       fontFamily: computedStyles.fontFamily,
+                                                       borderColor: computedStyles.borderColor,
+                                                       borderWidth: computedStyles.borderWidth,
+                                                       borderStyle: computedStyles.borderStyle,
+                                                       margin: computedStyles.margin,
+                                                       padding: computedStyles.padding,
+                                                       display: computedStyles.display,
+                                                       position: computedStyles.position
+                                                   },
+                                                   dimensions: {
+                                                       width: rect.width,
+                                                       height: rect.height
+                                                   },
+                                                   textContent: element.textContent?.trim().substring(0, 50) || ''
+                                               });
+                                           });
+                                           
+                                           // Compare styles between elements
+                                           for (let i = 0; i < results.length; i++) {
+                                               for (let j = i + 1; j < results.length; j++) {
+                                                   const a = results[i];
+                                                   const b = results[j];
+                                                   
+                                                   if (a.error || b.error) continue;
+                                                   
+                                                   const differences = [];
+                                                   const similarities = [];
+                                                   
+                                                   Object.keys(a.styles).forEach(property => {
+                                                       if (a.styles[property] === b.styles[property]) {
+                                                           similarities.push(property);
+                                                       } else {
+                                                           differences.push({
+                                                               property: property,
+                                                               elementA: a.styles[property],
+                                                               elementB: b.styles[property]
+                                                           });
+                                                       }
+                                                   });
+                                                   
+                                                   comparisons.push({
+                                                       elementA: a.selector,
+                                                       elementB: b.selector,
+                                                       differences: differences,
+                                                       similarities: similarities,
+                                                       similarityPercentage: Math.round((similarities.length / Object.keys(a.styles).length) * 100)
+                                                   });
+                                               }
+                                           }
+                                           
+                                           return {
+                                               elements: results,
+                                               comparisons: comparisons,
+                                               summary: {
+                                                   totalElements: results.filter(r => !r.error).length,
+                                                   totalComparisons: comparisons.length,
+                                                   averageSimilarity: comparisons.length > 0 ? 
+                                                       Math.round(comparisons.reduce((sum, comp) => sum + comp.similarityPercentage, 0) / comparisons.length) : 0
+                                               }
+                                           };
+                                       
+                           """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
             return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
@@ -731,9 +739,9 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Extract design system information and CSS custom properties")]
+    [Description("Extract design system information and CSS custom properties. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> ExtractDesignTokens(
-        [Description("Session ID")] string sessionId = "default")
+        string sessionId = "default")
     {
         try
         {
@@ -741,83 +749,85 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
             
-            var jsCode = @"
-                // Extract CSS custom properties (CSS variables)
-                const allStyleSheets = Array.from(document.styleSheets);
-                const customProperties = new Map();
-                const classDefinitions = new Map();
-                
-                // Extract from computed styles on document root
-                const rootStyles = window.getComputedStyle(document.documentElement);
-                for (let prop of rootStyles) {
-                    if (prop.startsWith('--')) {
-                        customProperties.set(prop, rootStyles.getPropertyValue(prop).trim());
-                    }
-                }
-                
-                // Try to extract from stylesheets (if accessible)
-                allStyleSheets.forEach(sheet => {
-                    try {
-                        if (sheet.cssRules) {
-                            Array.from(sheet.cssRules).forEach(rule => {
-                                if (rule.type === CSSRule.STYLE_RULE) {
-                                    // Collect class-based styles
-                                    if (rule.selectorText && rule.selectorText.includes('.')) {
-                                        const className = rule.selectorText.replace(/[^.a-zA-Z0-9_-]/g, '');
-                                        if (className) {
-                                            classDefinitions.set(className, rule.cssText);
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                    } catch (e) {
-                        // Cross-origin stylesheet access might be blocked
-                    }
-                });
-                
-                // Analyze common design patterns
-                const commonElements = document.querySelectorAll('button, .btn, .button, h1, h2, h3, h4, h5, h6, .card, .container, .row, .col');
-                const designPatterns = [];
-                
-                commonElements.forEach(element => {
-                    const computedStyles = window.getComputedStyle(element);
-                    designPatterns.push({
-                        element: element.tagName.toLowerCase() + (element.className ? '.' + Array.from(element.classList).join('.') : ''),
-                        styles: {
-                            fontSize: computedStyles.fontSize,
-                            fontWeight: computedStyles.fontWeight,
-                            color: computedStyles.color,
-                            backgroundColor: computedStyles.backgroundColor,
-                            borderRadius: computedStyles.borderRadius,
-                            padding: computedStyles.padding,
-                            margin: computedStyles.margin
-                        }
-                    });
-                });
-                
-                // Convert Maps to objects for JSON serialization
-                const customPropsObj = {};
-                customProperties.forEach((value, key) => {
-                    customPropsObj[key] = value;
-                });
-                
-                const classDefsObj = {};
-                classDefinitions.forEach((value, key) => {
-                    classDefsObj[key] = value;
-                });
-                
-                return {
-                    customProperties: customPropsObj,
-                    classDefinitions: classDefsObj,
-                    designPatterns: designPatterns,
-                    summary: {
-                        totalCustomProperties: customProperties.size,
-                        totalClassDefinitions: classDefinitions.size,
-                        totalAnalyzedElements: designPatterns.length
-                    }
-                };
-            ";
+            var jsCode = """
+
+                                         // Extract CSS custom properties (CSS variables)
+                                         const allStyleSheets = Array.from(document.styleSheets);
+                                         const customProperties = new Map();
+                                         const classDefinitions = new Map();
+                                         
+                                         // Extract from computed styles on document root
+                                         const rootStyles = window.getComputedStyle(document.documentElement);
+                                         for (let prop of rootStyles) {
+                                             if (prop.startsWith('--')) {
+                                                 customProperties.set(prop, rootStyles.getPropertyValue(prop).trim());
+                                             }
+                                         }
+                                         
+                                         // Try to extract from stylesheets (if accessible)
+                                         allStyleSheets.forEach(sheet => {
+                                             try {
+                                                 if (sheet.cssRules) {
+                                                     Array.from(sheet.cssRules).forEach(rule => {
+                                                         if (rule.type === CSSRule.STYLE_RULE) {
+                                                             // Collect class-based styles
+                                                             if (rule.selectorText && rule.selectorText.includes('.')) {
+                                                                 const className = rule.selectorText.replace(/[^.a-zA-Z0-9_-]/g, '');
+                                                                 if (className) {
+                                                                     classDefinitions.set(className, rule.cssText);
+                                                                 }
+                                                             }
+                                                         }
+                                                     });
+                                                 }
+                                             } catch (e) {
+                                                 // Cross-origin stylesheet access might be blocked
+                                             }
+                                         });
+                                         
+                                         // Analyze common design patterns
+                                         const commonElements = document.querySelectorAll('button, .btn, .button, h1, h2, h3, h4, h5, h6, .card, .container, .row, .col');
+                                         const designPatterns = [];
+                                         
+                                         commonElements.forEach(element => {
+                                             const computedStyles = window.getComputedStyle(element);
+                                             designPatterns.push({
+                                                 element: element.tagName.toLowerCase() + (element.className ? '.' + Array.from(element.classList).join('.') : ''),
+                                                 styles: {
+                                                     fontSize: computedStyles.fontSize,
+                                                     fontWeight: computedStyles.fontWeight,
+                                                     color: computedStyles.color,
+                                                     backgroundColor: computedStyles.backgroundColor,
+                                                     borderRadius: computedStyles.borderRadius,
+                                                     padding: computedStyles.padding,
+                                                     margin: computedStyles.margin
+                                                 }
+                                             });
+                                         });
+                                         
+                                         // Convert Maps to objects for JSON serialization
+                                         const customPropsObj = {};
+                                         customProperties.forEach((value, key) => {
+                                             customPropsObj[key] = value;
+                                         });
+                                         
+                                         const classDefsObj = {};
+                                         classDefinitions.forEach((value, key) => {
+                                             classDefsObj[key] = value;
+                                         });
+                                         
+                                         return {
+                                             customProperties: customPropsObj,
+                                             classDefinitions: classDefsObj,
+                                             designPatterns: designPatterns,
+                                             summary: {
+                                                 totalCustomProperties: customProperties.size,
+                                                 totalClassDefinitions: classDefinitions.size,
+                                                 totalAnalyzedElements: designPatterns.length
+                                             }
+                                         };
+                                     
+                         """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
             return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
@@ -829,10 +839,10 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Get layout analysis for responsive design testing")]
+    [Description("Get layout analysis for responsive design testing. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> AnalyzeLayout(
-        [Description("Optional container selector to analyze")] string? containerSelector = null,
-        [Description("Session ID")] string sessionId = "default")
+        string? containerSelector = null,
+        string sessionId = "default")
     {
         try
         {
@@ -842,118 +852,120 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
 
             string container = string.IsNullOrEmpty(containerSelector) ? "document.body" : $"document.querySelector('{containerSelector.Replace("'", "\\'")}')";
             
-            var jsCode = $@"
-                const container = {container};
-                if (!container) {{
-                    return {{ error: 'Container not found' }};
-                }}
-                
-                const viewport = {{
-                    width: window.innerWidth,
-                    height: window.innerHeight
-                }};
-                
-                const containerRect = container.getBoundingClientRect();
-                const elements = container.querySelectorAll('*');
-                
-                const layoutInfo = [];
-                const flexContainers = [];
-                const gridContainers = [];
-                const overlapping = [];
-                
-                elements.forEach(element => {{
-                    const computedStyles = window.getComputedStyle(element);
-                    const rect = element.getBoundingClientRect();
-                    
-                    // Skip elements that are not visible
-                    if (rect.width === 0 || rect.height === 0) return;
-                    
-                    const elementInfo = {{
-                        selector: element.tagName.toLowerCase() + (element.id ? '#' + element.id : '') + 
-                                 (element.className ? '.' + Array.from(element.classList).slice(0, 3).join('.') : ''),
-                        tagName: element.tagName.toLowerCase(),
-                        position: {{
-                            x: rect.left,
-                            y: rect.top,
-                            width: rect.width,
-                            height: rect.height
-                        }},
-                        styles: {{
-                            display: computedStyles.display,
-                            position: computedStyles.position,
-                            flexDirection: computedStyles.flexDirection,
-                            justifyContent: computedStyles.justifyContent,
-                            alignItems: computedStyles.alignItems,
-                            gridTemplateColumns: computedStyles.gridTemplateColumns,
-                            gridTemplateRows: computedStyles.gridTemplateRows,
-                            overflow: computedStyles.overflow,
-                            zIndex: computedStyles.zIndex
-                        }},
-                        responsiveIndicators: {{
-                            hasMediaQueries: false, // Would need stylesheet analysis
-                            usesViewportUnits: [computedStyles.width, computedStyles.height, computedStyles.fontSize]
-                                .some(val => val && (val.includes('vw') || val.includes('vh') || val.includes('vmin') || val.includes('vmax'))),
-                            usesFlexbox: computedStyles.display === 'flex',
-                            usesGrid: computedStyles.display === 'grid'
-                        }}
-                    }};
-                    
-                    layoutInfo.push(elementInfo);
-                    
-                    // Collect flex containers
-                    if (computedStyles.display === 'flex') {{
-                        flexContainers.push(elementInfo);
-                    }}
-                    
-                    // Collect grid containers
-                    if (computedStyles.display === 'grid') {{
-                        gridContainers.push(elementInfo);
-                    }}
-                }});
-                
-                // Check for overlapping elements
-                for (let i = 0; i < layoutInfo.length; i++) {{
-                    for (let j = i + 1; j < layoutInfo.length; j++) {{
-                        const a = layoutInfo[i];
-                        const b = layoutInfo[j];
-                        
-                        // Simple overlap detection
-                        if (a.position.x < b.position.x + b.position.width &&
-                            a.position.x + a.position.width > b.position.x &&
-                            a.position.y < b.position.y + b.position.height &&
-                            a.position.y + a.position.height > b.position.y) {{
-                            overlapping.push({{
-                                elementA: a.selector,
-                                elementB: b.selector,
-                                overlap: 'detected'
-                            }});
-                        }}
-                    }}
-                }}
-                
-                return {{
-                    viewport: viewport,
-                    containerInfo: {{
-                        width: containerRect.width,
-                        height: containerRect.height,
-                        elementCount: layoutInfo.length
-                    }},
-                    flexContainers: flexContainers,
-                    gridContainers: gridContainers,
-                    overlappingElements: overlapping.slice(0, 20), // Limit output
-                    summary: {{
-                        totalElements: layoutInfo.length,
-                        flexContainerCount: flexContainers.length,
-                        gridContainerCount: gridContainers.length,
-                        overlappingCount: overlapping.length,
-                        responsiveElementCount: layoutInfo.filter(el => 
-                            el.responsiveIndicators.usesViewportUnits || 
-                            el.responsiveIndicators.usesFlexbox || 
-                            el.responsiveIndicators.usesGrid
-                        ).length
-                    }}
-                }};
-            ";
+            var jsCode = $$"""
+
+                                           const container = {{container}};
+                                           if (!container) {
+                                               return { error: 'Container not found' };
+                                           }
+                                           
+                                           const viewport = {
+                                               width: window.innerWidth,
+                                               height: window.innerHeight
+                                           };
+                                           
+                                           const containerRect = container.getBoundingClientRect();
+                                           const elements = container.querySelectorAll('*');
+                                           
+                                           const layoutInfo = [];
+                                           const flexContainers = [];
+                                           const gridContainers = [];
+                                           const overlapping = [];
+                                           
+                                           elements.forEach(element => {
+                                               const computedStyles = window.getComputedStyle(element);
+                                               const rect = element.getBoundingClientRect();
+                                               
+                                               // Skip elements that are not visible
+                                               if (rect.width === 0 || rect.height === 0) return;
+                                               
+                                               const elementInfo = {
+                                                   selector: element.tagName.toLowerCase() + (element.id ? '#' + element.id : '') + 
+                                                            (element.className ? '.' + Array.from(element.classList).slice(0, 3).join('.') : ''),
+                                                   tagName: element.tagName.toLowerCase(),
+                                                   position: {
+                                                       x: rect.left,
+                                                       y: rect.top,
+                                                       width: rect.width,
+                                                       height: rect.height
+                                                   },
+                                                   styles: {
+                                                       display: computedStyles.display,
+                                                       position: computedStyles.position,
+                                                       flexDirection: computedStyles.flexDirection,
+                                                       justifyContent: computedStyles.justifyContent,
+                                                       alignItems: computedStyles.alignItems,
+                                                       gridTemplateColumns: computedStyles.gridTemplateColumns,
+                                                       gridTemplateRows: computedStyles.gridTemplateRows,
+                                                       overflow: computedStyles.overflow,
+                                                       zIndex: computedStyles.zIndex
+                                                   },
+                                                   responsiveIndicators: {
+                                                       hasMediaQueries: false, // Would need stylesheet analysis
+                                                       usesViewportUnits: [computedStyles.width, computedStyles.height, computedStyles.fontSize]
+                                                           .some(val => val && (val.includes('vw') || val.includes('vh') || val.includes('vmin') || val.includes('vmax'))),
+                                                       usesFlexbox: computedStyles.display === 'flex',
+                                                       usesGrid: computedStyles.display === 'grid'
+                                                   }
+                                               };
+                                               
+                                               layoutInfo.push(elementInfo);
+                                               
+                                               // Collect flex containers
+                                               if (computedStyles.display === 'flex') {
+                                                   flexContainers.push(elementInfo);
+                                               }
+                                               
+                                               // Collect grid containers
+                                               if (computedStyles.display === 'grid') {
+                                                   gridContainers.push(elementInfo);
+                                               }
+                                           });
+                                           
+                                           // Check for overlapping elements
+                                           for (let i = 0; i < layoutInfo.length; i++) {
+                                               for (let j = i + 1; j < layoutInfo.length; j++) {
+                                                   const a = layoutInfo[i];
+                                                   const b = layoutInfo[j];
+                                                   
+                                                   // Simple overlap detection
+                                                   if (a.position.x < b.position.x + b.position.width &&
+                                                       a.position.x + a.position.width > b.position.x &&
+                                                       a.position.y < b.position.y + b.position.height &&
+                                                       a.position.y + a.position.height > b.position.y) {
+                                                       overlapping.push({
+                                                           elementA: a.selector,
+                                                           elementB: b.selector,
+                                                           overlap: 'detected'
+                                                       });
+                                                   }
+                                               }
+                                           }
+                                           
+                                           return {
+                                               viewport: viewport,
+                                               containerInfo: {
+                                                   width: containerRect.width,
+                                                   height: containerRect.height,
+                                                   elementCount: layoutInfo.length
+                                               },
+                                               flexContainers: flexContainers,
+                                               gridContainers: gridContainers,
+                                               overlappingElements: overlapping.slice(0, 20), // Limit output
+                                               summary: {
+                                                   totalElements: layoutInfo.length,
+                                                   flexContainerCount: flexContainers.length,
+                                                   gridContainerCount: gridContainers.length,
+                                                   overlappingCount: overlapping.length,
+                                                   responsiveElementCount: layoutInfo.filter(el => 
+                                                       el.responsiveIndicators.usesViewportUnits || 
+                                                       el.responsiveIndicators.usesFlexbox || 
+                                                       el.responsiveIndicators.usesGrid
+                                                   ).length
+                                               }
+                                           };
+                                       
+                           """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
             return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
@@ -965,12 +977,12 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
     
     [McpServerTool]
-    [Description("Launch a browser with mobile device emulation")]
+    [Description("Launch a browser with mobile device emulation. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> LaunchMobileBrowser(
-        [Description("Device type: iphone12, iphone13, ipad, galaxy_s21, pixel5")] string deviceType,
-        [Description("Browser type: chrome, firefox, webkit")] string browserType = "chrome",
-        [Description("Run in headless mode")] bool headless = true,
-        [Description("Session ID for this browser instance")] string sessionId = "default")
+        string deviceType,
+        string browserType = "chrome",
+        bool headless = true,
+        string sessionId = "default")
     {
         return await LaunchBrowser(
             browserType: browserType,
@@ -981,13 +993,13 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Launch a browser with dark mode enabled")]
+    [Description("Launch a browser with dark mode enabled. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> LaunchDarkModeBrowser(
-        [Description("Browser type: chrome, firefox, webkit")] string browserType = "chrome",
-        [Description("Run in headless mode")] bool headless = true,
-        [Description("Session ID for this browser instance")] string sessionId = "default",
-        [Description("Viewport width in pixels")] int viewportWidth = 1920,
-        [Description("Viewport height in pixels")] int viewportHeight = 1080)
+        string browserType = "chrome",
+        bool headless = true,
+        string sessionId = "default",
+        int viewportWidth = 1920,
+        int viewportHeight = 1080)
     {
         return await LaunchBrowser(
             browserType: browserType,
@@ -1001,13 +1013,13 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Launch a browser with accessibility testing configuration")]
+    [Description("Launch a browser with accessibility testing configuration. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> LaunchAccessibilityBrowser(
-        [Description("Browser type: chrome, firefox, webkit")] string browserType = "chrome",
-        [Description("Run in headless mode")] bool headless = true,
-        [Description("Session ID for this browser instance")] string sessionId = "default",
-        [Description("Viewport width in pixels")] int viewportWidth = 1920,
-        [Description("Viewport height in pixels")] int viewportHeight = 1080)
+        string browserType = "chrome",
+        bool headless = true,
+        string sessionId = "default",
+        int viewportWidth = 1920,
+        int viewportHeight = 1080)
     {
         return await LaunchBrowser(
             browserType: browserType,
@@ -1022,9 +1034,9 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Get current browser viewport information")]
+    [Description("Get current browser viewport information. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> GetViewportInfo(
-        [Description("Session ID")] string sessionId = "default")
+        string sessionId = "default")
     {
         try
         {
@@ -1032,22 +1044,24 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var jsCode = @"
-                return {
-                    viewportWidth: window.innerWidth,
-                    viewportHeight: window.innerHeight,
-                    screenWidth: window.screen.width,
-                    screenHeight: window.screen.height,
-                    devicePixelRatio: window.devicePixelRatio,
-                    colorScheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
-                    reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduce' : 'no-preference',
-                    touchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
-                    userAgent: navigator.userAgent,
-                    platform: navigator.platform,
-                    language: navigator.language,
-                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                };
-            ";
+            var jsCode = """
+
+                                         return {
+                                             viewportWidth: window.innerWidth,
+                                             viewportHeight: window.innerHeight,
+                                             screenWidth: window.screen.width,
+                                             screenHeight: window.screen.height,
+                                             devicePixelRatio: window.devicePixelRatio,
+                                             colorScheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+                                             reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduce' : 'no-preference',
+                                             touchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+                                             userAgent: navigator.userAgent,
+                                             platform: navigator.platform,
+                                             language: navigator.language,
+                                             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                                         };
+                                     
+                         """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
             return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
@@ -1059,11 +1073,11 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Change viewport size of existing browser session")]
+    [Description("Change viewport size of existing browser session. See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> SetViewportSize(
-        [Description("Viewport width in pixels")] int width,
-        [Description("Viewport height in pixels")] int height,
-        [Description("Session ID")] string sessionId = "default")
+        int width,
+        int height,
+        string sessionId = "default")
     {
         try
         {
@@ -1081,10 +1095,10 @@ public class PlaywrightTools(ToolService toolService, PlaywrightSessionManager s
     }
 
     [McpServerTool]
-    [Description("Simulate device orientation change (portrait/landscape)")]
+    [Description("Simulate device orientation change (portrait/landscape). See skills/playwright-mcp/tools/playwright-tools.md.")]
     public async Task<string> RotateDevice(
-        [Description("Orientation: portrait or landscape")] string orientation,
-        [Description("Session ID")] string sessionId = "default")
+        string orientation,
+        string sessionId = "default")
     {
         try
         {

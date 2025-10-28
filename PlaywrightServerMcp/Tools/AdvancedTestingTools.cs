@@ -12,10 +12,10 @@ namespace PlaywrightServerMcp.Tools;
 public class AdvancedTestingTools(ToolService toolService, ChromeService chromeService)
 {
     [McpServerTool]
-    [Description("Simulate network conditions (slow, fast, offline)")]
+    [Description("Simulate network conditions (slow, fast, offline). See skills/playwright-mcp/tools/advanced-testing-tools.md.")]
     public async Task<string> SimulateNetworkConditions(
-        [Description("Network type: slow, fast, offline, mobile3g, mobile4g")] string networkType,
-        [Description("Session ID")] string sessionId = "default")
+        string networkType,
+        string sessionId = "default")
     {
         try
         {
@@ -51,11 +51,11 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     }
 
     [McpServerTool]
-    [Description("Upload files for testing (documents tab)")]
+    [Description("Upload files for testing (documents tab). See skills/playwright-mcp/tools/advanced-testing-tools.md.")]
     public async Task<string> UploadFiles(
-        [Description("File upload selector")] string selector,
-        [Description("File paths or test file types (pdf, jpg, png, invalid)")] string[] filePaths,
-        [Description("Session ID")] string sessionId = "default")
+        string selector,
+        string[] filePaths,
+        string sessionId = "default")
     {
         try
         {
@@ -119,10 +119,10 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     }
 
     [McpServerTool]
-    [Description("Simulate mobile device (iPhone, Android, iPad)")]
+    [Description("Simulate mobile device (iPhone, Android, iPad). See skills/playwright-mcp/tools/advanced-testing-tools.md.")]
     public async Task<string> EmulateDevice(
-        [Description("Device type: iphone12, iphone13, ipad, galaxy_s21, pixel5")] string deviceType,
-        [Description("Session ID")] string sessionId = "default")
+        string deviceType,
+        string sessionId = "default")
     {
         try
         {
@@ -154,10 +154,10 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     }
 
     [McpServerTool]
-    [Description("Test accessibility features (keyboard navigation, screen reader)")]
+    [Description("Test accessibility features (keyboard navigation, screen reader). See skills/playwright-mcp/tools/advanced-testing-tools.md.")]
     public async Task<string> TestAccessibility(
-        [Description("Test type: keyboard_navigation, aria_labels, color_contrast, focus_order")] string testType,
-        [Description("Session ID")] string sessionId = "default")
+        string testType,
+        string sessionId = "default")
     {
         try
         {
@@ -180,11 +180,11 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     }
 
     [McpServerTool]
-    [Description("Inject security test payloads (XSS, SQL injection)")]
+    [Description("Inject security test payloads (XSS, SQL injection). See skills/playwright-mcp/tools/advanced-testing-tools.md.")]
     public async Task<string> InjectSecurityPayloads(
-        [Description("Payload type: xss, sql_injection, script_injection, html_injection")] string payloadType,
-        [Description("Target field selector")] string selector,
-        [Description("Session ID")] string sessionId = "default")
+        string payloadType,
+        string selector,
+        string sessionId = "default")
     {
         try
         {
@@ -219,10 +219,10 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     }
 
     [McpServerTool]
-    [Description("Generate test data for forms")]
+    [Description("Generate test data for forms. See skills/playwright-mcp/tools/advanced-testing-tools.md.")]
     public static async Task<string> GenerateTestData(
-        [Description("Data type: person, address, company, ssn, email, phone")] string dataType,
-        [Description("Count of records to generate")] int count = 1)
+        string dataType,
+        int count = 1)
     {
         try
         {
@@ -253,10 +253,10 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     }
 
     [McpServerTool]
-    [Description("Execute TADERATCS enrollment form success test")]
+    [Description("Execute TADERATCS enrollment form success test. See skills/playwright-mcp/tools/advanced-testing-tools.md.")]
     public async Task<string> ExecuteEnrollmentSuccessTest(
-        [Description("Base URL of enrollment form")] string baseUrl = "http://localhost:4200",
-        [Description("Browser session ID")] string sessionId = "default")
+        string baseUrl = "http://localhost:4200",
+        string sessionId = "default")
     {
         try
         {
@@ -289,9 +289,9 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     }
 
     [McpServerTool]
-    [Description("Test localStorage auto-save functionality")]
+    [Description("Test localStorage auto-save functionality. See skills/playwright-mcp/tools/advanced-testing-tools.md.")]
     public async Task<string> TestLocalStorageAutoSave(
-        [Description("Browser session ID")] string sessionId = "default")
+        string sessionId = "default")
     {
         try
         {
@@ -303,11 +303,13 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
             await page.WaitForTimeoutAsync(1000); // Wait for auto-save
             
             // Check localStorage
-            var savedData = await page.EvaluateAsync<string>(@"
-                () => {
-                    return localStorage.getItem('enrollmentFormData') || 'No data saved';
-                }
-            ");
+            var savedData = await page.EvaluateAsync<string>("""
+
+                                                                             () => {
+                                                                                 return localStorage.getItem('enrollmentFormData') || 'No data saved';
+                                                                             }
+                                                                         
+                                                             """);
             
             // Refresh page and check if data persists
             await page.ReloadAsync();
@@ -439,140 +441,148 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
 
     private static async Task<string> TestKeyboardNavigation(IPage page)
     {
-        var result = await page.EvaluateAsync<object>(@"
-            () => {
-                const focusableElements = document.querySelectorAll(
-                    'button, [href], input, select, textarea, [tabindex]:not([tabindex=""-1])'
-                );
-                
-                const results = [];
-                focusableElements.forEach((element, index) => {
-                    const rect = element.getBoundingClientRect();
-                    results.push({
-                        tagName: element.tagName,
-                        type: element.type || 'N/A',
-                        id: element.id || 'N/A',
-                        testId: element.getAttribute('data-testid') || 'N/A',
-                        tabIndex: element.tabIndex,
-                        visible: rect.width > 0 && rect.height > 0,
-                        ariaLabel: element.getAttribute('aria-label') || 'N/A'
-                    });
-                });
-                
-                return {
-                    totalFocusableElements: focusableElements.length,
-                    elements: results
-                };
-            }
-        ");
+        var result = await page.EvaluateAsync<object>("""
+
+                                                                  () => {
+                                                                      const focusableElements = document.querySelectorAll(
+                                                                          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1])'
+                                                                      );
+                                                                      
+                                                                      const results = [];
+                                                                      focusableElements.forEach((element, index) => {
+                                                                          const rect = element.getBoundingClientRect();
+                                                                          results.push({
+                                                                              tagName: element.tagName,
+                                                                              type: element.type || 'N/A',
+                                                                              id: element.id || 'N/A',
+                                                                              testId: element.getAttribute('data-testid') || 'N/A',
+                                                                              tabIndex: element.tabIndex,
+                                                                              visible: rect.width > 0 && rect.height > 0,
+                                                                              ariaLabel: element.getAttribute('aria-label') || 'N/A'
+                                                                          });
+                                                                      });
+                                                                      
+                                                                      return {
+                                                                          totalFocusableElements: focusableElements.length,
+                                                                          elements: results
+                                                                      };
+                                                                  }
+                                                              
+                                                      """);
 
         return $"Keyboard navigation analysis:\n{JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented)}";
     }
 
     private static async Task<string> TestAriaLabels(IPage page)
     {
-        var result = await page.EvaluateAsync<object>(@"
-            () => {
-                const elementsNeedingLabels = document.querySelectorAll('input, button, select, textarea');
-                const issues = [];
-                
-                elementsNeedingLabels.forEach(element => {
-                    const hasAriaLabel = element.hasAttribute('aria-label');
-                    const hasAriaLabelledBy = element.hasAttribute('aria-labelledby');
-                    const hasLabel = element.closest('label') || document.querySelector(`label[for='${element.id}']`);
-                    
-                    if (!hasAriaLabel && !hasAriaLabelledBy && !hasLabel) {
-                        issues.push({
-                            tagName: element.tagName,
-                            type: element.type || 'N/A',
-                            id: element.id || 'N/A',
-                            testId: element.getAttribute('data-testid') || 'N/A',
-                            issue: 'Missing accessible label'
-                        });
-                    }
-                });
-                
-                return {
-                    totalElements: elementsNeedingLabels.length,
-                    issuesFound: issues.length,
-                    issues: issues
-                };
-            }
-        ");
+        var result = await page.EvaluateAsync<object>("""
+
+                                                                  () => {
+                                                                      const elementsNeedingLabels = document.querySelectorAll('input, button, select, textarea');
+                                                                      const issues = [];
+                                                                      
+                                                                      elementsNeedingLabels.forEach(element => {
+                                                                          const hasAriaLabel = element.hasAttribute('aria-label');
+                                                                          const hasAriaLabelledBy = element.hasAttribute('aria-labelledby');
+                                                                          const hasLabel = element.closest('label') || document.querySelector(`label[for='${element.id}']`);
+                                                                          
+                                                                          if (!hasAriaLabel && !hasAriaLabelledBy && !hasLabel) {
+                                                                              issues.push({
+                                                                                  tagName: element.tagName,
+                                                                                  type: element.type || 'N/A',
+                                                                                  id: element.id || 'N/A',
+                                                                                  testId: element.getAttribute('data-testid') || 'N/A',
+                                                                                  issue: 'Missing accessible label'
+                                                                              });
+                                                                          }
+                                                                      });
+                                                                      
+                                                                      return {
+                                                                          totalElements: elementsNeedingLabels.length,
+                                                                          issuesFound: issues.length,
+                                                                          issues: issues
+                                                                      };
+                                                                  }
+                                                              
+                                                      """);
 
         return $"ARIA labels analysis:\n{JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented)}";
     }
 
     private static async Task<string> TestColorContrast(IPage page)
     {
-        var result = await page.EvaluateAsync<object>(@"
-            () => {
-                const textElements = document.querySelectorAll('p, span, div, label, button, a, h1, h2, h3, h4, h5, h6');
-                const contrastIssues = [];
-                
-                textElements.forEach(element => {
-                    const styles = window.getComputedStyle(element);
-                    const backgroundColor = styles.backgroundColor;
-                    const color = styles.color;
-                    const fontSize = parseFloat(styles.fontSize);
-                    
-                    if (color && backgroundColor && color !== backgroundColor) {
-                        contrastIssues.push({
-                            tagName: element.tagName,
-                            id: element.id || 'N/A',
-                            testId: element.getAttribute('data-testid') || 'N/A',
-                            textColor: color,
-                            backgroundColor: backgroundColor,
-                            fontSize: fontSize,
-                            text: element.textContent?.substring(0, 50) + '...' || 'N/A'
-                        });
-                    }
-                });
-                
-                return {
-                    elementsChecked: textElements.length,
-                    potentialIssues: contrastIssues.length,
-                    elements: contrastIssues.slice(0, 10) // Limit output
-                };
-            }
-        ");
+        var result = await page.EvaluateAsync<object>("""
+
+                                                                  () => {
+                                                                      const textElements = document.querySelectorAll('p, span, div, label, button, a, h1, h2, h3, h4, h5, h6');
+                                                                      const contrastIssues = [];
+                                                                      
+                                                                      textElements.forEach(element => {
+                                                                          const styles = window.getComputedStyle(element);
+                                                                          const backgroundColor = styles.backgroundColor;
+                                                                          const color = styles.color;
+                                                                          const fontSize = parseFloat(styles.fontSize);
+                                                                          
+                                                                          if (color && backgroundColor && color !== backgroundColor) {
+                                                                              contrastIssues.push({
+                                                                                  tagName: element.tagName,
+                                                                                  id: element.id || 'N/A',
+                                                                                  testId: element.getAttribute('data-testid') || 'N/A',
+                                                                                  textColor: color,
+                                                                                  backgroundColor: backgroundColor,
+                                                                                  fontSize: fontSize,
+                                                                                  text: element.textContent?.substring(0, 50) + '...' || 'N/A'
+                                                                              });
+                                                                          }
+                                                                      });
+                                                                      
+                                                                      return {
+                                                                          elementsChecked: textElements.length,
+                                                                          potentialIssues: contrastIssues.length,
+                                                                          elements: contrastIssues.slice(0, 10) // Limit output
+                                                                      };
+                                                                  }
+                                                              
+                                                      """);
 
         return $"Color contrast analysis:\n{JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented)}";
     }
 
     private static async Task<string> TestFocusOrder(IPage page)
     {
-        var result = await page.EvaluateAsync<object>(@"
-            () => {
-                const focusableElements = Array.from(document.querySelectorAll(
-                    'button, [href], input, select, textarea, [tabindex]:not([tabindex=""-1])'
-                )).filter(el => {
-                    const rect = el.getBoundingClientRect();
-                    return rect.width > 0 && rect.height > 0;
-                });
-                
-                const focusOrder = focusableElements.map((element, index) => {
-                    const rect = element.getBoundingClientRect();
-                    return {
-                        order: index + 1,
-                        tagName: element.tagName,
-                        type: element.type || 'N/A',
-                        id: element.id || 'N/A',
-                        testId: element.getAttribute('data-testid') || 'N/A',
-                        tabIndex: element.tabIndex,
-                        position: {
-                            top: Math.round(rect.top),
-                            left: Math.round(rect.left)
-                        }
-                    };
-                });
-                
-                return {
-                    totalElements: focusableElements.length,
-                    focusOrder: focusOrder
-                };
-            }
-        ");
+        var result = await page.EvaluateAsync<object>("""
+
+                                                                  () => {
+                                                                      const focusableElements = Array.from(document.querySelectorAll(
+                                                                          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1])'
+                                                                      )).filter(el => {
+                                                                          const rect = el.getBoundingClientRect();
+                                                                          return rect.width > 0 && rect.height > 0;
+                                                                      });
+                                                                      
+                                                                      const focusOrder = focusableElements.map((element, index) => {
+                                                                          const rect = element.getBoundingClientRect();
+                                                                          return {
+                                                                              order: index + 1,
+                                                                              tagName: element.tagName,
+                                                                              type: element.type || 'N/A',
+                                                                              id: element.id || 'N/A',
+                                                                              testId: element.getAttribute('data-testid') || 'N/A',
+                                                                              tabIndex: element.tabIndex,
+                                                                              position: {
+                                                                                  top: Math.round(rect.top),
+                                                                                  left: Math.round(rect.left)
+                                                                              }
+                                                                          };
+                                                                      });
+                                                                      
+                                                                      return {
+                                                                          totalElements: focusableElements.length,
+                                                                          focusOrder: focusOrder
+                                                                      };
+                                                                  }
+                                                              
+                                                      """);
 
         return $"Focus order analysis:\n{JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented)}";
     }

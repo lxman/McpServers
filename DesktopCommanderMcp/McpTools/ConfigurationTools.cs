@@ -17,7 +17,7 @@ public class ConfigurationTools(
     ILogger<ConfigurationTools> logger)
 {
     [McpServerTool, DisplayName("get_security_configuration")]
-    [Description("Get the current security configuration including allowed directories and blocked commands")]
+    [Description("Get security config. See security-config/SKILL.md")]
     public Task<string> GetConfiguration()
     {
         try
@@ -42,9 +42,9 @@ public class ConfigurationTools(
     }
 
     [McpServerTool, DisplayName("add_allowed_directory")]
-    [Description("Add a directory to the allowed directories list")]
+    [Description("Add directory to whitelist. See security-config/SKILL.md")]
     public Task<string> AddAllowedDirectory(
-        [Description("Full path to the directory to allow")] string directoryPath)
+        string directoryPath)
     {
         try
         {
@@ -67,9 +67,9 @@ public class ConfigurationTools(
     }
 
     [McpServerTool, DisplayName("add_blocked_command")]
-    [Description("Add a command pattern to the blocked commands list")]
+    [Description("Add command pattern to blocklist. See security-config/SKILL.md")]
     public Task<string> AddBlockedCommand(
-        [Description("Command pattern to block (supports wildcards)")] string commandPattern)
+        string commandPattern)
     {
         try
         {
@@ -92,9 +92,9 @@ public class ConfigurationTools(
     }
 
     [McpServerTool, DisplayName("test_directory_access")]
-    [Description("Test if a directory path is allowed by security configuration")]
+    [Description("Test if directory is allowed. See security-config/SKILL.md")]
     public Task<string> TestDirectoryAccess(
-        [Description("Directory path to test")] string directoryPath)
+        string directoryPath)
     {
         try
         {
@@ -118,9 +118,9 @@ public class ConfigurationTools(
     }
 
     [McpServerTool, DisplayName("test_command_blocking")]
-    [Description("Test if a command is blocked by security configuration")]
+    [Description("Test if command is blocked. See security-config/SKILL.md")]
     public Task<string> TestCommandBlocking(
-        [Description("Command to test")] string command)
+        string command)
     {
         try
         {
@@ -144,9 +144,9 @@ public class ConfigurationTools(
     }
 
     [McpServerTool, DisplayName("get_audit_log")]
-    [Description("Get recent audit log entries")]
+    [Description("Get recent audit entries. See maintenance/SKILL.md")]
     public Task<string> GetAuditLog(
-        [Description("Number of recent entries to return (default: 20)")] int count = 20)
+        int count = 20)
     {
         try
         {
@@ -165,7 +165,7 @@ public class ConfigurationTools(
     }
 
     [McpServerTool, DisplayName("get_desktop_commander_info")]
-    [Description("Get help information and available endpoints for DesktopCommander")]
+    [Description("Get help info and endpoints. See maintenance/SKILL.md")]
     public Task<string> GetHelp()
     {
         try

@@ -15,12 +15,12 @@ public class AdvancedFileReadingTools(
     FileVersionService versionService,
     ILogger<AdvancedFileReadingTools> logger)
 {
-    [McpServerTool, DisplayName("read_file_range")]
-    [Description("Read a specific line range from a file")]
+    [McpServerTool, DisplayName("read_range")]
+    [Description("Read specific line range from file. See file-operations/SKILL.md")]
     public async Task<string> ReadRange(
-        [Description("Full path to the file")] string filePath,
-        [Description("Starting line number (1-based)")] int startLine,
-        [Description("Ending line number (inclusive)")] int endLine)
+        string filePath,
+        int startLine,
+        int endLine)
     {
         try
         {
@@ -73,11 +73,11 @@ public class AdvancedFileReadingTools(
     }
 
     [McpServerTool, DisplayName("read_around_line")]
-    [Description("Read lines around a specific line number with context")]
+    [Description("Read lines around specific line with context. See file-operations/SKILL.md")]
     public async Task<string> ReadAroundLine(
-        [Description("Full path to the file")] string filePath,
-        [Description("Target line number")] int lineNumber,
-        [Description("Number of context lines before and after (default: 10)")] int contextLines = 10)
+        string filePath,
+        int lineNumber,
+        int contextLines = 10)
     {
         try
         {
@@ -129,11 +129,11 @@ public class AdvancedFileReadingTools(
     }
 
     [McpServerTool, DisplayName("read_next_chunk")]
-    [Description("Read next chunk of lines from a file for incremental processing")]
+    [Description("Read next chunk of lines for incremental processing. See file-operations/SKILL.md")]
     public async Task<string> ReadNextChunk(
-        [Description("Full path to the file")] string filePath,
-        [Description("Starting line number (1-based)")] int startLine,
-        [Description("Maximum number of lines to return (default: 100)")] int maxLines = 100)
+        string filePath,
+        int startLine,
+        int maxLines = 100)
     {
         try
         {

@@ -23,10 +23,10 @@ public class AngularStyleTools(PlaywrightSessionManager sessionManager)
     };
 
     [McpServerTool]
-    [Description("Analyze Angular component styling and detect component isolation issues")]
+    [Description("Analyze Angular component styling and detect component isolation issues. See skills/playwright-mcp/tools/angular/style-tools.md.")]
     public async Task<string> AnalyzeAngularComponentStyles(
-        [Description("Component selector or data-testid")] string componentSelector,
-        [Description("Session ID")] string sessionId = "default")
+        string componentSelector,
+        string sessionId = "default")
     {
         try
         {
@@ -168,9 +168,9 @@ public class AngularStyleTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Extract Angular Material theme and design token information")]
+    [Description("Extract Angular Material theme and design token information. See skills/playwright-mcp/tools/angular/style-tools.md.")]
     public async Task<string> ExtractAngularMaterialTheme(
-        [Description("Session ID")] string sessionId = "default")
+        string sessionId = "default")
     {
         try
         {
@@ -286,10 +286,10 @@ public class AngularStyleTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Validate Angular component styling best practices")]
+    [Description("Validate Angular component styling best practices. See skills/playwright-mcp/tools/angular/style-tools.md.")]
     public async Task<string> ValidateAngularStylingBestPractices(
-        [Description("Component selector or data-testid")] string componentSelector,
-        [Description("Session ID")] string sessionId = "default")
+        string componentSelector,
+        string sessionId = "default")
     {
         try
         {
@@ -454,10 +454,10 @@ public class AngularStyleTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Capture visual element properties for detailed reporting to Claude")]
+    [Description("Capture visual element properties for detailed reporting to Claude. See skills/playwright-mcp/tools/angular/style-tools.md.")]
     public async Task<string> CaptureElementVisualReport(
-        [Description("Element selector or data-testid")] string selector,
-        [Description("Session ID")] string sessionId = "default")
+        string selector,
+        string sessionId = "default")
     {
         try
         {

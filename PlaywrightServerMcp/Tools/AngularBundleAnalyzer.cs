@@ -26,16 +26,16 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     };
 
     [McpServerTool]
-    [Description("Analyze Angular bundle size by component with detailed impact analysis and optimization recommendations")]
+    [Description("Analyze Angular bundle size by component with detailed impact analysis and optimization recommendations. See skills/playwright-mcp/tools/angular/bundle-analyzer.md.")]
     public async Task<string> AnalyzeBundleSizeByComponent(
-        [Description("Working directory containing Angular project (defaults to current directory)")] string workingDirectory = "",
-        [Description("Build configuration to analyze (production, development, or custom configuration name)")] string buildConfiguration = "production",
-        [Description("Include detailed component analysis")] bool includeComponentAnalysis = true,
-        [Description("Include dependency analysis")] bool includeDependencyAnalysis = true,
-        [Description("Include asset analysis")] bool includeAssetAnalysis = true,
-        [Description("Generate optimization recommendations")] bool generateRecommendations = true,
-        [Description("Maximum number of components to analyze (default: 50)")] int maxComponents = 50,
-        [Description("Session ID for context")] string sessionId = "default")
+        string workingDirectory = "",
+        string buildConfiguration = "production",
+        bool includeComponentAnalysis = true,
+        bool includeDependencyAnalysis = true,
+        bool includeAssetAnalysis = true,
+        bool generateRecommendations = true,
+        int maxComponents = 50,
+        string sessionId = "default")
     {
         try
         {

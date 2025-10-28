@@ -1,3 +1,4 @@
+using System.Collections;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.Json;
@@ -22,11 +23,11 @@ public class ServiceManagementTools(
     private const string CACHE_KEY_PREFIX = "ManagedService_";
 
     [McpServerTool, DisplayName("start_service")]
-    [Description("Start an MCP service if it's not currently running. Returns a service ID for later management.")]
+    [Description("Start MCP service. See service-management/SKILL.md")]
     public async Task<string> StartService(
-        [Description("Service name from the server directory (e.g., 'redis', 'go-analyzer')")] string serviceName,
-        [Description("Force re-initialization even if already initialized")] bool forceInit = false,
-        [Description("Optional working directory override")] string? workingDirectory = null)
+        string serviceName,
+        bool forceInit = false,
+        string? workingDirectory = null)
     {
         try
         {
@@ -39,7 +40,47 @@ public class ServiceManagementTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            // Check if port is already in use
+            // Check if the service is already running in the managed service cache
+            ManagedService? existingService = FindRunningService(serviceName);
+            if (existingService != null)
+            {
+                try
+                {
+                    // Verify the process is still running
+                    var existingProcess = Process.GetProcessById(existingService.ProcessId);
+                    if (!existingProcess.HasExited)
+                    {
+                        TimeSpan uptime = DateTime.UtcNow - existingService.StartedAt;
+                        logger.LogInformation(
+                            "Service {ServiceName} is already running with ID {ServiceId}", 
+                            serviceName, 
+                            existingService.ServiceId);
+
+                        return JsonSerializer.Serialize(new
+                        {
+                            success = true,
+                            serviceId = existingService.ServiceId,
+                            serviceName = existingService.ServiceName,
+                            processId = existingService.ProcessId,
+                            port = existingService.Port,
+                            url = serverInfo.Url,
+                            startedAt = existingService.StartedAt,
+                            uptime = uptime.ToString(@"hh\:mm\:ss"),
+                            message = "Service was already running"
+                        }, SerializerOptions.JsonOptionsIndented);
+                    }
+                }
+                catch (ArgumentException)
+                {
+                    // Process no longer exists, clean up the cache entry
+                    cache.Remove(CACHE_KEY_PREFIX + existingService.ServiceId);
+                    logger.LogInformation(
+                        "Cleaned up stale cache entry for service {ServiceName}", 
+                        serviceName);
+                }
+            }
+
+            // Check if the port is already in use
             if (serverInfo.Port.HasValue && IsPortInUse(serverInfo.Port.Value))
             {
                 return JsonSerializer.Serialize(new { 
@@ -64,13 +105,13 @@ public class ServiceManagementTools(
                         needsInit = !File.Exists(checkPath) && !Directory.Exists(checkPath);
                         break;
                     }
-                    case false when serverInfo.InitCommands?.Any() == true:
-                        // If no check path, assume we need to init on first start
+                    case false when serverInfo.InitCommands?.Count > 0:
+                        // If no check path, assume we need to init on the first start
                         needsInit = true;
                         break;
                 }
 
-                if (needsInit && serverInfo.InitCommands?.Any() == true)
+                if (needsInit && serverInfo.InitCommands?.Count > 0)
                 {
                     logger.LogInformation("Running initialization for {ServiceName}", serviceName);
                     
@@ -90,7 +131,7 @@ public class ServiceManagementTools(
                 }
             }
 
-            // Parse and execute start command
+            // Parse and execute the start command
             (string executable, string arguments) = ParseCommand(serverInfo.StartCommand ?? "dotnet run");
 
             var startInfo = new ProcessStartInfo
@@ -104,8 +145,8 @@ public class ServiceManagementTools(
                 RedirectStandardError = true
             };
 
-            Process? process = Process.Start(startInfo);
-            if (process == null)
+            Process? newProcess = Process.Start(startInfo);
+            if (newProcess == null)
             {
                 return JsonSerializer.Serialize(new { 
                     success = false, 
@@ -118,7 +159,7 @@ public class ServiceManagementTools(
             {
                 ServiceId = serviceId,
                 ServiceName = serviceName,
-                ProcessId = process.Id,
+                ProcessId = newProcess.Id,
                 Port = serverInfo.Port,
                 StartedAt = DateTime.UtcNow
             };
@@ -129,11 +170,11 @@ public class ServiceManagementTools(
             // Wait a bit to see if it crashes immediately
             await Task.Delay(1500);
             
-            if (process.HasExited)
+            if (newProcess.HasExited)
             {
                 return JsonSerializer.Serialize(new { 
                     success = false, 
-                    error = $"Process exited immediately with code {process.ExitCode}" 
+                    error = $"Process exited immediately with code {newProcess.ExitCode}" 
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
@@ -147,13 +188,13 @@ public class ServiceManagementTools(
                     success = true,
                     serviceId,
                     serviceName,
-                    processId = process.Id,
+                    processId = newProcess.Id,
                     port = serverInfo.Port,
                     url = serverInfo.Url,
                     startedAt = managedService.StartedAt
                 }, SerializerOptions.JsonOptionsIndented);
             logger.LogInformation("Performing health check for {ServiceName} at {Url}", serviceName, serverInfo.Url);
-            (bool isHealthy, string healthCheckMessage) = await WaitForServiceHealthy(serverInfo.Url, process, timeoutSeconds: 30);
+            (bool isHealthy, string healthCheckMessage) = await WaitForServiceHealthy(serverInfo.Url, newProcess, timeoutSeconds: 30);
                 
             if (isHealthy)
             {
@@ -171,7 +212,7 @@ public class ServiceManagementTools(
                 success = true,
                 serviceId,
                 serviceName,
-                processId = process.Id,
+                processId = newProcess.Id,
                 port = serverInfo.Port,
                 url = serverInfo.Url,
                 startedAt = managedService.StartedAt
@@ -188,9 +229,9 @@ public class ServiceManagementTools(
     }
 
     [McpServerTool, DisplayName("stop_service")]
-    [Description("Stop a running MCP service using its service ID")]
+    [Description("Stop MCP service. See service-management/SKILL.md")]
     public string StopService(
-        [Description("The service ID returned when the service was started")] string serviceId)
+        string serviceId)
     {
         string cacheKey = CACHE_KEY_PREFIX + serviceId;
 
@@ -242,9 +283,9 @@ public class ServiceManagementTools(
     }
 
     [McpServerTool, DisplayName("service_status")]
-    [Description("Get the current status and metrics of a running service")]
+    [Description("Get service status and metrics. See service-management/SKILL.md")]
     public string GetServiceStatus(
-        [Description("The service ID")] string serviceId)
+        string serviceId)
     {
         string cacheKey = CACHE_KEY_PREFIX + serviceId;
 
@@ -298,7 +339,7 @@ public class ServiceManagementTools(
 
 
     [McpServerTool, DisplayName("reload_server_registry")]
-    [Description("Reload the server configuration from servers.json without restarting DesktopCommander")]
+    [Description("Reload server configuration. See service-management/SKILL.md")]
     public string ReloadServerRegistry()
     {
         try
@@ -420,7 +461,7 @@ public class ServiceManagementTools(
             Timeout = TimeSpan.FromSeconds(5)
         };
         
-        var client = serviceUrl.StartsWith("https", StringComparison.OrdinalIgnoreCase) ? httpsClient : httpClient;
+        HttpClient client = serviceUrl.StartsWith("https", StringComparison.OrdinalIgnoreCase) ? httpsClient : httpClient;
         
         int maxAttempts = timeoutSeconds * 2; // Poll every 500ms
         int attempts = 0;
@@ -436,7 +477,7 @@ public class ServiceManagementTools(
             try
             {
                 // Try to connect to the service
-                var response = await client.GetAsync(serviceUrl);
+                HttpResponseMessage response = await client.GetAsync(serviceUrl);
                 
                 // Any response (even 404, 500, etc.) means the server is listening
                 logger.LogDebug("Health check attempt {Attempt}: HTTP {StatusCode}", 
@@ -462,4 +503,33 @@ public class ServiceManagementTools(
         return (false, $"Service did not become healthy after {timeoutSeconds} seconds ({attempts} attempts)");
     }
 
+    /// <summary>
+    /// Find a running service by name in the cache
+    /// </summary>
+    private ManagedService? FindRunningService(string serviceName)
+    {
+        // Get all cache entries
+        if (cache is not MemoryCache memCache) return null;
+        // Use reflection to access the internal EntriesCollection
+        object? coherentState = memCache.GetType()
+            .GetField("_coherentState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+            ?.GetValue(memCache);
+
+        if (coherentState?.GetType()
+                .GetProperty("EntriesCollection")
+                ?.GetValue(coherentState) is not ICollection entries) return null;
+        foreach (object? entry in entries)
+        {
+            var key = entry.GetType().GetProperty("Key")?.GetValue(entry) as string;
+            if (key?.StartsWith(CACHE_KEY_PREFIX) != true) continue;
+            if (cache.TryGetValue(key, out ManagedService? service) && 
+                service is not null && 
+                service.ServiceName == serviceName)
+            {
+                return service;
+            }
+        }
+
+        return null;
+    }
 }

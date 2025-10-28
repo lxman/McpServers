@@ -11,11 +11,11 @@ namespace PlaywrightServerMcp.Tools;
 public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
 {
     [McpServerTool]
-    [Description("Drag and drop between elements")]
+    [Description("Drag and drop between elements. See skills/playwright-mcp/tools/interaction-testing-tools.md.")]
     public async Task<string> DragAndDrop(
-        [Description("Source element selector")] string sourceSelector,
-        [Description("Target element selector")] string targetSelector,
-        [Description("Session ID")] string sessionId = "default")
+        string sourceSelector,
+        string targetSelector,
+        string sessionId = "default")
     {
         try
         {
@@ -52,49 +52,51 @@ public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
             }
 
             // Get element information before drag and drop
-            var elementInfo = await session.Page.EvaluateAsync<object>($@"
-                (() => {{
-                    const source = document.querySelector('{finalSourceSelector.Replace("'", "\\'")}');
-                    const target = document.querySelector('{finalTargetSelector.Replace("'", "\\'")}');
-                    
-                    if (!source || !target) return {{ error: 'Elements not found' }};
-                    
-                    const sourceRect = source.getBoundingClientRect();
-                    const targetRect = target.getBoundingClientRect();
-                    
-                    return {{
-                        source: {{
-                            tagName: source.tagName.toLowerCase(),
-                            className: source.className,
-                            id: source.id || null,
-                            position: {{
-                                x: sourceRect.left + sourceRect.width / 2,
-                                y: sourceRect.top + sourceRect.height / 2
-                            }},
-                            dimensions: {{
-                                width: sourceRect.width,
-                                height: sourceRect.height
-                            }},
-                            draggable: source.draggable,
-                            hasDataTransfer: !!source.ondragstart
-                        }},
-                        target: {{
-                            tagName: target.tagName.toLowerCase(),
-                            className: target.className,
-                            id: target.id || null,
-                            position: {{
-                                x: targetRect.left + targetRect.width / 2,
-                                y: targetRect.top + targetRect.height / 2
-                            }},
-                            dimensions: {{
-                                width: targetRect.width,
-                                height: targetRect.height
-                            }},
-                            hasDropHandler: !!target.ondrop
-                        }}
-                    }};
-                }})()
-            ");
+            var elementInfo = await session.Page.EvaluateAsync<object>($$"""
+
+                                                                                         (() => {
+                                                                                             const source = document.querySelector('{{finalSourceSelector.Replace("'", "\\'")}}');
+                                                                                             const target = document.querySelector('{{finalTargetSelector.Replace("'", "\\'")}}');
+                                                                                             
+                                                                                             if (!source || !target) return { error: 'Elements not found' };
+                                                                                             
+                                                                                             const sourceRect = source.getBoundingClientRect();
+                                                                                             const targetRect = target.getBoundingClientRect();
+                                                                                             
+                                                                                             return {
+                                                                                                 source: {
+                                                                                                     tagName: source.tagName.toLowerCase(),
+                                                                                                     className: source.className,
+                                                                                                     id: source.id || null,
+                                                                                                     position: {
+                                                                                                         x: sourceRect.left + sourceRect.width / 2,
+                                                                                                         y: sourceRect.top + sourceRect.height / 2
+                                                                                                     },
+                                                                                                     dimensions: {
+                                                                                                         width: sourceRect.width,
+                                                                                                         height: sourceRect.height
+                                                                                                     },
+                                                                                                     draggable: source.draggable,
+                                                                                                     hasDataTransfer: !!source.ondragstart
+                                                                                                 },
+                                                                                                 target: {
+                                                                                                     tagName: target.tagName.toLowerCase(),
+                                                                                                     className: target.className,
+                                                                                                     id: target.id || null,
+                                                                                                     position: {
+                                                                                                         x: targetRect.left + targetRect.width / 2,
+                                                                                                         y: targetRect.top + targetRect.height / 2
+                                                                                                     },
+                                                                                                     dimensions: {
+                                                                                                         width: targetRect.width,
+                                                                                                         height: targetRect.height
+                                                                                                     },
+                                                                                                     hasDropHandler: !!target.ondrop
+                                                                                                 }
+                                                                                             };
+                                                                                         })()
+                                                                                     
+                                                                         """);
 
             // Perform drag and drop
             await sourceElement.DragToAsync(targetElement);
@@ -103,29 +105,31 @@ public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
             await Task.Delay(500);
             
             // Check for any changes after drag and drop
-            var postDragInfo = await session.Page.EvaluateAsync<object>($@"
-                (() => {{
-                    const source = document.querySelector('{finalSourceSelector.Replace("'", "\\'")}');
-                    const target = document.querySelector('{finalTargetSelector.Replace("'", "\\'")}');
-                    
-                    if (!source || !target) return {{ error: 'Elements not found after drag' }};
-                    
-                    const sourceRect = source.getBoundingClientRect();
-                    const targetRect = target.getBoundingClientRect();
-                    
-                    return {{
-                        sourcePosition: {{
-                            x: sourceRect.left + sourceRect.width / 2,
-                            y: sourceRect.top + sourceRect.height / 2
-                        }},
-                        targetPosition: {{
-                            x: targetRect.left + targetRect.width / 2,
-                            y: targetRect.top + targetRect.height / 2
-                        }},
-                        pageChanged: performance.now()
-                    }};
-                }})()
-            ");
+            var postDragInfo = await session.Page.EvaluateAsync<object>($$"""
+
+                                                                                          (() => {
+                                                                                              const source = document.querySelector('{{finalSourceSelector.Replace("'", "\\'")}}');
+                                                                                              const target = document.querySelector('{{finalTargetSelector.Replace("'", "\\'")}}');
+                                                                                              
+                                                                                              if (!source || !target) return { error: 'Elements not found after drag' };
+                                                                                              
+                                                                                              const sourceRect = source.getBoundingClientRect();
+                                                                                              const targetRect = target.getBoundingClientRect();
+                                                                                              
+                                                                                              return {
+                                                                                                  sourcePosition: {
+                                                                                                      x: sourceRect.left + sourceRect.width / 2,
+                                                                                                      y: sourceRect.top + sourceRect.height / 2
+                                                                                                  },
+                                                                                                  targetPosition: {
+                                                                                                      x: targetRect.left + targetRect.width / 2,
+                                                                                                      y: targetRect.top + targetRect.height / 2
+                                                                                                  },
+                                                                                                  pageChanged: performance.now()
+                                                                                              };
+                                                                                          })()
+                                                                                      
+                                                                          """);
 
             var result = new
             {
@@ -147,10 +151,10 @@ public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Send keyboard shortcuts like Ctrl+S, Tab, complex sequences, and platform-specific shortcuts")]
+    [Description("Send keyboard shortcuts like Ctrl+S, Tab, complex sequences, and platform-specific shortcuts. See skills/playwright-mcp/tools/interaction-testing-tools.md.")]
     public async Task<string> SendKeyboardShortcut(
-        [Description("Keyboard shortcut (e.g., 'Ctrl+S', 'Alt+Tab', 'Cmd+C' for Mac, 'Ctrl+Shift+I', or complex sequences like 'Tab Tab Enter')")] string keys,
-        [Description("Session ID")] string sessionId = "default")
+        string keys,
+        string sessionId = "default")
     {
         try
         {
@@ -167,20 +171,22 @@ public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
             List<KeySequence> keySequences = ParseKeySequence(normalizedKeys);
             
             // Get initial page state
-            var initialState = await session.Page.EvaluateAsync<object>(@"
-                (() => {
-                    return {
-                        activeElement: document.activeElement ? {
-                            tagName: document.activeElement.tagName.toLowerCase(),
-                            className: document.activeElement.className,
-                            id: document.activeElement.id || null,
-                            type: document.activeElement.type || null
-                        } : null,
-                        url: window.location.href,
-                        title: document.title
-                    };
-                })()
-            ");
+            var initialState = await session.Page.EvaluateAsync<object>("""
+
+                                                                                        (() => {
+                                                                                            return {
+                                                                                                activeElement: document.activeElement ? {
+                                                                                                    tagName: document.activeElement.tagName.toLowerCase(),
+                                                                                                    className: document.activeElement.className,
+                                                                                                    id: document.activeElement.id || null,
+                                                                                                    type: document.activeElement.type || null
+                                                                                                } : null,
+                                                                                                url: window.location.href,
+                                                                                                title: document.title
+                                                                                            };
+                                                                                        })()
+                                                                                    
+                                                                        """);
 
             var executedSequences = new List<object>();
             
@@ -292,20 +298,22 @@ public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
             await Task.Delay(200);
             
             // Get final page state
-            var finalState = await session.Page.EvaluateAsync<object>(@"
-                (() => {
-                    return {
-                        activeElement: document.activeElement ? {
-                            tagName: document.activeElement.tagName.toLowerCase(),
-                            className: document.activeElement.className,
-                            id: document.activeElement.id || null,
-                            type: document.activeElement.type || null
-                        } : null,
-                        url: window.location.href,
-                        title: document.title
-                    };
-                })()
-            ");
+            var finalState = await session.Page.EvaluateAsync<object>("""
+
+                                                                                      (() => {
+                                                                                          return {
+                                                                                              activeElement: document.activeElement ? {
+                                                                                                  tagName: document.activeElement.tagName.toLowerCase(),
+                                                                                                  className: document.activeElement.className,
+                                                                                                  id: document.activeElement.id || null,
+                                                                                                  type: document.activeElement.type || null
+                                                                                              } : null,
+                                                                                              url: window.location.href,
+                                                                                              title: document.title
+                                                                                          };
+                                                                                      })()
+                                                                                  
+                                                                      """);
 
             var result = new
             {
@@ -328,7 +336,7 @@ public class InteractionTestingTools(PlaywrightSessionManager sessionManager)
         }
     }
 
-    // Helper classes for keyboard shortcut parsing
+    // Helper classes for keyboard-shortcut parsing
     private class KeySequence
     {
         public string Key { get; set; } = "";

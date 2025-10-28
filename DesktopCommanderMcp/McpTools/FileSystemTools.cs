@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
 using DesktopCommanderMcp.Common;
 using DesktopCommanderMcp.Services;
@@ -17,8 +17,17 @@ public class FileSystemTools(
     AuditLogger auditLogger,
     ILogger<FileSystemTools> logger)
 {
+    [McpServerTool, DisplayName("get_skills_location")]
+    public string GetSkillsLocation()
+    {
+        string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        string settingsPath = Path.Combine(appDirectory, "appsettings.json");
+        string skillsInfo = File.ReadAllText(settingsPath);
+        return skillsInfo;
+    }
+    
     [McpServerTool, DisplayName("read_file")]
-    [Description("Read file contents with automatic pagination. Returns lines of text from a file.")]
+    [Description("Read file with pagination. See file-operations/SKILL.md")]
     public async Task<string> ReadFile(
         [Description("Full path to the file")] string path,
         [Description("Starting line number (1-based, optional)")] int? startLine = null,
@@ -85,7 +94,7 @@ public class FileSystemTools(
     }
 
     [McpServerTool, DisplayName("write_file")]
-    [Description("Write content to a file. Can overwrite or append.")]
+    [Description("Write content to file. See file-operations/SKILL.md")]
     public async Task<string> WriteFile(
         [Description("Full path to the file")] string path,
         [Description("Content to write")] string content,
@@ -157,7 +166,7 @@ public class FileSystemTools(
     }
 
     [McpServerTool, DisplayName("list_directory")]
-    [Description("List contents of a directory")]
+    [Description("List directory contents. See file-operations/SKILL.md")]
     public Task<string> ListDirectory(
         [Description("Full path to the directory")] string path)
     {
@@ -219,7 +228,7 @@ public class FileSystemTools(
     }
 
     [McpServerTool, DisplayName("delete_file")]
-    [Description("Delete a file or directory")]
+    [Description("Delete file or directory. See file-operations/SKILL.md")]
     public Task<string> Delete(
         [Description("Full path to the file or directory")] string path,
         [Description("Force deletion (for directories with contents)")] bool force = false)
@@ -274,7 +283,7 @@ public class FileSystemTools(
     }
 
     [McpServerTool, DisplayName("move_file")]
-    [Description("Move or rename a file or directory")]
+    [Description("Move or rename file/directory. See file-operations/SKILL.md")]
     public Task<string> Move(
         [Description("Source path")] string sourcePath,
         [Description("Destination path")] string destinationPath)
@@ -331,7 +340,7 @@ public class FileSystemTools(
     }
 
     [McpServerTool, DisplayName("search_files")]
-    [Description("Search for files matching a pattern")]
+    [Description("Search files by pattern. See file-operations/SKILL.md")]
     public Task<string> SearchFiles(
         [Description("Directory to search in")] string searchPath,
         [Description("File pattern (e.g., '*.txt', 'test*.cs')")] string pattern,
@@ -380,7 +389,7 @@ public class FileSystemTools(
     }
 
     [McpServerTool, DisplayName("get_file_info")]
-    [Description("Get detailed information about a file or directory")]
+    [Description("Get file/directory info. See file-operations/SKILL.md")]
     public Task<string> GetFileInfo(
         [Description("Full path to the file or directory")] string path)
     {
@@ -449,7 +458,7 @@ public class FileSystemTools(
     }
 
     [McpServerTool, DisplayName("create_directory")]
-    [Description("Create a new directory")]
+    [Description("Create directory. See file-operations/SKILL.md")]
     public Task<string> CreateDirectory(
         [Description("Full path to the directory to create")] string path)
     {

@@ -14,12 +14,12 @@ namespace PlaywrightServerMcp.Tools;
 public class DatabaseTestingTools(ToolService toolService)
 {
     [McpServerTool]
-    [Description("Execute MongoDB test case from database")]
+    [Description("Execute MongoDB test case from database. See skills/playwright-mcp/tools/database-testing-tools.md.")]
     public async Task<string> ExecuteMongoDbTestCase(
-        [Description("Test case ID from MongoDB")] string testCaseId,
-        [Description("MongoDB connection string")] string connectionString = "mongodb://localhost:27017",
-        [Description("Database name")] string databaseName = "test",
-        [Description("Session ID")] string sessionId = "default")
+        string testCaseId,
+        string connectionString = "mongodb://localhost:27017",
+        string databaseName = "test",
+        string sessionId = "default")
     {
         try
         {
@@ -79,13 +79,13 @@ public class DatabaseTestingTools(ToolService toolService)
     }
 
     [McpServerTool]
-    [Description("Query MongoDB collection for test data")]
+    [Description("Query MongoDB collection for test data. See skills/playwright-mcp/tools/database-testing-tools.md.")]
     public static async Task<string> QueryMongoCollection(
-        [Description("Collection name to query")] string collectionName,
-        [Description("MongoDB query filter as JSON")] string filterJson = "{}",
-        [Description("Maximum documents to return")] int limit = 10,
-        [Description("MongoDB connection string")] string connectionString = "mongodb://localhost:27017",
-        [Description("Database name")] string databaseName = "test")
+        string collectionName,
+        string filterJson = "{}",
+        int limit = 10,
+        string connectionString = "mongodb://localhost:27017",
+        string databaseName = "test")
     {
         try
         {
@@ -115,12 +115,12 @@ public class DatabaseTestingTools(ToolService toolService)
     }
 
     [McpServerTool]
-    [Description("Insert test data into MongoDB collection")]
+    [Description("Insert test data into MongoDB collection. See skills/playwright-mcp/tools/database-testing-tools.md.")]
     public static async Task<string> InsertTestData(
-        [Description("Collection name")] string collectionName,
-        [Description("Test data as JSON")] string testDataJson,
-        [Description("MongoDB connection string")] string connectionString = "mongodb://localhost:27017",
-        [Description("Database name")] string databaseName = "test")
+        string collectionName,
+        string testDataJson,
+        string connectionString = "mongodb://localhost:27017",
+        string databaseName = "test")
     {
         try
         {
@@ -145,12 +145,12 @@ public class DatabaseTestingTools(ToolService toolService)
     }
 
     [McpServerTool]
-    [Description("Cleanup test data from MongoDB collection")]
+    [Description("Cleanup test data from MongoDB collection. See skills/playwright-mcp/tools/database-testing-tools.md.")]
     public static async Task<string> CleanupTestData(
-        [Description("Collection name")] string collectionName,
-        [Description("Filter for documents to delete as JSON")] string filterJson = "{}",
-        [Description("MongoDB connection string")] string connectionString = "mongodb://localhost:27017",
-        [Description("Database name")] string databaseName = "test")
+        string collectionName,
+        string filterJson = "{}",
+        string connectionString = "mongodb://localhost:27017",
+        string databaseName = "test")
     {
         try
         {
@@ -174,11 +174,11 @@ public class DatabaseTestingTools(ToolService toolService)
     }
 
     [McpServerTool]
-    [Description("Validate TADERATCS enrollment data in MongoDB")]
+    [Description("Validate TADERATCS enrollment data in MongoDB. See skills/playwright-mcp/tools/database-testing-tools.md.")]
     public static async Task<string> ValidateEnrollmentData(
-        [Description("Applicant identifier")] string applicantId,
-        [Description("MongoDB connection string")] string connectionString = "mongodb://localhost:27017",
-        [Description("Database name")] string databaseName = "test")
+        string applicantId,
+        string connectionString = "mongodb://localhost:27017",
+        string databaseName = "test")
     {
         try
         {
@@ -249,10 +249,10 @@ public class DatabaseTestingTools(ToolService toolService)
     }
 
     [McpServerTool]
-    [Description("Start video recording of test session")]
+    [Description("Start video recording of test session. See skills/playwright-mcp/tools/database-testing-tools.md.")]
     public async Task<string> StartVideoRecording(
-        [Description("Video filename")] string filename = "test-recording.webm",
-        [Description("Session ID")] string sessionId = "default")
+        string filename = "test-recording.webm",
+        string sessionId = "default")
     {
         try
         {
@@ -274,11 +274,11 @@ public class DatabaseTestingTools(ToolService toolService)
     }
 
     [McpServerTool]
-    [Description("Generate comprehensive test report")]
+    [Description("Generate comprehensive test report. See skills/playwright-mcp/tools/database-testing-tools.md.")]
     public static async Task<string> GenerateTestReport(
-        [Description("Test session data")] string testSessionData,
-        [Description("Report format: html, json, markdown")] string format = "html",
-        [Description("Output filename")] string filename = "test-report")
+        string testSessionData,
+        string format = "html",
+        string filename = "test-report")
     {
         try
         {
@@ -303,10 +303,10 @@ public class DatabaseTestingTools(ToolService toolService)
     }
 
     [McpServerTool]
-    [Description("Monitor memory usage and performance")]
+    [Description("Monitor memory usage and performance. See skills/playwright-mcp/tools/database-testing-tools.md.")]
     public async Task<string> MonitorSystemPerformance(
-        [Description("Duration in seconds")] int durationSeconds = 30,
-        [Description("Session ID")] string sessionId = "default")
+        int durationSeconds = 30,
+        string sessionId = "default")
     {
         try
         {
@@ -318,18 +318,20 @@ public class DatabaseTestingTools(ToolService toolService)
 
             for (var i = 0; i < durationSeconds; i++)
             {
-                var metric = await page.EvaluateAsync<object>(@"
-                    () => {
-                        const memory = performance.memory || {};
-                        return {
-                            timestamp: new Date().toISOString(),
-                            memoryUsed: memory.usedJSHeapSize ? Math.round(memory.usedJSHeapSize / 1024 / 1024) : 'N/A',
-                            memoryLimit: memory.jsHeapSizeLimit ? Math.round(memory.jsHeapSizeLimit / 1024 / 1024) : 'N/A',
-                            domNodes: document.getElementsByTagName('*').length,
-                            localStorageSize: JSON.stringify(localStorage).length
-                        };
-                    }
-                ");
+                var metric = await page.EvaluateAsync<object>("""
+
+                                                                                  () => {
+                                                                                      const memory = performance.memory || {};
+                                                                                      return {
+                                                                                          timestamp: new Date().toISOString(),
+                                                                                          memoryUsed: memory.usedJSHeapSize ? Math.round(memory.usedJSHeapSize / 1024 / 1024) : 'N/A',
+                                                                                          memoryLimit: memory.jsHeapSizeLimit ? Math.round(memory.jsHeapSizeLimit / 1024 / 1024) : 'N/A',
+                                                                                          domNodes: document.getElementsByTagName('*').length,
+                                                                                          localStorageSize: JSON.stringify(localStorage).length
+                                                                                      };
+                                                                                  }
+                                                                              
+                                                              """);
                 
                 metrics.Add(metric);
                 await Task.Delay(1000); // Wait 1 second
@@ -344,10 +346,10 @@ public class DatabaseTestingTools(ToolService toolService)
     }
 
     [McpServerTool]
-    [Description("Validate form data against business rules")]
+    [Description("Validate form data against business rules. See skills/playwright-mcp/tools/database-testing-tools.md.")]
     public static async Task<string> ValidateBusinessRules(
-        [Description("Form data as JSON")] string formDataJson,
-        [Description("Validation rules to apply")] string validationRules = "all")
+        string formDataJson,
+        string validationRules = "all")
     {
         try
         {
@@ -427,33 +429,35 @@ public class DatabaseTestingTools(ToolService toolService)
 
     private static string GenerateHtmlReport(string testData)
     {
-        return $@"
-<!DOCTYPE html>
-<html>
-<head>
-    <title>TADERATCS Test Report</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; margin: 20px; }}
-        .header {{ background: #f0f0f0; padding: 20px; border-radius: 5px; }}
-        .test-case {{ margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }}
-        .success {{ border-left: 5px solid #4CAF50; }}
-        .failure {{ border-left: 5px solid #f44336; }}
-        .timestamp {{ color: #666; font-size: 0.9em; }}
-    </style>
-</head>
-<body>
-    <div class='header'>
-        <h1>TADERATCS Enrollment Form Test Report</h1>
-        <p class='timestamp'>Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}</p>
-    </div>
-    
-    <div class='test-case success'>
-        <h3>Test Execution Summary</h3>
-        <p>Test Data: {testData}</p>
-        <p>Status: Completed</p>
-    </div>
-</body>
-</html>";
+        return $$"""
+
+                 <!DOCTYPE html>
+                 <html>
+                 <head>
+                     <title>TADERATCS Test Report</title>
+                     <style>
+                         body { font-family: Arial, sans-serif; margin: 20px; }
+                         .header { background: #f0f0f0; padding: 20px; border-radius: 5px; }
+                         .test-case { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+                         .success { border-left: 5px solid #4CAF50; }
+                         .failure { border-left: 5px solid #f44336; }
+                         .timestamp { color: #666; font-size: 0.9em; }
+                     </style>
+                 </head>
+                 <body>
+                     <div class='header'>
+                         <h1>TADERATCS Enrollment Form Test Report</h1>
+                         <p class='timestamp'>Generated: {{DateTime.Now:yyyy-MM-dd HH:mm:ss}}</p>
+                     </div>
+                     
+                     <div class='test-case success'>
+                         <h3>Test Execution Summary</h3>
+                         <p>Test Data: {{testData}}</p>
+                         <p>Status: Completed</p>
+                     </div>
+                 </body>
+                 </html>
+                 """;
     }
 
     private static string GenerateJsonReport(string testData)
@@ -478,25 +482,27 @@ public class DatabaseTestingTools(ToolService toolService)
 
     private static string GenerateMarkdownReport(string testData)
     {
-        return $@"# TADERATCS Test Report
+        return $"""
+                # TADERATCS Test Report
 
-## Test Summary
-- **Generated**: {DateTime.Now:yyyy-MM-dd HH:mm:ss}
-- **Application**: TADERATCS Enrollment Form
-- **Test Framework**: Playwright MCP Server
+                ## Test Summary
+                - **Generated**: {DateTime.Now:yyyy-MM-dd HH:mm:ss}
+                - **Application**: TADERATCS Enrollment Form
+                - **Test Framework**: Playwright MCP Server
 
-## Test Data
-```json
-{testData}
-```
+                ## Test Data
+                ```json
+                {testData}
+                ```
 
-## Results
-✅ Tests completed successfully
+                ## Results
+                ✅ Tests completed successfully
 
-## Recommendations
-- Monitor localStorage performance
-- Validate cross-browser compatibility
-- Review accessibility compliance
-";
+                ## Recommendations
+                - Monitor localStorage performance
+                - Validate cross-browser compatibility
+                - Review accessibility compliance
+
+                """;
     }
 }

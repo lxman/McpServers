@@ -11,11 +11,11 @@ namespace PlaywrightServerMcp.Tools;
 public class VisualTestingTools(PlaywrightSessionManager sessionManager)
 {
     [McpServerTool]
-    [Description("Capture full page or element screenshot")]
+    [Description("Capture full page or element screenshot. See skills/playwright-mcp/tools/visual-testing-tools.md.")]
     public async Task<string> CaptureScreenshot(
-        [Description("Optional element selector to capture specific element")] string? selector = null,
-        [Description("Capture full page including scrollable areas")] bool fullPage = false,
-        [Description("Session ID")] string sessionId = "default")
+        string? selector = null,
+        bool fullPage = false,
+        string sessionId = "default")
     {
         try
         {
@@ -74,10 +74,10 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Capture screenshot of specific element")]
+    [Description("Capture screenshot of specific element. See skills/playwright-mcp/tools/visual-testing-tools.md.")]
     public async Task<string> CaptureElementScreenshot(
-        [Description("Element selector (CSS selector or data-testid)")] string selector,
-        [Description("Session ID")] string sessionId = "default")
+        string selector,
+        string sessionId = "default")
     {
         try
         {
@@ -107,31 +107,33 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
             // Get element info before screenshot
-            var elementInfo = await session.Page.EvaluateAsync<object>($@"
-                (() => {{
-                    const element = document.querySelector('{finalSelector.Replace("'", "\\'")}');
-                    if (!element) return {{ error: 'Element not found' }};
-                    
-                    const rect = element.getBoundingClientRect();
-                    const computedStyles = window.getComputedStyle(element);
-                    
-                    return {{
-                        tagName: element.tagName.toLowerCase(),
-                        className: element.className,
-                        dimensions: {{
-                            width: rect.width,
-                            height: rect.height
-                        }},
-                        position: {{
-                            top: rect.top,
-                            left: rect.left
-                        }},
-                        visible: rect.width > 0 && rect.height > 0 && 
-                                computedStyles.visibility === 'visible' && 
-                                computedStyles.display !== 'none'
-                    }};
-                }})()
-            ");
+            var elementInfo = await session.Page.EvaluateAsync<object>($$"""
+
+                                                                                         (() => {
+                                                                                             const element = document.querySelector('{{finalSelector.Replace("'", "\\'")}}');
+                                                                                             if (!element) return { error: 'Element not found' };
+                                                                                             
+                                                                                             const rect = element.getBoundingClientRect();
+                                                                                             const computedStyles = window.getComputedStyle(element);
+                                                                                             
+                                                                                             return {
+                                                                                                 tagName: element.tagName.toLowerCase(),
+                                                                                                 className: element.className,
+                                                                                                 dimensions: {
+                                                                                                     width: rect.width,
+                                                                                                     height: rect.height
+                                                                                                 },
+                                                                                                 position: {
+                                                                                                     top: rect.top,
+                                                                                                     left: rect.left
+                                                                                                 },
+                                                                                                 visible: rect.width > 0 && rect.height > 0 && 
+                                                                                                         computedStyles.visibility === 'visible' && 
+                                                                                                         computedStyles.display !== 'none'
+                                                                                             };
+                                                                                         })()
+                                                                                     
+                                                                         """);
 
             // Take screenshot
             byte[] screenshotBytes = await element.ScreenshotAsync();
@@ -158,11 +160,11 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Generate PDF of current page")]
+    [Description("Generate PDF of current page. See skills/playwright-mcp/tools/visual-testing-tools.md.")]
     public async Task<string> GeneratePDF(
-        [Description("Optional output path (default: auto-generated) - must be canonical")] string? path = null,
-        [Description("Use landscape orientation")] bool landscape = false,
-        [Description("Session ID")] string sessionId = "default")
+        string? path = null,
+        bool landscape = false,
+        string sessionId = "default")
     {
         try
         {
@@ -188,20 +190,22 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
             });
 
             // Get page info
-            var pageInfo = await session.Page.EvaluateAsync<object>(@"
-                (() => {
-                    return {
-                        title: document.title,
-                        url: window.location.href,
-                        viewport: {
-                            width: window.innerWidth,
-                            height: window.innerHeight
-                        },
-                        documentHeight: document.documentElement.scrollHeight,
-                        lastModified: document.lastModified
-                    };
-                })()
-            ");
+            var pageInfo = await session.Page.EvaluateAsync<object>("""
+
+                                                                                    (() => {
+                                                                                        return {
+                                                                                            title: document.title,
+                                                                                            url: window.location.href,
+                                                                                            viewport: {
+                                                                                                width: window.innerWidth,
+                                                                                                height: window.innerHeight
+                                                                                            },
+                                                                                            documentHeight: document.documentElement.scrollHeight,
+                                                                                            lastModified: document.lastModified
+                                                                                        };
+                                                                                    })()
+                                                                                
+                                                                    """);
             
             var result = new
             {
@@ -224,10 +228,10 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Simulate hover effects on element")]
+    [Description("Simulate hover effects on element. See skills/playwright-mcp/tools/visual-testing-tools.md.")]
     public async Task<string> HoverElement(
-        [Description("Element selector (CSS selector or data-testid)")] string selector,
-        [Description("Session ID")] string sessionId = "default")
+        string selector,
+        string sessionId = "default")
     {
         try
         {
@@ -250,24 +254,26 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
             }
 
             // Get styles before hover
-            var beforeStyles = await session.Page.EvaluateAsync<object>($@"
-                (() => {{
-                    const element = document.querySelector('{finalSelector.Replace("'", "\\'")}');
-                    if (!element) return {{ error: 'Element not found' }};
-                    
-                    const computedStyles = window.getComputedStyle(element);
-                    return {{
-                        backgroundColor: computedStyles.backgroundColor,
-                        color: computedStyles.color,
-                        borderColor: computedStyles.borderColor,
-                        opacity: computedStyles.opacity,
-                        transform: computedStyles.transform,
-                        cursor: computedStyles.cursor,
-                        textDecoration: computedStyles.textDecoration,
-                        boxShadow: computedStyles.boxShadow
-                    }};
-                }})()
-            ");
+            var beforeStyles = await session.Page.EvaluateAsync<object>($$"""
+
+                                                                                          (() => {
+                                                                                              const element = document.querySelector('{{finalSelector.Replace("'", "\\'")}}');
+                                                                                              if (!element) return { error: 'Element not found' };
+                                                                                              
+                                                                                              const computedStyles = window.getComputedStyle(element);
+                                                                                              return {
+                                                                                                  backgroundColor: computedStyles.backgroundColor,
+                                                                                                  color: computedStyles.color,
+                                                                                                  borderColor: computedStyles.borderColor,
+                                                                                                  opacity: computedStyles.opacity,
+                                                                                                  transform: computedStyles.transform,
+                                                                                                  cursor: computedStyles.cursor,
+                                                                                                  textDecoration: computedStyles.textDecoration,
+                                                                                                  boxShadow: computedStyles.boxShadow
+                                                                                              };
+                                                                                          })()
+                                                                                      
+                                                                          """);
 
             // Perform hover
             await element.HoverAsync();
@@ -276,24 +282,26 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
             await Task.Delay(200);
 
             // Get styles after hover
-            var afterStyles = await session.Page.EvaluateAsync<object>($@"
-                (() => {{
-                    const element = document.querySelector('{finalSelector.Replace("'", "\\'")}');
-                    if (!element) return {{ error: 'Element not found' }};
-                    
-                    const computedStyles = window.getComputedStyle(element);
-                    return {{
-                        backgroundColor: computedStyles.backgroundColor,
-                        color: computedStyles.color,
-                        borderColor: computedStyles.borderColor,
-                        opacity: computedStyles.opacity,
-                        transform: computedStyles.transform,
-                        cursor: computedStyles.cursor,
-                        textDecoration: computedStyles.textDecoration,
-                        boxShadow: computedStyles.boxShadow
-                    }};
-                }})()
-            ");
+            var afterStyles = await session.Page.EvaluateAsync<object>($$"""
+
+                                                                                         (() => {
+                                                                                             const element = document.querySelector('{{finalSelector.Replace("'", "\\'")}}');
+                                                                                             if (!element) return { error: 'Element not found' };
+                                                                                             
+                                                                                             const computedStyles = window.getComputedStyle(element);
+                                                                                             return {
+                                                                                                 backgroundColor: computedStyles.backgroundColor,
+                                                                                                 color: computedStyles.color,
+                                                                                                 borderColor: computedStyles.borderColor,
+                                                                                                 opacity: computedStyles.opacity,
+                                                                                                 transform: computedStyles.transform,
+                                                                                                 cursor: computedStyles.cursor,
+                                                                                                 textDecoration: computedStyles.textDecoration,
+                                                                                                 boxShadow: computedStyles.boxShadow
+                                                                                             };
+                                                                                         })()
+                                                                                     
+                                                                         """);
 
             var result = new
             {
@@ -314,10 +322,10 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Analyze hover effects and style changes")]
+    [Description("Analyze hover effects and style changes. See skills/playwright-mcp/tools/visual-testing-tools.md.")]
     public async Task<string> AnalyzeHoverEffects(
-        [Description("Element selector (CSS selector or data-testid)")] string selector,
-        [Description("Session ID")] string sessionId = "default")
+        string selector,
+        string sessionId = "default")
     {
         try
         {
@@ -340,107 +348,109 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
             }
 
             // Comprehensive hover analysis
-            var hoverAnalysis = await session.Page.EvaluateAsync<object>($@"
-                (() => {{
-                    const element = document.querySelector('{finalSelector.Replace("'", "\\'")}');
-                    if (!element) return {{ error: 'Element not found' }};
-                    
-                    // Get initial styles
-                    const initialStyles = window.getComputedStyle(element);
-                    const initialState = {{
-                        backgroundColor: initialStyles.backgroundColor,
-                        color: initialStyles.color,
-                        borderColor: initialStyles.borderColor,
-                        opacity: initialStyles.opacity,
-                        transform: initialStyles.transform,
-                        cursor: initialStyles.cursor,
-                        textDecoration: initialStyles.textDecoration,
-                        boxShadow: initialStyles.boxShadow,
-                        fontSize: initialStyles.fontSize,
-                        fontWeight: initialStyles.fontWeight,
-                        borderRadius: initialStyles.borderRadius,
-                        padding: initialStyles.padding,
-                        margin: initialStyles.margin
-                    }};
-                    
-                    // Trigger hover
-                    element.dispatchEvent(new MouseEvent('mouseenter', {{ bubbles: true }}));
-                    
-                    // Wait for styles to change
-                    return new Promise(resolve => {{
-                        setTimeout(() => {{
-                            const hoverStyles = window.getComputedStyle(element);
-                            const hoverState = {{
-                                backgroundColor: hoverStyles.backgroundColor,
-                                color: hoverStyles.color,
-                                borderColor: hoverStyles.borderColor,
-                                opacity: hoverStyles.opacity,
-                                transform: hoverStyles.transform,
-                                cursor: hoverStyles.cursor,
-                                textDecoration: hoverStyles.textDecoration,
-                                boxShadow: hoverStyles.boxShadow,
-                                fontSize: hoverStyles.fontSize,
-                                fontWeight: hoverStyles.fontWeight,
-                                borderRadius: hoverStyles.borderRadius,
-                                padding: hoverStyles.padding,
-                                margin: hoverStyles.margin
-                            }};
-                            
-                            // Compare states
-                            const changes = {{}};
-                            const similarities = [];
-                            
-                            Object.keys(initialState).forEach(property => {{
-                                if (initialState[property] !== hoverState[property]) {{
-                                    changes[property] = {{
-                                        before: initialState[property],
-                                        after: hoverState[property]
-                                    }};
-                                }} else {{
-                                    similarities.push(property);
-                                }}
-                            }});
-                            
-                            // Check for CSS hover rules
-                            const hasHoverRules = !!Array.from(document.styleSheets)
-                                .some(sheet => {{
-                                    try {{
-                                        return Array.from(sheet.cssRules || []).some(rule => 
-                                            rule.selectorText && rule.selectorText.includes(':hover')
-                                        );
-                                    }} catch (e) {{
-                                        return false;
-                                    }}
-                                }});
-                            
-                            // Reset hover state
-                            element.dispatchEvent(new MouseEvent('mouseleave', {{ bubbles: true }}));
-                            
-                            resolve({{
-                                selector: '{finalSelector.Replace("'", "\\'")}',
-                                elementInfo: {{
-                                    tagName: element.tagName.toLowerCase(),
-                                    className: element.className,
-                                    id: element.id || null,
-                                    hasHoverRules: hasHoverRules
-                                }},
-                                initialState: initialState,
-                                hoverState: hoverState,
-                                changes: changes,
-                                similarities: similarities,
-                                analysis: {{
-                                    hasHoverEffects: Object.keys(changes).length > 0,
-                                    changedProperties: Object.keys(changes),
-                                    unchangedProperties: similarities,
-                                    significantChanges: Object.keys(changes).filter(prop => 
-                                        ['backgroundColor', 'color', 'transform', 'boxShadow'].includes(prop)
-                                    )
-                                }}
-                            }});
-                        }}, 100);
-                    }});
-                }})()
-            ");
+            var hoverAnalysis = await session.Page.EvaluateAsync<object>($$"""
+
+                                                                                           (() => {
+                                                                                               const element = document.querySelector('{{finalSelector.Replace("'", "\\'")}}');
+                                                                                               if (!element) return { error: 'Element not found' };
+                                                                                               
+                                                                                               // Get initial styles
+                                                                                               const initialStyles = window.getComputedStyle(element);
+                                                                                               const initialState = {
+                                                                                                   backgroundColor: initialStyles.backgroundColor,
+                                                                                                   color: initialStyles.color,
+                                                                                                   borderColor: initialStyles.borderColor,
+                                                                                                   opacity: initialStyles.opacity,
+                                                                                                   transform: initialStyles.transform,
+                                                                                                   cursor: initialStyles.cursor,
+                                                                                                   textDecoration: initialStyles.textDecoration,
+                                                                                                   boxShadow: initialStyles.boxShadow,
+                                                                                                   fontSize: initialStyles.fontSize,
+                                                                                                   fontWeight: initialStyles.fontWeight,
+                                                                                                   borderRadius: initialStyles.borderRadius,
+                                                                                                   padding: initialStyles.padding,
+                                                                                                   margin: initialStyles.margin
+                                                                                               };
+                                                                                               
+                                                                                               // Trigger hover
+                                                                                               element.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+                                                                                               
+                                                                                               // Wait for styles to change
+                                                                                               return new Promise(resolve => {
+                                                                                                   setTimeout(() => {
+                                                                                                       const hoverStyles = window.getComputedStyle(element);
+                                                                                                       const hoverState = {
+                                                                                                           backgroundColor: hoverStyles.backgroundColor,
+                                                                                                           color: hoverStyles.color,
+                                                                                                           borderColor: hoverStyles.borderColor,
+                                                                                                           opacity: hoverStyles.opacity,
+                                                                                                           transform: hoverStyles.transform,
+                                                                                                           cursor: hoverStyles.cursor,
+                                                                                                           textDecoration: hoverStyles.textDecoration,
+                                                                                                           boxShadow: hoverStyles.boxShadow,
+                                                                                                           fontSize: hoverStyles.fontSize,
+                                                                                                           fontWeight: hoverStyles.fontWeight,
+                                                                                                           borderRadius: hoverStyles.borderRadius,
+                                                                                                           padding: hoverStyles.padding,
+                                                                                                           margin: hoverStyles.margin
+                                                                                                       };
+                                                                                                       
+                                                                                                       // Compare states
+                                                                                                       const changes = {};
+                                                                                                       const similarities = [];
+                                                                                                       
+                                                                                                       Object.keys(initialState).forEach(property => {
+                                                                                                           if (initialState[property] !== hoverState[property]) {
+                                                                                                               changes[property] = {
+                                                                                                                   before: initialState[property],
+                                                                                                                   after: hoverState[property]
+                                                                                                               };
+                                                                                                           } else {
+                                                                                                               similarities.push(property);
+                                                                                                           }
+                                                                                                       });
+                                                                                                       
+                                                                                                       // Check for CSS hover rules
+                                                                                                       const hasHoverRules = !!Array.from(document.styleSheets)
+                                                                                                           .some(sheet => {
+                                                                                                               try {
+                                                                                                                   return Array.from(sheet.cssRules || []).some(rule => 
+                                                                                                                       rule.selectorText && rule.selectorText.includes(':hover')
+                                                                                                                   );
+                                                                                                               } catch (e) {
+                                                                                                                   return false;
+                                                                                                               }
+                                                                                                           });
+                                                                                                       
+                                                                                                       // Reset hover state
+                                                                                                       element.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+                                                                                                       
+                                                                                                       resolve({
+                                                                                                           selector: '{{finalSelector.Replace("'", "\\'")}}',
+                                                                                                           elementInfo: {
+                                                                                                               tagName: element.tagName.toLowerCase(),
+                                                                                                               className: element.className,
+                                                                                                               id: element.id || null,
+                                                                                                               hasHoverRules: hasHoverRules
+                                                                                                           },
+                                                                                                           initialState: initialState,
+                                                                                                           hoverState: hoverState,
+                                                                                                           changes: changes,
+                                                                                                           similarities: similarities,
+                                                                                                           analysis: {
+                                                                                                               hasHoverEffects: Object.keys(changes).length > 0,
+                                                                                                               changedProperties: Object.keys(changes),
+                                                                                                               unchangedProperties: similarities,
+                                                                                                               significantChanges: Object.keys(changes).filter(prop => 
+                                                                                                                   ['backgroundColor', 'color', 'transform', 'boxShadow'].includes(prop)
+                                                                                                               )
+                                                                                                           }
+                                                                                                       });
+                                                                                                   }, 100);
+                                                                                               });
+                                                                                           })()
+                                                                                       
+                                                                           """);
 
             // Also perform actual hover for verification
             await element.HoverAsync();
@@ -463,11 +473,11 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Visual regression testing with pixel comparison")]
+    [Description("Visual regression testing with pixel comparison. See skills/playwright-mcp/tools/visual-testing-tools.md.")]
     public async Task<string> CompareScreenshots(
-        [Description("Path to baseline screenshot for comparison - must be canonical")] string baselinePath,
-        [Description("Optional element selector to compare specific element")] string? selector = null,
-        [Description("Session ID")] string sessionId = "default")
+        string baselinePath,
+        string? selector = null,
+        string sessionId = "default")
     {
         try
         {

@@ -11,10 +11,10 @@ namespace PlaywrightServerMcp.Tools;
 public class TaderatcsTestingTools(ToolService toolService)
 {
     [McpServerTool]
-    [Description("Execute comprehensive TADERATCS enrollment form test suite")]
+    [Description("Execute comprehensive TADERATCS enrollment form test suite. See skills/playwright-mcp/tools/advanced-testing-tools.md.")]
     public async Task<string> ExecuteComprehensiveEnrollmentTest(
-        [Description("Base URL of enrollment form")] string baseUrl = "http://localhost:4200",
-        [Description("Browser session ID")] string sessionId = "default")
+        string baseUrl = "http://localhost:4200",
+        string sessionId = "default")
     {
         try
         {
@@ -59,10 +59,10 @@ public class TaderatcsTestingTools(ToolService toolService)
     }
 
     [McpServerTool]
-    [Description("Test specific TADERATCS business rules")]
+    [Description("Test specific TADERATCS business rules. See skills/playwright-mcp/tools/advanced-testing-tools.md.")]
     public async Task<string> TestBusinessRules(
-        [Description("Business rule type: ssn_validation, subprogram_rules, cross_tab_validation")] string ruleType,
-        [Description("Browser session ID")] string sessionId = "default")
+        string ruleType,
+        string sessionId = "default")
     {
         try
         {

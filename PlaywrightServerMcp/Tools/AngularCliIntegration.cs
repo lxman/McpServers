@@ -44,12 +44,12 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Execute Angular CLI commands and capture their output with comprehensive error handling")]
+    [Description("Execute Angular CLI commands and capture their output with comprehensive error handling. See skills/playwright-mcp/tools/angular/cli-integration.md.")]
     public async Task<string> ExecuteNgCommands(
-        [Description("Angular CLI command to execute (e.g., 'ng build', 'ng test', 'ng generate component my-comp')")] string command,
-        [Description("Working directory path (defaults to current directory)")] string workingDirectory = "",
-        [Description("Timeout in seconds (default: 120)")] int timeoutSeconds = 120,
-        [Description("Session ID for context")] string sessionId = "default")
+        string command,
+        string workingDirectory = "",
+        int timeoutSeconds = 120,
+        string sessionId = "default")
     {
         try
         {
@@ -94,10 +94,10 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Check if Angular CLI is installed and get version information")]
+    [Description("Check if Angular CLI is installed and get version information. See skills/playwright-mcp/tools/angular/cli-integration.md.")]
     public async Task<string> CheckAngularCliStatus(
-        [Description("Working directory to check (defaults to current directory)")] string workingDirectory = "",
-        [Description("Session ID for context")] string sessionId = "default")
+        string workingDirectory = "",
+        string sessionId = "default")
     {
         try
         {
@@ -156,13 +156,13 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Generate Angular components, services, or other artifacts using Angular CLI")]
+    [Description("Generate Angular components, services, or other artifacts using Angular CLI. See skills/playwright-mcp/tools/angular/cli-integration.md.")]
     public async Task<string> GenerateAngularArtifact(
-        [Description("Type of artifact to generate (component, service, module, directive, pipe, etc.)")] string artifactType,
-        [Description("Name of the artifact")] string artifactName,
-        [Description("Additional CLI options (e.g., '--skip-tests', '--inline-style')")] string options = "",
-        [Description("Working directory (defaults to current directory)")] string workingDirectory = "",
-        [Description("Session ID for context")] string sessionId = "default")
+        string artifactType,
+        string artifactName,
+        string options = "",
+        string workingDirectory = "",
+        string sessionId = "default")
     {
         try
         {
@@ -238,12 +238,12 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Build Angular project with specified configuration")]
+    [Description("Build Angular project with specified configuration. See skills/playwright-mcp/tools/angular/cli-integration.md.")]
     public async Task<string> BuildAngularProject(
-        [Description("Build configuration (development, production, or custom configuration name)")] string configuration = "development",
-        [Description("Additional build options (e.g., '--watch', '--aot')")] string options = "",
-        [Description("Working directory (defaults to current directory)")] string workingDirectory = "",
-        [Description("Session ID for context")] string sessionId = "default")
+        string configuration = "development",
+        string options = "",
+        string workingDirectory = "",
+        string sessionId = "default")
     {
         try
         {

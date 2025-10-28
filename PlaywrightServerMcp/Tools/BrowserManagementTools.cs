@@ -11,10 +11,10 @@ namespace PlaywrightServerMcp.Tools;
 public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
 {
     [McpServerTool]
-    [Description("Open new tab in current browser session")]
+    [Description("Open new tab in current browser session. See skills/playwright-mcp/tools/browser-management-tools.md.")]
     public async Task<string> OpenNewTab(
-        [Description("Optional URL to navigate to in new tab")] string? url = null,
-        [Description("Session ID")] string sessionId = "default")
+        string? url = null,
+        string sessionId = "default")
     {
         try
         {
@@ -81,10 +81,10 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Switch to a specific tab by index")]
+    [Description("Switch to a specific tab by index. See skills/playwright-mcp/tools/browser-management-tools.md.")]
     public async Task<string> SwitchToTab(
-        [Description("Tab index (0-based)")] int index,
-        [Description("Session ID")] string sessionId = "default")
+        int index,
+        string sessionId = "default")
     {
         try
         {
@@ -150,10 +150,10 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
     }
 
     [McpServerTool]
-    [Description("Clear browser storage (localStorage, sessionStorage, or indexedDB)")]
+    [Description("Clear browser storage (localStorage, sessionStorage, or indexedDB). See skills/playwright-mcp/tools/browser-management-tools.md.")]
     public async Task<string> ClearStorage(
-        [Description("Storage type: 'localStorage', 'sessionStorage', 'indexedDB', 'cookies', 'all'")] string type = "all",
-        [Description("Session ID")] string sessionId = "default")
+        string type = "all",
+        string sessionId = "default")
     {
         try
         {
@@ -172,13 +172,15 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
             {
                 try
                 {
-                    var localStorageCount = await session.Page.EvaluateAsync<int>(@"
-                        () => {
-                            const count = localStorage.length;
-                            localStorage.clear();
-                            return count;
-                        }
-                    ");
+                    var localStorageCount = await session.Page.EvaluateAsync<int>("""
+
+                                                () => {
+                                                    const count = localStorage.length;
+                                                    localStorage.clear();
+                                                    return count;
+                                                }
+                                            
+                        """);
 
                     clearResults.Add(new
                     {
@@ -198,13 +200,15 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
             {
                 try
                 {
-                    var sessionStorageCount = await session.Page.EvaluateAsync<int>(@"
-                        () => {
-                            const count = sessionStorage.length;
-                            sessionStorage.clear();
-                            return count;
-                        }
-                    ");
+                    var sessionStorageCount = await session.Page.EvaluateAsync<int>("""
+
+                                                () => {
+                                                    const count = sessionStorage.length;
+                                                    sessionStorage.clear();
+                                                    return count;
+                                                }
+                                            
+                        """);
 
                     clearResults.Add(new
                     {
@@ -224,34 +228,36 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
             {
                 try
                 {
-                    var indexedDbResult = await session.Page.EvaluateAsync<object>(@"
-                        async () => {
-                            try {
-                                const databases = await indexedDB.databases();
-                                const deletedDatabases = [];
-                                
-                                for (const db of databases) {
-                                    const deleteRequest = indexedDB.deleteDatabase(db.name);
-                                    await new Promise((resolve, reject) => {
-                                        deleteRequest.onsuccess = () => resolve();
-                                        deleteRequest.onerror = () => reject(deleteRequest.error);
-                                    });
-                                    deletedDatabases.push(db.name);
-                                }
-                                
-                                return {
-                                    success: true,
-                                    deletedDatabases: deletedDatabases,
-                                    count: deletedDatabases.length
-                                };
-                            } catch (error) {
-                                return {
-                                    success: false,
-                                    error: error.message
-                                };
-                            }
-                        }
-                    ");
+                    var indexedDbResult = await session.Page.EvaluateAsync<object>("""
+
+                                                async () => {
+                                                    try {
+                                                        const databases = await indexedDB.databases();
+                                                        const deletedDatabases = [];
+                                                        
+                                                        for (const db of databases) {
+                                                            const deleteRequest = indexedDB.deleteDatabase(db.name);
+                                                            await new Promise((resolve, reject) => {
+                                                                deleteRequest.onsuccess = () => resolve();
+                                                                deleteRequest.onerror = () => reject(deleteRequest.error);
+                                                            });
+                                                            deletedDatabases.push(db.name);
+                                                        }
+                                                        
+                                                        return {
+                                                            success: true,
+                                                            deletedDatabases: deletedDatabases,
+                                                            count: deletedDatabases.length
+                                                        };
+                                                    } catch (error) {
+                                                        return {
+                                                            success: false,
+                                                            error: error.message
+                                                        };
+                                                    }
+                                                }
+                                            
+                        """);
 
                     if (indexedDbResult != null)
                     {
@@ -304,18 +310,20 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
             {
                 try
                 {
-                    await session.Page.EvaluateAsync(@"
-                        async () => {
-                            if ('caches' in window) {
-                                const cacheNames = await caches.keys();
-                                await Promise.all(
-                                    cacheNames.map(cacheName => caches.delete(cacheName))
-                                );
-                                return cacheNames.length;
-                            }
-                            return 0;
-                        }
-                    ");
+                    await session.Page.EvaluateAsync("""
+
+                                                                             async () => {
+                                                                                 if ('caches' in window) {
+                                                                                     const cacheNames = await caches.keys();
+                                                                                     await Promise.all(
+                                                                                         cacheNames.map(cacheName => caches.delete(cacheName))
+                                                                                     );
+                                                                                     return cacheNames.length;
+                                                                                 }
+                                                                                 return 0;
+                                                                             }
+                                                                         
+                                                     """);
 
                     clearResults.Add(new
                     {
