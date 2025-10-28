@@ -15,6 +15,7 @@ public class TerminalTools(
     ProcessManager processManager,
     SecurityManager securityManager,
     AuditLogger auditLogger,
+    ResponseSizeGuard responseSizeGuard,
     ILogger<TerminalTools> logger)
 {
     [McpServerTool, DisplayName("execute_command")]
@@ -39,7 +40,7 @@ public class TerminalTools(
 
             ProcessResult result = await processManager.StartProcessAsync(command, sessionId, timeoutMs, workingDirectory);
 
-            return JsonSerializer.Serialize(new
+            var responseObject = new
             {
                 success = result.Success,
                 exitCode = result.ExitCode,
@@ -48,7 +49,28 @@ public class TerminalTools(
                 isTimeout = result.IsTimeout,
                 isRunning = result.IsRunning,
                 processId = result.ProcessId
-            }, SerializerOptions.JsonOptionsIndented);
+            };
+
+            // Check response size before returning
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "execute_command");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return responseSizeGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Command '{command}' produced output that is too large.",
+                    "Try redirecting output to a file, using filters like 'head' or 'tail', or reading the output incrementally using get_session_output.",
+                    new
+                    {
+                        command,
+                        sessionId,
+                        outputLength = result.Output?.Length ?? 0,
+                        errorLength = result.Error?.Length ?? 0,
+                        suggestion = "Consider using: command | head -n 100"
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
@@ -104,11 +126,11 @@ public class TerminalTools(
             if (result == null)
             {
                 return Task.FromResult(JsonSerializer.Serialize(
-                    new { success = false, error = "Session not found", sessionId }, 
+                    new { success = false, error = "Session not found", sessionId },
                     SerializerOptions.JsonOptionsIndented));
             }
 
-            return Task.FromResult(JsonSerializer.Serialize(new
+            var responseObject = new
             {
                 success = true,
                 sessionId,
@@ -117,7 +139,28 @@ public class TerminalTools(
                 isRunning = result.IsRunning,
                 exitCode = result.ExitCode,
                 processId = result.ProcessId
-            }, SerializerOptions.JsonOptionsIndented));
+            };
+
+            // Check response size before returning
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "get_session_output");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return Task.FromResult(responseSizeGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Session '{sessionId}' has accumulated output that is too large.",
+                    "Close the current session and create a new one, or redirect command output to files for large operations.",
+                    new
+                    {
+                        sessionId,
+                        outputLength = result.Output?.Length ?? 0,
+                        errorLength = result.Error?.Length ?? 0,
+                        isRunning = result.IsRunning,
+                        suggestion = "Consider using output redirection: command > output.txt"
+                    }));
+            }
+
+            return Task.FromResult(sizeCheck.SerializedJson!);
         }
         catch (Exception ex)
         {

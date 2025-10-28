@@ -18,6 +18,7 @@ public class FileEditingTools(
     FileEditor fileEditor,
     EditApprovalService approvalService,
     FileVersionService versionService,
+    ResponseSizeGuard responseSizeGuard,
     ILogger<FileEditingTools> logger)
 {
     [McpServerTool, DisplayName("prepare_replace_lines")]
@@ -256,65 +257,190 @@ public class FileEditingTools(
     }
 
     [McpServerTool, DisplayName("find_in_file")]
-    [Description("Find lines matching pattern. See file-operations/SKILL.md")]
+    [Description("Find lines matching pattern. Supports pagination and count-only mode. See file-operations/SKILL.md")]
     public async Task<string> FindInFile(
         string filePath,
         string pattern,
         bool caseSensitive = false,
-        bool useRegex = false)
+        bool useRegex = false,
+        [Description("Maximum number of matches to return (1-1000, default: 500)")] int maxMatches = 500,
+        [Description("Number of matches to skip (for pagination, default: 0)")] int skip = 0,
+        [Description("Return only the count of matches, not the actual matches")] bool countOnly = false,
+        [Description("Include surrounding lines for context")] bool includeContext = false,
+        [Description("Number of context lines before/after each match (default: 2)")] int contextLines = 2)
     {
         try
         {
             filePath = Path.GetFullPath(filePath);
-            
+
             if (!File.Exists(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File not found" }, 
+                return JsonSerializer.Serialize(new { success = false, error = "File not found" },
                     SerializerOptions.JsonOptionsIndented);
             }
 
-            string[] allLines = await File.ReadAllLinesAsync(filePath);
-            var matches = new List<object>();
+            // Clamp parameters to safe ranges
+            maxMatches = Math.Clamp(maxMatches, 1, 1000);
+            skip = Math.Max(0, skip);
+            contextLines = Math.Clamp(contextLines, 0, 10);
 
+            string[] allLines = await File.ReadAllLinesAsync(filePath);
+            var allMatches = new List<(int lineNumber, string content)>();
+
+            // Find all matches
             for (var i = 0; i < allLines.Length; i++)
             {
                 var isMatch = false;
-                
+
                 if (useRegex)
                 {
                     var regex = new Regex(
                         pattern,
-                        caseSensitive 
-                            ? RegexOptions.None 
+                        caseSensitive
+                            ? RegexOptions.None
                             : RegexOptions.IgnoreCase);
                     isMatch = regex.IsMatch(allLines[i]);
                 }
                 else
                 {
-                    StringComparison comparison = caseSensitive 
-                        ? StringComparison.Ordinal 
+                    StringComparison comparison = caseSensitive
+                        ? StringComparison.Ordinal
                         : StringComparison.OrdinalIgnoreCase;
                     isMatch = allLines[i].Contains(pattern, comparison);
                 }
 
                 if (isMatch)
                 {
-                    matches.Add(new
+                    allMatches.Add((i + 1, allLines[i]));
+                }
+            }
+
+            int totalMatches = allMatches.Count;
+
+            // Count-only mode - just return statistics
+            if (countOnly)
+            {
+                var countResponse = new
+                {
+                    success = true,
+                    countOnly = true,
+                    filePath,
+                    pattern,
+                    caseSensitive,
+                    useRegex,
+                    totalMatches,
+                    totalLines = allLines.Length,
+                    firstMatchLine = totalMatches > 0 ? (int?)allMatches[0].lineNumber : null,
+                    lastMatchLine = totalMatches > 0 ? (int?)allMatches[^1].lineNumber : null,
+                    suggestion = totalMatches > 0
+                        ? $"Use maxMatches and skip parameters to paginate through all {totalMatches} matches"
+                        : "No matches found"
+                };
+
+                return JsonSerializer.Serialize(countResponse, SerializerOptions.JsonOptionsIndented);
+            }
+
+            // Paginate matches
+            var paginatedMatches = allMatches.Skip(skip).Take(maxMatches).ToList();
+            bool hasMore = skip + paginatedMatches.Count < totalMatches;
+
+            // Build match objects with optional context
+            var matchObjects = new List<object>();
+            foreach (var (lineNumber, content) in paginatedMatches)
+            {
+                if (includeContext)
+                {
+                    int startLine = Math.Max(0, lineNumber - 1 - contextLines);
+                    int endLine = Math.Min(allLines.Length - 1, lineNumber - 1 + contextLines);
+
+                    var contextLinesData = new List<object>();
+                    for (int i = startLine; i <= endLine; i++)
                     {
-                        lineNumber = i + 1,
-                        content = allLines[i]
+                        contextLinesData.Add(new
+                        {
+                            lineNumber = i + 1,
+                            content = allLines[i],
+                            isMatch = i == lineNumber - 1
+                        });
+                    }
+
+                    matchObjects.Add(new
+                    {
+                        lineNumber,
+                        content,
+                        context = contextLinesData
+                    });
+                }
+                else
+                {
+                    matchObjects.Add(new
+                    {
+                        lineNumber,
+                        content
                     });
                 }
             }
 
-            return JsonSerializer.Serialize(new
+            var responseObject = new
             {
                 success = true,
                 filePath,
                 pattern,
-                matchesFound = matches.Count,
-                matches
-            }, SerializerOptions.JsonOptionsIndented);
+                caseSensitive,
+                useRegex,
+                totalMatches,
+                returnedCount = paginatedMatches.Count,
+                skip,
+                maxMatches,
+                hasMore,
+                nextSkip = hasMore ? (int?)(skip + paginatedMatches.Count) : null,
+                includeContext,
+                matches = matchObjects,
+                message = hasMore
+                    ? $"Showing {paginatedMatches.Count} of {totalMatches} matches (items {skip + 1}-{skip + paginatedMatches.Count}). Use skip={skip + paginatedMatches.Count} for next page."
+                    : $"Showing all {totalMatches} matching lines."
+            };
+
+            // Check response size before returning
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "find_in_file");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                // Even with pagination, response is too large - suggest alternatives
+                return responseSizeGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Found {totalMatches} matches for pattern '{pattern}', but even {maxMatches} results is too large to return.",
+                    "Try using countOnly=true first to see match statistics, or reduce maxMatches to 100 or less.",
+                    new
+                    {
+                        totalMatches,
+                        requestedMaxMatches = maxMatches,
+                        suggestedMaxMatches = Math.Max(10, maxMatches / 5),
+                        retryOptions = new object[]
+                        {
+                            new
+                            {
+                                option = "count_only",
+                                description = "Get match statistics without returning actual matches",
+                                parameters = new { filePath, pattern, caseSensitive, useRegex, countOnly = true }
+                            },
+                            new
+                            {
+                                option = "smaller_batch",
+                                description = "Get matches in smaller batches",
+                                parameters = new { filePath, pattern, caseSensitive, useRegex, maxMatches = 100, skip = 0 }
+                            },
+                            new
+                            {
+                                option = "more_specific_pattern",
+                                description = "Use a more specific pattern to reduce matches",
+                                parameters = new { filePath, pattern = pattern + " [add more specificity]", caseSensitive, useRegex = true }
+                            }
+                        }
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {

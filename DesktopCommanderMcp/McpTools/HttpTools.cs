@@ -2,6 +2,7 @@
 using System.Text;
 using System.Text.Json;
 using DesktopCommanderMcp.Common;
+using DesktopCommanderMcp.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -11,7 +12,10 @@ namespace DesktopCommanderMcp.McpTools;
 /// Tools for making HTTP requests to MCP servers
 /// </summary>
 [McpServerToolType]
-public class HttpTools(IHttpClientFactory httpClientFactory, ILogger<HttpTools> logger)
+public class HttpTools(
+    IHttpClientFactory httpClientFactory,
+    ResponseSizeGuard responseSizeGuard,
+    ILogger<HttpTools> logger)
 {
     private HttpClient CreateClient()
     {
@@ -40,6 +44,18 @@ public class HttpTools(IHttpClientFactory httpClientFactory, ILogger<HttpTools> 
                     statusText = response.ReasonPhrase,
                     error = content
                 }, SerializerOptions.JsonOptionsIndented);
+            }
+
+            // Check response size before processing
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(content, "http_get");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return responseSizeGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"HTTP response from '{url}' is too large.",
+                    "Try fetching a more specific endpoint, use query parameters to filter results, or implement pagination.",
+                    new { url, statusCode = (int)response.StatusCode, contentLength = content.Length });
             }
 
             // Try to parse as JSON for pretty printing
@@ -92,6 +108,18 @@ public class HttpTools(IHttpClientFactory httpClientFactory, ILogger<HttpTools> 
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
+            // Check response size before processing
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(responseContent, "http_post");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return responseSizeGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"HTTP POST response from '{url}' is too large.",
+                    "Try posting to a more specific endpoint, request fewer results, or use pagination in the API.",
+                    new { url, statusCode = (int)response.StatusCode, contentLength = responseContent.Length });
+            }
+
             // Try to parse as JSON for pretty printing
             try
             {
@@ -142,6 +170,18 @@ public class HttpTools(IHttpClientFactory httpClientFactory, ILogger<HttpTools> 
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
+            // Check response size before processing
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(responseContent, "http_put");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return responseSizeGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"HTTP PUT response from '{url}' is too large.",
+                    "The API response is too large to return. Consider requesting a summary or specific fields.",
+                    new { url, statusCode = (int)response.StatusCode, contentLength = responseContent.Length });
+            }
+
             try
             {
                 using JsonDocument doc = JsonDocument.Parse(responseContent);
@@ -186,6 +226,18 @@ public class HttpTools(IHttpClientFactory httpClientFactory, ILogger<HttpTools> 
                     statusText = response.ReasonPhrase,
                     error = content
                 }, SerializerOptions.JsonOptionsIndented);
+            }
+
+            // Check response size before processing
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(content, "http_delete");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return responseSizeGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"HTTP DELETE response from '{url}' is too large.",
+                    "The API response is too large to return. Consider requesting confirmation or summary data only.",
+                    new { url, statusCode = (int)response.StatusCode, contentLength = content.Length });
             }
 
             try
@@ -263,6 +315,18 @@ public class HttpTools(IHttpClientFactory httpClientFactory, ILogger<HttpTools> 
                     statusText = response.ReasonPhrase,
                     error = content
                 }, SerializerOptions.JsonOptionsIndented);
+            }
+
+            // Check response size before processing
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(content, "http_request");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return responseSizeGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"HTTP {method.ToUpper()} response from '{url}' is too large.",
+                    "The API response is too large to return. Try requesting specific fields, applying filters, or using pagination.",
+                    new { method = method.ToUpper(), url, statusCode = (int)response.StatusCode, contentLength = content.Length });
             }
 
             try

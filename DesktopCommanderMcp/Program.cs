@@ -25,6 +25,7 @@ builder.Services.AddSingleton<AuditLogger>();
 builder.Services.AddSingleton<FileVersionService>();
 builder.Services.AddSingleton<ProcessManager>();
 builder.Services.AddSingleton<HexAnalysisService>();
+builder.Services.AddSingleton<ResponseSizeGuard>();
 
 // File editing services
 builder.Services.AddSingleton<EditApprovalService>();

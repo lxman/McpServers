@@ -15,6 +15,7 @@ public class FileSystemTools(
     FileVersionService versionService,
     SecurityManager securityManager,
     AuditLogger auditLogger,
+    ResponseSizeGuard responseSizeGuard,
     ILogger<FileSystemTools> logger)
 {
     [McpServerTool, DisplayName("get_skills_location")]
@@ -389,11 +390,15 @@ public class FileSystemTools(
     }
 
     [McpServerTool, DisplayName("search_files")]
-    [Description("Search files by pattern. See file-operations/SKILL.md")]
+    [Description("Search files by pattern. Supports pagination for large result sets. See file-operations/SKILL.md")]
     public Task<string> SearchFiles(
         [Description("Directory to search in")] string searchPath,
         [Description("File pattern (e.g., '*.txt', 'test*.cs')")] string pattern,
-        [Description("Search recursively in subdirectories")] bool recursive = true)
+        [Description("Search recursively in subdirectories")] bool recursive = true,
+        [Description("Number of results to skip (for pagination, default: 0)")] int skip = 0,
+        [Description("Maximum number of results to return (1-1000, default: 500)")] int maxResults = 500,
+        [Description("Return summary only (count + sample + directory breakdown)")] bool summaryOnly = false,
+        [Description("Sort results by: 'name', 'size', 'date' (default: 'name')")] string? sortBy = "name")
     {
         try
         {
@@ -402,14 +407,26 @@ public class FileSystemTools(
             if (!Directory.Exists(searchPath))
             {
                 return Task.FromResult(JsonSerializer.Serialize(
-                    new { success = false, error = "Directory not found" }, 
+                    new { success = false, error = "Directory not found" },
                     SerializerOptions.JsonOptionsIndented));
             }
 
-            SearchOption searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-            string[] files = Directory.GetFiles(searchPath, pattern, searchOption);
+            // Clamp parameters to safe ranges
+            maxResults = Math.Clamp(maxResults, 1, 1000);
+            skip = Math.Max(0, skip);
 
-            var results = files.Select(f => new FileInfo(f)).Select(fi => new
+            SearchOption searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+            string[] allFiles = Directory.GetFiles(searchPath, pattern, searchOption);
+
+            // Sort files based on sortBy parameter
+            IEnumerable<FileInfo> sortedFiles = sortBy?.ToLower() switch
+            {
+                "size" => allFiles.Select(f => new FileInfo(f)).OrderByDescending(fi => fi.Length),
+                "date" => allFiles.Select(f => new FileInfo(f)).OrderByDescending(fi => fi.LastWriteTime),
+                _ => allFiles.Select(f => new FileInfo(f)).OrderBy(fi => fi.Name)
+            };
+
+            var allResults = sortedFiles.Select(fi => new
             {
                 path = fi.FullName,
                 name = fi.Name,
@@ -418,15 +435,103 @@ public class FileSystemTools(
                 modified = fi.LastWriteTime
             }).ToArray();
 
-            return Task.FromResult(JsonSerializer.Serialize(new
+            int totalCount = allResults.Length;
+
+            // Summary mode - return overview with sample
+            if (summaryOnly)
+            {
+                var directoryCounts = allResults
+                    .GroupBy(r => r.directory)
+                    .Select(g => new { directory = g.Key, count = g.Count() })
+                    .OrderByDescending(d => d.count)
+                    .Take(10)
+                    .ToArray();
+
+                var summary = new
+                {
+                    success = true,
+                    summaryOnly = true,
+                    totalFound = totalCount,
+                    searchPath,
+                    pattern,
+                    recursive,
+                    sortBy,
+                    sample = allResults.Take(10).ToArray(),
+                    topDirectories = directoryCounts,
+                    suggestion = totalCount > 100
+                        ? $"Use maxResults and skip parameters to paginate through all {totalCount} files"
+                        : "Call again without summaryOnly to get full results"
+                };
+
+                ResponseSizeCheck summaryCheck = responseSizeGuard.CheckResponseSize(summary, "search_files");
+                return Task.FromResult(summaryCheck.IsWithinLimit
+                    ? summaryCheck.SerializedJson!
+                    : JsonSerializer.Serialize(summary, SerializerOptions.JsonOptionsIndented));
+            }
+
+            // Paginate results
+            var paginatedResults = allResults.Skip(skip).Take(maxResults).ToArray();
+            bool hasMore = skip + paginatedResults.Length < totalCount;
+
+            var responseObject = new
             {
                 success = true,
                 searchPath,
                 pattern,
                 recursive,
-                filesFound = results.Length,
-                files = results
-            }, SerializerOptions.JsonOptionsIndented));
+                sortBy,
+                totalFound = totalCount,
+                returnedCount = paginatedResults.Length,
+                skip,
+                maxResults,
+                hasMore,
+                nextSkip = hasMore ? (int?)(skip + paginatedResults.Length) : null,
+                files = paginatedResults,
+                message = hasMore
+                    ? $"Showing {paginatedResults.Length} of {totalCount} files (items {skip + 1}-{skip + paginatedResults.Length}). Use skip={skip + paginatedResults.Length} for next page."
+                    : $"Showing all {totalCount} matching files."
+            };
+
+            // Check response size before returning
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "search_files");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                // Even with pagination, response is too large - suggest smaller maxResults or summary
+                return Task.FromResult(responseSizeGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Found {totalCount} files, but even {maxResults} results is too large to return.",
+                    "Try using summaryOnly=true first to see an overview, or reduce maxResults to 100 or less.",
+                    new
+                    {
+                        totalFound = totalCount,
+                        requestedMaxResults = maxResults,
+                        suggestedMaxResults = Math.Max(10, maxResults / 5),
+                        retryOptions = new object[]
+                        {
+                            new
+                            {
+                                option = "summary",
+                                description = "Get an overview with sample results and directory breakdown",
+                                parameters = new { searchPath, pattern, recursive, summaryOnly = true }
+                            },
+                            new
+                            {
+                                option = "smaller_batch",
+                                description = "Get results in smaller batches",
+                                parameters = new { searchPath, pattern, recursive, maxResults = 100, skip = 0 }
+                            },
+                            new
+                            {
+                                option = "narrow_search",
+                                description = "Search in a more specific subdirectory",
+                                parameters = new { searchPath = searchPath + "\\[subdirectory]", pattern, recursive }
+                            }
+                        }
+                    }));
+            }
+
+            return Task.FromResult(sizeCheck.SerializedJson!);
         }
         catch (Exception ex)
         {
