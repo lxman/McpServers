@@ -76,7 +76,7 @@ public class MetadataExtractor
             // Get detailed metadata from extractor
             ServiceResult<Dictionary<string, string>> detailedResult = 
                 await _processor.ExtractMetadataAsync(filePath, password);
-            if (detailedResult.Success && detailedResult.Data is not null)
+            if (detailedResult is { Success: true, Data: not null })
             {
                 // Merge detailed metadata
                 foreach ((string key, string value) in detailedResult.Data)
@@ -138,7 +138,7 @@ public class MetadataExtractor
                 string? password = passwords?.GetValueOrDefault(filePath);
                 
                 ServiceResult<EnrichedMetadata> result = await ExtractAsync(filePath, password);
-                if (result.Success && result.Data is not null)
+                if (result is { Success: true, Data: not null })
                 {
                     results.Add(result.Data);
                     successCount++;

@@ -70,7 +70,7 @@ public class LineBasedEditor(DiffPatchService diffPatchService, IndentationManag
     /// <summary>
     /// Inserts content with proper indentation matching the insertion context
     /// </summary>
-    public (bool success, string[] newLines, string? errorMessage) InsertWithIndentation(
+    public static (bool success, string[] newLines, string? errorMessage) InsertWithIndentation(
         string[] originalLines, 
         int afterLine, 
         string content)

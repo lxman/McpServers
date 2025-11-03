@@ -87,7 +87,7 @@ public class FileEditor(
             string originalContent = string.Join('\n', originalLines);
             
             (bool success, string[] newLines, string? errorMessage) = maintainIndentation 
-                ? lineBasedEditor.InsertWithIndentation(originalLines, afterLine, content)
+                ? LineBasedEditor.InsertWithIndentation(originalLines, afterLine, content)
                 : LineBasedEditor.InsertAfterLine(originalLines, afterLine, content);
             
             if (!success)

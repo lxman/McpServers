@@ -96,7 +96,7 @@ public class LuceneSearcher(ILogger<LuceneSearcher> logger, IndexManager indexMa
                 results.Results.Add(result);
 
                 // Update statistics
-                var docType = result.DocumentType;
+                string docType = result.DocumentType;
                 results.FileTypeCounts[docType] = results.FileTypeCounts.GetValueOrDefault(docType, 0) + 1;
 
                 string dirPath = Path.GetDirectoryName(result.FilePath) ?? "";

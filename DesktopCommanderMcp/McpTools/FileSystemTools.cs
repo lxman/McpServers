@@ -19,7 +19,7 @@ public class FileSystemTools(
     ILogger<FileSystemTools> logger)
 {
     [McpServerTool, DisplayName("get_skills_location")]
-    public string GetSkillsLocation()
+    public static string GetSkillsLocation()
     {
         string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
         string settingsPath = Path.Combine(appDirectory, "appsettings.json");
@@ -498,7 +498,7 @@ public class FileSystemTools(
             if (!sizeCheck.IsWithinLimit)
             {
                 // Even with pagination, response is too large - suggest smaller maxResults or summary
-                return Task.FromResult(responseSizeGuard.CreateOversizedErrorResponse(
+                return Task.FromResult(ResponseSizeGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"Found {totalCount} files, but even {maxResults} results is too large to return.",
                     "Try using summaryOnly=true first to see an overview, or reduce maxResults to 100 or less.",

@@ -56,7 +56,7 @@ public class TerminalTools(
 
             if (!sizeCheck.IsWithinLimit)
             {
-                return responseSizeGuard.CreateOversizedErrorResponse(
+                return ResponseSizeGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"Command '{command}' produced output that is too large.",
                     "Try redirecting output to a file, using filters like 'head' or 'tail', or reading the output incrementally using get_session_output.",
@@ -146,7 +146,7 @@ public class TerminalTools(
 
             if (!sizeCheck.IsWithinLimit)
             {
-                return Task.FromResult(responseSizeGuard.CreateOversizedErrorResponse(
+                return Task.FromResult(ResponseSizeGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"Session '{sessionId}' has accumulated output that is too large.",
                     "Close the current session and create a new one, or redirect command output to files for large operations.",

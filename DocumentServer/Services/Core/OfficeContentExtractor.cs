@@ -29,7 +29,7 @@ public class OfficeContentExtractor : IContentExtractor
     public DocumentType SupportedType => DocumentType.Word; // Supports all Office types
 
     /// <inheritdoc />
-    public async Task<ServiceResult<string>> ExtractTextAsync(LoadedDocument document)
+    public async Task<ServiceResult<string>> ExtractTextAsync(LoadedDocument document, int? startPage = null, int? endPage = null, int? maxPages = null)
     {
         _logger.LogInformation("Extracting text from Office document: {FilePath}, Type={Type}",
             document.FilePath, document.DocumentType);

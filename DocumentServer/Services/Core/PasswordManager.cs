@@ -260,8 +260,7 @@ public class PasswordManager
     private static bool IsValidPassword(string password)
     {
         bool isValid = !string.IsNullOrWhiteSpace(password) && 
-                       password.Length >= 3 && 
-                       password.Length <= 256 &&
+                       password.Length is >= 3 and <= 256 &&
                        !password.Contains('\n') &&
                        !password.Contains('\r');
         

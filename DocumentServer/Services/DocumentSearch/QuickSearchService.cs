@@ -121,7 +121,7 @@ public class QuickSearchService
                 ServiceResult<SearchResult> result = await SearchInDocumentAsync(
                     filePath, searchTerm, fuzzySearch, maxResultsPerDocument);
 
-                if (result.Success && result.Data is not null)
+                if (result is { Success: true, Data: not null })
                 {
                     if (result.Data.MatchCount > 0)
                     {

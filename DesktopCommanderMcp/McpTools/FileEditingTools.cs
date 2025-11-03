@@ -407,7 +407,7 @@ public class FileEditingTools(
             if (!sizeCheck.IsWithinLimit)
             {
                 // Even with pagination, response is too large - suggest alternatives
-                return responseSizeGuard.CreateOversizedErrorResponse(
+                return ResponseSizeGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"Found {totalMatches} matches for pattern '{pattern}', but even {maxMatches} results is too large to return.",
                     "Try using countOnly=true first to see match statistics, or reduce maxMatches to 100 or less.",

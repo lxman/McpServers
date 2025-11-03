@@ -101,8 +101,11 @@ public class DocumentProcessor
     /// </summary>
     /// <param name="filePath">Full path to the document</param>
     /// <param name="password">Optional password for encrypted documents</param>
+    /// <param name="startPage">Starting page number (1-based, null = from beginning)</param>
+    /// <param name="endPage">Ending page number (1-based, inclusive, null = to end)</param>
+    /// <param name="maxPages">Maximum number of pages to extract (alternative to startPage/endPage)</param>
     /// <returns>Service result containing the extracted text or error information</returns>
-    public async Task<ServiceResult<string>> ExtractTextAsync(string filePath, string? password = null)
+    public async Task<ServiceResult<string>> ExtractTextAsync(string filePath, string? password = null, int? startPage = null, int? endPage = null, int? maxPages = null)
     {
         _logger.LogInformation("Extracting text from: {FilePath}", filePath);
 
@@ -132,8 +135,8 @@ public class DocumentProcessor
                     $"No extractor available for {document.DocumentType}");
             }
 
-            // Extract text
-            ServiceResult<string> extractResult = await extractor.ExtractTextAsync(document);
+            // Extract text with page range parameters
+            ServiceResult<string> extractResult = await extractor.ExtractTextAsync(document, startPage, endPage, maxPages);
             
             if (extractResult.Success)
             {

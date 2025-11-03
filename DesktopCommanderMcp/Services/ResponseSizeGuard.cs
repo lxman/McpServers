@@ -126,7 +126,7 @@ public class ResponseSizeGuard
     /// <param name="context">Context about what was being returned</param>
     /// <param name="suggestion">Suggestion for how to avoid the issue</param>
     /// <returns>Serialized error JSON</returns>
-    public string CreateOversizedErrorResponse(
+    public static string CreateOversizedErrorResponse(
         ResponseSizeCheck check,
         string context,
         string suggestion)
@@ -155,7 +155,7 @@ public class ResponseSizeGuard
     /// <summary>
     /// Helper to create error response with additional metrics
     /// </summary>
-    public string CreateOversizedErrorResponse(
+    public static string CreateOversizedErrorResponse(
         ResponseSizeCheck check,
         string context,
         string suggestion,

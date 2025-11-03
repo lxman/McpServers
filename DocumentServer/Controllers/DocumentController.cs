@@ -213,7 +213,8 @@ public class DocumentController(
     [ProducesResponseType(typeof(ExtractContentResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ExtractContent([FromBody] ExtractContentRequest request)
     {
-        logger.LogInformation("Extracting content from: {FilePath}", request.FilePath);
+        logger.LogInformation("Extracting content from: {FilePath}, StartPage={StartPage}, EndPage={EndPage}, MaxPages={MaxPages}",
+            request.FilePath, request.StartPage, request.EndPage, request.MaxPages);
 
         if (string.IsNullOrWhiteSpace(request.FilePath))
         {
@@ -226,7 +227,7 @@ public class DocumentController(
 
         try
         {
-            ServiceResult<string> result = await processor.ExtractTextAsync(request.FilePath);
+            ServiceResult<string> result = await processor.ExtractTextAsync(request.FilePath, null, request.StartPage, request.EndPage, request.MaxPages);
 
             if (!result.Success)
             {
@@ -244,7 +245,7 @@ public class DocumentController(
             if (request.IncludeMetadata)
             {
                 ServiceResult<EnrichedMetadata> metadataResult = await metadataExtractor.ExtractAsync(request.FilePath);
-                if (metadataResult.Success && metadataResult.Data is not null)
+                if (metadataResult is { Success: true, Data: not null })
                 {
                     // Convert EnrichedMetadata to a simple dictionary
                     metadata = metadataResult.Data.DocumentMetadata;
@@ -273,6 +274,22 @@ public class DocumentController(
                 Error = ex.Message
             });
         }
+    }
+
+    /// <summary>
+    /// Test endpoint to verify request parameter deserialization
+    /// </summary>
+    [HttpPost("test-params")]
+    public IActionResult TestParams([FromBody] ExtractContentRequest request)
+    {
+        return Ok(new
+        {
+            FilePath = request.FilePath,
+            IncludeMetadata = request.IncludeMetadata,
+            StartPage = request.StartPage,
+            EndPage = request.EndPage,
+            MaxPages = request.MaxPages
+        });
     }
 
     /// <summary>
@@ -342,7 +359,7 @@ public class DocumentController(
 
             var response = new ValidateDocumentResponse
             {
-                IsValid = result.Success && result.Data?.IsValid == true,
+                IsValid = result is { Success: true, Data.IsValid: true },
                 FilePath = request.FilePath,
                 CanOpen = canOpen,
                 IsCorrupted = result.Data?.IsCorrupted ?? false

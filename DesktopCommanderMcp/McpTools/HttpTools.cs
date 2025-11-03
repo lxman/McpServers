@@ -51,7 +51,7 @@ public class HttpTools(
 
             if (!sizeCheck.IsWithinLimit)
             {
-                return responseSizeGuard.CreateOversizedErrorResponse(
+                return ResponseSizeGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"HTTP response from '{url}' is too large.",
                     "Try fetching a more specific endpoint, use query parameters to filter results, or implement pagination.",
@@ -113,7 +113,7 @@ public class HttpTools(
 
             if (!sizeCheck.IsWithinLimit)
             {
-                return responseSizeGuard.CreateOversizedErrorResponse(
+                return ResponseSizeGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"HTTP POST response from '{url}' is too large.",
                     "Try posting to a more specific endpoint, request fewer results, or use pagination in the API.",
@@ -175,7 +175,7 @@ public class HttpTools(
 
             if (!sizeCheck.IsWithinLimit)
             {
-                return responseSizeGuard.CreateOversizedErrorResponse(
+                return ResponseSizeGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"HTTP PUT response from '{url}' is too large.",
                     "The API response is too large to return. Consider requesting a summary or specific fields.",
@@ -233,7 +233,7 @@ public class HttpTools(
 
             if (!sizeCheck.IsWithinLimit)
             {
-                return responseSizeGuard.CreateOversizedErrorResponse(
+                return ResponseSizeGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"HTTP DELETE response from '{url}' is too large.",
                     "The API response is too large to return. Consider requesting confirmation or summary data only.",
@@ -322,7 +322,7 @@ public class HttpTools(
 
             if (!sizeCheck.IsWithinLimit)
             {
-                return responseSizeGuard.CreateOversizedErrorResponse(
+                return ResponseSizeGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"HTTP {method.ToUpper()} response from '{url}' is too large.",
                     "The API response is too large to return. Try requesting specific fields, applying filters, or using pagination.",

@@ -13,11 +13,14 @@ public interface IContentExtractor
     DocumentType SupportedType { get; }
 
     /// <summary>
-    /// Extract all text content from a loaded document
+    /// Extract text content from a loaded document
     /// </summary>
     /// <param name="document">The loaded document</param>
+    /// <param name="startPage">Starting page number (1-based, null = from beginning)</param>
+    /// <param name="endPage">Ending page number (1-based, inclusive, null = to end)</param>
+    /// <param name="maxPages">Maximum number of pages to extract (alternative to startPage/endPage)</param>
     /// <returns>Service result containing the extracted text or error information</returns>
-    Task<ServiceResult<string>> ExtractTextAsync(LoadedDocument document);
+    Task<ServiceResult<string>> ExtractTextAsync(LoadedDocument document, int? startPage = null, int? endPage = null, int? maxPages = null);
 
     /// <summary>
     /// Extract metadata from a loaded document

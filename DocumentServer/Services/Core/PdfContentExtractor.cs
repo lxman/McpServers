@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using DocumentServer.Models.Common;
 using UglyToad.PdfPig;
@@ -26,9 +27,10 @@ public class PdfContentExtractor : IContentExtractor
     public DocumentType SupportedType => DocumentType.Pdf;
 
     /// <inheritdoc />
-    public async Task<ServiceResult<string>> ExtractTextAsync(LoadedDocument document)
+    public async Task<ServiceResult<string>> ExtractTextAsync(LoadedDocument document, int? startPage = null, int? endPage = null, int? maxPages = null)
     {
-        _logger.LogInformation("Extracting text from PDF: {FilePath}", document.FilePath);
+        _logger.LogInformation("Extracting text from PDF: {FilePath}, StartPage={StartPage}, EndPage={EndPage}, MaxPages={MaxPages}",
+            document.FilePath, startPage, endPage, maxPages);
 
         try
         {
@@ -38,18 +40,59 @@ public class PdfContentExtractor : IContentExtractor
                 return ServiceResult<string>.CreateFailure("Invalid document object");
             }
 
-            var textBuilder = new StringBuilder();
-            var pageCount = 0;
+            int totalPages = pdfDocument.NumberOfPages;
 
+            // Calculate actual page range
+            int actualStartPage = startPage ?? 1;
+            int actualEndPage = endPage ?? totalPages;
+
+            // Validate page numbers
+            if (actualStartPage < 1)
+                actualStartPage = 1;
+            if (actualStartPage > totalPages)
+            {
+                return ServiceResult<string>.CreateFailure($"Start page {actualStartPage} exceeds total pages {totalPages}");
+            }
+
+            if (actualEndPage < actualStartPage)
+                actualEndPage = actualStartPage;
+            if (actualEndPage > totalPages)
+                actualEndPage = totalPages;
+
+            // Apply maxPages limit if specified
+            if (maxPages is > 0)
+            {
+                int calculatedEndPage = actualStartPage + maxPages.Value - 1;
+                if (calculatedEndPage < actualEndPage)
+                    actualEndPage = calculatedEndPage;
+            }
+
+            // Ensure we don't exceed total pages
+            if (actualEndPage > totalPages)
+                actualEndPage = totalPages;
+
+            _logger.LogInformation("Extracting pages {Start} to {End} (out of {Total})", 
+                actualStartPage, actualEndPage, totalPages);
+
+            var textBuilder = new StringBuilder();
+            var extractedPageCount = 0;
+
+            // Extract only the specified page range
             foreach (Page page in pdfDocument.GetPages())
             {
+                // PdfPig pages are 1-based
+                if (page.Number < actualStartPage)
+                    continue;
+                if (page.Number > actualEndPage)
+                    break;
+
                 try
                 {
                     string pageText = ContentOrderTextExtractor.GetText(page);
                     textBuilder.AppendLine($"--- Page {page.Number} ---");
                     textBuilder.AppendLine(pageText);
                     textBuilder.AppendLine();
-                    pageCount++;
+                    extractedPageCount++;
                 }
                 catch (Exception ex)
                 {
@@ -61,8 +104,8 @@ public class PdfContentExtractor : IContentExtractor
 
             var extractedText = textBuilder.ToString();
 
-            _logger.LogInformation("Text extraction complete: {FilePath}, Pages={PageCount}, Length={Length} characters",
-                document.FilePath, pageCount, extractedText.Length);
+            _logger.LogInformation("Text extraction complete: {FilePath}, Pages={PageCount}/{TotalPages}, Length={Length} characters",
+                document.FilePath, extractedPageCount, totalPages, extractedText.Length);
 
             return await Task.FromResult(ServiceResult<string>.CreateSuccess(extractedText));
         }
@@ -94,7 +137,7 @@ public class PdfContentExtractor : IContentExtractor
             metadata["Keywords"] = info?.Keywords ?? string.Empty;
             metadata["Creator"] = info?.Creator ?? string.Empty;
             metadata["Producer"] = info?.Producer ?? string.Empty;
-            metadata["Version"] = pdfDocument.Version.ToString();
+            metadata["Version"] = pdfDocument.Version.ToString(CultureInfo.InvariantCulture);
             metadata["PageCount"] = pdfDocument.NumberOfPages.ToString();
 
             // Parse dates
@@ -162,11 +205,9 @@ public class PdfContentExtractor : IContentExtractor
                 };
 
                 // Extract images
-                var images = new List<Dictionary<string, object>>();
                 var imageIndex = 0;
-                foreach (IPdfImage image in page.GetImages())
-                {
-                    images.Add(new Dictionary<string, object>
+                List<Dictionary<string, object>> images = page.GetImages()
+                    .Select(image => new Dictionary<string, object>
                     {
                         ["Index"] = imageIndex++,
                         ["Width"] = (int)image.Bounds.Width,
@@ -174,8 +215,8 @@ public class PdfContentExtractor : IContentExtractor
                         ["X"] = image.Bounds.Left,
                         ["Y"] = image.Bounds.Bottom,
                         ["SizeBytes"] = image.RawBytes.Length
-                    });
-                }
+                    })
+                    .ToList();
                 pageData["Images"] = images;
                 pageData["ImageCount"] = images.Count;
 
@@ -197,7 +238,7 @@ public class PdfContentExtractor : IContentExtractor
                 ["DocumentInfo"] = new
                 {
                     PageCount = pdfDocument.NumberOfPages,
-                    Version = pdfDocument.Version.ToString()
+                    Version = pdfDocument.Version.ToString(CultureInfo.InvariantCulture)
                 },
                 ["Pages"] = pages
             };
