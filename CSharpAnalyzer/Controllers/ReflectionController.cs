@@ -1,5 +1,5 @@
-using CSharpAnalyzer.Models.Reflection;
-using CSharpAnalyzer.Services.Reflection;
+using CSharpAnalyzer.Core.Models.Reflection;
+using CSharpAnalyzer.Core.Services.Reflection;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CSharpAnalyzer.Controllers;

@@ -11,15 +11,8 @@ namespace McpUtilitiesServer;
 /// Provides time-related utilities through MCP.
 /// </summary>
 [McpServerToolType]
-public class TimeUtilities
+public class TimeUtilities(ILogger<TimeUtilities> logger)
 {
-    private readonly ILogger<TimeUtilities> _logger;
-
-    public TimeUtilities(ILogger<TimeUtilities> logger)
-    {
-        _logger = logger;
-    }
-
     /// <summary>
     /// Gets the current system time in various formats.
     /// </summary>
@@ -27,7 +20,7 @@ public class TimeUtilities
     [Description("Get the current system time")]
     public string GetCurrentTime()
     {
-        _logger.LogInformation("GetCurrentTime called");
+        logger.LogInformation("GetCurrentTime called");
         
         DateTime now = DateTime.Now;
         DateTime utcNow = DateTime.UtcNow;
@@ -55,7 +48,7 @@ public class TimeUtilities
         [Description("Start timestamp (ISO 8601 format)")] string startTimestamp,
         [Description("End timestamp (leave empty to use current time)")] string? endTimestamp = null)
     {
-        _logger.LogInformation("CalculateElapsedTime called with start: {Start}, end: {End}", 
+        logger.LogInformation("CalculateElapsedTime called with start: {Start}, end: {End}", 
             startTimestamp, endTimestamp ?? "now");
         
         try
@@ -88,7 +81,7 @@ public class TimeUtilities
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calculating elapsed time");
+            logger.LogError(ex, "Error calculating elapsed time");
             return JsonSerializer.Serialize(new 
             { 
                 error = ex.Message,
@@ -105,7 +98,7 @@ public class TimeUtilities
     [Description("Get timestamp in multiple formats")]
     public string GetTimestamp()
     {
-        _logger.LogInformation("GetTimestamp called");
+        logger.LogInformation("GetTimestamp called");
         
         DateTimeOffset now = DateTimeOffset.Now;
         
@@ -130,7 +123,7 @@ public class TimeUtilities
     [Description("Start a named timer")]
     public string StartTimer([Description("Name of the timer")] string timerName)
     {
-        _logger.LogInformation("StartTimer called for timer: {Timer}", timerName);
+        logger.LogInformation("StartTimer called for timer: {Timer}", timerName);
         
         // Validate timer name
         if (string.IsNullOrWhiteSpace(timerName))
@@ -175,7 +168,7 @@ public class TimeUtilities
     [Description("Stop a named timer and get elapsed time")]
     public string StopTimer([Description("Name of the timer")] string timerName)
     {
-        _logger.LogInformation("StopTimer called for timer: {Timer}", timerName);
+        logger.LogInformation("StopTimer called for timer: {Timer}", timerName);
         
         var timestampKey = $"timer_{timerName}";
         string? startTimeStr = Environment.GetEnvironmentVariable(timestampKey);
@@ -225,7 +218,7 @@ public class TimeUtilities
     [Description("List all active timers")]
     public string ListTimers()
     {
-        _logger.LogInformation("ListTimers called");
+        logger.LogInformation("ListTimers called");
         
         var timers = new List<object>();
         DateTimeOffset currentUtc = DateTimeOffset.UtcNow;
@@ -259,7 +252,7 @@ public class TimeUtilities
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to parse timer {TimerName} with value {Value}", timerName, startTimeStr);
+                    logger.LogWarning(ex, "Failed to parse timer {TimerName} with value {Value}", timerName, startTimeStr);
                     // Skip invalid timer entries
                 }
             }
@@ -284,7 +277,7 @@ public class TimeUtilities
         [Description("Duration in seconds")] double durationSeconds = 5.0,
         [Description("Return timestamps for the operation")] bool includeTimestamps = true)
     {
-        _logger.LogInformation("SimulateDelay called with duration: {Duration}s", durationSeconds);
+        logger.LogInformation("SimulateDelay called with duration: {Duration}s", durationSeconds);
         
         // Bound the duration to reasonable values (0.1 to 30 seconds)
         durationSeconds = Math.Max(0.1, Math.Min(30, durationSeconds));

@@ -1,10 +1,10 @@
 using Amazon.S3;
 using Amazon.S3.Model;
-using AwsServer.Configuration;
-using AwsServer.S3;
-using AwsServer.S3.Models;
+using AwsServer.Core.Configuration;
+using AwsServer.Core.Services.S3;
+using AwsServer.Core.Services.S3.Models;
 using Microsoft.AspNetCore.Mvc;
-using PutObjectRequest = AwsServer.Controllers.Requests.PutObjectRequest;
+using PutObjectRequest = AwsServer.Core.Models.Requests.PutObjectRequest;
 
 namespace AwsServer.Controllers;
 

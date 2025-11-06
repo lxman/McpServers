@@ -1,10 +1,10 @@
 ﻿using System.ComponentModel;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using DesktopCommanderMcp.Common;
-using DesktopCommanderMcp.Services;
-using DesktopCommanderMcp.Services.AdvancedFileEditing;
-using DesktopCommanderMcp.Services.AdvancedFileEditing.Models;
+using DesktopCommander.Core.Common;
+using DesktopCommander.Core.Services;
+using DesktopCommander.Core.Services.AdvancedFileEditing;
+using DesktopCommander.Core.Services.AdvancedFileEditing.Models;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 

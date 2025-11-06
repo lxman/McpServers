@@ -1,6 +1,6 @@
-using DocumentServer.Models.Common;
-using DocumentServer.Models.Requests;
-using DocumentServer.Services.DocumentSearch;
+using DocumentServer.Core.Models.Common;
+using DocumentServer.Core.Models.Requests;
+using DocumentServer.Core.Services.DocumentSearch;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DocumentServer.Controllers;

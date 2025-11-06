@@ -1,12 +1,12 @@
-using AwsServer.CloudWatch;
-using AwsServer.Configuration;
-using AwsServer.Configuration.Models;
-using AwsServer.Controllers.Models;
-using AwsServer.Controllers.Responses;
-using AwsServer.ECR;
-using AwsServer.ECS;
-using AwsServer.QuickSight;
-using AwsServer.S3;
+using AwsServer.Core.Configuration;
+using AwsServer.Core.Configuration.Models;
+using AwsServer.Core.Models.Controllers.Models;
+using AwsServer.Core.Models.Responses;
+using AwsServer.Core.Services.CloudWatch;
+using AwsServer.Core.Services.ECR;
+using AwsServer.Core.Services.ECS;
+using AwsServer.Core.Services.QuickSight;
+using AwsServer.Core.Services.S3;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AwsServer.Controllers;

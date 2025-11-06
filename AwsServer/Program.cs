@@ -1,4 +1,4 @@
-using AwsServer.Configuration;
+using AwsServer.Core.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Scalar.AspNetCore;
 
@@ -10,7 +10,13 @@ builder.Services.AddHttpClient();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 
-// Add AWS services (includes response compression)
+// Add response compression for large log responses
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
+
+// Add AWS services
 builder.Services.AddAwsServices();
 
 // Configure JSON options

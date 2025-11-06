@@ -1,4 +1,5 @@
 using System.Text.Json;
+using MongoServer.Core;
 using MongoTools;
 using Scalar.AspNetCore;
 

@@ -1,5 +1,5 @@
-using AzureServer.Services.DevOps;
-using AzureServer.Services.DevOps.Models;
+using AzureServer.Core.Services.DevOps;
+using AzureServer.Core.Services.DevOps.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;

@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.Json;
-using DesktopCommanderMcp.Common;
-using DesktopCommanderMcp.Models;
-using DesktopCommanderMcp.Services;
+using DesktopCommander.Core.Common;
+using DesktopCommander.Core.Models;
+using DesktopCommander.Core.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 

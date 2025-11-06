@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
-using SeleniumChromeTool.Models;
-using SeleniumChromeTool.Services;
-using SeleniumChromeTool.Services.Enhanced;
-using SeleniumChromeTool.Services.Scrapers;
+using SeleniumChrome.Core.Models;
+using SeleniumChrome.Core.Services;
+using SeleniumChrome.Core.Services.Enhanced;
+using SeleniumChrome.Core.Services.Scrapers;
 using Serilog;
 using Serilog.Events;
 

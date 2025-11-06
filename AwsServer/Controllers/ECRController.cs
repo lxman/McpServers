@@ -1,7 +1,7 @@
 using Amazon.ECR.Model;
-using AwsServer.Configuration;
-using AwsServer.ECR;
-using AwsServer.ECR.Models;
+using AwsServer.Core.Configuration;
+using AwsServer.Core.Services.ECR;
+using AwsServer.Core.Services.ECR.Models;
 using Microsoft.AspNetCore.Mvc;
 
 // ReSharper disable InconsistentNaming

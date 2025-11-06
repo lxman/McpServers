@@ -1,5 +1,5 @@
-using AzureServer.Services.Container;
-using AzureServer.Services.Container.Models;
+using AzureServer.Core.Services.Container;
+using AzureServer.Core.Services.Container.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;

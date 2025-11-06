@@ -1,9 +1,9 @@
-using DocumentServer.Models.Common;
-using DocumentServer.Models.Requests;
-using DocumentServer.Models.Responses;
-using DocumentServer.Services.Analysis;
-using DocumentServer.Services.Analysis.Models;
-using DocumentServer.Services.Core;
+using DocumentServer.Core.Models.Common;
+using DocumentServer.Core.Models.Requests;
+using DocumentServer.Core.Models.Responses;
+using DocumentServer.Core.Services.Analysis;
+using DocumentServer.Core.Services.Analysis.Models;
+using DocumentServer.Core.Services.Core;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DocumentServer.Controllers;

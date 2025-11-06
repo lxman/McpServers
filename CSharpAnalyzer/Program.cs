@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CSharpAnalyzer.Services.Reflection;
+using CSharpAnalyzer.Core.Services.Reflection;
 using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);

@@ -1,5 +1,5 @@
 using Azure.Core;
-using AzureServer.Authentication;
+using AzureServer.Core.Authentication;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;

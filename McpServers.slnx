@@ -1,7 +1,18 @@
 ﻿<Solution>
   <Folder Name="/Libraries/">
-    <Project Path="MsOfficeCrypto\MsOfficeCrypto.csproj" Type="Classic C#" />
-    <Project Path="Playwright.Core\Playwright.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\AwsServer.Core\AwsServer.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\AzureServer.Core\AzureServer.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\CSharpAnalyzer.Core\CSharpAnalyzer.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\DebugServer.Core\DebugServer.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\DesktopCommander.Core\DesktopCommander.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\DocumentServer.Core\DocumentServer.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\MongoServer.Core\MongoServer.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\MsOfficeCrypto\MsOfficeCrypto.csproj" Type="Classic C#" />
+    <Project Path="Libraries\Playwright.Core\Playwright.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\RedisBrowser.Core\RedisBrowser.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\RegistryTools\RegistryTools.csproj" Type="Classic C#" />
+    <Project Path="Libraries\SeleniumChrome.Core\SeleniumChrome.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\SqlServer.Core\SqlServer.Core.csproj" Type="Classic C#" />
   </Folder>
   <Folder Name="/SolutionFolder/">
     <File Path="README.md" />
@@ -16,7 +27,6 @@
   <Project Path="MongoTools\MongoTools.csproj" Type="Classic C#" />
   <Project Path="PlaywrightServerMcp\PlaywrightServerMcp.csproj" Type="Classic C#" />
   <Project Path="RedisBrowser\RedisBrowser.csproj" Type="Classic C#" />
-  <Project Path="RegistryTools\RegistryTools.csproj" Type="Classic C#" />
   <Project Path="SeleniumChromeTool\SeleniumChromeTool.csproj" Type="Classic C#" />
   <Project Path="SqlMcp\SqlMcp.csproj" Type="Classic C#" />
   <Project Path="TrafficGenerator\TrafficGenerator.csproj" Type="Classic C#" />

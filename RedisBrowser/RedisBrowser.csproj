@@ -9,10 +9,10 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9"/>
         <PackageReference Include="Scalar.AspNetCore" Version="2.9.0" />
-        <PackageReference Include="StackExchange.Redis" Version="2.9.32" />
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Libraries\RedisBrowser.Core\RedisBrowser.Core.csproj" />
       <ProjectReference Include="..\RegistryTools\RegistryTools.csproj" />
     </ItemGroup>
 

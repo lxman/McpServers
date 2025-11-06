@@ -2,8 +2,8 @@ using System.ComponentModel;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
-using SqlMcp.Common;
-using SqlMcp.Services.Interfaces;
+using SqlServer.Core.Common;
+using SqlServer.Core.Services.Interfaces;
 
 namespace SqlMcp.Tools;
 

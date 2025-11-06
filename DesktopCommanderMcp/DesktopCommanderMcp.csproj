@@ -41,5 +41,9 @@
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
     </ItemGroup>
+    
+    <ItemGroup>
+      <ProjectReference Include="..\Libraries\DesktopCommander.Core\DesktopCommander.Core.csproj" />
+    </ItemGroup>
 
 </Project>

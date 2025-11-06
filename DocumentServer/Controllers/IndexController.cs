@@ -1,8 +1,8 @@
-using DocumentServer.Models.Common;
-using DocumentServer.Models.Requests;
-using DocumentServer.Models.Responses;
-using DocumentServer.Services.Lucene;
-using DocumentServer.Services.Lucene.Models;
+using DocumentServer.Core.Models.Common;
+using DocumentServer.Core.Models.Requests;
+using DocumentServer.Core.Models.Responses;
+using DocumentServer.Core.Services.Lucene;
+using DocumentServer.Core.Services.Lucene.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DocumentServer.Controllers;

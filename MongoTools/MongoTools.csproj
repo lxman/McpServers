@@ -14,6 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Libraries\MongoServer.Core\MongoServer.Core.csproj" />
       <ProjectReference Include="..\RegistryTools\RegistryTools.csproj" />
     </ItemGroup>
 

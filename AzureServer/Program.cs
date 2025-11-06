@@ -1,4 +1,4 @@
-using AzureServer.Configuration;
+using AzureServer.Core.Configuration;
 using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);

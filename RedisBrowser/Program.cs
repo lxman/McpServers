@@ -1,4 +1,4 @@
-using RedisBrowser.Services;
+using RedisBrowser.Core.Services;
 using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);

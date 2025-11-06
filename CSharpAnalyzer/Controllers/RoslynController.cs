@@ -1,5 +1,5 @@
-using CSharpAnalyzer.Models.Roslyn;
-using CSharpAnalyzer.Services.Roslyn;
+using CSharpAnalyzer.Core.Models.Roslyn;
+using CSharpAnalyzer.Core.Services.Roslyn;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CSharpAnalyzer.Controllers;

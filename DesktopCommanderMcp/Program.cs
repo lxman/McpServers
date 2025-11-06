@@ -1,7 +1,7 @@
 using System.Net.Security;
+using DesktopCommander.Core.Services;
+using DesktopCommander.Core.Services.AdvancedFileEditing;
 using DesktopCommanderMcp.McpTools;
-using DesktopCommanderMcp.Services;
-using DesktopCommanderMcp.Services.AdvancedFileEditing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

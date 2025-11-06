@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
-using DesktopCommanderMcp.Common;
-using DesktopCommanderMcp.Services;
+using DesktopCommander.Core.Common;
+using DesktopCommander.Core.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 

@@ -1,37 +1,27 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using SeleniumChromeTool.Models;
-using SeleniumChromeTool.Services;
-using SeleniumChromeTool.Services.Enhanced;
-using SeleniumChromeTool.Services.Scrapers;
+using SeleniumChrome.Core.Models;
+using SeleniumChrome.Core.Services;
+using SeleniumChrome.Core.Services.Enhanced;
+using SeleniumChrome.Core.Services.Scrapers;
 
 namespace SeleniumChromeTool.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class JobScrapingController : ControllerBase
+public class JobScrapingController(
+    IEnhancedJobScrapingService scrapingService,
+    ILogger<JobScrapingController> logger,
+    GoogleSimplifyJobsService googleSimplifyService)
+    : ControllerBase
 {
-    private readonly IEnhancedJobScrapingService _scrapingService;
-    private readonly ILogger<JobScrapingController> _logger;
-    private readonly GoogleSimplifyJobsService _googleSimplifyService;
-
-    public JobScrapingController(
-        IEnhancedJobScrapingService scrapingService,
-        ILogger<JobScrapingController> logger,
-        GoogleSimplifyJobsService googleSimplifyService)
-    {
-        _scrapingService = scrapingService;
-        _logger = logger;
-        _googleSimplifyService = googleSimplifyService;
-    }
-
     [HttpPost("scrape-multiple-sites")]
     public async Task<ActionResult> ScrapeMultipleSites([FromBody] EnhancedScrapeRequest request)
     {
         try
         {
-            _logger.LogInformation($"Starting multi-site scrape for user: {request.UserId}");
+            logger.LogInformation($"Starting multi-site scrape for user: {request.UserId}");
             
-            List<EnhancedJobListing> jobs = await _scrapingService.ScrapeMultipleSitesAsync(request);
+            List<EnhancedJobListing> jobs = await scrapingService.ScrapeMultipleSitesAsync(request);
             
             return Ok(new { 
                 Success = true,
@@ -52,7 +42,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error in multi-site scrape: {ex.Message}");
+            logger.LogError($"Error in multi-site scrape: {ex.Message}");
             return StatusCode(500, new { 
                 Success = false, 
                 Error = "Failed to scrape jobs from multiple sites", 
@@ -66,7 +56,7 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            _logger.LogInformation($"Starting scrape for {site}");
+            logger.LogInformation($"Starting scrape for {site}");
             
             // Add timeout to prevent hanging - max 4 minutes
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(4));
@@ -76,13 +66,13 @@ public class JobScrapingController : ControllerBase
             // Use Google-based discovery for SimplifyJobs (Phase 2 enhancement)
             if (site == JobSite.SimplifyJobs)
             {
-                _logger.LogInformation("🚀 Using Phase 2 Google-based SimplifyJobs discovery");
-                jobs = await _googleSimplifyService.DiscoverAndFetchJobsAsync(request);
+                logger.LogInformation("🚀 Using Phase 2 Google-based SimplifyJobs discovery");
+                jobs = await googleSimplifyService.DiscoverAndFetchJobsAsync(request);
             }
             else
             {
                 // Use traditional scraping for other sites
-                jobs = await _scrapingService.ScrapeSpecificSiteAsync(site, request);
+                jobs = await scrapingService.ScrapeSpecificSiteAsync(site, request);
             }
             
             return Ok(new { 
@@ -97,7 +87,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning($"Scraping {site} timed out after 4 minutes");
+            logger.LogWarning($"Scraping {site} timed out after 4 minutes");
             return StatusCode(408, new { 
                 Success = false, 
                 Error = $"Scraping {site} timed out after 4 minutes", 
@@ -106,7 +96,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error scraping {site}: {ex.Message}");
+            logger.LogError($"Error scraping {site}: {ex.Message}");
             return StatusCode(500, new { 
                 Success = false, 
                 Error = $"Failed to scrape {site}", 
@@ -120,9 +110,9 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            _logger.LogInformation($"Saving {request.Jobs.Count} filtered jobs for user: {request.UserId}");
+            logger.LogInformation($"Saving {request.Jobs.Count} filtered jobs for user: {request.UserId}");
             
-            bool success = await _scrapingService.SaveJobsAsync(request);
+            bool success = await scrapingService.SaveJobsAsync(request);
             
             if (success)
             {
@@ -142,7 +132,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error saving jobs: {ex.Message}");
+            logger.LogError($"Error saving jobs: {ex.Message}");
             return StatusCode(500, new { 
                 Success = false, 
                 Error = "Failed to save jobs", 
@@ -157,7 +147,7 @@ public class JobScrapingController : ControllerBase
         try
         {
             filters ??= new JobSearchFilters();
-            List<EnhancedJobListing> jobs = await _scrapingService.GetStoredJobsAsync(userId, filters);
+            List<EnhancedJobListing> jobs = await scrapingService.GetStoredJobsAsync(userId, filters);
             
             return Ok(new { 
                 Success = true,
@@ -168,7 +158,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error retrieving stored jobs: {ex.Message}");
+            logger.LogError($"Error retrieving stored jobs: {ex.Message}");
             return StatusCode(500, new { 
                 Success = false, 
                 Error = "Failed to retrieve stored jobs", 
@@ -182,12 +172,12 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            SiteConfiguration config = await _scrapingService.GetSiteConfigurationAsync(site);
+            SiteConfiguration config = await scrapingService.GetSiteConfigurationAsync(site);
             return Ok(new { Success = true, Configuration = config });
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error getting site configuration: {ex.Message}");
+            logger.LogError($"Error getting site configuration: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message });
         }
     }
@@ -197,12 +187,12 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            await _scrapingService.UpdateSiteConfigurationAsync(config);
+            await scrapingService.UpdateSiteConfigurationAsync(config);
             return Ok(new { Success = true, Message = "Configuration updated successfully" });
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error updating site configuration: {ex.Message}");
+            logger.LogError($"Error updating site configuration: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message });
         }
     }
@@ -212,7 +202,7 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            string filePath = await _scrapingService.TakeScreenshotAsync(url);
+            string filePath = await scrapingService.TakeScreenshotAsync(url);
             return Ok(new { Success = true, FilePath = filePath });
         }
         catch (Exception ex)
@@ -236,7 +226,7 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            SiteConfiguration config = await _scrapingService.GetSiteConfigurationAsync(site);
+            SiteConfiguration config = await scrapingService.GetSiteConfigurationAsync(site);
             return Ok(new { 
                 Success = true, 
                 Site = site.ToString(),
@@ -266,7 +256,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error getting email job alert summary: {ex.Message}");
+            logger.LogError($"Error getting email job alert summary: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message });
         }
     }
@@ -309,7 +299,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error getting email job alerts: {ex.Message}");
+            logger.LogError($"Error getting email job alerts: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message });
         }
     }
@@ -336,7 +326,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error getting recent email job alerts: {ex.Message}");
+            logger.LogError($"Error getting recent email job alerts: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message });
         }
     }
@@ -383,7 +373,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error getting enhanced email job alerts: {ex.Message}");
+            logger.LogError($"Error getting enhanced email job alerts: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message });
         }
     }
@@ -395,7 +385,7 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            _logger.LogInformation($"Starting automated comprehensive .NET search for user: {request.UserId}");
+            logger.LogInformation($"Starting automated comprehensive .NET search for user: {request.UserId}");
             
             var automatedSearch = HttpContext.RequestServices.GetService<AutomatedSimplifySearch>();
             if (automatedSearch == null)
@@ -424,7 +414,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error in automated comprehensive search: {ex.Message}");
+            logger.LogError($"Error in automated comprehensive search: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message, Details = ex.StackTrace });
         }
     }
@@ -434,7 +424,7 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            _logger.LogInformation($"Starting bulk job processing: {request.TargetJobCount} jobs for '{request.SearchTerm}'");
+            logger.LogInformation($"Starting bulk job processing: {request.TargetJobCount} jobs for '{request.SearchTerm}'");
             
             var bulkProcessor = HttpContext.RequestServices.GetService<IntelligentBulkProcessor>();
             if (bulkProcessor == null)
@@ -467,7 +457,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error in bulk processing: {ex.Message}");
+            logger.LogError($"Error in bulk processing: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message, Details = ex.StackTrace });
         }
     }
@@ -477,7 +467,7 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            _logger.LogInformation($"Starting enhanced SimplifyJobs scraping for: {request.SearchTerm}");
+            logger.LogInformation($"Starting enhanced SimplifyJobs scraping for: {request.SearchTerm}");
 
             // Use bulk processor for enhanced capacity
             var bulkProcessor = HttpContext.RequestServices.GetService<IntelligentBulkProcessor>();
@@ -519,7 +509,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error in enhanced SimplifyJobs scraping: {ex.Message}");
+            logger.LogError($"Error in enhanced SimplifyJobs scraping: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message });
         }
     }
@@ -531,7 +521,7 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            _logger.LogInformation($"Starting smart deduplication for {request.Jobs.Count} jobs");
+            logger.LogInformation($"Starting smart deduplication for {request.Jobs.Count} jobs");
             
             var deduplicationService = HttpContext.RequestServices.GetService<SmartDeduplicationService>();
             if (deduplicationService == null)
@@ -565,7 +555,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error in smart deduplication: {ex.Message}");
+            logger.LogError($"Error in smart deduplication: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message, Details = ex.StackTrace });
         }
     }
@@ -581,7 +571,7 @@ public class JobScrapingController : ControllerBase
                 request = new ApplicationCategorizationRequest();
             }
 
-            _logger.LogInformation($"Starting application categorization for {request.Jobs.Count} jobs");
+            logger.LogInformation($"Starting application categorization for {request.Jobs.Count} jobs");
             
             var applicationService = HttpContext.RequestServices.GetService<ApplicationManagementService>();
             if (applicationService == null)
@@ -627,7 +617,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error in application categorization: {ex.Message}");
+            logger.LogError($"Error in application categorization: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message, Details = ex.StackTrace });
         }
     }
@@ -643,7 +633,7 @@ public class JobScrapingController : ControllerBase
                 request = new MarketIntelligenceRequest();
             }
 
-            _logger.LogInformation($"Generating market intelligence report for {request.Jobs.Count} jobs");
+            logger.LogInformation($"Generating market intelligence report for {request.Jobs.Count} jobs");
             
             var marketService = HttpContext.RequestServices.GetService<MarketIntelligenceService>();
             if (marketService == null)
@@ -716,7 +706,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error in market intelligence generation: {ex.Message}");
+            logger.LogError($"Error in market intelligence generation: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message, Details = ex.StackTrace });
         }
     }
@@ -732,7 +722,7 @@ public class JobScrapingController : ControllerBase
                 request = new EnhancedAnalysisRequest();
             }
 
-            _logger.LogInformation($"Starting enhanced job analysis pipeline for {request.Jobs.Count} jobs");
+            logger.LogInformation($"Starting enhanced job analysis pipeline for {request.Jobs.Count} jobs");
 
             // Step 1: Smart Deduplication
             var deduplicationService = HttpContext.RequestServices.GetService<SmartDeduplicationService>();
@@ -751,13 +741,13 @@ public class JobScrapingController : ControllerBase
             };
 
             // Phase 2a: Deduplication
-            _logger.LogInformation("Phase 2a: Running smart deduplication");
+            logger.LogInformation("Phase 2a: Running smart deduplication");
             DeduplicationResult deduplicationResult = await deduplicationService.DeduplicateJobsAsync(request.Jobs);
             analysisResult.DeduplicationResult = deduplicationResult;
             analysisResult.ProcessingSteps.Add($"Deduplication: {deduplicationResult.DuplicatesRemoved} duplicates removed");
 
             // Phase 2b: Application Categorization
-            _logger.LogInformation("Phase 2b: Running application categorization");
+            logger.LogInformation("Phase 2b: Running application categorization");
             ApplicationCategorizationResult categorizationResult = await applicationService.CategorizeJobsAsync(
                 deduplicationResult.UniqueJobs, 
                 request.ApplicationPreferences ?? new ApplicationPreferences { UserId = request.UserId ?? "default" });
@@ -765,7 +755,7 @@ public class JobScrapingController : ControllerBase
             analysisResult.ProcessingSteps.Add($"Categorization: {categorizationResult.ImmediateApplications.Count + categorizationResult.HighPriorityApplications.Count} application-ready jobs identified");
 
             // Phase 2c: Market Intelligence
-            _logger.LogInformation("Phase 2c: Generating market intelligence");
+            logger.LogInformation("Phase 2c: Generating market intelligence");
             MarketIntelligenceReport marketResult = await marketService.GenerateMarketReportAsync(
                 deduplicationResult.UniqueJobs, 
                 request.MarketAnalysisRequest ?? new MarketAnalysisRequest { JobTitle = "Software Engineer", FocusArea = "comprehensive" });
@@ -818,7 +808,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error in enhanced job analysis: {ex.Message}");
+            logger.LogError($"Error in enhanced job analysis: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message, Details = ex.StackTrace });
         }
     }
@@ -852,7 +842,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error tracking application: {ex.Message}");
+            logger.LogError($"Error tracking application: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message });
         }
     }
@@ -888,7 +878,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error updating application status: {ex.Message}");
+            logger.LogError($"Error updating application status: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message });
         }
     }
@@ -900,7 +890,7 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            _logger.LogInformation($"Fetching {request.JobIds.Length} jobs by ID via SimplifyJobs API");
+            logger.LogInformation($"Fetching {request.JobIds.Length} jobs by ID via SimplifyJobs API");
             
             var simplifyApiService = HttpContext.RequestServices.GetService<SimplifyJobsApiService>();
             if (simplifyApiService == null)
@@ -926,7 +916,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error fetching jobs by IDs: {ex.Message}");
+            logger.LogError($"Error fetching jobs by IDs: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message, Details = ex.StackTrace });
         }
     }
@@ -938,9 +928,9 @@ public class JobScrapingController : ControllerBase
     {
         try
         {
-            _logger.LogInformation($"🚀 Phase 2: Starting Google-based SimplifyJobs discovery for '{request.SearchTerm}'");
+            logger.LogInformation($"🚀 Phase 2: Starting Google-based SimplifyJobs discovery for '{request.SearchTerm}'");
             
-            List<EnhancedJobListing> jobs = await _googleSimplifyService.DiscoverAndFetchJobsAsync(request);
+            List<EnhancedJobListing> jobs = await googleSimplifyService.DiscoverAndFetchJobsAsync(request);
 
             return Ok(new { 
                 Success = true,
@@ -956,7 +946,7 @@ public class JobScrapingController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error in Phase 2 Google-based SimplifyJobs discovery: {ex.Message}");
+            logger.LogError($"Error in Phase 2 Google-based SimplifyJobs discovery: {ex.Message}");
             return StatusCode(500, new { Success = false, Error = ex.Message, Details = ex.StackTrace });
         }
     }

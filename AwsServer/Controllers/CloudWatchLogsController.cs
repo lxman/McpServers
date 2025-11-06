@@ -1,11 +1,11 @@
 using Amazon.CloudWatchLogs;
 using Amazon.CloudWatchLogs.Model;
-using AwsServer.CloudWatch;
-using AwsServer.CloudWatch.Models;
-using AwsServer.Controllers.Models;
-using AwsServer.Controllers.Responses;
+using AwsServer.Core.Models.Controllers.Models;
+using AwsServer.Core.Models.Responses;
+using AwsServer.Core.Services.CloudWatch;
+using AwsServer.Core.Services.CloudWatch.Models;
 using Microsoft.AspNetCore.Mvc;
-using QueryStatistics = AwsServer.Controllers.Models.QueryStatistics;
+using QueryStatistics = AwsServer.Core.Models.Controllers.Models.QueryStatistics;
 
 namespace AwsServer.Controllers;
 
@@ -57,7 +57,7 @@ public class CloudWatchLogsController(
                 limit, nextToken, streams);
             
             // Calculate pagination metadata if requested
-            Common.Models.PaginationMetadata? pagination = null;
+            AwsServer.Core.Common.Models.PaginationMetadata? pagination = null;
             if (includePagination)
             {
                 // Get count estimate (only on first page to avoid extra overhead)

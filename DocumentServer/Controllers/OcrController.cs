@@ -1,6 +1,6 @@
-using DocumentServer.Models.Requests;
-using DocumentServer.Services.Ocr;
-using DocumentServer.Services.Ocr.Models;
+using DocumentServer.Core.Models.Requests;
+using DocumentServer.Core.Services.Ocr;
+using DocumentServer.Core.Services.Ocr.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DocumentServer.Controllers;

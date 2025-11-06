@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using RedisBrowser.Services;
+using RedisBrowser.Core.Services;
 
 namespace RedisBrowser.Controllers;
 

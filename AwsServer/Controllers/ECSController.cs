@@ -1,9 +1,9 @@
 using Amazon.ECS.Model;
-using AwsServer.Configuration;
-using AwsServer.ECS;
+using AwsServer.Core.Configuration;
+using AwsServer.Core.Services.ECS;
 using Microsoft.AspNetCore.Mvc;
-using RunTaskRequest = AwsServer.Controllers.Requests.RunTaskRequest;
-using UpdateServiceRequest = AwsServer.Controllers.Requests.UpdateServiceRequest;
+using RunTaskRequest = AwsServer.Core.Models.Requests.RunTaskRequest;
+using UpdateServiceRequest = AwsServer.Core.Models.Requests.UpdateServiceRequest;
 
 // ReSharper disable InconsistentNaming
 

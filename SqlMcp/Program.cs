@@ -2,10 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using SqlMcp.Models;
-using SqlMcp.Services;
-using SqlMcp.Services.Interfaces;
 using SqlMcp.Tools;
+using SqlServer.Core.Models;
+using SqlServer.Core.Services;
+using SqlServer.Core.Services.Interfaces;
 
 // Set the base path to the directory where the DLL is located
 // This ensures appsettings.json is found even when the working directory is different

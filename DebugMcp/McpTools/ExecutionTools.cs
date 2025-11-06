@@ -1,9 +1,9 @@
 using System.ComponentModel;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using DebugMcp.Common;
-using DebugMcp.Models;
-using DebugMcp.Services;
+using DebugServer.Core.Common;
+using DebugServer.Core.Models;
+using DebugServer.Core.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 

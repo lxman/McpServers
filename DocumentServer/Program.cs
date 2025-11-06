@@ -1,12 +1,12 @@
-using DocumentServer.Services.Analysis;
-using DocumentServer.Services.Core;
-using DocumentServer.Services.DocumentSearch;
-using DocumentServer.Services.FormatSpecific.Excel;
-using DocumentServer.Services.FormatSpecific.Pdf;
-using DocumentServer.Services.FormatSpecific.PowerPoint;
-using DocumentServer.Services.FormatSpecific.Word;
-using DocumentServer.Services.Lucene;
-using DocumentServer.Services.Ocr;
+using DocumentServer.Core.Services.Analysis;
+using DocumentServer.Core.Services.Core;
+using DocumentServer.Core.Services.DocumentSearch;
+using DocumentServer.Core.Services.FormatSpecific.Excel;
+using DocumentServer.Core.Services.FormatSpecific.Pdf;
+using DocumentServer.Core.Services.FormatSpecific.PowerPoint;
+using DocumentServer.Core.Services.FormatSpecific.Word;
+using DocumentServer.Core.Services.Lucene;
+using DocumentServer.Core.Services.Ocr;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 

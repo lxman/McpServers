@@ -1,5 +1,5 @@
-using AzureServer.Services.Monitor;
-using AzureServer.Services.Monitor.Models;
+using AzureServer.Core.Services.Monitor;
+using AzureServer.Core.Services.Monitor.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;

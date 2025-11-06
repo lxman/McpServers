@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="AWSSDK.CloudWatch" Version="4.0.4.7" />
+        <PackageReference Include="AWSSDK.CloudWatchLogs" Version="4.0.8.8" />
+        <PackageReference Include="AWSSDK.Core" Version="4.0.1.2" />
+        <PackageReference Include="AWSSDK.ECR" Version="4.0.5" />
+        <PackageReference Include="AWSSDK.ECS" Version="4.0.6.5" />
+        <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.8" />
+        <PackageReference Include="AWSSDK.QuickSight" Version="4.0.7.3" />
+        <PackageReference Include="AWSSDK.S3" Version="4.0.7.14" />
+        <PackageReference Include="AWSSDK.SecurityToken" Version="4.0.2.10" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0-rc.2.25502.107" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0-rc.2.25502.107" />
+        <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="5.0.17" />
+        <PackageReference Include="Microsoft.AspNetCore.ResponseCompression" Version="2.2.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\RegistryTools\RegistryTools.csproj" />
+    </ItemGroup>
+
+</Project>

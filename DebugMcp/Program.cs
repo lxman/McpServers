@@ -1,5 +1,5 @@
 using DebugMcp.McpTools;
-using DebugMcp.Services;
+using DebugServer.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

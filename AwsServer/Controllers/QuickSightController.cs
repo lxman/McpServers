@@ -1,6 +1,6 @@
 using Amazon.QuickSight.Model;
-using AwsServer.Controllers.Requests;
-using AwsServer.QuickSight;
+using AwsServer.Core.Models.Requests;
+using AwsServer.Core.Services.QuickSight;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AwsServer.Controllers;

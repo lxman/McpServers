@@ -1,5 +1,5 @@
-using AzureServer.Services.ResourceManagement;
-using AzureServer.Services.ResourceManagement.Models;
+using AzureServer.Core.Services.ResourceManagement;
+using AzureServer.Core.Services.ResourceManagement.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;

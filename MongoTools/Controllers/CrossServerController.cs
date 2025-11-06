@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using MongoTools.Services;
+using MongoServer.Core;
+using MongoServer.Core.Services;
 
 namespace MongoTools.Controllers;
 

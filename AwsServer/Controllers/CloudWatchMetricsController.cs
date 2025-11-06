@@ -1,5 +1,5 @@
 using Amazon.CloudWatch.Model;
-using AwsServer.CloudWatch;
+using AwsServer.Core.Services.CloudWatch;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AwsServer.Controllers;

@@ -1,5 +1,5 @@
-using AzureServer.Services.ServiceBus;
-using AzureServer.Services.ServiceBus.Models;
+using AzureServer.Core.Services.ServiceBus;
+using AzureServer.Core.Services.ServiceBus.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AzureServer.Controllers;
