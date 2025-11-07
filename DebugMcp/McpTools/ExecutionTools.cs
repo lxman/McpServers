@@ -21,7 +21,7 @@ public class ExecutionTools(
     [McpServerTool, DisplayName("debug_run")]
     [Description("Begin execution of the debugged program")]
     public async Task<string> RunAsync(
-        [Description("Session ID from debug_launch")] string sessionId)
+        string sessionId)
     {
         try
         {
@@ -97,7 +97,7 @@ public class ExecutionTools(
     [McpServerTool, DisplayName("debug_continue")]
     [Description("Continue execution until next breakpoint or program termination")]
     public async Task<string> ContinueAsync(
-        [Description("Session ID from debug_launch")] string sessionId)
+        string sessionId)
     {
         try
         {
@@ -186,7 +186,7 @@ public class ExecutionTools(
     [McpServerTool, DisplayName("debug_step_over")]
     [Description("Step over one source line (does not enter functions)")]
     public async Task<string> StepOverAsync(
-        [Description("Session ID from debug_launch")] string sessionId)
+        string sessionId)
     {
         try
         {
@@ -249,7 +249,7 @@ public class ExecutionTools(
     [McpServerTool, DisplayName("debug_step_into")]
     [Description("Step into one source line (enters functions)")]
     public async Task<string> StepIntoAsync(
-        [Description("Session ID from debug_launch")] string sessionId)
+        string sessionId)
     {
         try
         {
@@ -312,7 +312,7 @@ public class ExecutionTools(
     [McpServerTool, DisplayName("debug_step_out")]
     [Description("Step out of current function")]
     public async Task<string> StepOutAsync(
-        [Description("Session ID from debug_launch")] string sessionId)
+        string sessionId)
     {
         try
         {

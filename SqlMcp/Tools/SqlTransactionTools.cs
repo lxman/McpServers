@@ -15,8 +15,8 @@ public class SqlTransactionTools(
     [McpServerTool, DisplayName("begin_transaction")]
     [Description("Begin database transaction. See transaction-management/begin_transaction.md")]
     public async Task<string> BeginTransaction(
-        [Description("Connection name")] string connectionName,
-        [Description("Isolation level (optional)")] string? isolationLevel = null)
+        string connectionName,
+        string? isolationLevel = null)
     {
         try
         {
@@ -33,7 +33,7 @@ public class SqlTransactionTools(
     [McpServerTool, DisplayName("commit_transaction")]
     [Description("Commit transaction. See transaction-management/commit_transaction.md")]
     public async Task<string> CommitTransaction(
-        [Description("Transaction ID")] string transactionId)
+        string transactionId)
     {
         try
         {
@@ -50,7 +50,7 @@ public class SqlTransactionTools(
     [McpServerTool, DisplayName("rollback_transaction")]
     [Description("Rollback transaction. See transaction-management/rollback_transaction.md")]
     public async Task<string> RollbackTransaction(
-        [Description("Transaction ID")] string transactionId)
+        string transactionId)
     {
         try
         {

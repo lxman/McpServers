@@ -575,18 +575,18 @@ public class CloudWatchLogsService : IDisposable
             {
                 try
                 {
-                    JsonDocument jsonDoc = System.Text.Json.JsonDocument.Parse(evt.Message);
+                    JsonDocument jsonDoc = JsonDocument.Parse(evt.Message);
                     structured.ParsedData = new Dictionary<string, object?>();
                     
                     foreach (JsonProperty prop in jsonDoc.RootElement.EnumerateObject())
                     {
                         structured.ParsedData[prop.Name] = prop.Value.ValueKind switch
                         {
-                            System.Text.Json.JsonValueKind.String => prop.Value.GetString(),
-                            System.Text.Json.JsonValueKind.Number => prop.Value.GetDouble(),
-                            System.Text.Json.JsonValueKind.True => true,
-                            System.Text.Json.JsonValueKind.False => false,
-                            System.Text.Json.JsonValueKind.Null => null,
+                            JsonValueKind.String => prop.Value.GetString(),
+                            JsonValueKind.Number => prop.Value.GetDouble(),
+                            JsonValueKind.True => true,
+                            JsonValueKind.False => false,
+                            JsonValueKind.Null => null,
                             _ => prop.Value.ToString()
                         };
                     }

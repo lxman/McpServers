@@ -18,10 +18,10 @@ public class SqlQueryTools(
     [McpServerTool, DisplayName("execute_query")]
     [Description("Execute SQL SELECT query. See query-execution/execute_query.md")]
     public async Task<string> ExecuteQuery(
-        [Description("Connection name")] string connectionName,
-        [Description("SQL SELECT statement")] string sql,
-        [Description("Query parameters (optional)")] object? parameters = null,
-        [Description("Maximum rows to return (default: 1000)")] int maxRows = 1000)
+        string connectionName,
+        string sql,
+        object? parameters = null,
+        int maxRows = 1000)
     {
         try
         {
@@ -61,9 +61,9 @@ public class SqlQueryTools(
     [McpServerTool, DisplayName("execute_non_query")]
     [Description("Execute SQL INSERT/UPDATE/DELETE. See query-execution/execute_non_query.md")]
     public async Task<string> ExecuteNonQuery(
-        [Description("Connection name")] string connectionName,
-        [Description("SQL statement")] string sql,
-        [Description("Query parameters (optional)")] object? parameters = null)
+        string connectionName,
+        string sql,
+        object? parameters = null)
     {
         try
         {
@@ -80,9 +80,9 @@ public class SqlQueryTools(
     [McpServerTool, DisplayName("execute_scalar")]
     [Description("Execute SQL scalar query. See query-execution/execute_scalar.md")]
     public async Task<string> ExecuteScalar(
-        [Description("Connection name")] string connectionName,
-        [Description("SQL statement")] string sql,
-        [Description("Query parameters (optional)")] object? parameters = null)
+        string connectionName,
+        string sql,
+        object? parameters = null)
     {
         try
         {

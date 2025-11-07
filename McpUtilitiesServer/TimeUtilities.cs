@@ -17,7 +17,7 @@ public class TimeUtilities(ILogger<TimeUtilities> logger)
     /// Gets the current system time in various formats.
     /// </summary>
     [McpServerTool, DisplayName("get_current_time")]
-    [Description("Get the current system time")]
+    [Description("See skills/utilities/time/get_current_time.md only when using this tool")]
     public string GetCurrentTime()
     {
         logger.LogInformation("GetCurrentTime called");
@@ -43,7 +43,7 @@ public class TimeUtilities(ILogger<TimeUtilities> logger)
     /// Calculates elapsed time between now and a given timestamp or between two timestamps.
     /// </summary>
     [McpServerTool, DisplayName("calculate_elapsed_time")]
-    [Description("Calculate elapsed time from a timestamp")]
+    [Description("See skills/utilities/time/calculate_elapsed_time.md only when using this tool")]
     public string CalculateElapsedTime(
         [Description("Start timestamp (ISO 8601 format)")] string startTimestamp,
         [Description("End timestamp (leave empty to use current time)")] string? endTimestamp = null)
@@ -95,7 +95,7 @@ public class TimeUtilities(ILogger<TimeUtilities> logger)
     /// Gets the current timestamp in various formats.
     /// </summary>
     [McpServerTool, DisplayName("get_timestamp")]
-    [Description("Get timestamp in multiple formats")]
+    [Description("See skills/utilities/time/get_timestamp.md only when using this tool")]
     public string GetTimestamp()
     {
         logger.LogInformation("GetTimestamp called");
@@ -120,7 +120,7 @@ public class TimeUtilities(ILogger<TimeUtilities> logger)
     /// Starts a timer and returns the start timestamp. Use with StopTimer to measure elapsed time.
     /// </summary>
     [McpServerTool, DisplayName("start_timer")]
-    [Description("Start a named timer")]
+    [Description("See skills/utilities/time/start_timer.md only when using this tool")]
     public string StartTimer([Description("Name of the timer")] string timerName)
     {
         logger.LogInformation("StartTimer called for timer: {Timer}", timerName);
@@ -165,7 +165,7 @@ public class TimeUtilities(ILogger<TimeUtilities> logger)
     /// Stops a timer and returns the elapsed time.
     /// </summary>
     [McpServerTool, DisplayName("stop_timer")]
-    [Description("Stop a named timer and get elapsed time")]
+    [Description("See skills/utilities/time/stop_timer.md only when using this tool")]
     public string StopTimer([Description("Name of the timer")] string timerName)
     {
         logger.LogInformation("StopTimer called for timer: {Timer}", timerName);
@@ -215,7 +215,7 @@ public class TimeUtilities(ILogger<TimeUtilities> logger)
     /// Gets all active timers.
     /// </summary>
     [McpServerTool, DisplayName("list_timers")]
-    [Description("List all active timers")]
+    [Description("See skills/utilities/time/list_timers.md only when using this tool")]
     public string ListTimers()
     {
         logger.LogInformation("ListTimers called");
@@ -272,7 +272,7 @@ public class TimeUtilities(ILogger<TimeUtilities> logger)
     /// Performs a time-consuming operation to test timing accuracy.
     /// </summary>
     [McpServerTool, DisplayName("simulate_delay")]
-    [Description("Simulate a process that takes the specified number of seconds")]
+    [Description("See skills/utilities/time/simulate_delay.md only when using this tool")]
     public string SimulateDelay(
         [Description("Duration in seconds")] double durationSeconds = 5.0,
         [Description("Return timestamps for the operation")] bool includeTimestamps = true)

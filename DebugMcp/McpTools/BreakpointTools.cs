@@ -21,9 +21,9 @@ public partial class BreakpointTools(
     [McpServerTool, DisplayName("debug_set_breakpoint")]
     [Description("Set a breakpoint at a specific file and line number")]
     public async Task<string> SetBreakpointAsync(
-        [Description("Session ID from debug_launch")] string sessionId,
-        [Description("Full path to the source file")] string filePath,
-        [Description("Line number (1-based)")] int lineNumber)
+        string sessionId,
+        string filePath,
+        int lineNumber)
     {
         try
         {
@@ -104,7 +104,7 @@ public partial class BreakpointTools(
     [McpServerTool, DisplayName("debug_list_breakpoints")]
     [Description("List all breakpoints for a debug session")]
     public string ListBreakpoints(
-        [Description("Session ID from debug_launch")] string sessionId)
+        string sessionId)
     {
         try
         {
@@ -149,8 +149,8 @@ public partial class BreakpointTools(
     [McpServerTool, DisplayName("debug_delete_breakpoint")]
     [Description("Remove a breakpoint by ID")]
     public async Task<string> DeleteBreakpointAsync(
-        [Description("Session ID from debug_launch")] string sessionId,
-        [Description("Breakpoint ID from debug_set_breakpoint")] int breakpointId)
+        string sessionId,
+        int breakpointId)
     {
         try
         {

@@ -18,4 +18,15 @@
       <ProjectReference Include="..\Libraries\Playwright.Core\Playwright.Core.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="skills\" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Copy skills documentation to output directory -->
+        <None Update="skills\**\*.md">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
 </Project>

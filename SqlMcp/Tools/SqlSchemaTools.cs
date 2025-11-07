@@ -18,7 +18,7 @@ public class SqlSchemaTools(
     [McpServerTool, DisplayName("list_tables")]
     [Description("List all tables in database. See schema-inspection/list_tables.md")]
     public async Task<string> ListTables(
-        [Description("Connection name")] string connectionName)
+        string connectionName)
     {
         try
         {
@@ -56,8 +56,8 @@ public class SqlSchemaTools(
     [McpServerTool, DisplayName("get_table_schema")]
     [Description("Get table schema details. See schema-inspection/get_table_schema.md")]
     public async Task<string> GetTableSchema(
-        [Description("Connection name")] string connectionName,
-        [Description("Table name")] string tableName)
+        string connectionName,
+        string tableName)
     {
         try
         {
@@ -74,8 +74,8 @@ public class SqlSchemaTools(
     [McpServerTool, DisplayName("get_table_indexes")]
     [Description("Get table indexes. See schema-inspection/get_table_indexes.md")]
     public async Task<string> GetTableIndexes(
-        [Description("Connection name")] string connectionName,
-        [Description("Table name")] string tableName)
+        string connectionName,
+        string tableName)
     {
         try
         {
@@ -92,8 +92,8 @@ public class SqlSchemaTools(
     [McpServerTool, DisplayName("get_foreign_keys")]
     [Description("Get table foreign keys. See schema-inspection/get_foreign_keys.md")]
     public async Task<string> GetForeignKeys(
-        [Description("Connection name")] string connectionName,
-        [Description("Table name")] string tableName)
+        string connectionName,
+        string tableName)
     {
         try
         {

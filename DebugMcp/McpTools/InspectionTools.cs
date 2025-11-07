@@ -21,8 +21,8 @@ public class InspectionTools(
     [McpServerTool, DisplayName("debug_get_stack_trace")]
     [Description("Get the call stack when execution is paused at a breakpoint")]
     public async Task<string> GetStackTraceAsync(
-        [Description("Session ID from debug_launch")] string sessionId,
-        [Description("Thread ID (use 1 for main thread)")] int threadId = 1)
+        string sessionId,
+        int threadId = 1)
     {
         try
         {
@@ -86,7 +86,7 @@ public class InspectionTools(
     [McpServerTool, DisplayName("debug_get_variables")]
     [Description("Get local variables when execution is paused")]
     public async Task<string> GetVariablesAsync(
-        [Description("Session ID from debug_launch")] string sessionId)
+        string sessionId)
     {
         try
         {
@@ -147,8 +147,8 @@ public class InspectionTools(
     [McpServerTool, DisplayName("debug_evaluate_expression")]
     [Description("Evaluate an expression in the current context")]
     public async Task<string> EvaluateExpressionAsync(
-        [Description("Session ID from debug_launch")] string sessionId,
-        [Description("Expression to evaluate (e.g., 'x + y', 'myObject.Property')")] string expression)
+        string sessionId,
+        string expression)
     {
         try
         {
@@ -206,7 +206,7 @@ public class InspectionTools(
     [McpServerTool, DisplayName("debug_get_threads")]
     [Description("Get all threads in the debugged process")]
     public async Task<string> GetThreadsAsync(
-        [Description("Session ID from debug_launch")] string sessionId)
+        string sessionId)
     {
         try
         {

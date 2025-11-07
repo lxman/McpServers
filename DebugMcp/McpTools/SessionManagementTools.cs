@@ -18,11 +18,11 @@ public class SessionManagementTools(
     ILogger<SessionManagementTools> logger)
 {
     [McpServerTool, DisplayName("debug_launch")]
-    [Description("Start a debug session for a .NET application. Returns session ID for use in other debug commands.")]
+    [Description("See skills/debug/session/debug_launch.md only when using this tool")]
     public async Task<string> LaunchAsync(
-        [Description("Full path to the .NET executable (.exe or .dll)")] string executablePath,
-        [Description("Working directory for the application (optional)")] string? workingDirectory = null,
-        [Description("Command line arguments to pass to the application (optional)")] string? arguments = null)
+        string executablePath,
+        string? workingDirectory = null,
+        string? arguments = null)
     {
         try
         {
@@ -88,9 +88,9 @@ public class SessionManagementTools(
     }
 
     [McpServerTool, DisplayName("debug_stop")]
-    [Description("Stop and cleanup a debug session")]
+    [Description("See skills/debug/session/debug_stop.md only when using this tool")]
     public async Task<string> StopAsync(
-        [Description("Session ID from debug_launch")] string sessionId)
+        string sessionId)
     {
         try
         {
@@ -136,7 +136,7 @@ public class SessionManagementTools(
     }
 
     [McpServerTool, DisplayName("debug_list_sessions")]
-    [Description("List all active debug sessions")]
+    [Description("See skills/debug/session/debug_list_sessions.md only when using this tool")]
     public string ListSessions()
     {
         try
@@ -176,9 +176,9 @@ public class SessionManagementTools(
     }
 
     [McpServerTool, DisplayName("debug_get_session_info")]
-    [Description("Get detailed information about a specific debug session")]
+    [Description("See skills/debug/session/debug_get_session_info.md only when using this tool")]
     public string GetSessionInfo(
-        [Description("Session ID from debug_launch")] string sessionId)
+        string sessionId)
     {
         try
         {
@@ -231,7 +231,7 @@ public class SessionManagementTools(
     }
 
     [McpServerTool, DisplayName("debug_stop_all")]
-    [Description("Stop all active debug sessions")]
+    [Description("See skills/debug/session/debug_stop_all.md only when using this tool")]
     public async Task<string> StopAllAsync()
     {
         try

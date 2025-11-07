@@ -31,7 +31,7 @@ public class SqlConnectionTools(
     [McpServerTool, DisplayName("test_connection")]
     [Description("Test database connection. See connection-management/test_connection.md")]
     public async Task<string> TestConnection(
-        [Description("Connection name from configuration")] string connectionName)
+        string connectionName)
     {
         try
         {
@@ -48,7 +48,7 @@ public class SqlConnectionTools(
     [McpServerTool, DisplayName("close_connection")]
     [Description("Close database connection. See connection-management/close_connection.md")]
     public async Task<string> CloseConnection(
-        [Description("Connection name to close")] string connectionName)
+        string connectionName)
     {
         try
         {
