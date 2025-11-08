@@ -64,11 +64,13 @@ public class JobStorageTools(
         bool? isRemote = null,
         double? minMatchScore = null,
         bool? isApplied = null,
-        string? requiredSkillsJson = null)
+        string? requiredSkillsJson = null,
+        int limit = 100,
+        int skip = 0)
     {
         try
         {
-            logger.LogDebug("Retrieving stored jobs for user {UserId}", userId);
+            logger.LogDebug("Retrieving stored jobs for user {UserId} (limit: {Limit}, skip: {Skip})", userId, limit, skip);
 
             var filters = new JobSearchFilters();
 
@@ -96,15 +98,26 @@ public class JobStorageTools(
                 filters.RequiredSkills = JsonSerializer.Deserialize<List<string>>(requiredSkillsJson) ?? [];
             }
 
-            List<EnhancedJobListing> result = await scrapingService.GetStoredJobsAsync(userId, filters);
+            List<EnhancedJobListing> allResults = await scrapingService.GetStoredJobsAsync(userId, filters);
+
+            // Apply pagination
+            int totalCount = allResults.Count;
+            List<EnhancedJobListing> paginatedResults = allResults
+                .Skip(skip)
+                .Take(limit)
+                .ToList();
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 userId,
                 filters,
-                jobsCount = result.Count,
-                jobs = result
+                totalCount,
+                returnedCount = paginatedResults.Count,
+                skip,
+                limit,
+                hasMore = (skip + limit) < totalCount,
+                jobs = paginatedResults
             }, _jsonOptions);
         }
         catch (Exception ex)

@@ -10,6 +10,8 @@ HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
 // Configure logging
 builder.Logging.ClearProviders();
+Console.SetOut(TextWriter.Null);
+Console.SetError(TextWriter.Null);
 
 // Add Memory Cache for ServerRegistry and other services
 builder.Services.AddMemoryCache();

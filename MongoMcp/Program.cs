@@ -15,10 +15,18 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+    // Create builder WITHOUT default logging to prevent console output
+    var builder = new HostApplicationBuilder(new HostApplicationBuilderSettings
+    {
+        Args = args,
+        DisableDefaults = true  // This prevents default console logging
+    });
+    
+    // Manually configure only what we need
+    builder.Services.AddSerilog(Log.Logger, dispose: true);
 
-    // Add Serilog
-    builder.Services.AddSerilog();
+    Console.SetOut(TextWriter.Null);
+    Console.SetError(TextWriter.Null);
 
     // Register MongoServer.Core services
     builder.Services.AddSingleton<MongoDbService>();

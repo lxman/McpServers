@@ -19,20 +19,30 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+    // Configure builder to use the executable's directory as the content root
+    HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+    {
+        Args = args,
+        ContentRootPath = AppContext.BaseDirectory
+    });
 
     // Add Serilog
     builder.Services.AddSerilog();
+
+    Log.Logger.Debug($"AppContext.BaseDirectory is {AppContext.BaseDirectory}");
+    Log.Logger.Debug($"Content root is {builder.Environment.ContentRootPath}");
 
     // MongoDB configuration - required for most services
     MongoDbSettings mongoSettings = builder.Configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>()
                                     ?? throw new InvalidOperationException("MongoDbSettings configuration is required");
 
+    Log.Logger.Debug($"MongoDbSettings is {mongoSettings}");
+
     if (string.IsNullOrEmpty(mongoSettings.ConnectionString))
         throw new InvalidOperationException("MongoDB ConnectionString is required in configuration");
 
     builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings.ConnectionString));
-    builder.Services.AddScoped(provider =>
+    builder.Services.AddScoped<IMongoDatabase>(provider =>
         provider.GetRequiredService<IMongoClient>().GetDatabase(mongoSettings.DatabaseName));
 
     // HttpClient for web requests

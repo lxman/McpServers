@@ -14,6 +14,8 @@ Log.Logger = new LoggerConfiguration()
 try
 {
     HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+    Console.SetOut(TextWriter.Null);
+    Console.SetError(TextWriter.Null);
 
     // Add Serilog
     builder.Services.AddSerilog();

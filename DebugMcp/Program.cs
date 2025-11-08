@@ -25,6 +25,8 @@ try
 
     // Configure logging to use Serilog
     builder.Logging.ClearProviders();
+    Console.SetOut(TextWriter.Null);
+    Console.SetError(TextWriter.Null);
     builder.Logging.AddSerilog(Log.Logger);
 
     // Register debugging services

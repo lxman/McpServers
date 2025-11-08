@@ -29,6 +29,8 @@ try
 
     // Configure logging
     builder.Logging.ClearProviders();
+    Console.SetOut(TextWriter.Null);
+    Console.SetError(TextWriter.Null);
     builder.Logging.AddSerilog();
 
     // Register DocumentServer.Core services

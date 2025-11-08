@@ -263,11 +263,11 @@ public class FileEditingTools(
         string pattern,
         bool caseSensitive = false,
         bool useRegex = false,
-        [Description("Maximum number of matches to return (1-1000, default: 500)")] int maxMatches = 500,
-        [Description("Number of matches to skip (for pagination, default: 0)")] int skip = 0,
-        [Description("Return only the count of matches, not the actual matches")] bool countOnly = false,
-        [Description("Include surrounding lines for context")] bool includeContext = false,
-        [Description("Number of context lines before/after each match (default: 2)")] int contextLines = 2)
+        int maxMatches = 500,
+        int skip = 0,
+        bool countOnly = false,
+        bool includeContext = false,
+        int contextLines = 2)
     {
         try
         {

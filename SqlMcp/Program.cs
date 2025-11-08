@@ -37,6 +37,8 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 builder.Logging.ClearProviders();
+Console.SetOut(TextWriter.Null);
+Console.SetError(TextWriter.Null);
 builder.Logging.AddSerilog(Log.Logger);
 
 // Log diagnostic information to help troubleshoot configuration issues

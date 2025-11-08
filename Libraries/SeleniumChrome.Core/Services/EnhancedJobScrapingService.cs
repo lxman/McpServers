@@ -128,6 +128,12 @@ public class EnhancedJobScrapingService(
         FilterDefinitionBuilder<EnhancedJobListing>? filterBuilder = Builders<EnhancedJobListing>.Filter;
         FilterDefinition<EnhancedJobListing>? mongoFilter = filterBuilder.Empty;
 
+        // Filter by userId if provided
+        if (!string.IsNullOrEmpty(userId))
+        {
+            mongoFilter &= filterBuilder.Eq(j => j.UserId, userId);
+        }
+
         if (filters.Sites.Count != 0)
         {
             mongoFilter &= filterBuilder.In(j => j.SourceSite, filters.Sites);

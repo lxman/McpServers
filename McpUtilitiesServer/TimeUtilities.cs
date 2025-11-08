@@ -45,8 +45,8 @@ public class TimeUtilities(ILogger<TimeUtilities> logger)
     [McpServerTool, DisplayName("calculate_elapsed_time")]
     [Description("See skills/utilities/time/calculate_elapsed_time.md only when using this tool")]
     public string CalculateElapsedTime(
-        [Description("Start timestamp (ISO 8601 format)")] string startTimestamp,
-        [Description("End timestamp (leave empty to use current time)")] string? endTimestamp = null)
+        string startTimestamp,
+        string? endTimestamp = null)
     {
         logger.LogInformation("CalculateElapsedTime called with start: {Start}, end: {End}", 
             startTimestamp, endTimestamp ?? "now");
@@ -121,7 +121,7 @@ public class TimeUtilities(ILogger<TimeUtilities> logger)
     /// </summary>
     [McpServerTool, DisplayName("start_timer")]
     [Description("See skills/utilities/time/start_timer.md only when using this tool")]
-    public string StartTimer([Description("Name of the timer")] string timerName)
+    public string StartTimer(string timerName)
     {
         logger.LogInformation("StartTimer called for timer: {Timer}", timerName);
         
@@ -166,7 +166,7 @@ public class TimeUtilities(ILogger<TimeUtilities> logger)
     /// </summary>
     [McpServerTool, DisplayName("stop_timer")]
     [Description("See skills/utilities/time/stop_timer.md only when using this tool")]
-    public string StopTimer([Description("Name of the timer")] string timerName)
+    public string StopTimer(string timerName)
     {
         logger.LogInformation("StopTimer called for timer: {Timer}", timerName);
         
@@ -274,8 +274,8 @@ public class TimeUtilities(ILogger<TimeUtilities> logger)
     [McpServerTool, DisplayName("simulate_delay")]
     [Description("See skills/utilities/time/simulate_delay.md only when using this tool")]
     public string SimulateDelay(
-        [Description("Duration in seconds")] double durationSeconds = 5.0,
-        [Description("Return timestamps for the operation")] bool includeTimestamps = true)
+        double durationSeconds = 5.0,
+        bool includeTimestamps = true)
     {
         logger.LogInformation("SimulateDelay called with duration: {Duration}s", durationSeconds);
         

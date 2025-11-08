@@ -30,9 +30,9 @@ public class FileSystemTools(
     [McpServerTool, DisplayName("read_file")]
     [Description("Read file with pagination. See file-operations/SKILL.md")]
     public async Task<string> ReadFile(
-        [Description("Full path to the file")] string path,
-        [Description("Starting line number (1-based, optional)")] int? startLine = null,
-        [Description("Maximum number of lines to return (1-1000, default 500)")] int maxLines = 500)
+        string path,
+        int? startLine = null,
+        int maxLines = 500)
     {
         try
         {
@@ -97,10 +97,10 @@ public class FileSystemTools(
     [McpServerTool, DisplayName("write_file")]
     [Description("Write content to file. See file-operations/SKILL.md")]
     public async Task<string> WriteFile(
-        [Description("Full path to the file")] string path,
-        [Description("Content to write")] string content,
-        [Description("Write mode: 'overwrite' or 'append' (default: overwrite)")] string mode = "overwrite",
-        [Description("Version token for optimistic concurrency (optional)")] string? versionToken = null)
+        string path,
+        string content,
+        string mode = "overwrite",
+        string? versionToken = null)
     {
         try
         {
@@ -169,9 +169,9 @@ public class FileSystemTools(
     [McpServerTool, DisplayName("list_directory")]
     [Description("List directory contents. See file-operations/SKILL.md")]
     public Task<string> ListDirectory(
-        [Description("Full path to the directory")] string path,
-        [Description("Number of items to skip (for pagination, default: 0)")] int skip = 0,
-        [Description("Maximum number of items to return (1-1000, default: 500)")] int take = 500)
+        string path,
+        int skip = 0,
+        int take = 500)
     {
         try
         {
@@ -280,8 +280,8 @@ public class FileSystemTools(
     [McpServerTool, DisplayName("delete_file")]
     [Description("Delete file or directory. See file-operations/SKILL.md")]
     public Task<string> Delete(
-        [Description("Full path to the file or directory")] string path,
-        [Description("Force deletion (for directories with contents)")] bool force = false)
+        string path,
+        bool force = false)
     {
         try
         {
@@ -335,8 +335,8 @@ public class FileSystemTools(
     [McpServerTool, DisplayName("move_file")]
     [Description("Move or rename file/directory. See file-operations/SKILL.md")]
     public Task<string> Move(
-        [Description("Source path")] string sourcePath,
-        [Description("Destination path")] string destinationPath)
+        string sourcePath,
+        string destinationPath)
     {
         try
         {
@@ -392,13 +392,13 @@ public class FileSystemTools(
     [McpServerTool, DisplayName("search_files")]
     [Description("Search files by pattern. Supports pagination for large result sets. See file-operations/SKILL.md")]
     public Task<string> SearchFiles(
-        [Description("Directory to search in")] string searchPath,
-        [Description("File pattern (e.g., '*.txt', 'test*.cs')")] string pattern,
-        [Description("Search recursively in subdirectories")] bool recursive = true,
-        [Description("Number of results to skip (for pagination, default: 0)")] int skip = 0,
-        [Description("Maximum number of results to return (1-1000, default: 500)")] int maxResults = 500,
-        [Description("Return summary only (count + sample + directory breakdown)")] bool summaryOnly = false,
-        [Description("Sort results by: 'name', 'size', 'date' (default: 'name')")] string? sortBy = "name")
+        string searchPath,
+        string pattern,
+        bool recursive = true,
+        int skip = 0,
+        int maxResults = 500,
+        bool summaryOnly = false,
+        string? sortBy = "name")
     {
         try
         {
@@ -545,7 +545,7 @@ public class FileSystemTools(
     [McpServerTool, DisplayName("get_file_info")]
     [Description("Get file/directory info. See file-operations/SKILL.md")]
     public Task<string> GetFileInfo(
-        [Description("Full path to the file or directory")] string path)
+        string path)
     {
         try
         {
@@ -614,7 +614,7 @@ public class FileSystemTools(
     [McpServerTool, DisplayName("create_directory")]
     [Description("Create directory. See file-operations/SKILL.md")]
     public Task<string> CreateDirectory(
-        [Description("Full path to the directory to create")] string path)
+        string path)
     {
         try
         {
