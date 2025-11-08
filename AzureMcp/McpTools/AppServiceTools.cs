@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using AzureServer.Core.Services.AppService;
+using AzureServer.Core.Services.AppService.Models;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -25,7 +26,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Listing web apps");
-            var webApps = await appServiceService.ListWebAppsAsync(subscriptionId, resourceGroupName);
+            IEnumerable<WebAppDto> webApps = await appServiceService.ListWebAppsAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -47,7 +48,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Getting web app {WebAppName}", webAppName);
-            var webApp = await appServiceService.GetWebAppAsync(webAppName, resourceGroupName, subscriptionId);
+            WebAppDto? webApp = await appServiceService.GetWebAppAsync(webAppName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -69,7 +70,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Starting web app {WebAppName}", webAppName);
-            var success = await appServiceService.StartWebAppAsync(webAppName, resourceGroupName, subscriptionId);
+            bool success = await appServiceService.StartWebAppAsync(webAppName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -91,7 +92,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Stopping web app {WebAppName}", webAppName);
-            var success = await appServiceService.StopWebAppAsync(webAppName, resourceGroupName, subscriptionId);
+            bool success = await appServiceService.StopWebAppAsync(webAppName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -113,7 +114,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Restarting web app {WebAppName}", webAppName);
-            var success = await appServiceService.RestartWebAppAsync(webAppName, resourceGroupName, subscriptionId);
+            bool success = await appServiceService.RestartWebAppAsync(webAppName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -139,7 +140,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Listing deployment slots for {WebAppName}", webAppName);
-            var slots = await appServiceService.ListDeploymentSlotsAsync(webAppName, resourceGroupName, subscriptionId);
+            IEnumerable<DeploymentSlotDto> slots = await appServiceService.ListDeploymentSlotsAsync(webAppName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -161,7 +162,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Getting deployment slot {SlotName}", slotName);
-            var slot = await appServiceService.GetDeploymentSlotAsync(webAppName, slotName, resourceGroupName, subscriptionId);
+            DeploymentSlotDto? slot = await appServiceService.GetDeploymentSlotAsync(webAppName, slotName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -188,7 +189,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Swapping slots {Source} -> {Target}", sourceSlotName, targetSlotName);
-            var success = await appServiceService.SwapSlotsAsync(webAppName, sourceSlotName, targetSlotName, resourceGroupName, subscriptionId);
+            bool success = await appServiceService.SwapSlotsAsync(webAppName, sourceSlotName, targetSlotName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -210,7 +211,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Starting slot {SlotName}", slotName);
-            var success = await appServiceService.StartSlotAsync(webAppName, slotName, resourceGroupName, subscriptionId);
+            bool success = await appServiceService.StartSlotAsync(webAppName, slotName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -232,7 +233,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Stopping slot {SlotName}", slotName);
-            var success = await appServiceService.StopSlotAsync(webAppName, slotName, resourceGroupName, subscriptionId);
+            bool success = await appServiceService.StopSlotAsync(webAppName, slotName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -258,7 +259,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Getting app settings for {WebAppName}", webAppName);
-            var settings = await appServiceService.GetAppSettingsAsync(webAppName, resourceGroupName, subscriptionId);
+            AppSettingsDto settings = await appServiceService.GetAppSettingsAsync(webAppName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -284,7 +285,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Updating app settings for {WebAppName}", webAppName);
-            var success = await appServiceService.UpdateAppSettingsAsync(webAppName, resourceGroupName, settings, subscriptionId);
+            bool success = await appServiceService.UpdateAppSettingsAsync(webAppName, resourceGroupName, settings, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -306,7 +307,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Getting connection strings for {WebAppName}", webAppName);
-            var connectionStrings = await appServiceService.GetConnectionStringsAsync(webAppName, resourceGroupName, subscriptionId);
+            IEnumerable<ConnectionStringDto> connectionStrings = await appServiceService.GetConnectionStringsAsync(webAppName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -345,7 +346,7 @@ public class AppServiceTools(
             }
 
             logger.LogDebug("Scaling web app {WebAppName} to {Count} instances", webAppName, instanceCount);
-            var success = await appServiceService.ScaleWebAppAsync(webAppName, resourceGroupName, instanceCount, subscriptionId);
+            bool success = await appServiceService.ScaleWebAppAsync(webAppName, resourceGroupName, instanceCount, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -371,7 +372,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Listing app service plans");
-            var plans = await appServiceService.ListAppServicePlansAsync(subscriptionId, resourceGroupName);
+            IEnumerable<AppServicePlanDto> plans = await appServiceService.ListAppServicePlansAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -393,7 +394,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Getting app service plan {PlanName}", planName);
-            var plan = await appServiceService.GetAppServicePlanAsync(planName, resourceGroupName, subscriptionId);
+            AppServicePlanDto? plan = await appServiceService.GetAppServicePlanAsync(planName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -423,7 +424,7 @@ public class AppServiceTools(
         try
         {
             logger.LogDebug("Getting application logs for {WebAppName}", webAppName);
-            var logs = await appServiceService.GetApplicationLogsAsync(webAppName, resourceGroupName, lastHours, subscriptionId);
+            string logs = await appServiceService.GetApplicationLogsAsync(webAppName, resourceGroupName, lastHours, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {

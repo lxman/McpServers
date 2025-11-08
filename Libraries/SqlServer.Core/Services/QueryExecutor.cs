@@ -25,10 +25,10 @@ public class QueryExecutor(
             ValidateSql(sql);
             maxRows = Math.Min(maxRows, _config.Security.MaxResultRows);
 
-            var connection = await connectionManager.GetConnectionAsync(connectionName);
-            var data = (await connection.QueryAsync<dynamic>(sql, parameters)).ToList();
+            IDbConnection connection = await connectionManager.GetConnectionAsync(connectionName);
+            List<dynamic> data = (await connection.QueryAsync<dynamic>(sql, parameters)).ToList();
 
-            var isTruncated = data.Count > maxRows;
+            bool isTruncated = data.Count > maxRows;
             if (isTruncated)
                 data = data.Take(maxRows).ToList();
 
@@ -71,8 +71,8 @@ public class QueryExecutor(
         {
             ValidateSql(sql);
 
-            var connection = await connectionManager.GetConnectionAsync(connectionName);
-            var rowsAffected = await connection.ExecuteAsync(sql, parameters);
+            IDbConnection connection = await connectionManager.GetConnectionAsync(connectionName);
+            int rowsAffected = await connection.ExecuteAsync(sql, parameters);
 
             sw.Stop();
             var result = new QueryResult
@@ -111,8 +111,8 @@ public class QueryExecutor(
         {
             ValidateSql(sql);
 
-            var connection = await connectionManager.GetConnectionAsync(connectionName);
-            var scalarValue = await connection.ExecuteScalarAsync(sql, parameters);
+            IDbConnection connection = await connectionManager.GetConnectionAsync(connectionName);
+            object? scalarValue = await connection.ExecuteScalarAsync(sql, parameters);
 
             sw.Stop();
             var result = new QueryResult
@@ -151,7 +151,7 @@ public class QueryExecutor(
 
         if (!_config.Security.AllowDdl)
         {
-            var upperSql = sql.TrimStart().ToUpperInvariant();
+            string upperSql = sql.TrimStart().ToUpperInvariant();
             var ddlKeywords = new[] { "CREATE ", "DROP ", "ALTER ", "TRUNCATE " };
             if (ddlKeywords.Any(keyword => upperSql.StartsWith(keyword)))
                 throw new UnauthorizedAccessException("DDL operations are not allowed");

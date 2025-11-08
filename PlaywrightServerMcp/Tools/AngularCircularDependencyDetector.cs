@@ -80,7 +80,7 @@ public class AngularCircularDependencyDetector(PlaywrightSessionManager sessionM
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return JsonSerializer.Serialize(new { error = "No active browser session found", sessionId }, JsonOptions);
 

@@ -31,9 +31,9 @@ public class HttpTools(
         {
             logger.LogInformation("Making GET request to: {Url}", url);
             
-            using var httpClient = CreateClient();
-            var response = await httpClient.GetAsync(url);
-            var content = await response.Content.ReadAsStringAsync();
+            using HttpClient httpClient = CreateClient();
+            HttpResponseMessage response = await httpClient.GetAsync(url);
+            string content = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
@@ -47,7 +47,7 @@ public class HttpTools(
             }
 
             // Check response size before processing
-            var sizeCheck = responseSizeGuard.CheckStringSize(content, "http_get");
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(content, "http_get");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -61,7 +61,7 @@ public class HttpTools(
             // Try to parse as JSON for pretty printing
             try
             {
-                using var doc = JsonDocument.Parse(content);
+                using JsonDocument doc = JsonDocument.Parse(content);
                 return JsonSerializer.Serialize(doc, SerializerOptions.JsonOptionsIndented);
             }
             catch
@@ -92,10 +92,10 @@ public class HttpTools(
         {
             logger.LogInformation("Making POST request to: {Url}", url);
             
-            using var httpClient = CreateClient();
+            using HttpClient httpClient = CreateClient();
             var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-            var response = await httpClient.PostAsync(url, content);
-            var responseContent = await response.Content.ReadAsStringAsync();
+            HttpResponseMessage response = await httpClient.PostAsync(url, content);
+            string responseContent = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
@@ -109,7 +109,7 @@ public class HttpTools(
             }
 
             // Check response size before processing
-            var sizeCheck = responseSizeGuard.CheckStringSize(responseContent, "http_post");
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(responseContent, "http_post");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -123,7 +123,7 @@ public class HttpTools(
             // Try to parse as JSON for pretty printing
             try
             {
-                using var doc = JsonDocument.Parse(responseContent);
+                using JsonDocument doc = JsonDocument.Parse(responseContent);
                 return JsonSerializer.Serialize(doc, SerializerOptions.JsonOptionsIndented);
             }
             catch
@@ -154,10 +154,10 @@ public class HttpTools(
         {
             logger.LogInformation("Making PUT request to: {Url}", url);
             
-            using var httpClient = CreateClient();
+            using HttpClient httpClient = CreateClient();
             var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-            var response = await httpClient.PutAsync(url, content);
-            var responseContent = await response.Content.ReadAsStringAsync();
+            HttpResponseMessage response = await httpClient.PutAsync(url, content);
+            string responseContent = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
@@ -171,7 +171,7 @@ public class HttpTools(
             }
 
             // Check response size before processing
-            var sizeCheck = responseSizeGuard.CheckStringSize(responseContent, "http_put");
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(responseContent, "http_put");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -184,7 +184,7 @@ public class HttpTools(
 
             try
             {
-                using var doc = JsonDocument.Parse(responseContent);
+                using JsonDocument doc = JsonDocument.Parse(responseContent);
                 return JsonSerializer.Serialize(doc, SerializerOptions.JsonOptionsIndented);
             }
             catch
@@ -213,9 +213,9 @@ public class HttpTools(
         {
             logger.LogInformation("Making DELETE request to: {Url}", url);
             
-            using var httpClient = CreateClient();
-            var response = await httpClient.DeleteAsync(url);
-            var content = await response.Content.ReadAsStringAsync();
+            using HttpClient httpClient = CreateClient();
+            HttpResponseMessage response = await httpClient.DeleteAsync(url);
+            string content = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
@@ -229,7 +229,7 @@ public class HttpTools(
             }
 
             // Check response size before processing
-            var sizeCheck = responseSizeGuard.CheckStringSize(content, "http_delete");
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(content, "http_delete");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -242,7 +242,7 @@ public class HttpTools(
 
             try
             {
-                using var doc = JsonDocument.Parse(content);
+                using JsonDocument doc = JsonDocument.Parse(content);
                 return JsonSerializer.Serialize(doc, SerializerOptions.JsonOptionsIndented);
             }
             catch
@@ -274,7 +274,7 @@ public class HttpTools(
         {
             logger.LogInformation("Making {Method} request to: {Url}", method, url);
             
-            using var httpClient = CreateClient();
+            using HttpClient httpClient = CreateClient();
             var request = new HttpRequestMessage(new HttpMethod(method.ToUpper()), url);
 
             // Add custom headers if provided
@@ -285,7 +285,7 @@ public class HttpTools(
                     var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersJson);
                     if (headers != null)
                     {
-                        foreach (var header in headers)
+                        foreach (KeyValuePair<string, string> header in headers)
                         {
                             request.Headers.TryAddWithoutValidation(header.Key, header.Value);
                         }
@@ -303,8 +303,8 @@ public class HttpTools(
                 request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
             }
 
-            var response = await httpClient.SendAsync(request);
-            var content = await response.Content.ReadAsStringAsync();
+            HttpResponseMessage response = await httpClient.SendAsync(request);
+            string content = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
@@ -318,7 +318,7 @@ public class HttpTools(
             }
 
             // Check response size before processing
-            var sizeCheck = responseSizeGuard.CheckStringSize(content, "http_request");
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(content, "http_request");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -331,7 +331,7 @@ public class HttpTools(
 
             try
             {
-                using var doc = JsonDocument.Parse(content);
+                using JsonDocument doc = JsonDocument.Parse(content);
                 return JsonSerializer.Serialize(doc, SerializerOptions.JsonOptionsIndented);
             }
             catch

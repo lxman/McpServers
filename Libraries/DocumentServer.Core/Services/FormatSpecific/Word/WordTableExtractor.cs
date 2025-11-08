@@ -27,8 +27,8 @@ public class WordTableExtractor(
 
         try
         {
-            using var doc = await OpenDocumentAsync(filePath);
-            var body = doc.MainDocumentPart?.Document?.Body;
+            using WordprocessingDocument doc = await OpenDocumentAsync(filePath);
+            Body? body = doc.MainDocumentPart?.Document?.Body;
 
             if (body is null)
             {
@@ -38,9 +38,9 @@ public class WordTableExtractor(
             var tables = new List<WordTable>();
             var tableNumber = 1;
 
-            foreach (var table in body.Elements<Table>())
+            foreach (Table table in body.Elements<Table>())
             {
-                var wordTable = ProcessTable(table, tableNumber++);
+                WordTable wordTable = ProcessTable(table, tableNumber++);
                 tables.Add(wordTable);
             }
 
@@ -64,15 +64,15 @@ public class WordTableExtractor(
 
         try
         {
-            using var doc = await OpenDocumentAsync(filePath);
-            var body = doc.MainDocumentPart?.Document?.Body;
+            using WordprocessingDocument doc = await OpenDocumentAsync(filePath);
+            Body? body = doc.MainDocumentPart?.Document?.Body;
 
             if (body is null)
             {
                 return ServiceResult<WordTable>.CreateFailure("Document body not found");
             }
 
-            var allTables = body.Elements<Table>().ToList();
+            List<Table> allTables = body.Elements<Table>().ToList();
 
             if (tableNumber < 1 || tableNumber > allTables.Count)
             {
@@ -80,8 +80,8 @@ public class WordTableExtractor(
                     $"Table {tableNumber} not found (document has {allTables.Count} tables)");
             }
 
-            var table = allTables[tableNumber - 1];
-            var wordTable = ProcessTable(table, tableNumber);
+            Table table = allTables[tableNumber - 1];
+            WordTable wordTable = ProcessTable(table, tableNumber);
 
             logger.LogInformation("Extracted table #{Number} with {Rows} rows and {Cols} columns",
                 tableNumber, wordTable.RowCount, wordTable.ColumnCount);
@@ -104,15 +104,15 @@ public class WordTableExtractor(
 
         try
         {
-            using var doc = await OpenDocumentAsync(filePath);
-            var body = doc.MainDocumentPart?.Document?.Body;
+            using WordprocessingDocument doc = await OpenDocumentAsync(filePath);
+            Body? body = doc.MainDocumentPart?.Document?.Body;
 
             if (body is null)
             {
                 return ServiceResult<int>.CreateFailure("Document body not found");
             }
 
-            var count = body.Elements<Table>().Count();
+            int count = body.Elements<Table>().Count();
 
             logger.LogInformation("Document has {Count} tables: {FilePath}", count, filePath);
 
@@ -129,7 +129,7 @@ public class WordTableExtractor(
 
     private async Task<WordprocessingDocument> OpenDocumentAsync(string filePath)
     {
-        var cached = cache.Get(filePath);
+        LoadedDocument? cached = cache.Get(filePath);
         var doc = cached?.DocumentObject as WordprocessingDocument;
 
         if (doc is not null)
@@ -137,11 +137,11 @@ public class WordTableExtractor(
             return doc;
         }
 
-        var password = passwordManager.GetPasswordForFile(filePath);
+        string? password = passwordManager.GetPasswordForFile(filePath);
 
         // Use MsOfficeCrypto to handle decryption (or pass through if not encrypted)
-        await using var fileStream = File.OpenRead(filePath);
-        await using var decryptedStream = await OfficeDocument.DecryptAsync(fileStream, password);
+        await using FileStream fileStream = File.OpenRead(filePath);
+        await using Stream decryptedStream = await OfficeDocument.DecryptAsync(fileStream, password);
         
         // Copy to memory stream and open document
         var memoryStream = new MemoryStream();
@@ -158,20 +158,20 @@ public class WordTableExtractor(
         var headers = new List<string>();
         var firstRow = true;
 
-        foreach (var row in table.Elements<TableRow>())
+        foreach (TableRow row in table.Elements<TableRow>())
         {
             var rowCells = new List<string>();
 
-            foreach (var cell in row.Elements<TableCell>())
+            foreach (TableCell cell in row.Elements<TableCell>())
             {
                 var cellText = new StringBuilder();
-                foreach (var paragraph in cell.Elements<Paragraph>())
+                foreach (Paragraph paragraph in cell.Elements<Paragraph>())
                 {
                     cellText.Append(GetParagraphText(paragraph).Trim());
                     cellText.Append(' ');
                 }
 
-                var cellContent = cellText.ToString().Trim();
+                string cellContent = cellText.ToString().Trim();
                 rowCells.Add(cellContent);
             }
 
@@ -185,12 +185,12 @@ public class WordTableExtractor(
             cells.Add(rowCells);
 
             // Build content representation
-            var rowString = string.Join(" | ", rowCells);
+            string rowString = string.Join(" | ", rowCells);
             tableContent.AppendLine(rowString);
         }
 
-        var rowCount = cells.Count;
-        var columnCount = cells.Count > 0 ? cells[0].Count : 0;
+        int rowCount = cells.Count;
+        int columnCount = cells.Count > 0 ? cells[0].Count : 0;
 
         return new WordTable
         {
@@ -207,9 +207,9 @@ public class WordTableExtractor(
     {
         var textBuilder = new StringBuilder();
 
-        foreach (var run in paragraph.Elements<Run>())
+        foreach (Run run in paragraph.Elements<Run>())
         {
-            foreach (var element in run.Elements())
+            foreach (OpenXmlElement element in run.Elements())
             {
                 if (element is Text text)
                 {

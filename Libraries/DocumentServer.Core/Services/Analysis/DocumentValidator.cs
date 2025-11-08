@@ -70,7 +70,7 @@ public class DocumentValidator
             }
 
             // Try to load the document
-            var loadResult = await _processor.LoadDocumentAsync(filePath, password);
+            ServiceResult<LoadedDocument> loadResult = await _processor.LoadDocumentAsync(filePath, password);
             if (!loadResult.Success)
             {
                 validationResult.IsValid = false;
@@ -99,7 +99,7 @@ public class DocumentValidator
             validationResult.DocumentType = loadResult.Data.DocumentType.ToString();
 
             // Try to extract content to verify integrity
-            var extractResult = await _processor.ExtractTextAsync(filePath, password);
+            ServiceResult<string> extractResult = await _processor.ExtractTextAsync(filePath, password);
             if (!extractResult.Success)
             {
                 validationResult.Warnings.Add($"Content extraction warning: {extractResult.Error}");
@@ -115,7 +115,7 @@ public class DocumentValidator
             }
 
             // Get metadata
-            var metadataResult = 
+            ServiceResult<Dictionary<string, string>> metadataResult = 
                 await _processor.ExtractMetadataAsync(filePath, password);
             if (metadataResult.Success)
             {
@@ -144,7 +144,7 @@ public class DocumentValidator
     {
         try
         {
-            var result = await _processor.LoadDocumentAsync(filePath, password);
+            ServiceResult<LoadedDocument> result = await _processor.LoadDocumentAsync(filePath, password);
             return result.Success;
         }
         catch

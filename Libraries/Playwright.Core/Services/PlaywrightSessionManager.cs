@@ -76,7 +76,7 @@ public async Task<string> CreateSessionAsync(string sessionId, string browserTyp
             };
 
             // Check for device emulation first
-            var deviceConfig = BrowserLaunchOptions.GetDeviceConfiguration(options.DeviceEmulation);
+            DeviceConfiguration? deviceConfig = BrowserLaunchOptions.GetDeviceConfiguration(options.DeviceEmulation);
             
             // Create browser context options
             var contextOptions = new BrowserNewContextOptions();
@@ -156,7 +156,7 @@ public async Task<string> CreateSessionAsync(string sessionId, string browserTyp
             }
 
             // Apply extra HTTP headers
-            var extraHeaders = options.GetExtraHttpHeadersDictionary();
+            Dictionary<string, string>? extraHeaders = options.GetExtraHttpHeadersDictionary();
             if (extraHeaders != null && extraHeaders.Any())
             {
                 contextOptions.ExtraHTTPHeaders = extraHeaders;
@@ -192,8 +192,8 @@ public async Task<string> CreateSessionAsync(string sessionId, string browserTyp
                 Timestamp = DateTime.UtcNow
             });
 
-            var deviceInfo = deviceConfig != null ? $" (Device: {options.DeviceEmulation})" : "";
-            var viewportInfo = deviceConfig != null 
+            string deviceInfo = deviceConfig != null ? $" (Device: {options.DeviceEmulation})" : "";
+            string viewportInfo = deviceConfig != null 
                 ? $"{deviceConfig.ViewportWidth}x{deviceConfig.ViewportHeight}" 
                 : $"{options.ViewportWidth}x{options.ViewportHeight}";
 
@@ -262,14 +262,14 @@ public async Task<string> CreateSessionAsync(string sessionId, string browserTyp
         // Response event listener at context level
         session.Context.Response += async (_, e) =>
         {
-            var startTime = DateTime.UtcNow;
+            DateTime startTime = DateTime.UtcNow;
             var responseBody = "";
             var responseHeaders = new Dictionary<string, string>();
 
             try
             {
                 // Capture response headers (limited to prevent size issues)
-                foreach (var header in e.Headers.Take(10))
+                foreach (KeyValuePair<string, string> header in e.Headers.Take(10))
                 {
                     if (responseHeaders.Count < 10) // Limit total headers
                     {
@@ -363,7 +363,7 @@ public async Task<string> CreateSessionAsync(string sessionId, string browserTyp
 
     public async Task<bool> CloseSessionAsync(string sessionId)
     {
-        if (!_sessions.TryGetValue(sessionId, out var session))
+        if (!_sessions.TryGetValue(sessionId, out SessionContext? session))
             return false;
 
         try
@@ -380,7 +380,7 @@ public async Task<string> CreateSessionAsync(string sessionId, string browserTyp
 
     public async Task CloseAllSessionsAsync()
     {
-        foreach (var session in _sessions.Values)
+        foreach (SessionContext session in _sessions.Values)
         {
             session.Dispose();
         }

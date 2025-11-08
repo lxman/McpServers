@@ -25,10 +25,10 @@ public class ApplicationTrackingTools(
         {
             logger.LogDebug("Tracking new application");
 
-            var application = JsonSerializer.Deserialize<ApplicationRecord>(applicationJson)
-                              ?? throw new ArgumentException("Invalid application JSON");
+            ApplicationRecord application = JsonSerializer.Deserialize<ApplicationRecord>(applicationJson)
+                                            ?? throw new ArgumentException("Invalid application JSON");
 
-            var result = await applicationService.TrackApplicationAsync(application);
+            bool result = await applicationService.TrackApplicationAsync(application);
 
             return JsonSerializer.Serialize(new
             {
@@ -54,7 +54,7 @@ public class ApplicationTrackingTools(
         {
             logger.LogDebug("Updating application {ApplicationId} status to {Status}", applicationId, status);
 
-            var result = await applicationService.UpdateApplicationStatusAsync(
+            bool result = await applicationService.UpdateApplicationStatusAsync(
                 applicationId,
                 status,
                 notes);

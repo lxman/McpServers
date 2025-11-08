@@ -29,16 +29,16 @@ public class ExcelWorksheetReader(
         try
         {
             // Try to get from cache first
-            var cached = cache.Get(filePath);
+            LoadedDocument? cached = cache.Get(filePath);
             var workbook = cached?.DocumentObject as XLWorkbook;
 
             if (workbook is null)
             {
                 logger.LogDebug("Document not in cache, loading: {FilePath}", filePath);
                 
-                var password = passwordManager.GetPasswordForFile(filePath);
-                await using var fileStream = File.OpenRead(filePath);
-                await using var decryptedStream = await decryptionService.DecryptDocumentAsync(fileStream, password);
+                string? password = passwordManager.GetPasswordForFile(filePath);
+                await using FileStream fileStream = File.OpenRead(filePath);
+                await using Stream decryptedStream = await decryptionService.DecryptDocumentAsync(fileStream, password);
                 
                 workbook = new XLWorkbook(decryptedStream);
             }
@@ -73,7 +73,7 @@ public class ExcelWorksheetReader(
                 worksheet = workbook.Worksheets.First();
             }
 
-            var excelWorksheet = await ConvertWorksheetAsync(worksheet);
+            ExcelWorksheet excelWorksheet = await ConvertWorksheetAsync(worksheet);
 
             logger.LogInformation("Successfully read worksheet: {Name} with {Rows} rows and {Cols} columns",
                 excelWorksheet.Name, excelWorksheet.RowCount, excelWorksheet.ColumnCount);
@@ -96,19 +96,19 @@ public class ExcelWorksheetReader(
 
         try
         {
-            var cached = cache.Get(filePath);
+            LoadedDocument? cached = cache.Get(filePath);
             var workbook = cached?.DocumentObject as XLWorkbook;
 
             if (workbook is null)
             {
-                var password = passwordManager.GetPasswordForFile(filePath);
-                await using var fileStream = File.OpenRead(filePath);
-                await using var decryptedStream = await decryptionService.DecryptDocumentAsync(fileStream, password);
+                string? password = passwordManager.GetPasswordForFile(filePath);
+                await using FileStream fileStream = File.OpenRead(filePath);
+                await using Stream decryptedStream = await decryptionService.DecryptDocumentAsync(fileStream, password);
                 
                 workbook = new XLWorkbook(decryptedStream);
             }
 
-            var names = workbook.Worksheets.Select(w => w.Name).ToList();
+            List<string> names = workbook.Worksheets.Select(w => w.Name).ToList();
 
             logger.LogInformation("Found {Count} worksheets in: {FilePath}", names.Count, filePath);
 
@@ -136,10 +136,10 @@ public class ExcelWorksheetReader(
                 IsVisible = worksheet.Visibility == XLWorksheetVisibility.Visible
             };
 
-            var usedRange = worksheet.RangeUsed();
+            IXLRange? usedRange = worksheet.RangeUsed();
             if (usedRange is not null)
             {
-                foreach (var cell in usedRange.Cells())
+                foreach (IXLCell? cell in usedRange.Cells())
                 {
                     var excelCell = new ExcelCell
                     {
@@ -156,7 +156,7 @@ public class ExcelWorksheetReader(
                 }
 
                 // Extract tables
-                foreach (var table in worksheet.Tables)
+                foreach (IXLTable? table in worksheet.Tables)
                 {
                     var excelTable = new ExcelTable
                     {

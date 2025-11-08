@@ -17,17 +17,17 @@ public class VpnGatewayService(ArmClientFactory armClientFactory, ILogger<VpnGat
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var gateways = new List<VpnGatewayDto>();
 
             switch (string.IsNullOrEmpty(subscriptionId))
             {
                 case false when !string.IsNullOrEmpty(resourceGroupName):
                 {
-                    var resourceGroup = armClient.GetResourceGroupResource(
+                    ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
                         ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
                 
-                    await foreach (var gateway in resourceGroup.GetVirtualNetworkGateways())
+                    await foreach (VirtualNetworkGatewayResource? gateway in resourceGroup.GetVirtualNetworkGateways())
                     {
                         gateways.Add(MappingService.MapToVpnGatewayDto(gateway.Data));
                     }
@@ -36,12 +36,12 @@ public class VpnGatewayService(ArmClientFactory armClientFactory, ILogger<VpnGat
                 }
                 case false:
                 {
-                    var subscription = armClient.GetSubscriptionResource(
+                    SubscriptionResource? subscription = armClient.GetSubscriptionResource(
                         new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
-                    await foreach (var resourceGroup in subscription.GetResourceGroups())
+                    await foreach (ResourceGroupResource? resourceGroup in subscription.GetResourceGroups())
                     {
-                        await foreach (var gateway in resourceGroup.GetVirtualNetworkGateways())
+                        await foreach (VirtualNetworkGatewayResource? gateway in resourceGroup.GetVirtualNetworkGateways())
                         {
                             gateways.Add(MappingService.MapToVpnGatewayDto(gateway.Data));
                         }
@@ -51,11 +51,11 @@ public class VpnGatewayService(ArmClientFactory armClientFactory, ILogger<VpnGat
                 }
                 default:
                 {
-                    await foreach (var subscription in armClient.GetSubscriptions())
+                    await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
                     {
-                        await foreach (var resourceGroup in subscription.GetResourceGroups())
+                        await foreach (ResourceGroupResource? resourceGroup in subscription.GetResourceGroups())
                         {
-                            await foreach (var gateway in resourceGroup.GetVirtualNetworkGateways())
+                            await foreach (VirtualNetworkGatewayResource? gateway in resourceGroup.GetVirtualNetworkGateways())
                             {
                                 gateways.Add(MappingService.MapToVpnGatewayDto(gateway.Data));
                             }
@@ -79,8 +79,8 @@ public class VpnGatewayService(ArmClientFactory armClientFactory, ILogger<VpnGat
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = VirtualNetworkGatewayResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, gatewayName);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = VirtualNetworkGatewayResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, gatewayName);
             Response<VirtualNetworkGatewayResource>? response = await armClient.GetVirtualNetworkGatewayResource(resourceId).GetAsync();
             
             return response.HasValue ? MappingService.MapToVpnGatewayDto(response.Value.Data) : null;
@@ -100,8 +100,8 @@ public class VpnGatewayService(ArmClientFactory armClientFactory, ILogger<VpnGat
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceGroup = armClient.GetResourceGroupResource(
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
                 ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
 
             var gatewayData = new VirtualNetworkGatewayData
@@ -131,7 +131,7 @@ public class VpnGatewayService(ArmClientFactory armClientFactory, ILogger<VpnGat
 
             if (request.Tags is not null)
             {
-                foreach (var tag in request.Tags)
+                foreach (KeyValuePair<string, string> tag in request.Tags)
                     gatewayData.Tags.Add(tag.Key, tag.Value);
             }
 
@@ -151,9 +151,9 @@ public class VpnGatewayService(ArmClientFactory armClientFactory, ILogger<VpnGat
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = VirtualNetworkGatewayResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, gatewayName);
-            var gateway = armClient.GetVirtualNetworkGatewayResource(resourceId);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = VirtualNetworkGatewayResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, gatewayName);
+            VirtualNetworkGatewayResource? gateway = armClient.GetVirtualNetworkGatewayResource(resourceId);
             
             await gateway.DeleteAsync(WaitUntil.Completed);
             return true;

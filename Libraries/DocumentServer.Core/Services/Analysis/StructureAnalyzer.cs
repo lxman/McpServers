@@ -41,7 +41,7 @@ public class StructureAnalyzer
             };
 
             // Get document info
-            var infoResult = await _processor.GetDocumentInfoAsync(filePath, password);
+            ServiceResult<DocumentInfo> infoResult = await _processor.GetDocumentInfoAsync(filePath, password);
             if (infoResult.Success)
             {
                 analysis.DocumentType = infoResult.Data!.DocumentType.ToString();
@@ -50,7 +50,7 @@ public class StructureAnalyzer
             }
 
             // Extract text for content analysis
-            var textResult = await _processor.ExtractTextAsync(filePath, password);
+            ServiceResult<string> textResult = await _processor.ExtractTextAsync(filePath, password);
             if (!textResult.Success)
             {
                 _logger.LogWarning("Failed to extract text for analysis: {FilePath}, Error: {Error}",
@@ -59,11 +59,11 @@ public class StructureAnalyzer
                     $"Failed to extract content: {textResult.Error}");
             }
 
-            var text = textResult.Data!;
+            string text = textResult.Data!;
             AnalyzeTextContent(text, analysis);
 
             // Get structured content
-            var structuredResult = 
+            ServiceResult<object> structuredResult = 
                 await _processor.ExtractStructuredContentAsync(filePath, password);
             if (structuredResult.Success)
             {
@@ -71,7 +71,7 @@ public class StructureAnalyzer
             }
 
             // Get metadata
-            var metadataResult = 
+            ServiceResult<Dictionary<string, string>> metadataResult = 
                 await _processor.ExtractMetadataAsync(filePath, password);
             if (metadataResult.Success)
             {
@@ -99,12 +99,12 @@ public class StructureAnalyzer
         analysis.CharacterCountNoSpaces = text.Count(c => !char.IsWhiteSpace(c));
 
         // Line analysis
-        var lines = text.Split('\n');
+        string[] lines = text.Split('\n');
         analysis.LineCount = lines.Length;
         analysis.EmptyLineCount = lines.Count(string.IsNullOrWhiteSpace);
 
         // Word analysis
-        var words = text.Split([' ', '\n', '\r', '\t'], 
+        string[] words = text.Split([' ', '\n', '\r', '\t'], 
             StringSplitOptions.RemoveEmptyEntries);
         analysis.WordCount = words.Length;
 
@@ -119,7 +119,7 @@ public class StructureAnalyzer
         }
 
         // Sentence analysis (approximate)
-        var sentences = text.Split(['.', '!', '?'], 
+        string[] sentences = text.Split(['.', '!', '?'], 
             StringSplitOptions.RemoveEmptyEntries);
         analysis.SentenceCount = sentences.Count(s => !string.IsNullOrWhiteSpace(s));
 
@@ -129,12 +129,12 @@ public class StructureAnalyzer
         }
 
         // Paragraph analysis (double newlines)
-        var paragraphs = text.Split(["\n\n", "\r\n\r\n"], 
+        string[] paragraphs = text.Split(["\n\n", "\r\n\r\n"], 
             StringSplitOptions.RemoveEmptyEntries);
         analysis.ParagraphCount = paragraphs.Length;
 
         // Word frequency analysis (top 10)
-        var wordFrequency = words
+        Dictionary<string, int> wordFrequency = words
             .Where(w => w.Length > 3) // Ignore very short words
             .GroupBy(w => w.ToLowerInvariant())
             .OrderByDescending(g => g.Count())
@@ -146,8 +146,8 @@ public class StructureAnalyzer
         // Calculate readability scores
         if (analysis.SentenceCount <= 0 || analysis.WordCount <= 0) return;
         // Flesch Reading Ease approximation
-        var avgSentenceLength = (double)analysis.WordCount / analysis.SentenceCount;
-        var avgSyllablesPerWord = analysis.AverageWordLength / 2.5; // Rough approximation
+        double avgSentenceLength = (double)analysis.WordCount / analysis.SentenceCount;
+        double avgSyllablesPerWord = analysis.AverageWordLength / 2.5; // Rough approximation
         analysis.ReadabilityScore = 206.835 - 1.015 * avgSentenceLength - 84.6 * avgSyllablesPerWord;
     }
 }

@@ -25,7 +25,7 @@ try
 {
     Log.Information("Starting Document MCP server");
 
-    var builder = Host.CreateApplicationBuilder(args);
+    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
     // Configure logging
     builder.Logging.ClearProviders();
@@ -56,7 +56,7 @@ try
         .WithTools<SearchTools>()
         .WithTools<PasswordTools>();
 
-    var host = builder.Build();
+    IHost host = builder.Build();
     await host.RunAsync();
 }
 catch (Exception ex)

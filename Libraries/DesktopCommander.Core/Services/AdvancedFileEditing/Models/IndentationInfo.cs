@@ -47,8 +47,8 @@ public class IndentationInfo(IndentationType type, int size, int level = 0)
         if (spaces > 0)
         {
             // Try to detect common indentation sizes (2, 4, 8)
-            var size = DetectSpaceSize(spaces);
-            var level = spaces / size;
+            int size = DetectSpaceSize(spaces);
+            int level = spaces / size;
             return new IndentationInfo(IndentationType.Spaces, size, level);
         }
 
@@ -68,7 +68,7 @@ public class IndentationInfo(IndentationType type, int size, int level = 0)
         // Common indentation sizes
         int[] commonSizes = [2, 4, 8];
         
-        foreach (var size in commonSizes)
+        foreach (int size in commonSizes)
         {
             if (totalSpaces % size == 0)
                 return size;

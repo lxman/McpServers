@@ -15,21 +15,21 @@ public class AssemblyAnalysisService(AssemblyLoaderService loaderService)
         try
         {
             // Ensure assembly is loaded
-            var loadResult = loaderService.LoadAssembly(assemblyPath);
+            LoadAssemblyResponse loadResult = loaderService.LoadAssembly(assemblyPath);
             if (!loadResult.Success)
             {
                 response.Error = loadResult.Error;
                 return response;
             }
 
-            var assembly = loaderService.GetLoadedAssembly(assemblyPath);
+            Assembly? assembly = loaderService.GetLoadedAssembly(assemblyPath);
             if (assembly == null)
             {
                 response.Error = "Assembly was loaded but could not be retrieved";
                 return response;
             }
 
-            var assemblyName = assembly.GetName();
+            AssemblyName assemblyName = assembly.GetName();
 
             response.Success = true;
             response.Name = assemblyName.Name ?? string.Empty;
@@ -37,7 +37,7 @@ public class AssemblyAnalysisService(AssemblyLoaderService loaderService)
             response.Version = assemblyName.Version?.ToString() ?? string.Empty;
             response.Culture = assemblyName.CultureName ?? "neutral";
             
-            var publicKeyToken = assemblyName.GetPublicKeyToken();
+            byte[]? publicKeyToken = assemblyName.GetPublicKeyToken();
             response.PublicKeyToken = publicKeyToken != null && publicKeyToken.Length > 0
                 ? Convert.ToHexStringLower(publicKeyToken)
                 : "null";
@@ -45,7 +45,7 @@ public class AssemblyAnalysisService(AssemblyLoaderService loaderService)
             response.Location = assemblyPath;
 
             // Get target framework from attribute using CustomAttributeData
-            var targetFrameworkAttr = assembly.CustomAttributes
+            CustomAttributeData? targetFrameworkAttr = assembly.CustomAttributes
                 .FirstOrDefault(a => a.AttributeType.Name == "TargetFrameworkAttribute");
             
             if (targetFrameworkAttr != null && targetFrameworkAttr.ConstructorArguments.Count > 0)
@@ -74,14 +74,14 @@ public class AssemblyAnalysisService(AssemblyLoaderService loaderService)
         try
         {
             // Ensure assembly is loaded
-            var loadResult = loaderService.LoadAssembly(request.AssemblyPath);
+            LoadAssemblyResponse loadResult = loaderService.LoadAssembly(request.AssemblyPath);
             if (!loadResult.Success)
             {
                 response.Error = loadResult.Error;
                 return response;
             }
 
-            var assembly = loaderService.GetLoadedAssembly(request.AssemblyPath);
+            Assembly? assembly = loaderService.GetLoadedAssembly(request.AssemblyPath);
             if (assembly == null)
             {
                 response.Error = "Assembly was loaded but could not be retrieved";
@@ -89,7 +89,7 @@ public class AssemblyAnalysisService(AssemblyLoaderService loaderService)
             }
 
             // Get all types
-            var types = assembly.GetTypes();
+            Type[] types = assembly.GetTypes();
 
             // Apply filters
             IEnumerable<Type> filteredTypes = types;
@@ -112,7 +112,7 @@ public class AssemblyAnalysisService(AssemblyLoaderService loaderService)
             }
 
             // Convert to TypeSummary
-            foreach (var type in filteredTypes)
+            foreach (Type type in filteredTypes)
             {
                 response.Types.Add(new TypeSummary
                 {

@@ -5,7 +5,7 @@ using RedisMcp.McpTools;
 using Serilog;
 
 // Configure Serilog to write to a file (stdout is reserved for MCP protocol)
-var logPath = Path.Combine(AppContext.BaseDirectory, "logs", "redismcp.log");
+string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "redismcp.log");
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
@@ -13,7 +13,7 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    var builder = Host.CreateApplicationBuilder(args);
+    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
     // Add Serilog
     builder.Services.AddSerilog();
@@ -29,7 +29,7 @@ try
         .WithTools<ExpiryTools>()
         .WithTools<ServerTools>();
 
-    var host = builder.Build();
+    IHost host = builder.Build();
 
     Log.Information("RedisMcp starting...");
     await host.RunAsync();

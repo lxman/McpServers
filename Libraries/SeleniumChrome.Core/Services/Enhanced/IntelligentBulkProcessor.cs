@@ -29,10 +29,10 @@ public class IntelligentBulkProcessor(
         {
             logger.LogInformation($"Starting bulk processing: target {request.TargetJobCount} jobs");
 
-            var config = scraper.GetDefaultConfiguration();
+            SiteConfiguration config = scraper.GetDefaultConfiguration();
             
             // Adaptive batch sizing based on target
-            var batchSize = CalculateOptimalBatchSize(request.TargetJobCount);
+            int batchSize = CalculateOptimalBatchSize(request.TargetJobCount);
             var currentPage = 1;
             var consecutiveLowScoreCount = 0;
             var maxConsecutiveLowScore = 3;
@@ -55,7 +55,7 @@ public class IntelligentBulkProcessor(
                     };
 
                     // Get jobs for current batch
-                    var jobs = await scraper.ScrapeJobsAsync(searchRequest, config);
+                    List<EnhancedJobListing> jobs = await scraper.ScrapeJobsAsync(searchRequest, config);
                     
                     if (jobs.Count == 0)
                     {
@@ -67,7 +67,7 @@ public class IntelligentBulkProcessor(
 
                     var batchHighScoreCount = 0;
 
-                    foreach (var job in jobs)
+                    foreach (EnhancedJobListing job in jobs)
                     {
                         if (result.ProcessedJobs.Count >= request.TargetJobCount)
                             break;
@@ -75,7 +75,7 @@ public class IntelligentBulkProcessor(
                         try
                         {
                             // Enhanced scoring
-                            var scoringResult = scorer.CalculateEnhancedMatchScore(job, request.ScoringProfile);
+                            JobScoringResult scoringResult = scorer.CalculateEnhancedMatchScore(job, request.ScoringProfile);
                             job.MatchScore = scoringResult.TotalScore;
 
                             // Store scoring details
@@ -124,7 +124,7 @@ public class IntelligentBulkProcessor(
                     }
 
                     // Adaptive rate limiting
-                    var delayMs = CalculateAdaptiveDelay(currentPage, jobs.Count);
+                    int delayMs = CalculateAdaptiveDelay(currentPage, jobs.Count);
                     await Task.Delay(delayMs);
 
                     currentPage++;
@@ -209,7 +209,7 @@ public class IntelligentBulkProcessor(
             baseDelay += 500;
 
         // Add some randomization to avoid patterns
-        var randomization = new Random().Next(-200, 200);
+        int randomization = new Random().Next(-200, 200);
         
         return Math.Max(500, baseDelay + randomization);
     }

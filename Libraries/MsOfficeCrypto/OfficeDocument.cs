@@ -71,7 +71,7 @@ namespace MsOfficeCrypto
                     throw new InvalidPasswordException("Password required for encrypted document");
 
                 // Extract encryption info and encrypted data from the SAME RootStorage
-                var encryptionInfo = OfficeCryptoDetector.ExtractEncryptionInfo(root, "<stream>");
+                EncryptionInfo encryptionInfo = OfficeCryptoDetector.ExtractEncryptionInfo(root, "<stream>");
 
                 byte[] encryptedPackageData;
                 // Extract the EncryptedPackage stream
@@ -79,7 +79,7 @@ namespace MsOfficeCrypto
 
                 // Decrypt the data
                 using var decryptor = new DocumentDecryptor(encryptionInfo, encryptedPackageData);
-                var decryptedData = await decryptor.DecryptDocumentAsync(password, cancellationToken);
+                byte[] decryptedData = await decryptor.DecryptDocumentAsync(password, cancellationToken);
                 
                 return new MemoryStream(decryptedData);
             }
@@ -125,8 +125,8 @@ namespace MsOfficeCrypto
 
             try
             {
-                var encryptionInfo = OfficeCryptoDetector.GetEncryptionInfo(stream);
-                var encryptedPackageData = OfficeCryptoDetector.ExtractEncryptedPackageData(stream, encryptionInfo);
+                EncryptionInfo encryptionInfo = OfficeCryptoDetector.GetEncryptionInfo(stream);
+                byte[] encryptedPackageData = OfficeCryptoDetector.ExtractEncryptedPackageData(stream, encryptionInfo);
                 
                 using var decryptor = new DocumentDecryptor(encryptionInfo, encryptedPackageData);
                 return await decryptor.VerifyPasswordAsync(password, cancellationToken);

@@ -23,9 +23,9 @@ public class DiffPatchService
     /// </summary>
     public string GenerateUnifiedDiff(string originalContent, string modifiedContent, string filePath = "")
     {
-        var diff = _differ.CreateDiffs(originalContent, modifiedContent, true, false, LineChunker.Instance);
-        var originalLines = SplitLines(originalContent);
-        var modifiedLines = SplitLines(modifiedContent);
+        DiffResult? diff = _differ.CreateDiffs(originalContent, modifiedContent, true, false, LineChunker.Instance);
+        string[] originalLines = SplitLines(originalContent);
+        string[] modifiedLines = SplitLines(modifiedContent);
         return FormatAsUnifiedDiff(diff, filePath, originalLines, modifiedLines);
     }
     
@@ -42,9 +42,9 @@ public class DiffPatchService
     /// </summary>
     public string CreateEditPreview(string[] originalLines, EditOperation operation)
     {
-        var modifiedLines = ApplyOperationToLines(originalLines, operation);
-        var originalContent = string.Join('\n', originalLines);
-        var modifiedContent = string.Join('\n', modifiedLines);
+        string[] modifiedLines = ApplyOperationToLines(originalLines, operation);
+        string originalContent = string.Join('\n', originalLines);
+        string modifiedContent = string.Join('\n', modifiedLines);
         
         return GenerateUnifiedDiff(originalContent, modifiedContent);
     }
@@ -81,12 +81,12 @@ public class DiffPatchService
         {
             case EditOperationType.Replace:
                 // Remove the old lines and insert new ones
-                var removeCount = operation.EndLine - operation.StartLine + 1;
+                int removeCount = operation.EndLine - operation.StartLine + 1;
                 result.RemoveRange(operation.StartLine - 1, removeCount);
                 
                 if (!string.IsNullOrEmpty(operation.Content))
                 {
-                    var newLines = SplitLines(operation.Content);
+                    string[] newLines = SplitLines(operation.Content);
                     result.InsertRange(operation.StartLine - 1, newLines);
                 }
                 break;
@@ -94,13 +94,13 @@ public class DiffPatchService
             case EditOperationType.Insert:
                 if (!string.IsNullOrEmpty(operation.Content))
                 {
-                    var newLines = SplitLines(operation.Content);
+                    string[] newLines = SplitLines(operation.Content);
                     result.InsertRange(operation.StartLine, newLines); // Insert after the line
                 }
                 break;
                 
             case EditOperationType.Delete:
-                var deleteCount = operation.EndLine - operation.StartLine + 1;
+                int deleteCount = operation.EndLine - operation.StartLine + 1;
                 result.RemoveRange(operation.StartLine - 1, deleteCount);
                 break;
             default:
@@ -130,19 +130,19 @@ public class DiffPatchService
             result.Add($"+++ {filePath} (modified)");
         }
         
-        foreach (var block in diff.DiffBlocks)
+        foreach (DiffBlock? block in diff.DiffBlocks)
         {
-            var headerOldStart = block.DeleteStartA + 1;
-            var headerOldCount = block.DeleteCountA;
-            var headerNewStart = block.InsertStartB + 1;
-            var headerNewCount = block.InsertCountB;
+            int headerOldStart = block.DeleteStartA + 1;
+            int headerOldCount = block.DeleteCountA;
+            int headerNewStart = block.InsertStartB + 1;
+            int headerNewCount = block.InsertCountB;
             
             result.Add($"@@ -{headerOldStart},{headerOldCount} +{headerNewStart},{headerNewCount} @@");
             
             // Add deleted lines
             for (var j = 0; j < block.DeleteCountA; j++)
             {
-                var lineIndex = block.DeleteStartA + j;
+                int lineIndex = block.DeleteStartA + j;
                 if (lineIndex < originalLines.Length)
                     result.Add($"-{originalLines[lineIndex]}");
             }
@@ -150,7 +150,7 @@ public class DiffPatchService
             // Add inserted lines
             for (var j = 0; j < block.InsertCountB; j++)
             {
-                var lineIndex = block.InsertStartB + j;
+                int lineIndex = block.InsertStartB + j;
                 if (lineIndex < modifiedLines.Length)
                     result.Add($"+{modifiedLines[lineIndex]}");
             }

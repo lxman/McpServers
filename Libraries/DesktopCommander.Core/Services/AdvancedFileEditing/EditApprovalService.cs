@@ -33,7 +33,7 @@ public class EditApprovalService
         bool createBackup,
         Dictionary<string, object>? metadata = null)
     {
-        var approvalToken = GenerateApprovalToken();
+        string approvalToken = GenerateApprovalToken();
         
         var pendingEdit = new PendingEdit
         {
@@ -66,7 +66,7 @@ public class EditApprovalService
         if (string.IsNullOrWhiteSpace(approvalToken))
             return null;
             
-        if (!_pendingEdits.TryRemove(approvalToken, out var pendingEdit))
+        if (!_pendingEdits.TryRemove(approvalToken, out PendingEdit? pendingEdit))
             return null;
             
         // Check if expired
@@ -83,7 +83,7 @@ public class EditApprovalService
     /// </summary>
     public IReadOnlyList<PendingEdit> GetPendingEditsForFile(string filePath)
     {
-        var normalizedPath = Path.GetFullPath(filePath);
+        string normalizedPath = Path.GetFullPath(filePath);
         
         return _pendingEdits.Values
             .Where(pe => Path.GetFullPath(pe.FilePath) == normalizedPath && pe.ExpiresAt > DateTime.UtcNow)
@@ -115,8 +115,8 @@ public class EditApprovalService
     /// </summary>
     public int CancelPendingEditsForFile(string filePath)
     {
-        var normalizedPath = Path.GetFullPath(filePath);
-        var tokensToRemove = _pendingEdits.Values
+        string normalizedPath = Path.GetFullPath(filePath);
+        List<string> tokensToRemove = _pendingEdits.Values
             .Where(pe => Path.GetFullPath(pe.FilePath) == normalizedPath)
             .Select(pe => pe.ApprovalToken)
             .ToList();
@@ -126,12 +126,12 @@ public class EditApprovalService
     
     private void CleanupExpiredEdits(object? state)
     {
-        var expiredTokens = _pendingEdits.Values
+        List<string> expiredTokens = _pendingEdits.Values
             .Where(pe => pe.ExpiresAt < DateTime.UtcNow)
             .Select(pe => pe.ApprovalToken)
             .ToList();
         
-        foreach (var token in expiredTokens)
+        foreach (string token in expiredTokens)
         {
             _pendingEdits.TryRemove(token, out _);
         }
@@ -146,12 +146,12 @@ public class EditApprovalService
             rng.GetBytes(randomBytes);
         }
         
-        var tokenBase = Convert.ToBase64String(randomBytes);
+        string tokenBase = Convert.ToBase64String(randomBytes);
         var timestamp = DateTime.UtcNow.Ticks.ToString();
         
         // Hash for additional security and consistent length
-        var combinedBytes = Encoding.UTF8.GetBytes($"{tokenBase}:{timestamp}");
-        var hashBytes = SHA256.HashData(combinedBytes);
+        byte[] combinedBytes = Encoding.UTF8.GetBytes($"{tokenBase}:{timestamp}");
+        byte[] hashBytes = SHA256.HashData(combinedBytes);
         
         return $"approval_{Convert.ToHexStringLower(hashBytes)}";
     }

@@ -26,7 +26,7 @@ public class SimplifyJobsApiService(ILogger<SimplifyJobsApiService> logger) : Ba
             InitializeDriver(new AntiDetectionConfig { RequiresLogin = true });
             
             // Ensure authentication for API access
-            var isAuthenticated = await EnsureAuthentication();
+            bool isAuthenticated = await EnsureAuthentication();
             if (!isAuthenticated)
             {
                 Logger.LogError("Authentication failed. Cannot proceed with SimplifyJobs API calls.");
@@ -38,15 +38,15 @@ public class SimplifyJobsApiService(ILogger<SimplifyJobsApiService> logger) : Ba
             // Process each job ID via direct API call
             for (var i = 0; i < jobIds.Length; i++)
             {
-                var jobId = jobIds[i];
+                string jobId = jobIds[i];
                 Logger.LogInformation($"Processing job {i + 1}/{jobIds.Length}: {jobId}");
                 
                 try
                 {
-                    var jobData = await FetchJobDetailsViaApi(jobId);
+                    JsonElement? jobData = await FetchJobDetailsViaApi(jobId);
                     if (jobData.HasValue)
                     {
-                        var enhancedJob = ConvertToEnhancedJobListing(jobData.Value, userId);
+                        EnhancedJobListing? enhancedJob = ConvertToEnhancedJobListing(jobData.Value, userId);
                         if (enhancedJob != null)
                         {
                             enhancedJob.SourceSite = SupportedSite;
@@ -107,8 +107,8 @@ public class SimplifyJobsApiService(ILogger<SimplifyJobsApiService> logger) : Ba
             Driver.Navigate().GoToUrl("https://simplify.jobs/jobs");
             await Task.Delay(1000);
             
-            var currentUrl = Driver.Url.ToLower();
-            var isAuthenticated = currentUrl.Contains("/jobs") && !currentUrl.Contains("login");
+            string currentUrl = Driver.Url.ToLower();
+            bool isAuthenticated = currentUrl.Contains("/jobs") && !currentUrl.Contains("login");
             
             Logger.LogInformation($"Authentication status: {(isAuthenticated ? "Authenticated" : "May need login")}");
             return true; // Proceed anyway
@@ -157,7 +157,7 @@ public class SimplifyJobsApiService(ILogger<SimplifyJobsApiService> logger) : Ba
                 }});
             ";
             
-            var result = await Task.Run(() => 
+            object? result = await Task.Run(() => 
                 ((IJavaScriptExecutor)Driver!).ExecuteAsyncScript(jsScript)
             );
             
@@ -165,7 +165,7 @@ public class SimplifyJobsApiService(ILogger<SimplifyJobsApiService> logger) : Ba
             {
                 try
                 {
-                    var jsonDoc = JsonDocument.Parse(jsonString);
+                    JsonDocument jsonDoc = JsonDocument.Parse(jsonString);
                     Logger.LogInformation($"Successfully fetched job data for {jobId}");
                     return jsonDoc.RootElement;
                 }
@@ -198,7 +198,7 @@ public class SimplifyJobsApiService(ILogger<SimplifyJobsApiService> logger) : Ba
             Logger.LogInformation($"🔍 FULL API RESPONSE: {jobData.GetRawText()}");
             Logger.LogInformation($"🔍 Available properties: {string.Join(", ", jobData.EnumerateObject().Select(p => p.Name))}");
             
-            if (!jobData.TryGetProperty("title", out var titleElement))
+            if (!jobData.TryGetProperty("title", out JsonElement titleElement))
             {
                 Logger.LogWarning("Missing title in job data");
                 return null;
@@ -208,16 +208,16 @@ public class SimplifyJobsApiService(ILogger<SimplifyJobsApiService> logger) : Ba
             var companyName = "Unknown Company";
             
             // First try to get company from root level (legacy support)
-            if (jobData.TryGetProperty("company", out var companyElement) &&
-                companyElement.TryGetProperty("name", out var compNameElement))
+            if (jobData.TryGetProperty("company", out JsonElement companyElement) &&
+                companyElement.TryGetProperty("name", out JsonElement compNameElement))
             {
                 companyName = compNameElement.GetString() ?? "Unknown Company";
                 Logger.LogInformation($"Found company name at root level: {companyName}");
             }
             // Then try to get company from nested job.company.name structure
-            else if (jobData.TryGetProperty("job", out var jobElement) &&
-                     jobElement.TryGetProperty("company", out var nestedCompanyElement) &&
-                     nestedCompanyElement.TryGetProperty("name", out var nestedCompNameElement))
+            else if (jobData.TryGetProperty("job", out JsonElement jobElement) &&
+                     jobElement.TryGetProperty("company", out JsonElement nestedCompanyElement) &&
+                     nestedCompanyElement.TryGetProperty("name", out JsonElement nestedCompNameElement))
             {
                 companyName = nestedCompNameElement.GetString() ?? "Unknown Company";
                 Logger.LogInformation($"Found company name in nested structure: {companyName}");
@@ -236,9 +236,9 @@ public class SimplifyJobsApiService(ILogger<SimplifyJobsApiService> logger) : Ba
             };
 
             // Extract the external application URL
-            if (jobData.TryGetProperty("url", out var urlElement))
+            if (jobData.TryGetProperty("url", out JsonElement urlElement))
             {
-                var url = urlElement.GetString();
+                string? url = urlElement.GetString();
                 if (!string.IsNullOrEmpty(url))
                 {
                     job.Url = url;
@@ -256,17 +256,17 @@ public class SimplifyJobsApiService(ILogger<SimplifyJobsApiService> logger) : Ba
             }
 
             // Extract other fields
-            if (jobData.TryGetProperty("description", out var descElement))
+            if (jobData.TryGetProperty("description", out JsonElement descElement))
             {
                 job.Description = descElement.GetString() ?? "";
             }
 
             // Extract location
-            if (jobData.TryGetProperty("locations", out var locationsElement) && 
+            if (jobData.TryGetProperty("locations", out JsonElement locationsElement) && 
                 locationsElement.ValueKind == JsonValueKind.Array)
             {
-                var firstLocation = locationsElement.EnumerateArray().FirstOrDefault();
-                if (firstLocation.TryGetProperty("value", out var locationValue))
+                JsonElement firstLocation = locationsElement.EnumerateArray().FirstOrDefault();
+                if (firstLocation.TryGetProperty("value", out JsonElement locationValue))
                 {
                     job.Location = locationValue.GetString();
                     job.IsRemote = job.Location?.Contains("Remote", StringComparison.OrdinalIgnoreCase) ?? false;
@@ -274,7 +274,7 @@ public class SimplifyJobsApiService(ILogger<SimplifyJobsApiService> logger) : Ba
             }
 
             // Extract skills
-            if (jobData.TryGetProperty("skills", out var skillsElement) && 
+            if (jobData.TryGetProperty("skills", out JsonElement skillsElement) && 
                 skillsElement.ValueKind == JsonValueKind.Array)
             {
                 job.Technologies = skillsElement.EnumerateArray()
@@ -302,8 +302,8 @@ public class SimplifyJobsApiService(ILogger<SimplifyJobsApiService> logger) : Ba
     {
         var score = 30;
         
-        var title = job.Title?.ToLower() ?? "";
-        var description = job.Description?.ToLower() ?? "";
+        string title = job.Title?.ToLower() ?? "";
+        string description = job.Description?.ToLower() ?? "";
         
         if (title.Contains(".net") || description.Contains(".net")) score += 25;
         if (title.Contains("c#") || description.Contains("c#")) score += 20;

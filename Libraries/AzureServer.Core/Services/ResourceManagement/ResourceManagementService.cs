@@ -17,10 +17,10 @@ public class ResourceManagementService(
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var subscriptions = new List<SubscriptionDto>();
             
-            await foreach (var subscription in armClient.GetSubscriptions().GetAllAsync())
+            await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions().GetAllAsync())
             {
                 subscriptions.Add(MapSubscription(subscription));
             }
@@ -39,7 +39,7 @@ public class ResourceManagementService(
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             SubscriptionResource subscription = await armClient.GetSubscriptionResource(
                 new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             
@@ -61,15 +61,15 @@ public class ResourceManagementService(
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var resourceGroups = new List<ResourceGroupDto>();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 // Get resource groups from all subscriptions
-                await foreach (var subscription in armClient.GetSubscriptions().GetAllAsync())
+                await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions().GetAllAsync())
                 {
-                    await foreach (var rg in subscription.GetResourceGroups().GetAllAsync())
+                    await foreach (ResourceGroupResource? rg in subscription.GetResourceGroups().GetAllAsync())
                     {
                         resourceGroups.Add(MapResourceGroup(rg));
                     }
@@ -78,10 +78,10 @@ public class ResourceManagementService(
             else
             {
                 // Get resource groups from specific subscription
-                var subscription = armClient.GetSubscriptionResource(
+                SubscriptionResource? subscription = armClient.GetSubscriptionResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
-                await foreach (var rg in subscription.GetResourceGroups().GetAllAsync())
+                await foreach (ResourceGroupResource? rg in subscription.GetResourceGroups().GetAllAsync())
                 {
                     resourceGroups.Add(MapResourceGroup(rg));
                 }
@@ -101,8 +101,8 @@ public class ResourceManagementService(
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var subscription = armClient.GetSubscriptionResource(
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            SubscriptionResource? subscription = armClient.GetSubscriptionResource(
                 new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
             
             ResourceGroupResource resourceGroup = await subscription.GetResourceGroups()
@@ -127,7 +127,7 @@ public class ResourceManagementService(
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var resources = new List<GenericResourceDto>();
 
             switch (string.IsNullOrEmpty(subscriptionId))
@@ -135,7 +135,7 @@ public class ResourceManagementService(
                 case false when !string.IsNullOrEmpty(resourceGroupName):
                 {
                     // Get resources from a specific resource group
-                    var subscription = armClient.GetSubscriptionResource(
+                    SubscriptionResource? subscription = armClient.GetSubscriptionResource(
                         new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                     ResourceGroupResource resourceGroup = await subscription.GetResourceGroups()
                         .GetAsync(resourceGroupName);
@@ -147,7 +147,7 @@ public class ResourceManagementService(
                 case false:
                 {
                     // Get all resources from a specific subscription
-                    var subscription = armClient.GetSubscriptionResource(
+                    SubscriptionResource? subscription = armClient.GetSubscriptionResource(
                         new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
                     resources.AddRange(subscription.GetGenericResources().Select(MapGenericResource));
@@ -156,7 +156,7 @@ public class ResourceManagementService(
                 default:
                 {
                     // Get all resources from all subscriptions
-                    await foreach (var subscription in armClient.GetSubscriptions().GetAllAsync())
+                    await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions().GetAllAsync())
                     {
                         resources.AddRange(subscription.GetGenericResources().Select(MapGenericResource));
                     }
@@ -179,19 +179,19 @@ public class ResourceManagementService(
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var resources = new List<GenericResourceDto>();
 
             if (!string.IsNullOrEmpty(subscriptionId))
             {
-                var subscription = armClient.GetSubscriptionResource(
+                SubscriptionResource? subscription = armClient.GetSubscriptionResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
                 resources.AddRange(subscription.GetGenericResources(filter: $"resourceType eq '{resourceType}'").Select(MapGenericResource));
             }
             else
             {
-                await foreach (var subscription in armClient.GetSubscriptions().GetAllAsync())
+                await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions().GetAllAsync())
                 {
                     resources.AddRange(subscription.GetGenericResources(filter: $"resourceType eq '{resourceType}'").Select(MapGenericResource));
                 }
@@ -211,7 +211,7 @@ public class ResourceManagementService(
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var id = new ResourceIdentifier(resourceId);
             GenericResource resource = await armClient.GetGenericResource(id).GetAsync();
             
@@ -233,8 +233,8 @@ public class ResourceManagementService(
     {
         try
         {
-            var resources = await GetResourcesAsync(subscriptionId);
-            var countByType = resources
+            IEnumerable<GenericResourceDto> resources = await GetResourcesAsync(subscriptionId);
+            Dictionary<string, int> countByType = resources
                 .GroupBy(r => r.Type)
                 .ToDictionary(g => g.Key, g => g.Count());
 

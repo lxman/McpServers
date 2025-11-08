@@ -41,11 +41,11 @@ public class PdfContentExtractor : IContentExtractor
                 return ServiceResult<string>.CreateFailure("Invalid document object");
             }
 
-            var totalPages = pdfDocument.NumberOfPages;
+            int totalPages = pdfDocument.NumberOfPages;
 
             // Calculate actual page range
-            var actualStartPage = startPage ?? 1;
-            var actualEndPage = endPage ?? totalPages;
+            int actualStartPage = startPage ?? 1;
+            int actualEndPage = endPage ?? totalPages;
 
             // Validate page numbers
             if (actualStartPage < 1)
@@ -63,7 +63,7 @@ public class PdfContentExtractor : IContentExtractor
             // Apply maxPages limit if specified
             if (maxPages is > 0)
             {
-                var calculatedEndPage = actualStartPage + maxPages.Value - 1;
+                int calculatedEndPage = actualStartPage + maxPages.Value - 1;
                 if (calculatedEndPage < actualEndPage)
                     actualEndPage = calculatedEndPage;
             }
@@ -79,7 +79,7 @@ public class PdfContentExtractor : IContentExtractor
             var extractedPageCount = 0;
 
             // Extract only the specified page range
-            foreach (var page in pdfDocument.GetPages())
+            foreach (Page page in pdfDocument.GetPages())
             {
                 // PdfPig pages are 1-based
                 if (page.Number < actualStartPage)
@@ -89,7 +89,7 @@ public class PdfContentExtractor : IContentExtractor
 
                 try
                 {
-                    var pageText = ContentOrderTextExtractor.GetText(page);
+                    string? pageText = ContentOrderTextExtractor.GetText(page);
                     textBuilder.AppendLine($"--- Page {page.Number} ---");
                     textBuilder.AppendLine(pageText);
                     textBuilder.AppendLine();
@@ -130,7 +130,7 @@ public class PdfContentExtractor : IContentExtractor
             }
 
             var metadata = new Dictionary<string, string>();
-            var info = pdfDocument.Information;
+            DocumentInformation? info = pdfDocument.Information;
 
             metadata["Title"] = info?.Title ?? string.Empty;
             metadata["Author"] = info?.Author ?? string.Empty;
@@ -142,13 +142,13 @@ public class PdfContentExtractor : IContentExtractor
             metadata["PageCount"] = pdfDocument.NumberOfPages.ToString();
 
             // Parse dates
-            var creationDate = ParsePdfDate(info?.CreationDate);
+            DateTime? creationDate = ParsePdfDate(info?.CreationDate);
             if (creationDate.HasValue)
             {
                 metadata["CreationDate"] = creationDate.Value.ToString("yyyy-MM-dd HH:mm:ss");
             }
 
-            var modDate = ParsePdfDate(info?.ModifiedDate);
+            DateTime? modDate = ParsePdfDate(info?.ModifiedDate);
             if (modDate.HasValue)
             {
                 metadata["ModificationDate"] = modDate.Value.ToString("yyyy-MM-dd HH:mm:ss");
@@ -158,7 +158,7 @@ public class PdfContentExtractor : IContentExtractor
             var totalImages = 0;
             long totalTextLength = 0;
 
-            foreach (var page in pdfDocument.GetPages())
+            foreach (Page page in pdfDocument.GetPages())
             {
                 totalImages += page.GetImages().Count();
                 totalTextLength += ContentOrderTextExtractor.GetText(page).Length;
@@ -194,7 +194,7 @@ public class PdfContentExtractor : IContentExtractor
 
             var pages = new List<Dictionary<string, object>>();
 
-            foreach (var page in pdfDocument.GetPages())
+            foreach (Page page in pdfDocument.GetPages())
             {
                 var pageData = new Dictionary<string, object>
                 {
@@ -207,7 +207,7 @@ public class PdfContentExtractor : IContentExtractor
 
                 // Extract images
                 var imageIndex = 0;
-                var images = page.GetImages()
+                List<Dictionary<string, object>> images = page.GetImages()
                     .Select(image => new Dictionary<string, object>
                     {
                         ["Index"] = imageIndex++,
@@ -269,10 +269,10 @@ public class PdfContentExtractor : IContentExtractor
             // PDF dates are in format: D:YYYYMMDDHHmmSSOHH'mm
             if (pdfDate.StartsWith("D:"))
             {
-                var dateStr = pdfDate[2..];
+                string dateStr = pdfDate[2..];
 
                 // Handle timezone offset
-                var timezoneIndex = dateStr.IndexOfAny(['+', '-']);
+                int timezoneIndex = dateStr.IndexOfAny(['+', '-']);
                 if (timezoneIndex > 0)
                 {
                     dateStr = dateStr[..timezoneIndex];
@@ -282,12 +282,12 @@ public class PdfContentExtractor : IContentExtractor
                 dateStr = dateStr.PadRight(14, '0');
 
                 if (dateStr.Length >= 14 &&
-                    int.TryParse(dateStr[..4], out var year) &&
-                    int.TryParse(dateStr[4..6], out var month) &&
-                    int.TryParse(dateStr[6..8], out var day) &&
-                    int.TryParse(dateStr[8..10], out var hour) &&
-                    int.TryParse(dateStr[10..12], out var minute) &&
-                    int.TryParse(dateStr[12..14], out var second))
+                    int.TryParse(dateStr[..4], out int year) &&
+                    int.TryParse(dateStr[4..6], out int month) &&
+                    int.TryParse(dateStr[6..8], out int day) &&
+                    int.TryParse(dateStr[8..10], out int hour) &&
+                    int.TryParse(dateStr[10..12], out int minute) &&
+                    int.TryParse(dateStr[12..14], out int second))
                 {
                     if (year is >= 1900 and <= 9999 &&
                         month is >= 1 and <= 12 &&
@@ -309,7 +309,7 @@ public class PdfContentExtractor : IContentExtractor
             }
 
             // Fallback: try standard DateTime parsing
-            if (DateTime.TryParse(pdfDate, out var result))
+            if (DateTime.TryParse(pdfDate, out DateTime result))
                 return result;
         }
         catch

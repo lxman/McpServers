@@ -44,7 +44,7 @@ public class SearchTools(
                 return JsonSerializer.Serialize(new { success = false, error = "File not found" }, _jsonOptions);
             }
 
-            var result = await searchService.SearchInDocumentAsync(filePath, searchTerm, fuzzySearch, maxResults, null);
+            ServiceResult<SearchResult> result = await searchService.SearchInDocumentAsync(filePath, searchTerm, fuzzySearch, maxResults, null);
 
             if (!result.Success)
             {
@@ -95,7 +95,7 @@ public class SearchTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Search term is required" }, _jsonOptions);
             }
 
-            var result = await searchService.SearchAcrossDocumentsAsync(searchTerm, fuzzySearch, maxResultsPerDocument);
+            ServiceResult<List<SearchResult>> result = await searchService.SearchAcrossDocumentsAsync(searchTerm, fuzzySearch, maxResultsPerDocument);
 
             if (!result.Success)
             {
@@ -121,7 +121,7 @@ public class SearchTools(
                 })
                 .ToList();
 
-            var totalMatches = result.Data?.Sum(r => r.MatchCount) ?? 0;
+            int totalMatches = result.Data?.Sum(r => r.MatchCount) ?? 0;
 
             return JsonSerializer.Serialize(new
             {

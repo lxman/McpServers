@@ -35,10 +35,10 @@ public class SchemaInspector : ISchemaInspector
     {
         try
         {
-            var connection = await _connectionManager.GetConnectionAsync(connectionName);
-            var provider = GetProvider(connectionName);
-            var query = provider.GetTablesQuery();
-            var tables = await connection.QueryAsync<TableInfo>(query);
+            IDbConnection connection = await _connectionManager.GetConnectionAsync(connectionName);
+            IDbProvider provider = GetProvider(connectionName);
+            string query = provider.GetTablesQuery();
+            IEnumerable<TableInfo> tables = await connection.QueryAsync<TableInfo>(query);
             return tables;
         }
         catch (Exception ex)
@@ -52,10 +52,10 @@ public class SchemaInspector : ISchemaInspector
     {
         try
         {
-            var connection = await _connectionManager.GetConnectionAsync(connectionName);
-            var provider = GetProvider(connectionName);
-            var query = provider.GetColumnsQuery(tableName);
-            var columns = await connection.QueryAsync<ColumnInfo>(query, new { tableName });
+            IDbConnection connection = await _connectionManager.GetConnectionAsync(connectionName);
+            IDbProvider provider = GetProvider(connectionName);
+            string query = provider.GetColumnsQuery(tableName);
+            IEnumerable<ColumnInfo> columns = await connection.QueryAsync<ColumnInfo>(query, new { tableName });
 
             return new TableSchema
             {
@@ -74,14 +74,14 @@ public class SchemaInspector : ISchemaInspector
     {
         try
         {
-            var connection = await _connectionManager.GetConnectionAsync(connectionName);
-            var provider = GetProvider(connectionName);
-            var query = provider.GetIndexesQuery(tableName);
+            IDbConnection connection = await _connectionManager.GetConnectionAsync(connectionName);
+            IDbProvider provider = GetProvider(connectionName);
+            string query = provider.GetIndexesQuery(tableName);
 
             // For SQLite, we need to handle the comma-separated Columns string
             if (provider.ProviderName == "Sqlite")
             {
-                var rawResults = await connection.QueryAsync<SqliteIndexDto>(query, new { tableName });
+                IEnumerable<SqliteIndexDto> rawResults = await connection.QueryAsync<SqliteIndexDto>(query, new { tableName });
                 return rawResults.Select(r => new IndexInfo
                 {
                     IndexName = r.IndexName,
@@ -94,7 +94,7 @@ public class SchemaInspector : ISchemaInspector
                 });
             }
 
-            var indexes = await connection.QueryAsync<IndexInfo>(query, new { tableName });
+            IEnumerable<IndexInfo> indexes = await connection.QueryAsync<IndexInfo>(query, new { tableName });
             return indexes;
         }
         catch (Exception ex)
@@ -118,10 +118,10 @@ public class SchemaInspector : ISchemaInspector
     {
         try
         {
-            var connection = await _connectionManager.GetConnectionAsync(connectionName);
-            var provider = GetProvider(connectionName);
-            var query = provider.GetForeignKeysQuery(tableName);
-            var foreignKeys = await connection.QueryAsync<ForeignKeyInfo>(query, new { tableName });
+            IDbConnection connection = await _connectionManager.GetConnectionAsync(connectionName);
+            IDbProvider provider = GetProvider(connectionName);
+            string query = provider.GetForeignKeysQuery(tableName);
+            IEnumerable<ForeignKeyInfo> foreignKeys = await connection.QueryAsync<ForeignKeyInfo>(query, new { tableName });
             return foreignKeys;
         }
         catch (Exception ex)
@@ -133,10 +133,10 @@ public class SchemaInspector : ISchemaInspector
 
     private IDbProvider GetProvider(string connectionName)
     {
-        if (!_config.Connections.TryGetValue(connectionName, out var connConfig))
+        if (!_config.Connections.TryGetValue(connectionName, out ConnectionConfig? connConfig))
             throw new ArgumentException($"Connection '{connectionName}' not found");
 
-        if (!_providers.TryGetValue(connConfig.Provider, out var provider))
+        if (!_providers.TryGetValue(connConfig.Provider, out IDbProvider? provider))
             throw new NotSupportedException($"Provider '{connConfig.Provider}' not supported");
 
         return provider;

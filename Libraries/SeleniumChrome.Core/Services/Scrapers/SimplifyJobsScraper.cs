@@ -21,7 +21,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             InitializeDriver(config.AntiDetection);
             
             // First ensure we're logged in (critical for Cloudflare bypass)
-            var isAuthenticated = await EnsureAuthentication(config);
+            bool isAuthenticated = await EnsureAuthentication(config);
             if (!isAuthenticated)
             {
                 Logger.LogError("Authentication failed. Cannot proceed with Simplify.jobs scraping.");
@@ -29,7 +29,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             }
             
             // Build search URL based on your breakthrough analysis
-            var searchUrl = BuildSearchUrl(request, config);
+            string searchUrl = BuildSearchUrl(request, config);
             Logger.LogInformation($"Scraping Simplify.jobs: {searchUrl}");
             
             Driver!.Navigate().GoToUrl(searchUrl);
@@ -43,23 +43,23 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             
             var processedJobs = 0;
             var scrollAttempts = 0;
-            var maxScrollAttempts = Math.Max(request.MaxResults * 2, 10); // Allow scrolling to find more jobs
+            int maxScrollAttempts = Math.Max(request.MaxResults * 2, 10); // Allow scrolling to find more jobs
             
             while (processedJobs < request.MaxResults && scrollAttempts < maxScrollAttempts)
             {
                 // Step 1: Extract any job IDs from current page state
-                var currentJobIds = await ExtractJobIds();
+                List<string> currentJobIds = await ExtractJobIds();
                 Logger.LogInformation($"📋 Found {currentJobIds.Count} job IDs from page state");
                 
                 // Step 2: Find visible job cards in the left panel
-                var jobCards = FindJobCardsInLeftPanel();
+                List<IWebElement> jobCards = FindJobCardsInLeftPanel();
                 Logger.LogInformation($"👀 Found {jobCards.Count} visible job cards");
                 
                 // Process jobs from current view
                 var jobsFoundInThisIteration = 0;
                 
                 // First, process any job IDs we extracted from page source/URL
-                foreach (var jobId in currentJobIds.Take(request.MaxResults - processedJobs))
+                foreach (string jobId in currentJobIds.Take(request.MaxResults - processedJobs))
                 {
                     if (await ProcessJobById(jobId, request, jobs))
                     {
@@ -75,7 +75,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                 if (processedJobs < request.MaxResults && jobCards.Count > 0)
                 {
                     // Process visible job cards by clicking them
-                    var cardsToProcess = Math.Min(jobCards.Count, request.MaxResults - processedJobs);
+                    int cardsToProcess = Math.Min(jobCards.Count, request.MaxResults - processedJobs);
                     for (var i = 0; i < cardsToProcess; i++)
                     {
                         try
@@ -87,7 +87,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                             await Task.Delay(1000); // Wait for right panel to update
                             
                             // Try to get job ID from the updated URL or page state
-                            var jobId = await ExtractJobIdFromCurrentState();
+                            string? jobId = await ExtractJobIdFromCurrentState();
                             
                             if (!string.IsNullOrEmpty(jobId) && await ProcessJobById(jobId, request, jobs))
                             {
@@ -98,7 +98,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                             else
                             {
                                 // Fallback: extract job data directly from current page
-                                var directJob = await ExtractJobFromCurrentPage(request);
+                                EnhancedJobListing? directJob = await ExtractJobFromCurrentPage(request);
                                 if (directJob != null)
                                 {
                                     directJob.SourceSite = SupportedSite;
@@ -165,10 +165,10 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             Logger.LogInformation($"🔍 Processing job ID: {jobId}");
             
             // Fetch job details via API
-            var jobDetails = await FetchJobDetailsViaApi(jobId);
+            JsonElement? jobDetails = await FetchJobDetailsViaApi(jobId);
             if (jobDetails.HasValue)
             {
-                var enhancedJob = ConvertToEnhancedJobListing(jobDetails.Value, request);
+                EnhancedJobListing? enhancedJob = ConvertToEnhancedJobListing(jobDetails.Value, request);
                 if (enhancedJob != null)
                 {
                     enhancedJob.SourceSite = SupportedSite;
@@ -191,15 +191,15 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
         try
         {
             // Check URL for jobId parameter
-            var currentUrl = Driver!.Url;
-            var urlMatch = Regex.Match(currentUrl, @"jobId=([a-f0-9-]{8,50})", RegexOptions.IgnoreCase);
+            string currentUrl = Driver!.Url;
+            Match urlMatch = Regex.Match(currentUrl, @"jobId=([a-f0-9-]{8,50})", RegexOptions.IgnoreCase);
             if (urlMatch.Success)
             {
                 return urlMatch.Groups[1].Value;
             }
             
             // Try JavaScript to get current selected job ID
-            var jsResult = ((IJavaScriptExecutor)Driver!).ExecuteScript(@"
+            object? jsResult = ((IJavaScriptExecutor)Driver!).ExecuteScript(@"
                 try {
                     // Check URL params
                     const urlParams = new URLSearchParams(window.location.search);
@@ -250,11 +250,11 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                 "h1", "h2", "[data-testid*='title']", ".job-title", "[class*='title']"
             };
             
-            foreach (var selector in titleSelectors)
+            foreach (string selector in titleSelectors)
             {
                 try
                 {
-                    var element = Driver!.FindElement(By.CssSelector(selector));
+                    IWebElement element = Driver!.FindElement(By.CssSelector(selector));
                     title = element.Text?.Trim();
                     if (!string.IsNullOrEmpty(title))
                     {
@@ -271,11 +271,11 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                 "[data-testid*='company']", ".company-name", "[class*='company']", "h3", "h4"
             };
             
-            foreach (var selector in companySelectors)
+            foreach (string selector in companySelectors)
             {
                 try
                 {
-                    var element = Driver!.FindElement(By.CssSelector(selector));
+                    IWebElement element = Driver!.FindElement(By.CssSelector(selector));
                     company = element.Text?.Trim();
                     if (!string.IsNullOrEmpty(company) && company != title)
                     {
@@ -289,7 +289,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             // Extract location
             try
             {
-                var locationElement = Driver!.FindElement(By.CssSelector("[data-testid*='location'], .location, [class*='location']"));
+                IWebElement locationElement = Driver!.FindElement(By.CssSelector("[data-testid*='location'], .location, [class*='location']"));
                 location = locationElement.Text?.Trim();
             }
             catch { }
@@ -379,10 +379,10 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                 Driver.Navigate().GoToUrl("https://simplify.jobs/jobs");
                 await Task.Delay(250); // Optimized: Quick check
                 
-                var currentUrl = Driver.Url.ToLower();
-                var isAuthenticated = currentUrl.Contains("/jobs") && 
-                                      !currentUrl.Contains("login") && 
-                                      !currentUrl.Contains("signin");
+                string currentUrl = Driver.Url.ToLower();
+                bool isAuthenticated = currentUrl.Contains("/jobs") && 
+                                       !currentUrl.Contains("login") && 
+                                       !currentUrl.Contains("signin");
                 
                 if (isAuthenticated)
                 {
@@ -434,7 +434,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
         }
         
         // Location filter - prioritize remote
-        var location = !string.IsNullOrEmpty(request.Location) ? request.Location : "Remote in USA";
+        string location = !string.IsNullOrEmpty(request.Location) ? request.Location : "Remote in USA";
         queryParams.Add($"state={Uri.EscapeDataString(location)}");
         
         // Experience level - target senior roles for your profile
@@ -465,7 +465,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             
             // Wait for job listings to appear (Next.js SSR content)
             // Use a more flexible approach with multiple possible indicators
-            var jobContentLoaded = wait.Until(d => {
+            bool jobContentLoaded = wait.Until(d => {
                 try
                 {
                     // Check for any of these indicators that the page has content
@@ -485,9 +485,9 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                         "#content"
                     };
                     
-                    foreach (var selector in indicators)
+                    foreach (string selector in indicators)
                     {
-                        var elements = d.FindElements(By.CssSelector(selector));
+                        ReadOnlyCollection<IWebElement> elements = d.FindElements(By.CssSelector(selector));
                         if (elements.Count > 0)
                         {
                             Logger.LogInformation($"Job content detected with selector: {selector} ({elements.Count} elements)");
@@ -530,8 +530,8 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             Logger.LogInformation("Starting enhanced job ID extraction...");
             
             // First, let's see what's on the page
-            var pageTitle = Driver!.Title;
-            var currentUrl = Driver.Url;
+            string pageTitle = Driver!.Title;
+            string currentUrl = Driver.Url;
             Logger.LogInformation($"Current page: {pageTitle} at {currentUrl}");
             
             // Strategy 1: Try to extract job IDs from page source (for JavaScript-rendered content)
@@ -555,7 +555,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             //     jobIds.AddRange(await ExtractJobIdsByInteraction());
             // }
             
-            var uniqueJobIds = jobIds.Distinct().Take(10).ToList(); // Limit to 10 for testing
+            List<string> uniqueJobIds = jobIds.Distinct().Take(10).ToList(); // Limit to 10 for testing
             Logger.LogInformation($"Successfully extracted {uniqueJobIds.Count} unique job IDs");
             
             if (uniqueJobIds.Count == 0)
@@ -586,11 +586,11 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             Logger.LogInformation("Attempting to extract job IDs from page source...");
             
             // First, extract job ID from current URL (as seen in the screenshot)
-            var currentUrl = Driver!.Url;
-            var urlJobIdMatch = Regex.Match(currentUrl, @"jobId=([a-f0-9-]{8,50})", RegexOptions.IgnoreCase);
+            string currentUrl = Driver!.Url;
+            Match urlJobIdMatch = Regex.Match(currentUrl, @"jobId=([a-f0-9-]{8,50})", RegexOptions.IgnoreCase);
             if (urlJobIdMatch.Success)
             {
-                var urlJobId = urlJobIdMatch.Groups[1].Value;
+                string urlJobId = urlJobIdMatch.Groups[1].Value;
                 if (IsValidJobId(urlJobId))
                 {
                     jobIds.Add(urlJobId);
@@ -598,7 +598,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                 }
             }
             
-            var pageSource = Driver.PageSource;
+            string pageSource = Driver.PageSource;
             
             // Enhanced patterns specifically for Simplify.Jobs based on screenshot analysis
             var patterns = new[]
@@ -613,14 +613,14 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                 @"""([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})""", // Pure UUID patterns
             };
             
-            foreach (var pattern in patterns)
+            foreach (string pattern in patterns)
             {
-                var matches = Regex.Matches(pageSource, pattern, RegexOptions.IgnoreCase);
+                MatchCollection matches = Regex.Matches(pageSource, pattern, RegexOptions.IgnoreCase);
                 foreach (Match match in matches)
                 {
                     if (match.Success && match.Groups.Count > 1)
                     {
-                        var jobId = match.Groups[1].Value;
+                        string jobId = match.Groups[1].Value;
                         if (IsValidJobId(jobId) && !jobIds.Contains(jobId))
                         {
                             jobIds.Add(jobId);
@@ -763,11 +763,11 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                 return [...new Set(jobIds)]; // Return unique job IDs
             ";
             
-            var result = ((IJavaScriptExecutor)Driver!).ExecuteScript(jsScript);
+            object? result = ((IJavaScriptExecutor)Driver!).ExecuteScript(jsScript);
             
             if (result is ReadOnlyCollection<object> resultArray)
             {
-                foreach (var item in resultArray)
+                foreach (object item in resultArray)
                 {
                     if (item is string jobId && IsValidJobId(jobId))
                     {
@@ -815,29 +815,29 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                 "[onClick*='job']"
             };
             
-            foreach (var selector in jobLinkSelectors)
+            foreach (string selector in jobLinkSelectors)
             {
                 try
                 {
-                    var elements = Driver!.FindElements(By.CssSelector(selector));
+                    ReadOnlyCollection<IWebElement> elements = Driver!.FindElements(By.CssSelector(selector));
                     Logger.LogDebug($"Selector '{selector}' found {elements.Count} elements");
                     
-                    foreach (var element in elements)
+                    foreach (IWebElement element in elements)
                     {
                         try
                         {
                             // Try multiple attributes
                             var attributes = new[] { "href", "data-job-id", "onclick", "data-href" };
                             
-                            foreach (var attr in attributes)
+                            foreach (string attr in attributes)
                             {
-                                var value = element.GetAttribute(attr);
+                                string? value = element.GetAttribute(attr);
                                 if (!string.IsNullOrEmpty(value))
                                 {
-                                    var matches = Regex.Matches(value, @"([a-f0-9-]{8,50})", RegexOptions.IgnoreCase);
+                                    MatchCollection matches = Regex.Matches(value, @"([a-f0-9-]{8,50})", RegexOptions.IgnoreCase);
                                     foreach (Match match in matches)
                                     {
-                                        var jobId = match.Groups[1].Value;
+                                        string jobId = match.Groups[1].Value;
                                         if (IsValidJobId(jobId) && !jobIds.Contains(jobId))
                                         {
                                             jobIds.Add(jobId);
@@ -878,7 +878,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             Logger.LogInformation("Attempting job ID extraction by interaction...");
             
             // Find clickable job elements
-            var jobElements = Driver!.FindElements(By.CssSelector(".job-card, .job-listing, [class*='job-item'], [data-testid*='job']"));
+            ReadOnlyCollection<IWebElement> jobElements = Driver!.FindElements(By.CssSelector(".job-card, .job-listing, [class*='job-item'], [data-testid*='job']"));
             
             Logger.LogInformation($"Found {jobElements.Count} potentially clickable job elements");
             
@@ -886,21 +886,21 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             {
                 try
                 {
-                    var element = jobElements[i];
-                    var originalUrl = Driver.Url;
+                    IWebElement element = jobElements[i];
+                    string originalUrl = Driver.Url;
                     
                     // Try clicking the element
                     element.Click();
                     await Task.Delay(500); // Optimized: Wait for navigation or URL change
                     
-                    var newUrl = Driver.Url;
+                    string newUrl = Driver.Url;
                     if (newUrl != originalUrl)
                     {
                         // URL changed, extract job ID from new URL
-                        var match = Regex.Match(newUrl, @"/jobs/([a-f0-9-]{8,50})", RegexOptions.IgnoreCase);
+                        Match match = Regex.Match(newUrl, @"/jobs/([a-f0-9-]{8,50})", RegexOptions.IgnoreCase);
                         if (match.Success)
                         {
-                            var jobId = match.Groups[1].Value;
+                            string jobId = match.Groups[1].Value;
                             if (IsValidJobId(jobId) && !jobIds.Contains(jobId))
                             {
                                 jobIds.Add(jobId);
@@ -931,14 +931,14 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
     {
         try
         {
-            var screenshot = ((ITakesScreenshot)Driver!).GetScreenshot();
+            Screenshot screenshot = ((ITakesScreenshot)Driver!).GetScreenshot();
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             var screenshotPath = $"C:\\Users\\jorda\\RiderProjects\\SeleniumChromeTool\\Screenshots\\simplify_debug_{timestamp}.png";
             screenshot.SaveAsFile(screenshotPath);
             Logger.LogInformation($"Debug screenshot saved: {screenshotPath}");
             
             // Also log page source length for debugging
-            var pageSourceLength = Driver.PageSource.Length;
+            int pageSourceLength = Driver.PageSource.Length;
             Logger.LogInformation($"Page source length: {pageSourceLength} characters");
         }
         catch (Exception ex)
@@ -991,7 +991,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                     ""url"": ""https://job-boards.greenhouse.io/example-company/jobs/12345""
                 }}";
                 
-                var jsonDoc = JsonDocument.Parse(mockJobData);
+                JsonDocument jsonDoc = JsonDocument.Parse(mockJobData);
                 return jsonDoc.RootElement;
             }
             
@@ -1005,7 +1005,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                 $"https://api.simplify.jobs/v2/jobs/{jobId}"
             };
             
-            foreach (var apiUrl in apiEndpoints)
+            foreach (string apiUrl in apiEndpoints)
             {
                 try
                 {
@@ -1056,7 +1056,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                         }});
                     ";
                     
-                    var result = await Task.Run(() => 
+                    object? result = await Task.Run(() => 
                         ((IJavaScriptExecutor)Driver!).ExecuteAsyncScript(jsScript)
                     );
                     
@@ -1064,13 +1064,13 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                     {
                         try
                         {
-                            var jsonDoc = JsonDocument.Parse(jsonString);
-                            var jobElement = jsonDoc.RootElement;
+                            JsonDocument jsonDoc = JsonDocument.Parse(jsonString);
+                            JsonElement jobElement = jsonDoc.RootElement;
                             
                             // 🎯 CRITICAL: Check if we got the external URL
-                            if (jobElement.TryGetProperty("url", out var urlElement))
+                            if (jobElement.TryGetProperty("url", out JsonElement urlElement))
                             {
-                                var externalUrl = urlElement.GetString();
+                                string? externalUrl = urlElement.GetString();
                                 if (!string.IsNullOrEmpty(externalUrl))
                                 {
                                     if (!externalUrl.Contains("simplify.jobs"))
@@ -1147,11 +1147,11 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                     "h2"
                 };
                 
-                foreach (var selector in titleSelectors)
+                foreach (string selector in titleSelectors)
                 {
                     try
                     {
-                        var titleElement = Driver.FindElement(By.CssSelector(selector));
+                        IWebElement titleElement = Driver.FindElement(By.CssSelector(selector));
                         if (!string.IsNullOrEmpty(titleElement.Text))
                         {
                             jobData["title"] = titleElement.Text.Trim();
@@ -1174,11 +1174,11 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                     "span[class*='company']"
                 };
                 
-                foreach (var selector in companySelectors)
+                foreach (string selector in companySelectors)
                 {
                     try
                     {
-                        var companyElement = Driver.FindElement(By.CssSelector(selector));
+                        IWebElement companyElement = Driver.FindElement(By.CssSelector(selector));
                         if (!string.IsNullOrEmpty(companyElement.Text) && 
                             !companyElement.Text.Contains("Desktop Software Engineer") && // Don't confuse title with company
                             companyElement.Text.Length < 100) // Company names shouldn't be too long
@@ -1207,11 +1207,11 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                     "section p"
                 };
                 
-                foreach (var selector in descSelectors)
+                foreach (string selector in descSelectors)
                 {
                     try
                     {
-                        var descElement = Driver.FindElement(By.CssSelector(selector));
+                        IWebElement descElement = Driver.FindElement(By.CssSelector(selector));
                         if (!string.IsNullOrEmpty(descElement.Text) && descElement.Text.Length > 50)
                         {
                             jobData["description"] = descElement.Text.Trim();
@@ -1231,11 +1231,11 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                     "p[class*='location']"
                 };
                 
-                foreach (var selector in locationSelectors)
+                foreach (string selector in locationSelectors)
                 {
                     try
                     {
-                        var locationElement = Driver.FindElement(By.CssSelector(selector));
+                        IWebElement locationElement = Driver.FindElement(By.CssSelector(selector));
                         if (!string.IsNullOrEmpty(locationElement.Text))
                         {
                             jobData["locations"] = new[] { 
@@ -1267,12 +1267,12 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                 };
                 
                 var skills = new List<object>();
-                foreach (var selector in skillsSelectors)
+                foreach (string selector in skillsSelectors)
                 {
                     try
                     {
-                        var skillElements = Driver.FindElements(By.CssSelector(selector));
-                        foreach (var skillElement in skillElements.Take(10)) // Limit to 10 skills
+                        ReadOnlyCollection<IWebElement> skillElements = Driver.FindElements(By.CssSelector(selector));
+                        foreach (IWebElement skillElement in skillElements.Take(10)) // Limit to 10 skills
                         {
                             if (!string.IsNullOrEmpty(skillElement.Text) && skillElement.Text.Length < 50)
                             {
@@ -1298,8 +1298,8 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                 if (jobData.ContainsKey("title"))
                 {
                     // Convert to JSON
-                    var jsonString = JsonSerializer.Serialize(jobData);
-                    var jsonDoc = JsonDocument.Parse(jsonString);
+                    string jsonString = JsonSerializer.Serialize(jobData);
+                    JsonDocument jsonDoc = JsonDocument.Parse(jsonString);
                     
                     Logger.LogInformation("Successfully extracted job data from page");
                     return jsonDoc.RootElement;
@@ -1329,7 +1329,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             Logger.LogInformation($"🔍 DEBUG: Converting job data with properties: {string.Join(", ", jobData.EnumerateObject().Select(p => p.Name))}");
             
             // Extract data based on your breakthrough analysis structure
-            if (!jobData.TryGetProperty("title", out var titleElement))
+            if (!jobData.TryGetProperty("title", out JsonElement titleElement))
             {
                 Logger.LogWarning($"❌ Missing title property in JSON. Available properties: {string.Join(", ", jobData.EnumerateObject().Select(p => p.Name))}");
                 return null;
@@ -1337,7 +1337,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
 
             // 🎯 FIX: Company information is in the nested 'job' object, not at root level
             JsonElement companyElement = default;
-            if (!jobData.TryGetProperty("job", out var jobElement) || 
+            if (!jobData.TryGetProperty("job", out JsonElement jobElement) || 
                 !jobElement.TryGetProperty("company", out companyElement))
             {
                 Logger.LogWarning($"❌ Missing job.company property in JSON. Available properties: {string.Join(", ", jobData.EnumerateObject().Select(p => p.Name))}");
@@ -1347,7 +1347,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             var job = new EnhancedJobListing
             {
                 Title = titleElement.GetString() ?? "Unknown Title",
-                Company = companyElement.TryGetProperty("name", out var compNameElement) 
+                Company = companyElement.TryGetProperty("name", out JsonElement compNameElement) 
                     ? compNameElement.GetString() ?? "Unknown Company"
                     : "Unknown Company",
                 SourceSite = SupportedSite,
@@ -1358,9 +1358,9 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             string? externalUrl = null;
             string? simplifyJobsUrl = null;
             
-            if (jobData.TryGetProperty("url", out var urlElement))
+            if (jobData.TryGetProperty("url", out JsonElement urlElement))
             {
-                var url = urlElement.GetString();
+                string? url = urlElement.GetString();
                 if (!string.IsNullOrEmpty(url))
                 {
                     if (!url.Contains("simplify.jobs"))
@@ -1384,26 +1384,26 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
                 job.Url = externalUrl; // The Apply button destination!
                 Logger.LogInformation($"🎯 Job URL set to EXTERNAL URL: {externalUrl}");
             }
-            else if (jobData.TryGetProperty("id", out var idElement))
+            else if (jobData.TryGetProperty("id", out JsonElement idElement))
             {
                 // Fallback: Use SimplifyJobs URL if no external URL found
-                var jobId = idElement.GetString();
+                string? jobId = idElement.GetString();
                 job.Url = $"https://simplify.jobs/jobs/{jobId}";
                 Logger.LogWarning($"⚠️ No external URL found, using SimplifyJobs URL: {job.Url}");
             }
             
             // Extract description
-            if (jobData.TryGetProperty("description", out var descElement))
+            if (jobData.TryGetProperty("description", out JsonElement descElement))
             {
                 job.Description = descElement.GetString() ?? "";
             }
             
             // Extract location
-            if (jobData.TryGetProperty("locations", out var locationsElement) && 
+            if (jobData.TryGetProperty("locations", out JsonElement locationsElement) && 
                 locationsElement.ValueKind == JsonValueKind.Array)
             {
-                var firstLocation = locationsElement.EnumerateArray().FirstOrDefault();
-                if (firstLocation.TryGetProperty("value", out var locationValue))
+                JsonElement firstLocation = locationsElement.EnumerateArray().FirstOrDefault();
+                if (firstLocation.TryGetProperty("value", out JsonElement locationValue))
                 {
                     job.Location = locationValue.GetString();
                     job.IsRemote = job.Location?.Contains("Remote", StringComparison.OrdinalIgnoreCase) ?? false;
@@ -1412,12 +1412,12 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             
             // Extract company details - store in Notes for now since model doesn't have separate company fields
             var companyInfo = new List<string>();
-            if (companyElement.TryGetProperty("description", out var compDescElement))
+            if (companyElement.TryGetProperty("description", out JsonElement compDescElement))
             {
                 companyInfo.Add($"Company: {compDescElement.GetString()}");
             }
             
-            if (companyElement.TryGetProperty("size", out var sizeElement))
+            if (companyElement.TryGetProperty("size", out JsonElement sizeElement))
             {
                 companyInfo.Add($"Size: {sizeElement.GetString()}");
             }
@@ -1438,10 +1438,10 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             }
             
             // Extract requirements - store in Summary field
-            if (jobData.TryGetProperty("requirements", out var reqElement) && 
+            if (jobData.TryGetProperty("requirements", out JsonElement reqElement) && 
                 reqElement.ValueKind == JsonValueKind.Array)
             {
-                var requirements = reqElement.EnumerateArray()
+                List<string?> requirements = reqElement.EnumerateArray()
                     .Select(r => r.GetString())
                     .Where(r => !string.IsNullOrEmpty(r))
                     .ToList();
@@ -1453,10 +1453,10 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             }
             
             // Extract skills/technologies
-            if (jobData.TryGetProperty("skills", out var skillsElement) && 
+            if (jobData.TryGetProperty("skills", out JsonElement skillsElement) && 
                 skillsElement.ValueKind == JsonValueKind.Array)
             {
-                var technologies = skillsElement.EnumerateArray()
+                List<string?> technologies = skillsElement.EnumerateArray()
                     .Where(s => s.TryGetProperty("name", out _))
                     .Select(s => s.GetProperty("name").GetString())
                     .Where(name => !string.IsNullOrEmpty(name))
@@ -1493,9 +1493,9 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
     {
         var score = 30; // Base score
         
-        var title = job.Title?.ToLower() ?? "";
-        var description = job.Description?.ToLower() ?? "";
-        var summary = job.Summary?.ToLower() ?? "";
+        string title = job.Title?.ToLower() ?? "";
+        string description = job.Description?.ToLower() ?? "";
+        string summary = job.Summary?.ToLower() ?? "";
         
         // .NET technology scoring
         if (title.Contains(".net") || description.Contains(".net") || summary.Contains(".net")) score += 20;
@@ -1508,7 +1508,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
         if (job.IsRemote) score += 10;
         
         // Technology stack bonuses
-        var techList = job.Technologies ?? [];
+        List<string> techList = job.Technologies ?? [];
         if (techList.Any(t => t.Contains("Azure", StringComparison.OrdinalIgnoreCase))) score += 5;
         if (techList.Any(t => t.Contains("AWS", StringComparison.OrdinalIgnoreCase))) score += 5;
         if (techList.Any(t => t.Contains("Angular", StringComparison.OrdinalIgnoreCase))) score += 5;
@@ -1565,11 +1565,11 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             "div[class*='cursor-pointer']"
         };
         
-        foreach (var selector in cardSelectors)
+        foreach (string selector in cardSelectors)
         {
             try
             {
-                var elements = Driver!.FindElements(By.CssSelector(selector));
+                ReadOnlyCollection<IWebElement> elements = Driver!.FindElements(By.CssSelector(selector));
                 if (elements.Count > 0)
                 {
                     Logger.LogInformation($"Found {elements.Count} job cards with: {selector}");
@@ -1612,12 +1612,12 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             "[data-testid*='apply']"
         };
         
-        foreach (var selector in applySelectors)
+        foreach (string selector in applySelectors)
         {
             try
             {
-                var element = Driver!.FindElement(By.CssSelector(selector));
-                var href = element.GetAttribute("href");
+                IWebElement element = Driver!.FindElement(By.CssSelector(selector));
+                string? href = element.GetAttribute("href");
                 if (!string.IsNullOrEmpty(href) && href.Contains("simplify.jobs"))
                 {
                     return href;
@@ -1629,7 +1629,7 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
         // Try JavaScript approach
         try
         {
-            var jsResult = ((IJavaScriptExecutor)Driver!).ExecuteScript(@"
+            object? jsResult = ((IJavaScriptExecutor)Driver!).ExecuteScript(@"
                 const buttons = document.querySelectorAll('button, a');
                 for (let btn of buttons) {
                     if (btn.textContent.toLowerCase().includes('apply')) {
@@ -1658,9 +1658,9 @@ public partial class SimplifyJobsScraper(ILogger<SimplifyJobsScraper> logger) : 
             @"id=([a-f0-9-]{8,50})"
         };
         
-        foreach (var pattern in patterns)
+        foreach (string pattern in patterns)
         {
-            var match = Regex.Match(url, pattern, RegexOptions.IgnoreCase);
+            Match match = Regex.Match(url, pattern, RegexOptions.IgnoreCase);
             if (match.Success && IsValidJobId(match.Groups[1].Value))
             {
                 return match.Groups[1].Value;

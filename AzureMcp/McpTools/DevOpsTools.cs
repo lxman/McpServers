@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using AzureServer.Core.Services.DevOps;
+using AzureServer.Core.Services.DevOps.Models;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -25,7 +26,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting DevOps projects");
-            var projects = await devOpsService.GetProjectsAsync();
+            IEnumerable<ProjectDto> projects = await devOpsService.GetProjectsAsync();
 
             return JsonSerializer.Serialize(new
             {
@@ -47,7 +48,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting project {ProjectName}", projectName);
-            var project = await devOpsService.GetProjectAsync(projectName);
+            ProjectDto? project = await devOpsService.GetProjectAsync(projectName);
 
             return JsonSerializer.Serialize(new
             {
@@ -73,7 +74,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting work item {Id}", id);
-            var workItem = await devOpsService.GetWorkItemAsync(id);
+            WorkItemDto? workItem = await devOpsService.GetWorkItemAsync(id);
 
             return JsonSerializer.Serialize(new
             {
@@ -95,7 +96,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting work items for project {ProjectName}", projectName);
-            var workItems = await devOpsService.GetWorkItemsAsync(projectName, wiql);
+            IEnumerable<WorkItemDto> workItems = await devOpsService.GetWorkItemsAsync(projectName, wiql);
 
             return JsonSerializer.Serialize(new
             {
@@ -121,7 +122,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Creating work item in project {ProjectName}", projectName);
-            var workItem = await devOpsService.CreateWorkItemAsync(projectName, workItemType, title, fields);
+            WorkItemDto workItem = await devOpsService.CreateWorkItemAsync(projectName, workItemType, title, fields);
 
             return JsonSerializer.Serialize(new
             {
@@ -147,7 +148,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting repositories for project {ProjectName}", projectName);
-            var repositories = await devOpsService.GetRepositoriesAsync(projectName);
+            IEnumerable<RepositoryDto> repositories = await devOpsService.GetRepositoriesAsync(projectName);
 
             return JsonSerializer.Serialize(new
             {
@@ -169,7 +170,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting repository {RepositoryName}", repositoryName);
-            var repository = await devOpsService.GetRepositoryAsync(projectName, repositoryName);
+            RepositoryDto? repository = await devOpsService.GetRepositoryAsync(projectName, repositoryName);
 
             return JsonSerializer.Serialize(new
             {
@@ -195,7 +196,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting file content for {FilePath}", filePath);
-            var content = await devOpsService.GetRepositoryFileContentAsync(projectName, repositoryName, filePath, branch);
+            string? content = await devOpsService.GetRepositoryFileContentAsync(projectName, repositoryName, filePath, branch);
 
             return JsonSerializer.Serialize(new
             {
@@ -223,7 +224,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Updating file {FilePath}", filePath);
-            var success = await devOpsService.UpdateRepositoryFileAsync(projectName, repositoryName, filePath, content, commitMessage, branch);
+            bool success = await devOpsService.UpdateRepositoryFileAsync(projectName, repositoryName, filePath, content, commitMessage, branch);
 
             return JsonSerializer.Serialize(new
             {
@@ -244,7 +245,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Finding YAML pipeline files in repository {RepositoryName}", repositoryName);
-            var files = await devOpsService.FindYamlPipelineFilesAsync(projectName, repositoryName);
+            IEnumerable<string> files = await devOpsService.FindYamlPipelineFilesAsync(projectName, repositoryName);
 
             return JsonSerializer.Serialize(new
             {
@@ -270,7 +271,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting build definitions for project {ProjectName}", projectName);
-            var definitions = await devOpsService.GetBuildDefinitionsAsync(projectName);
+            IEnumerable<BuildDefinitionDto> definitions = await devOpsService.GetBuildDefinitionsAsync(projectName);
 
             return JsonSerializer.Serialize(new
             {
@@ -292,7 +293,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting build definition {DefinitionId}", definitionId);
-            var definition = await devOpsService.GetBuildDefinitionAsync(projectName, definitionId);
+            BuildDefinitionDto? definition = await devOpsService.GetBuildDefinitionAsync(projectName, definitionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -314,7 +315,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting pipeline YAML for definition {DefinitionId}", definitionId);
-            var yaml = await devOpsService.GetPipelineYamlAsync(projectName, definitionId);
+            string? yaml = await devOpsService.GetPipelineYamlAsync(projectName, definitionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -340,7 +341,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Updating pipeline YAML for definition {DefinitionId}", definitionId);
-            var success = await devOpsService.UpdatePipelineYamlAsync(projectName, definitionId, yamlContent, commitMessage);
+            bool success = await devOpsService.UpdatePipelineYamlAsync(projectName, definitionId, yamlContent, commitMessage);
 
             return JsonSerializer.Serialize(new
             {
@@ -365,7 +366,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting builds for project {ProjectName}", projectName);
-            var builds = await devOpsService.GetBuildsAsync(projectName, definitionId, top);
+            IEnumerable<BuildDto> builds = await devOpsService.GetBuildsAsync(projectName, definitionId, top);
 
             return JsonSerializer.Serialize(new
             {
@@ -387,7 +388,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting build {BuildId}", buildId);
-            var build = await devOpsService.GetBuildAsync(projectName, buildId);
+            BuildDto? build = await devOpsService.GetBuildAsync(projectName, buildId);
 
             return JsonSerializer.Serialize(new
             {
@@ -409,7 +410,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Queueing build for definition {DefinitionId}", definitionId);
-            var build = await devOpsService.QueueBuildAsync(projectName, definitionId, branch);
+            BuildDto build = await devOpsService.QueueBuildAsync(projectName, definitionId, branch);
 
             return JsonSerializer.Serialize(new
             {
@@ -431,7 +432,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting build logs for build {BuildId}", buildId);
-            var logs = await devOpsService.GetBuildLogsAsync(projectName, buildId);
+            IEnumerable<BuildLogDto> logs = await devOpsService.GetBuildLogsAsync(projectName, buildId);
 
             return JsonSerializer.Serialize(new
             {
@@ -453,7 +454,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting build log content for log {LogId}", logId);
-            var logContent = await devOpsService.GetBuildLogContentAsync(projectName, buildId, logId);
+            BuildLogContentDto? logContent = await devOpsService.GetBuildLogContentAsync(projectName, buildId, logId);
 
             return JsonSerializer.Serialize(new
             {
@@ -475,7 +476,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting build timeline for build {BuildId}", buildId);
-            var timeline = await devOpsService.GetBuildTimelineAsync(projectName, buildId);
+            BuildTimelineDto? timeline = await devOpsService.GetBuildTimelineAsync(projectName, buildId);
 
             return JsonSerializer.Serialize(new
             {
@@ -497,7 +498,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting build step logs for build {BuildId}", buildId);
-            var stepLogs = await devOpsService.GetBuildStepLogsAsync(projectName, buildId);
+            IEnumerable<BuildStepLogDto> stepLogs = await devOpsService.GetBuildStepLogsAsync(projectName, buildId);
 
             return JsonSerializer.Serialize(new
             {
@@ -519,7 +520,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting complete build log for build {BuildId}", buildId);
-            var log = await devOpsService.GetCompleteBuildLogAsync(projectName, buildId);
+            string log = await devOpsService.GetCompleteBuildLogAsync(projectName, buildId);
 
             return JsonSerializer.Serialize(new
             {
@@ -541,7 +542,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting build task log for task {TaskId}", taskId);
-            var taskLog = await devOpsService.GetBuildTaskLogAsync(projectName, buildId, taskId);
+            BuildLogContentDto? taskLog = await devOpsService.GetBuildTaskLogAsync(projectName, buildId, taskId);
 
             return JsonSerializer.Serialize(new
             {
@@ -569,7 +570,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Searching build logs for build {BuildId}", buildId);
-            var result = await devOpsService.SearchBuildLogsWithRegexAsync(
+            string result = await devOpsService.SearchBuildLogsWithRegexAsync(
                 projectName, buildId, regexPattern, contextLines, caseSensitive, maxMatches);
 
             return JsonSerializer.Serialize(new
@@ -596,7 +597,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting release definitions for project {ProjectName}", projectName);
-            var definitions = await devOpsService.GetReleaseDefinitionsAsync(projectName);
+            IEnumerable<ReleaseDefinitionDto> definitions = await devOpsService.GetReleaseDefinitionsAsync(projectName);
 
             return JsonSerializer.Serialize(new
             {
@@ -618,7 +619,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting release definition {DefinitionId}", definitionId);
-            var definition = await devOpsService.GetReleaseDefinitionAsync(projectName, definitionId);
+            ReleaseDefinitionDto? definition = await devOpsService.GetReleaseDefinitionAsync(projectName, definitionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -640,7 +641,7 @@ public class DevOpsTools(
         try
         {
             logger.LogDebug("Getting releases for project {ProjectName}", projectName);
-            var releases = await devOpsService.GetReleasesAsync(projectName, definitionId);
+            IEnumerable<ReleaseDto> releases = await devOpsService.GetReleasesAsync(projectName, definitionId);
 
             return JsonSerializer.Serialize(new
             {

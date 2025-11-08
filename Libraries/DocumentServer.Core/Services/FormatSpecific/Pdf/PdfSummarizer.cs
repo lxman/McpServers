@@ -29,10 +29,10 @@ public class PdfSummarizer(
 
         try
         {
-            using var pdf = await OpenPdfAsync(filePath);
+            using PdfDocument pdf = await OpenPdfAsync(filePath);
 
-            var fullText = ExtractFullText(pdf);
-            var summary = GenerateSummary(fullText, maxLength);
+            string fullText = ExtractFullText(pdf);
+            DocumentSummary summary = GenerateSummary(fullText, maxLength);
 
             logger.LogInformation("Generated summary: {WordCount} words, {KeyPoints} key points",
                 summary.WordCount, summary.KeyPoints.Count);
@@ -58,7 +58,7 @@ public class PdfSummarizer(
 
         try
         {
-            using var pdf = await OpenPdfAsync(filePath);
+            using PdfDocument pdf = await OpenPdfAsync(filePath);
 
             if (pageNumber < 1 || pageNumber > pdf.NumberOfPages)
             {
@@ -66,10 +66,10 @@ public class PdfSummarizer(
                     $"Page {pageNumber} not found (document has {pdf.NumberOfPages} pages)");
             }
 
-            var page = pdf.GetPage(pageNumber);
-            var pageText = ContentOrderTextExtractor.GetText(page);
+            Page page = pdf.GetPage(pageNumber);
+            string? pageText = ContentOrderTextExtractor.GetText(page);
 
-            var summary = GenerateSummary(pageText, maxLength);
+            DocumentSummary summary = GenerateSummary(pageText, maxLength);
 
             logger.LogInformation("Generated page summary: {WordCount} words",
                 summary.WordCount);
@@ -98,7 +98,7 @@ public class PdfSummarizer(
 
         try
         {
-            using var pdf = await OpenPdfAsync(filePath);
+            using PdfDocument pdf = await OpenPdfAsync(filePath);
 
             if (startPage < 1 || endPage > pdf.NumberOfPages || startPage > endPage)
             {
@@ -108,15 +108,15 @@ public class PdfSummarizer(
 
             var textBuilder = new StringBuilder();
 
-            for (var i = startPage; i <= endPage; i++)
+            for (int i = startPage; i <= endPage; i++)
             {
-                var page = pdf.GetPage(i);
-                var pageText = ContentOrderTextExtractor.GetText(page);
+                Page page = pdf.GetPage(i);
+                string? pageText = ContentOrderTextExtractor.GetText(page);
                 textBuilder.AppendLine(pageText);
             }
 
             var fullText = textBuilder.ToString();
-            var summary = GenerateSummary(fullText, maxLength);
+            DocumentSummary summary = GenerateSummary(fullText, maxLength);
 
             logger.LogInformation("Generated range summary: {WordCount} words from {PageCount} pages",
                 summary.WordCount, endPage - startPage + 1);
@@ -143,10 +143,10 @@ public class PdfSummarizer(
 
         try
         {
-            using var pdf = await OpenPdfAsync(filePath);
+            using PdfDocument pdf = await OpenPdfAsync(filePath);
 
-            var fullText = ExtractFullText(pdf);
-            var keywords = ExtractTopKeywords(fullText, topCount);
+            string fullText = ExtractFullText(pdf);
+            Dictionary<string, int> keywords = ExtractTopKeywords(fullText, topCount);
 
             logger.LogInformation("Extracted {Count} keywords", keywords.Count);
 
@@ -165,7 +165,7 @@ public class PdfSummarizer(
     {
         return await Task.Run(() =>
         {
-            var cached = cache.Get(filePath);
+            LoadedDocument? cached = cache.Get(filePath);
             var pdf = cached?.DocumentObject as PdfDocument;
 
             if (pdf is not null)
@@ -173,7 +173,7 @@ public class PdfSummarizer(
                 return pdf;
             }
 
-            var password = passwordManager.GetPasswordForFile(filePath);
+            string? password = passwordManager.GetPasswordForFile(filePath);
 
             if (password is not null)
             {
@@ -189,9 +189,9 @@ public class PdfSummarizer(
     {
         var textBuilder = new StringBuilder();
 
-        foreach (var page in pdf.GetPages())
+        foreach (Page page in pdf.GetPages())
         {
-            var pageText = ContentOrderTextExtractor.GetText(page);
+            string? pageText = ContentOrderTextExtractor.GetText(page);
             textBuilder.AppendLine(pageText);
         }
 
@@ -200,23 +200,23 @@ public class PdfSummarizer(
 
     private static DocumentSummary GenerateSummary(string fullText, int maxLength)
     {
-        var words = fullText.Split([' ', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries);
-        var sentences = fullText.Split(['.', '!', '?'], StringSplitOptions.RemoveEmptyEntries)
+        string[] words = fullText.Split([' ', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries);
+        List<string> sentences = fullText.Split(['.', '!', '?'], StringSplitOptions.RemoveEmptyEntries)
             .Select(s => s.Trim())
             .Where(s => s.Length > 20)
             .ToList();
 
-        var wordFreq = words
+        Dictionary<string, int> wordFreq = words
             .Where(w => w.Length > 3)
             .GroupBy(w => w.ToLower())
             .ToDictionary(g => g.Key, g => g.Count());
 
-        var keyPoints = sentences
+        List<string> keyPoints = sentences
             .OrderByDescending(s => GetSentenceScore(s, wordFreq))
             .Take(5)
             .ToList();
 
-        var mainContent = string.Join(" ", keyPoints);
+        string mainContent = string.Join(" ", keyPoints);
         if (mainContent.Length > maxLength)
         {
             mainContent = mainContent[..maxLength];
@@ -235,7 +235,7 @@ public class PdfSummarizer(
 
     private static double GetSentenceScore(string sentence, Dictionary<string, int> wordFreq)
     {
-        var words = sentence.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string[] words = sentence.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (words.Length == 0) return 0;
 
         return words.Where(w => wordFreq.ContainsKey(w.ToLower())).Sum(w => wordFreq[w.ToLower()]) / (double)words.Length;
@@ -243,9 +243,9 @@ public class PdfSummarizer(
 
     private static Dictionary<string, int> ExtractTopKeywords(string text, int topCount)
     {
-        var words = text.Split([' ', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries);
+        string[] words = text.Split([' ', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries);
 
-        var wordFreq = words
+        Dictionary<string, int> wordFreq = words
             .Where(w => w.Length > 3)
             .GroupBy(w => w.ToLower())
             .ToDictionary(g => g.Key, g => g.Count());

@@ -212,7 +212,7 @@ namespace MsOfficeCrypto.Structures
         /// <returns></returns>
         public string GetEncryptionTypeName()
         {
-            var type = EncryptionType;
+            string type = EncryptionType;
 
             return type.StartsWith("ECMA-376")
                 ? type[9..]
@@ -247,7 +247,7 @@ namespace MsOfficeCrypto.Structures
         /// <returns>Technical details string</returns>
         public string GetTechnicalDetails()
         {
-            var details = GetSummary() + "\n\n";
+            string details = GetSummary() + "\n\n";
             
             if (IsModernFormat && VersionInfo != null)
             {
@@ -282,8 +282,8 @@ namespace MsOfficeCrypto.Structures
             }
             
             // Check encryption method from EncryptionType property
-            var encType = EncryptionType.ToLowerInvariant() ?? "";
-            var encMethod = EncryptionMethod.ToLowerInvariant() ?? "";
+            string encType = EncryptionType.ToLowerInvariant() ?? "";
+            string encMethod = EncryptionMethod.ToLowerInvariant() ?? "";
                 
             // XOR Obfuscation - very weak
             if (encMethod.Contains("xor"))
@@ -311,8 +311,8 @@ namespace MsOfficeCrypto.Structures
             if (VersionInfo == null)
                 return $"{EncryptionType} - {EncryptionMethod}" +
                        (KeySizeBits.HasValue ? $" ({KeySizeBits} bits)" : "");
-            var strength = GetEncryptionStrength();
-            var keyInfo = KeySizeBits.HasValue ? $"{KeySizeBits} bits" : "unknown key size";
+            string strength = GetEncryptionStrength();
+            string keyInfo = KeySizeBits.HasValue ? $"{KeySizeBits} bits" : "unknown key size";
             return $"{VersionInfo.GetEncryptionType()} - Security: {strength}, Key: {keyInfo}";
 
             // Fallback for legacy formats

@@ -47,14 +47,14 @@ public class QuickSearchService
         try
         {
             // Extract text from document
-            var textResult = await _processor.ExtractTextAsync(filePath, password);
+            ServiceResult<string> textResult = await _processor.ExtractTextAsync(filePath, password);
             if (!textResult.Success)
             {
                 return ServiceResult<SearchResult>.CreateFailure(
                     $"Failed to extract text: {textResult.Error}");
             }
 
-            var text = textResult.Data!;
+            string text = textResult.Data!;
             var matches = new List<SearchMatch>();
 
             if (fuzzySearch)
@@ -105,7 +105,7 @@ public class QuickSearchService
 
         try
         {
-            var cachedPaths = _processor.GetCachedDocuments();
+            List<string> cachedPaths = _processor.GetCachedDocuments();
             
             if (cachedPaths.Count == 0)
             {
@@ -117,9 +117,9 @@ public class QuickSearchService
             var successCount = 0;
             var failureCount = 0;
 
-            foreach (var filePath in cachedPaths)
+            foreach (string filePath in cachedPaths)
             {
-                var result = await SearchInDocumentAsync(
+                ServiceResult<SearchResult> result = await SearchInDocumentAsync(
                     filePath, searchTerm, fuzzySearch, maxResultsPerDocument);
 
                 if (result is { Success: true, Data: not null })
@@ -141,7 +141,7 @@ public class QuickSearchService
             // Sort by relevance score
             allResults = allResults.OrderByDescending(r => r.RelevanceScore).ToList();
 
-            var totalMatches = allResults.Sum(r => r.MatchCount);
+            int totalMatches = allResults.Sum(r => r.MatchCount);
 
             _logger.LogInformation("Cross-document search complete: {Total} documents, {Matches} total matches, {Success} succeeded, {Failed} failed",
                 cachedPaths.Count, totalMatches, successCount, failureCount);
@@ -165,7 +165,7 @@ public class QuickSearchService
         try
         {
             var regex = new Regex(Regex.Escape(searchTerm), RegexOptions.IgnoreCase);
-            var regexMatches = regex.Matches(text);
+            MatchCollection regexMatches = regex.Matches(text);
 
             var count = 0;
             foreach (Match match in regexMatches)
@@ -202,17 +202,17 @@ public class QuickSearchService
         try
         {
             // Split text into sentences for fuzzy matching
-            var sentences = SplitIntoSentences(text);
+            List<string> sentences = SplitIntoSentences(text);
             
             // Use FuzzySharp to find the best matches
             IEnumerable<ExtractedResult<string>> fuzzyMatches = Process.ExtractTop(searchTerm, sentences, limit: maxResults * 2)
                 .Where(m => m.Score >= 60) // Minimum 60% similarity
                 .Take(maxResults);
 
-            foreach (var fuzzyMatch in fuzzyMatches)
+            foreach (ExtractedResult<string> fuzzyMatch in fuzzyMatches)
             {
                 // Find the position of this sentence in the original text
-                var position = text.IndexOf(fuzzyMatch.Value, StringComparison.OrdinalIgnoreCase);
+                int position = text.IndexOf(fuzzyMatch.Value, StringComparison.OrdinalIgnoreCase);
                 if (position >= 0)
                 {
                     matches.Add(new SearchMatch
@@ -241,10 +241,10 @@ public class QuickSearchService
     /// </summary>
     private string GetContext(string text, int position, int matchLength, int contextSize = 100)
     {
-        var start = Math.Max(0, position - contextSize);
-        var end = Math.Min(text.Length, position + matchLength + contextSize);
+        int start = Math.Max(0, position - contextSize);
+        int end = Math.Min(text.Length, position + matchLength + contextSize);
 
-        var context = text[start..end];
+        string context = text[start..end];
 
         // Add ellipsis if truncated
         if (start > 0) context = "..." + context;
@@ -266,7 +266,7 @@ public class QuickSearchService
     {
         if (position < 0 || position >= text.Length) return 0;
 
-        var textUpToPosition = text[..position];
+        string textUpToPosition = text[..position];
         return textUpToPosition.Count(c => c == '\n') + 1;
     }
 
@@ -276,7 +276,7 @@ public class QuickSearchService
     private List<string> SplitIntoSentences(string text)
     {
         // Simple sentence splitting on common punctuation
-        var sentences = text.Split(['.', '!', '?', '\n'], 
+        string[] sentences = text.Split(['.', '!', '?', '\n'], 
             StringSplitOptions.RemoveEmptyEntries);
 
         return sentences
@@ -290,7 +290,7 @@ public class QuickSearchService
     /// </summary>
     private DocumentType GetDocumentType(string filePath)
     {
-        var extension = Path.GetExtension(filePath).ToLowerInvariant();
+        string extension = Path.GetExtension(filePath).ToLowerInvariant();
         
         return extension switch
         {

@@ -19,7 +19,7 @@ public class FileStorageService(
 
     private async Task<ShareServiceClient> GetShareServiceClientAsync(string accountName)
     {
-        if (_shareServiceClients.TryGetValue(accountName, out var existingClient))
+        if (_shareServiceClients.TryGetValue(accountName, out ShareServiceClient? existingClient))
             return existingClient;
 
         var serviceUri = new Uri($"https://{accountName}.file.core.windows.net");
@@ -35,10 +35,10 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
             var shares = new List<FileShareDto>();
 
-            await foreach (var share in serviceClient.GetSharesAsync(prefix: prefix))
+            await foreach (ShareItem? share in serviceClient.GetSharesAsync(prefix: prefix))
             {
                 shares.Add(MapFileShare(share, accountName));
             }
@@ -57,8 +57,8 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
 
             if (!await shareClient.ExistsAsync())
                 return null;
@@ -81,8 +81,8 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
 
             var options = new ShareCreateOptions
             {
@@ -111,11 +111,11 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
 
-            var response = await shareClient.DeleteIfExistsAsync();
-            var deleted = response.Value;
+            Response<bool>? response = await shareClient.DeleteIfExistsAsync();
+            bool deleted = response.Value;
 
             if (deleted)
                 logger.LogInformation("Deleted file share {ShareName} from {AccountName}", shareName, accountName);
@@ -133,8 +133,8 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
             return await shareClient.ExistsAsync();
         }
         catch (Exception ex)
@@ -152,12 +152,12 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
-            var directoryClient = shareClient.GetDirectoryClient(directoryPath);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
+            ShareDirectoryClient? directoryClient = shareClient.GetDirectoryClient(directoryPath);
 
             Response<ShareDirectoryInfo> response = await directoryClient.CreateIfNotExistsAsync();
-            var created = response is not null;
+            bool created = response is not null;
 
             if (created)
                 logger.LogInformation("Created directory {DirectoryPath} in {ShareName}/{AccountName}", directoryPath, shareName, accountName);
@@ -175,12 +175,12 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
-            var directoryClient = shareClient.GetDirectoryClient(directoryPath);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
+            ShareDirectoryClient? directoryClient = shareClient.GetDirectoryClient(directoryPath);
 
-            var response = await directoryClient.DeleteIfExistsAsync();
-            var deleted = response.Value;
+            Response<bool>? response = await directoryClient.DeleteIfExistsAsync();
+            bool deleted = response.Value;
 
             if (deleted)
                 logger.LogInformation("Deleted directory {DirectoryPath} from {ShareName}/{AccountName}", directoryPath, shareName, accountName);
@@ -198,9 +198,9 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
-            var directoryClient = shareClient.GetDirectoryClient(directoryPath);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
+            ShareDirectoryClient? directoryClient = shareClient.GetDirectoryClient(directoryPath);
             return await directoryClient.ExistsAsync();
         }
         catch (Exception ex)
@@ -218,15 +218,15 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
-            var directoryClient = string.IsNullOrEmpty(directoryPath)
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
+            ShareDirectoryClient? directoryClient = string.IsNullOrEmpty(directoryPath)
                 ? shareClient.GetRootDirectoryClient()
                 : shareClient.GetDirectoryClient(directoryPath);
 
             var items = new List<FileItemDto>();
 
-            await foreach (var item in directoryClient.GetFilesAndDirectoriesAsync(prefix: prefix))
+            await foreach (ShareFileItem? item in directoryClient.GetFilesAndDirectoriesAsync(prefix: prefix))
             {
                 items.Add(MapFileItem(item, shareName, accountName, directoryPath));
             }
@@ -247,9 +247,9 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
-            var fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
+            ShareFileClient? fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
 
             if (!await fileClient.ExistsAsync())
                 return null;
@@ -273,13 +273,13 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
-            var fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
+            ShareFileClient? fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
 
             Response<ShareFileDownloadInfo> response = await fileClient.DownloadAsync();
             using var streamReader = new StreamReader(response.Value.Content);
-            var content = await streamReader.ReadToEndAsync();
+            string content = await streamReader.ReadToEndAsync();
 
             logger.LogInformation("Downloaded file {FilePath} as text from {ShareName}/{AccountName}", 
                 filePath, shareName, accountName);
@@ -297,14 +297,14 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
-            var fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
+            ShareFileClient? fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
 
             Response<ShareFileDownloadInfo> response = await fileClient.DownloadAsync();
             using var memoryStream = new MemoryStream();
             await response.Value.Content.CopyToAsync(memoryStream);
-            var content = memoryStream.ToArray();
+            byte[] content = memoryStream.ToArray();
 
             logger.LogInformation("Downloaded file {FilePath} as bytes from {ShareName}/{AccountName}", 
                 filePath, shareName, accountName);
@@ -322,11 +322,11 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
-            var fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
+            ShareFileClient? fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
 
-            var bytes = Encoding.UTF8.GetBytes(content);
+            byte[] bytes = Encoding.UTF8.GetBytes(content);
             using var stream = new MemoryStream(bytes);
 
             await fileClient.CreateAsync(bytes.Length);
@@ -369,9 +369,9 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
-            var fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
+            ShareFileClient? fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
 
             using var stream = new MemoryStream(content);
 
@@ -415,12 +415,12 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
-            var fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
+            ShareFileClient? fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
 
-            var response = await fileClient.DeleteIfExistsAsync();
-            var deleted = response.Value;
+            Response<bool>? response = await fileClient.DeleteIfExistsAsync();
+            bool deleted = response.Value;
 
             if (deleted)
                 logger.LogInformation("Deleted file {FilePath} from {ShareName}/{AccountName}", 
@@ -440,9 +440,9 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
-            var fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
+            ShareFileClient? fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
 
             return await fileClient.ExistsAsync();
         }
@@ -462,9 +462,9 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
-            var fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
+            ShareFileClient? fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
 
             ShareFileProperties properties = await fileClient.GetPropertiesAsync();
             return properties.Metadata.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
@@ -481,9 +481,9 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
-            var fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
+            ShareFileClient? fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
 
             await fileClient.SetMetadataAsync(metadata);
 
@@ -507,9 +507,9 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
-            var fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
+            ShareFileClient? fileClient = shareClient.GetRootDirectoryClient().GetFileClient(filePath);
 
             if (!fileClient.CanGenerateSasUri)
             {
@@ -530,7 +530,7 @@ public class FileStorageService(
             if (permissions.Contains('d')) sasBuilder.SetPermissions(ShareFileSasPermissions.Delete);
             if (permissions.Contains('c')) sasBuilder.SetPermissions(ShareFileSasPermissions.Create);
 
-            var sasUri = fileClient.GenerateSasUri(sasBuilder);
+            Uri? sasUri = fileClient.GenerateSasUri(sasBuilder);
 
             logger.LogInformation("Generated SAS URL for file {FilePath} in {ShareName}/{AccountName}",
                 filePath, shareName, accountName);
@@ -559,8 +559,8 @@ public class FileStorageService(
     {
         try
         {
-            var serviceClient = await GetShareServiceClientAsync(accountName);
-            var shareClient = serviceClient.GetShareClient(shareName);
+            ShareServiceClient serviceClient = await GetShareServiceClientAsync(accountName);
+            ShareClient? shareClient = serviceClient.GetShareClient(shareName);
 
             if (!shareClient.CanGenerateSasUri)
             {
@@ -581,7 +581,7 @@ public class FileStorageService(
             if (permissions.Contains('l')) sasBuilder.SetPermissions(ShareSasPermissions.List);
             if (permissions.Contains('c')) sasBuilder.SetPermissions(ShareSasPermissions.Create);
 
-            var sasUri = shareClient.GenerateSasUri(sasBuilder);
+            Uri? sasUri = shareClient.GenerateSasUri(sasBuilder);
 
             logger.LogInformation("Generated SAS URL for share {ShareName} in {AccountName}",
                 shareName, accountName);
@@ -639,7 +639,7 @@ public class FileStorageService(
 
     private static FileItemDto MapFileItem(ShareFileItem item, string shareName, string accountName, string? directoryPath)
     {
-        var fullPath = string.IsNullOrEmpty(directoryPath) 
+        string? fullPath = string.IsNullOrEmpty(directoryPath) 
             ? item.Name 
             : $"{directoryPath}/{item.Name}";
 

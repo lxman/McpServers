@@ -93,9 +93,9 @@ namespace MsOfficeCrypto.Structures
         {
             if (!IsValid()) return "Invalid";
 
-            var saltBytes = Salt?.Length ?? 0;
-            var verifierBytes = EncryptedVerifier?.Length ?? 0;
-            var hashBytes = EncryptedVerifierHash?.Length ?? 0;
+            int saltBytes = Salt?.Length ?? 0;
+            int verifierBytes = EncryptedVerifier?.Length ?? 0;
+            int hashBytes = EncryptedVerifierHash?.Length ?? 0;
 
             if (saltBytes >= 16 && verifierBytes >= 16 && hashBytes >= 20)
             {

@@ -33,7 +33,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null || session.Context == null)
                 return $"Session {sessionId} not found or page/context not available.";
 
@@ -95,11 +95,11 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            if (!_coverageSessions.TryGetValue(sessionId, out var coverageSession))
+            if (!_coverageSessions.TryGetValue(sessionId, out CoverageSession? coverageSession))
             {
                 return $"No active coverage session found for session {sessionId}";
             }
@@ -150,17 +150,17 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             {
                 try
                 {
-                    var jsCoverageJson = JsonSerializer.Serialize(coverageData.jsCoverage);
-                    var jsCoverageArray = JsonSerializer.Deserialize<object[]>(jsCoverageJson) ?? new object[0];
+                    dynamic? jsCoverageJson = JsonSerializer.Serialize(coverageData.jsCoverage);
+                    dynamic jsCoverageArray = JsonSerializer.Deserialize<object[]>(jsCoverageJson) ?? new object[0];
                     
-                    foreach (var entry in jsCoverageArray)
+                    foreach (dynamic? entry in jsCoverageArray)
                     {
-                        var entryJson = JsonSerializer.Serialize(entry);
-                        var entryElement = JsonSerializer.Deserialize<JsonElement>(entryJson);
+                        dynamic? entryJson = JsonSerializer.Serialize(entry);
+                        dynamic? entryElement = JsonSerializer.Deserialize<JsonElement>(entryJson);
                         
-                        var totalBytes = entryElement.TryGetProperty("totalBytes", out JsonElement tbProp) ? tbProp.GetInt32() : 0;
-                        var usedBytes = entryElement.TryGetProperty("usedBytes", out JsonElement ubProp) ? ubProp.GetInt32() : 0;
-                        var url = entryElement.TryGetProperty("url", out JsonElement urlProp) ? urlProp.GetString() ?? "" : "";
+                        int totalBytes = entryElement.TryGetProperty("totalBytes", out JsonElement tbProp) ? tbProp.GetInt32() : 0;
+                        int usedBytes = entryElement.TryGetProperty("usedBytes", out JsonElement ubProp) ? ubProp.GetInt32() : 0;
+                        string url = entryElement.TryGetProperty("url", out JsonElement urlProp) ? urlProp.GetString() ?? "" : "";
                         
                         totalJsBytes += totalBytes;
                         usedJsBytes += usedBytes;
@@ -194,17 +194,17 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             {
                 try
                 {
-                    var cssCoverageJson = JsonSerializer.Serialize(coverageData.cssCoverage);
-                    var cssCoverageArray = JsonSerializer.Deserialize<object[]>(cssCoverageJson) ?? new object[0];
+                    dynamic? cssCoverageJson = JsonSerializer.Serialize(coverageData.cssCoverage);
+                    dynamic cssCoverageArray = JsonSerializer.Deserialize<object[]>(cssCoverageJson) ?? new object[0];
                     
-                    foreach (var entry in cssCoverageArray)
+                    foreach (dynamic? entry in cssCoverageArray)
                     {
-                        var entryJson = JsonSerializer.Serialize(entry);
-                        var entryElement = JsonSerializer.Deserialize<JsonElement>(entryJson);
+                        dynamic? entryJson = JsonSerializer.Serialize(entry);
+                        dynamic? entryElement = JsonSerializer.Deserialize<JsonElement>(entryJson);
                         
-                        var totalBytes = entryElement.TryGetProperty("totalBytes", out JsonElement tbProp) ? tbProp.GetInt32() : 0;
-                        var usedBytes = entryElement.TryGetProperty("usedBytes", out JsonElement ubProp) ? ubProp.GetInt32() : 0;
-                        var url = entryElement.TryGetProperty("url", out JsonElement urlProp) ? urlProp.GetString() ?? "" : "";
+                        int totalBytes = entryElement.TryGetProperty("totalBytes", out JsonElement tbProp) ? tbProp.GetInt32() : 0;
+                        int usedBytes = entryElement.TryGetProperty("usedBytes", out JsonElement ubProp) ? ubProp.GetInt32() : 0;
+                        string url = entryElement.TryGetProperty("url", out JsonElement urlProp) ? urlProp.GetString() ?? "" : "";
                         
                         totalCssBytes += totalBytes;
                         usedCssBytes += usedBytes;
@@ -233,8 +233,8 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                 }
             }
 
-            var jsUsagePercentage = totalJsBytes > 0 ? (double)usedJsBytes / totalJsBytes * 100 : 0;
-            var cssUsagePercentage = totalCssBytes > 0 ? (double)usedCssBytes / totalCssBytes * 100 : 0;
+            double jsUsagePercentage = totalJsBytes > 0 ? (double)usedJsBytes / totalJsBytes * 100 : 0;
+            double cssUsagePercentage = totalCssBytes > 0 ? (double)usedCssBytes / totalCssBytes * 100 : 0;
 
             var results = new
             {
@@ -324,12 +324,12 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
             var snapshots = new List<MemorySnapshot>();
-            var startTime = DateTime.UtcNow;
+            DateTime startTime = DateTime.UtcNow;
 
             // JavaScript code to monitor memory usage
             var jsCode = """
@@ -468,8 +468,8 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                     
                     if (memoryStats != null)
                     {
-                        var memoryChange = GetDoubleFromObject(memoryStats.GetValueOrDefault("change", 0));
-                        var peakMemory = GetDoubleFromObject(memoryStats.GetValueOrDefault("peak", 0));
+                        double memoryChange = GetDoubleFromObject(memoryStats.GetValueOrDefault("change", 0));
+                        double peakMemory = GetDoubleFromObject(memoryStats.GetValueOrDefault("peak", 0));
                         
                         if (memoryChange > 10000000) // 10MB increase
                         {
@@ -502,8 +502,8 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                     
                     if (domStats != null)
                     {
-                        var domChange = GetDoubleFromObject(domStats.GetValueOrDefault("change", 0));
-                        var peakDom = GetDoubleFromObject(domStats.GetValueOrDefault("peak", 0));
+                        double domChange = GetDoubleFromObject(domStats.GetValueOrDefault("change", 0));
+                        double peakDom = GetDoubleFromObject(domStats.GetValueOrDefault("peak", 0));
                         
                         if (domChange > 1000)
                         {
@@ -551,7 +551,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
@@ -696,11 +696,11 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var startTime = DateTime.UtcNow;
+            DateTime startTime = DateTime.UtcNow;
             var snapshots = new List<object>();
 
             // Monitor at 1 second intervals
@@ -725,8 +725,8 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                 await Task.Delay(1000);
             }
 
-            var endTime = DateTime.UtcNow;
-            var duration = (endTime - startTime).TotalSeconds;
+            DateTime endTime = DateTime.UtcNow;
+            double duration = (endTime - startTime).TotalSeconds;
 
             // Calculate statistics
             var result = new
@@ -763,14 +763,14 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
             // Note: This is a simplified Lighthouse-style audit since full Lighthouse integration 
             // requires additional dependencies. This provides similar metrics using available APIs.
             
-            var auditCategory = category?.ToLower() ?? "performance";
+            string auditCategory = category?.ToLower() ?? "performance";
             var results = new Dictionary<string, object>();
 
             // Performance metrics using Performance API
@@ -975,12 +975,12 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
             // Start performance tracing using Chrome DevTools Protocol
-            var cdpSession = await session.Page.Context.NewCDPSessionAsync(session.Page);
+            ICDPSession cdpSession = await session.Page.Context.NewCDPSessionAsync(session.Page);
             
             // Enable required domains for performance tracing
             await cdpSession.SendAsync("Runtime.enable");
@@ -1033,7 +1033,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             }
 
             // Record start time and create trace session
-            var startTime = DateTime.UtcNow;
+            DateTime startTime = DateTime.UtcNow;
             var traceId = Guid.NewGuid().ToString();
             
             // Store trace session info for later retrieval
@@ -1047,7 +1047,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             };
 
             // Collect initial performance metrics
-            var initialMetrics = await GetBrowserPerformanceMetrics(session.Page);
+            object initialMetrics = await GetBrowserPerformanceMetrics(session.Page);
             
             // Get initial page state
             var initialPageState = await session.Page.EvaluateAsync<object>("""
@@ -1128,12 +1128,12 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
             // Get CDP session (we'll need to recreate it as we don't store it)
-            var cdpSession = await session.Page.Context.NewCDPSessionAsync(session.Page);
+            ICDPSession cdpSession = await session.Page.Context.NewCDPSessionAsync(session.Page);
             
             try
             {
@@ -1148,10 +1148,10 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                 // Tracing may not have been started or already stopped
             }
 
-            var endTime = DateTime.UtcNow;
+            DateTime endTime = DateTime.UtcNow;
             
             // Collect final performance metrics
-            var finalMetrics = await GetBrowserPerformanceMetrics(session.Page);
+            object finalMetrics = await GetBrowserPerformanceMetrics(session.Page);
             
             // Get comprehensive performance data
             var performanceData = await session.Page.EvaluateAsync<object>("""
@@ -1297,7 +1297,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             return element.ValueKind switch
             {
                 JsonValueKind.Number => element.GetDouble(),
-                JsonValueKind.String => double.TryParse(element.GetString(), out var result) ? result : 0.0,
+                JsonValueKind.String => double.TryParse(element.GetString(), out double result) ? result : 0.0,
                 _ => 0.0
             };
         }
@@ -1307,6 +1307,6 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
         if (obj is long l) return l;
         if (obj is decimal dec) return (double)dec;
         
-        return double.TryParse(obj.ToString(), out var parsed) ? parsed : 0.0;
+        return double.TryParse(obj.ToString(), out double parsed) ? parsed : 0.0;
     }
 }

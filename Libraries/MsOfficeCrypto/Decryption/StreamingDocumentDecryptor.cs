@@ -164,7 +164,7 @@ namespace MsOfficeCrypto.Decryption
             if (!OfficeCryptoDetector.IsEncryptedOfficeDocument(filePath))
                 throw new NotEncryptedException($"Document is not encrypted: {filePath}");
 
-            var encryptionInfo = OfficeCryptoDetector.GetEncryptionInfo(filePath);
+            EncryptionInfo encryptionInfo = OfficeCryptoDetector.GetEncryptionInfo(filePath);
             var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             
             // TODO: Position stream to EncryptedPackage data start
@@ -184,10 +184,10 @@ namespace MsOfficeCrypto.Decryption
             CancellationToken cancellationToken)
         {
             // Derive decryption key
-            var decryptionKey = _encryptionInfo.Verifier!.DeriveKey(password, _encryptionInfo.Header!);
+            byte[] decryptionKey = _encryptionInfo.Verifier!.DeriveKey(password, _encryptionInfo.Header!);
 
             // Create crypto transform based on algorithm
-            using var decryptor = CreateDecryptor(decryptionKey);
+            using ICryptoTransform decryptor = CreateDecryptor(decryptionKey);
             
             // Reset position and counters
             if (_encryptedStream.CanSeek)
@@ -202,7 +202,7 @@ namespace MsOfficeCrypto.Decryption
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var bytesRead = await _encryptedStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+                int bytesRead = await _encryptedStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
                 
                 if (bytesRead == 0)
                     break; // End of stream
@@ -211,14 +211,14 @@ namespace MsOfficeCrypto.Decryption
                 if (bytesRead < BufferSize)
                 {
                     // Final block - use TransformFinalBlock
-                    var finalBlock = decryptor.TransformFinalBlock(buffer, 0, bytesRead);
+                    byte[] finalBlock = decryptor.TransformFinalBlock(buffer, 0, bytesRead);
                     await outputStream.WriteAsync(finalBlock, 0, finalBlock.Length, cancellationToken);
                     BytesDecrypted += bytesRead;
                     break;
                 }
 
                 // Intermediate block - use TransformBlock
-                var decryptedBytes = decryptor.TransformBlock(buffer, 0, bytesRead, decryptedBuffer, 0);
+                int decryptedBytes = decryptor.TransformBlock(buffer, 0, bytesRead, decryptedBuffer, 0);
                 await outputStream.WriteAsync(decryptedBuffer, 0, decryptedBytes, cancellationToken);
 
                 BytesDecrypted += bytesRead;
@@ -232,7 +232,7 @@ namespace MsOfficeCrypto.Decryption
         /// </summary>
         private ICryptoTransform CreateDecryptor(byte[] key)
         {
-            var algorithm = _encryptionInfo.Header!.GetAlgorithmName();
+            string algorithm = _encryptionInfo.Header!.GetAlgorithmName();
             
             return algorithm switch
             {
@@ -262,7 +262,7 @@ namespace MsOfficeCrypto.Decryption
         /// </summary>
         private static byte[] EnsureKeyLength(byte[] key, int keySize)
         {
-            var requiredBytes = keySize / 8;
+            int requiredBytes = keySize / 8;
             
             if (key.Length == requiredBytes)
                 return key;

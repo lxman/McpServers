@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using AzureServer.Core.Services.Storage;
+using AzureServer.Core.Services.Storage.Models;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -25,7 +26,7 @@ public class StorageTools(
         try
         {
             logger.LogDebug("Listing storage accounts");
-            var accounts = await storageService.ListStorageAccountsAsync(subscriptionId);
+            IEnumerable<StorageAccountDto> accounts = await storageService.ListStorageAccountsAsync(subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -59,7 +60,7 @@ public class StorageTools(
         try
         {
             logger.LogDebug("Getting storage account {AccountName}", accountName);
-            var account = await storageService.GetStorageAccountAsync(subscriptionId, resourceGroupName, accountName);
+            StorageAccountDto? account = await storageService.GetStorageAccountAsync(subscriptionId, resourceGroupName, accountName);
 
             return JsonSerializer.Serialize(new
             {
@@ -95,7 +96,7 @@ public class StorageTools(
         try
         {
             logger.LogDebug("Listing containers in {AccountName}", accountName);
-            var containers = await storageService.ListContainersAsync(accountName, prefix);
+            IEnumerable<BlobContainerDto> containers = await storageService.ListContainersAsync(accountName, prefix);
 
             return JsonSerializer.Serialize(new
             {
@@ -125,7 +126,7 @@ public class StorageTools(
         try
         {
             logger.LogDebug("Getting container {ContainerName} in {AccountName}", containerName, accountName);
-            var container = await storageService.GetContainerAsync(accountName, containerName);
+            BlobContainerDto? container = await storageService.GetContainerAsync(accountName, containerName);
 
             return JsonSerializer.Serialize(new
             {
@@ -214,7 +215,7 @@ public class StorageTools(
         try
         {
             logger.LogDebug("Listing blobs in container {ContainerName}", containerName);
-            var blobs = await storageService.ListBlobsAsync(accountName, containerName, prefix, maxResults);
+            IEnumerable<BlobItemDto> blobs = await storageService.ListBlobsAsync(accountName, containerName, prefix, maxResults);
 
             return JsonSerializer.Serialize(new
             {
@@ -248,7 +249,7 @@ public class StorageTools(
         try
         {
             logger.LogDebug("Getting properties for blob {BlobName}", blobName);
-            var properties = await storageService.GetBlobPropertiesAsync(accountName, containerName, blobName);
+            BlobPropertiesDto? properties = await storageService.GetBlobPropertiesAsync(accountName, containerName, blobName);
 
             return JsonSerializer.Serialize(new
             {
@@ -283,7 +284,7 @@ public class StorageTools(
         try
         {
             logger.LogDebug("Downloading blob {BlobName} as text", blobName);
-            var content = await storageService.DownloadBlobAsTextAsync(accountName, containerName, blobName);
+            string content = await storageService.DownloadBlobAsTextAsync(accountName, containerName, blobName);
 
             return JsonSerializer.Serialize(new
             {
@@ -402,7 +403,7 @@ public class StorageTools(
         try
         {
             logger.LogDebug("Getting metadata for blob {BlobName}", blobName);
-            var metadata = await storageService.GetBlobMetadataAsync(accountName, containerName, blobName);
+            Dictionary<string, string> metadata = await storageService.GetBlobMetadataAsync(accountName, containerName, blobName);
 
             return JsonSerializer.Serialize(new
             {
@@ -461,7 +462,7 @@ public class StorageTools(
         try
         {
             logger.LogDebug("Generating SAS URL for blob {BlobName}", blobName);
-            var sasUrl = await storageService.GenerateBlobSasUrlAsync(
+            SasTokenDto sasUrl = await storageService.GenerateBlobSasUrlAsync(
                 accountName, containerName, blobName, expiryHours, permissions);
 
             return JsonSerializer.Serialize(new
@@ -490,7 +491,7 @@ public class StorageTools(
         try
         {
             logger.LogDebug("Generating SAS URL for container {ContainerName}", containerName);
-            var sasUrl = await storageService.GenerateContainerSasUrlAsync(
+            SasTokenDto sasUrl = await storageService.GenerateContainerSasUrlAsync(
                 accountName, containerName, expiryHours, permissions);
 
             return JsonSerializer.Serialize(new

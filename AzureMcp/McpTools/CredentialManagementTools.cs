@@ -24,7 +24,7 @@ public class CredentialManagementTools(
         try
         {
             logger.LogDebug("Listing credentials");
-            (_, var result) = await selectionService.GetCredentialAsync();
+            (_, CredentialSelectionResult result) = await selectionService.GetCredentialAsync();
 
             if (result.Status == SelectionStatus.NoCredentialsFound)
             {
@@ -42,7 +42,7 @@ public class CredentialManagementTools(
                 }, _jsonOptions);
             }
 
-            var credentials =
+            List<CredentialInfo> credentials =
                 result.AvailableCredentials
                 ?? (result.SelectedCredential is not null ? [result.SelectedCredential] : []);
 
@@ -55,7 +55,7 @@ public class CredentialManagementTools(
                 }, _jsonOptions);
             }
 
-            var selected = selectionService.GetSelectedCredential();
+            CredentialInfo? selected = selectionService.GetSelectedCredential();
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -94,7 +94,7 @@ public class CredentialManagementTools(
         try
         {
             logger.LogDebug("Selecting credential {CredentialId}", credentialId);
-            (var credential, var result) = selectionService.SelectCredential(credentialId);
+            (TokenCredential? credential, CredentialSelectionResult result) = selectionService.SelectCredential(credentialId);
 
             if (result.Status == SelectionStatus.Error)
             {
@@ -114,7 +114,7 @@ public class CredentialManagementTools(
                 }, _jsonOptions);
             }
 
-            var info = result.SelectedCredential;
+            CredentialInfo? info = result.SelectedCredential;
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -150,7 +150,7 @@ public class CredentialManagementTools(
         try
         {
             logger.LogDebug("Getting current credential");
-            var selected = selectionService.GetSelectedCredential();
+            CredentialInfo? selected = selectionService.GetSelectedCredential();
 
             if (selected is null)
             {
@@ -275,7 +275,7 @@ public class CredentialManagementTools(
         try
         {
             logger.LogDebug("Testing credential");
-            (var credential, var result) = await selectionService.GetCredentialAsync();
+            (TokenCredential? credential, CredentialSelectionResult result) = await selectionService.GetCredentialAsync();
 
             if (result.Status == SelectionStatus.NoCredentialsFound)
             {
@@ -296,7 +296,7 @@ public class CredentialManagementTools(
                 }, _jsonOptions);
             }
 
-            var selected = result.SelectedCredential;
+            CredentialInfo? selected = result.SelectedCredential;
             return JsonSerializer.Serialize(new
             {
                 success = true,

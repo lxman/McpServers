@@ -27,7 +27,7 @@ public partial class BreakpointTools(
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            DebugSession? session = sessionManager.GetSession(sessionId);
             if (session is null)
             {
                 return JsonSerializer.Serialize(new
@@ -42,11 +42,11 @@ public partial class BreakpointTools(
 
             // Send MI command: -break-insert <file>:<line>
             var command = $"-break-insert {filePath}:{lineNumber}";
-            var response = await miClient.SendCommandAsync(sessionId, command);
+            MiResponse? response = await miClient.SendCommandAsync(sessionId, command);
 
             if (response is null || !response.Success)
             {
-                var errorMsg = ExtractErrorMessage(response);
+                string errorMsg = ExtractErrorMessage(response);
                 return JsonSerializer.Serialize(new
                 {
                     success = false,
@@ -57,7 +57,7 @@ public partial class BreakpointTools(
 
             // Parse the breakpoint number from MI response
             // Expected format: 123^done,bkpt={number="1",...}
-            var breakpointNumber = ParseBreakpointNumber(response);
+            int breakpointNumber = ParseBreakpointNumber(response);
             if (breakpointNumber == 0)
             {
                 logger.LogWarning("Could not parse breakpoint number from response");
@@ -65,7 +65,7 @@ public partial class BreakpointTools(
             }
 
             // Extract additional breakpoint info
-            var breakpointInfo = ParseBreakpointInfo(response);
+            BreakpointInfo breakpointInfo = ParseBreakpointInfo(response);
 
             var breakpoint = new Breakpoint
             {
@@ -108,7 +108,7 @@ public partial class BreakpointTools(
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            DebugSession? session = sessionManager.GetSession(sessionId);
             if (session is null)
             {
                 return JsonSerializer.Serialize(new
@@ -154,7 +154,7 @@ public partial class BreakpointTools(
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            DebugSession? session = sessionManager.GetSession(sessionId);
             if (session is null)
             {
                 return JsonSerializer.Serialize(new
@@ -164,7 +164,7 @@ public partial class BreakpointTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            var breakpoint = session.Breakpoints.FirstOrDefault(b => b.Id == breakpointId);
+            Breakpoint? breakpoint = session.Breakpoints.FirstOrDefault(b => b.Id == breakpointId);
             if (breakpoint is null)
             {
                 return JsonSerializer.Serialize(new
@@ -179,11 +179,11 @@ public partial class BreakpointTools(
 
             // Send MI command: -break-delete <number>
             var command = $"-break-delete {breakpointId}";
-            var response = await miClient.SendCommandAsync(sessionId, command);
+            MiResponse? response = await miClient.SendCommandAsync(sessionId, command);
             
             if (response is null || !response.Success)
             {
-                var errorMsg = ExtractErrorMessage(response);
+                string errorMsg = ExtractErrorMessage(response);
                 return JsonSerializer.Serialize(new
                 {
                     success = false,
@@ -218,13 +218,13 @@ public partial class BreakpointTools(
     /// </summary>
     private static int ParseBreakpointNumber(MiResponse response)
     {
-        var resultRecord = response.GetResultRecord();
+        string? resultRecord = response.GetResultRecord();
         if (string.IsNullOrEmpty(resultRecord))
             return 0;
 
         // Look for the number="N" pattern
-        var match = Regex.Match(resultRecord, @"number=""(\d+)""");
-        if (match.Success && int.TryParse(match.Groups[1].Value, out var number))
+        Match match = Regex.Match(resultRecord, @"number=""(\d+)""");
+        if (match.Success && int.TryParse(match.Groups[1].Value, out int number))
         {
             return number;
         }
@@ -237,7 +237,7 @@ public partial class BreakpointTools(
     /// </summary>
     private static BreakpointInfo ParseBreakpointInfo(MiResponse response)
     {
-        var resultRecord = response.GetResultRecord();
+        string? resultRecord = response.GetResultRecord();
         if (string.IsNullOrEmpty(resultRecord))
             return new BreakpointInfo();
 
@@ -247,7 +247,7 @@ public partial class BreakpointTools(
         };
 
         // Check for a warning field (unresolved breakpoint)
-        var warningMatch = Regex.Match(resultRecord, @"warning=""([^""]+)""");
+        Match warningMatch = Regex.Match(resultRecord, @"warning=""([^""]+)""");
         if (warningMatch.Success)
         {
             info.Warning = warningMatch.Groups[1].Value;
@@ -255,22 +255,22 @@ public partial class BreakpointTools(
         }
 
         // Extract file path if present
-        var fileMatch = Regex.Match(resultRecord, @"file=""([^""]+)""");
+        Match fileMatch = Regex.Match(resultRecord, @"file=""([^""]+)""");
         if (fileMatch.Success)
         {
             info.FilePath = fileMatch.Groups[1].Value;
         }
 
         // Extract fullname if present (full path)
-        var fullnameMatch = Regex.Match(resultRecord, @"fullname=""([^""]+)""");
+        Match fullnameMatch = Regex.Match(resultRecord, @"fullname=""([^""]+)""");
         if (fullnameMatch.Success)
         {
             info.FilePath = fullnameMatch.Groups[1].Value;
         }
 
         // Extract line number if present
-        var lineMatch = Regex.Match(resultRecord, @"line=""(\d+)""");
-        if (lineMatch.Success && int.TryParse(lineMatch.Groups[1].Value, out var line))
+        Match lineMatch = Regex.Match(resultRecord, @"line=""(\d+)""");
+        if (lineMatch.Success && int.TryParse(lineMatch.Groups[1].Value, out int line))
         {
             info.LineNumber = line;
         }
@@ -286,12 +286,12 @@ public partial class BreakpointTools(
         if (response is null)
             return "No response received from debugger";
 
-        var resultRecord = response.GetResultRecord();
+        string? resultRecord = response.GetResultRecord();
         if (string.IsNullOrEmpty(resultRecord))
             return "Empty response from debugger";
 
         // Look for error message: ^error,msg="..."
-        var match = Regex.Match(resultRecord, @"msg=""([^""]+)""");
+        Match match = Regex.Match(resultRecord, @"msg=""([^""]+)""");
         if (match.Success)
         {
             return match.Groups[1].Value;

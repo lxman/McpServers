@@ -16,12 +16,12 @@ public class SubnetService(ArmClientFactory armClientFactory, ILogger<SubnetServ
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = VirtualNetworkResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName);
-            var vnet = armClient.GetVirtualNetworkResource(resourceId);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = VirtualNetworkResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName);
+            VirtualNetworkResource? vnet = armClient.GetVirtualNetworkResource(resourceId);
             
             var subnets = new List<SubnetDto>();
-            await foreach (var subnet in vnet.GetSubnets())
+            await foreach (SubnetResource? subnet in vnet.GetSubnets())
             {
                 subnets.Add(MappingService.MapToSubnetDto(subnet.Data));
             }
@@ -39,8 +39,8 @@ public class SubnetService(ArmClientFactory armClientFactory, ILogger<SubnetServ
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = SubnetResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName, subnetName);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = SubnetResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName, subnetName);
             Response<SubnetResource>? response = await armClient.GetSubnetResource(resourceId).GetAsync();
             
             return response.HasValue ? MappingService.MapToSubnetDto(response.Value.Data) : null;
@@ -60,9 +60,9 @@ public class SubnetService(ArmClientFactory armClientFactory, ILogger<SubnetServ
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var vnetResourceId = VirtualNetworkResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName);
-            var vnet = armClient.GetVirtualNetworkResource(vnetResourceId);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? vnetResourceId = VirtualNetworkResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName);
+            VirtualNetworkResource? vnet = armClient.GetVirtualNetworkResource(vnetResourceId);
 
             var subnetData = new SubnetData
             {
@@ -77,7 +77,7 @@ public class SubnetService(ArmClientFactory armClientFactory, ILogger<SubnetServ
 
             if (request.ServiceEndpoints is not null)
             {
-                foreach (var endpoint in request.ServiceEndpoints)
+                foreach (string endpoint in request.ServiceEndpoints)
                 {
                     subnetData.ServiceEndpoints.Add(new ServiceEndpointProperties { Service = endpoint });
                 }
@@ -99,9 +99,9 @@ public class SubnetService(ArmClientFactory armClientFactory, ILogger<SubnetServ
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = SubnetResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName, subnetName);
-            var subnet = armClient.GetSubnetResource(resourceId);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = SubnetResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName, subnetName);
+            SubnetResource? subnet = armClient.GetSubnetResource(resourceId);
             
             await subnet.DeleteAsync(WaitUntil.Completed);
             return true;
@@ -117,12 +117,12 @@ public class SubnetService(ArmClientFactory armClientFactory, ILogger<SubnetServ
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = SubnetResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName, subnetName);
-            var subnet = armClient.GetSubnetResource(resourceId);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = SubnetResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, vnetName, subnetName);
+            SubnetResource? subnet = armClient.GetSubnetResource(resourceId);
             
             Response<SubnetResource>? response = await subnet.GetAsync();
-            var subnetData = response.Value.Data;
+            SubnetData? subnetData = response.Value.Data;
 
             if (!string.IsNullOrEmpty(request.AddressPrefix))
                 subnetData.AddressPrefix = request.AddressPrefix;
@@ -136,7 +136,7 @@ public class SubnetService(ArmClientFactory armClientFactory, ILogger<SubnetServ
             if (request.ServiceEndpoints is not null)
             {
                 subnetData.ServiceEndpoints.Clear();
-                foreach (var endpoint in request.ServiceEndpoints)
+                foreach (string endpoint in request.ServiceEndpoints)
                 {
                     subnetData.ServiceEndpoints.Add(new ServiceEndpointProperties { Service = endpoint });
                 }

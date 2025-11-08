@@ -27,23 +27,23 @@ public class FileEditor(
             if (!File.Exists(filePath))
                 return EditResult.CreateFailure(filePath, "File not found");
             
-            var originalLines = await File.ReadAllLinesAsync(filePath);
-            var originalContent = string.Join('\n', originalLines);
+            string[] originalLines = await File.ReadAllLinesAsync(filePath);
+            string originalContent = string.Join('\n', originalLines);
             
-            (var success, var newLines, var errorMessage) =
+            (bool success, string[] newLines, string? errorMessage) =
                 LineBasedEditor.ReplaceLines(originalLines, startLine, endLine, newContent);
             
             if (!success)
                 return EditResult.CreateFailure(filePath, errorMessage ?? "Unknown error occurred");
             
-            var previewContent = string.Join('\n', newLines);
-            var diff = diffPatchService.GenerateUnifiedDiff(originalContent, previewContent, filePath);
-            var linesAffected = Math.Abs(newLines.Length - originalLines.Length) + (endLine - startLine + 1);
+            string previewContent = string.Join('\n', newLines);
+            string diff = diffPatchService.GenerateUnifiedDiff(originalContent, previewContent, filePath);
+            int linesAffected = Math.Abs(newLines.Length - originalLines.Length) + (endLine - startLine + 1);
             
-            var operation = EditOperation.Replace(startLine, endLine, newContent, 
+            EditOperation operation = EditOperation.Replace(startLine, endLine, newContent, 
                 $"Replace lines {startLine}-{endLine}");
             
-            var pendingEdit = approvalService.CreatePendingEdit(
+            PendingEdit pendingEdit = approvalService.CreatePendingEdit(
                 filePath,
                 operation,
                 originalVersionToken,
@@ -83,21 +83,21 @@ public class FileEditor(
             if (!File.Exists(filePath))
                 return EditResult.CreateFailure(filePath, "File not found");
             
-            var originalLines = await File.ReadAllLinesAsync(filePath);
-            var originalContent = string.Join('\n', originalLines);
+            string[] originalLines = await File.ReadAllLinesAsync(filePath);
+            string originalContent = string.Join('\n', originalLines);
             
-            (var success, var newLines, var errorMessage) = maintainIndentation 
+            (bool success, string[] newLines, string? errorMessage) = maintainIndentation 
                 ? LineBasedEditor.InsertWithIndentation(originalLines, afterLine, content)
                 : LineBasedEditor.InsertAfterLine(originalLines, afterLine, content);
             
             if (!success)
                 return EditResult.CreateFailure(filePath, errorMessage ?? "Unknown error occurred");
             
-            var previewContent = string.Join('\n', newLines);
-            var diff = diffPatchService.GenerateUnifiedDiff(originalContent, previewContent, filePath);
-            var linesInserted = newLines.Length - originalLines.Length;
+            string previewContent = string.Join('\n', newLines);
+            string diff = diffPatchService.GenerateUnifiedDiff(originalContent, previewContent, filePath);
+            int linesInserted = newLines.Length - originalLines.Length;
             
-            var operation = EditOperation.Insert(afterLine, content, 
+            EditOperation operation = EditOperation.Insert(afterLine, content, 
                 $"Insert after line {afterLine}");
             
             var metadata = new Dictionary<string, object>
@@ -105,7 +105,7 @@ public class FileEditor(
                 ["maintainIndentation"] = maintainIndentation
             };
             
-            var pendingEdit = approvalService.CreatePendingEdit(
+            PendingEdit pendingEdit = approvalService.CreatePendingEdit(
                 filePath,
                 operation,
                 originalVersionToken,
@@ -145,23 +145,23 @@ public class FileEditor(
             if (!File.Exists(filePath))
                 return EditResult.CreateFailure(filePath, "File not found");
             
-            var originalLines = await File.ReadAllLinesAsync(filePath);
-            var originalContent = string.Join('\n', originalLines);
+            string[] originalLines = await File.ReadAllLinesAsync(filePath);
+            string originalContent = string.Join('\n', originalLines);
             
-            (var success, var newLines, var errorMessage) =
+            (bool success, string[] newLines, string? errorMessage) =
                 LineBasedEditor.DeleteLines(originalLines, startLine, endLine);
             
             if (!success)
                 return EditResult.CreateFailure(filePath, errorMessage ?? "Unknown error occurred");
             
-            var previewContent = string.Join('\n', newLines);
-            var diff = diffPatchService.GenerateUnifiedDiff(originalContent, previewContent, filePath);
-            var linesDeleted = originalLines.Length - newLines.Length;
+            string previewContent = string.Join('\n', newLines);
+            string diff = diffPatchService.GenerateUnifiedDiff(originalContent, previewContent, filePath);
+            int linesDeleted = originalLines.Length - newLines.Length;
             
-            var operation = EditOperation.Delete(startLine, endLine, 
+            EditOperation operation = EditOperation.Delete(startLine, endLine, 
                 $"Delete lines {startLine}-{endLine}");
             
-            var pendingEdit = approvalService.CreatePendingEdit(
+            PendingEdit pendingEdit = approvalService.CreatePendingEdit(
                 filePath,
                 operation,
                 originalVersionToken,
@@ -202,21 +202,21 @@ public class FileEditor(
             if (!File.Exists(filePath))
                 return EditResult.CreateFailure(filePath, "File not found");
             
-            var originalLines = await File.ReadAllLinesAsync(filePath);
-            var originalContent = string.Join('\n', originalLines);
+            string[] originalLines = await File.ReadAllLinesAsync(filePath);
+            string originalContent = string.Join('\n', originalLines);
             
-            (var success, var newLines, var errorMessage) = LineBasedEditor.ReplaceInLines(
+            (bool success, string[] newLines, string? errorMessage) = LineBasedEditor.ReplaceInLines(
                 originalLines, searchPattern, replaceWith, useRegex, caseSensitive);
             
             if (!success)
                 return EditResult.CreateFailure(filePath, errorMessage ?? "No replacements made");
             
-            var previewContent = string.Join('\n', newLines);
-            var diff = diffPatchService.GenerateUnifiedDiff(originalContent, previewContent, filePath);
-            var changedLines = CountChangedLines(originalLines, newLines);
+            string previewContent = string.Join('\n', newLines);
+            string diff = diffPatchService.GenerateUnifiedDiff(originalContent, previewContent, filePath);
+            int changedLines = CountChangedLines(originalLines, newLines);
             
             // Create a pseudo-operation for replace-in-file
-            var operation = EditOperation.Replace(0, 0, replaceWith, 
+            EditOperation operation = EditOperation.Replace(0, 0, replaceWith, 
                 $"Replace '{searchPattern}' with '{replaceWith}'");
             
             var metadata = new Dictionary<string, object>
@@ -227,7 +227,7 @@ public class FileEditor(
                 ["caseSensitive"] = caseSensitive
             };
             
-            var pendingEdit = approvalService.CreatePendingEdit(
+            PendingEdit pendingEdit = approvalService.CreatePendingEdit(
                 filePath,
                 operation,
                 originalVersionToken,
@@ -257,7 +257,7 @@ public class FileEditor(
     /// </summary>
     public async Task<EditResult> ApplyPendingEdit(string approvalToken, string currentVersionToken)
     {
-        var pendingEdit = approvalService.ConsumePendingEdit(approvalToken);
+        PendingEdit? pendingEdit = approvalService.ConsumePendingEdit(approvalToken);
         
         if (pendingEdit == null)
         {
@@ -312,8 +312,8 @@ public class FileEditor(
             if (!File.Exists(filePath))
                 return (false, Array.Empty<int>(), "File not found");
             
-            var lines = await File.ReadAllLinesAsync(filePath);
-            var matches = LineBasedEditor.FindLines(lines, pattern, useRegex, caseSensitive);
+            string[] lines = await File.ReadAllLinesAsync(filePath);
+            int[] matches = LineBasedEditor.FindLines(lines, pattern, useRegex, caseSensitive);
             
             return (true, matches, null);
         }
@@ -333,10 +333,10 @@ public class FileEditor(
             if (!File.Exists(filePath))
                 return (false, "File not found");
             
-            var lines = await File.ReadAllLinesAsync(filePath);
-            var fileIndentation = IndentationManager.DetectFileIndentation(lines);
-            var content = string.Join('\n', lines);
-            (var isConsistent, var issues) = IndentationManager.ValidateIndentation(content, fileIndentation);
+            string[] lines = await File.ReadAllLinesAsync(filePath);
+            IndentationInfo fileIndentation = IndentationManager.DetectFileIndentation(lines);
+            string content = string.Join('\n', lines);
+            (bool isConsistent, string? issues) = IndentationManager.ValidateIndentation(content, fileIndentation);
             
             var analysis = "File indentation analysis:\n";
             analysis += $"Detected style: {fileIndentation}\n";
@@ -361,7 +361,7 @@ public class FileEditor(
             return;
             
         // Only create one backup per file per session
-        var normalizedPath = Path.GetFullPath(filePath);
+        string normalizedPath = Path.GetFullPath(filePath);
         if (_backedUpFilesThisSession.Contains(normalizedPath))
             return;
             
@@ -373,12 +373,12 @@ public class FileEditor(
     private static int CountChangedLines(string[] original, string[] modified)
     {
         var changes = 0;
-        var maxLength = Math.Max(original.Length, modified.Length);
+        int maxLength = Math.Max(original.Length, modified.Length);
         
         for (var i = 0; i < maxLength; i++)
         {
-            var originalLine = i < original.Length ? original[i] : string.Empty;
-            var modifiedLine = i < modified.Length ? modified[i] : string.Empty;
+            string originalLine = i < original.Length ? original[i] : string.Empty;
+            string modifiedLine = i < modified.Length ? modified[i] : string.Empty;
             
             if (originalLine != modifiedLine)
                 changes++;

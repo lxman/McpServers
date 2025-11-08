@@ -65,10 +65,10 @@ public class TesseractEngine : IDisposable
         {
             _logger.LogDebug("Extracting text from image ({Size} bytes)", imageBytes.Length);
 
-            using var img = TesseractImage.LoadFromMemory(imageBytes);
-            using var page = _engine!.Process(img);
+            using TesseractImage? img = TesseractImage.LoadFromMemory(imageBytes);
+            using Page? page = _engine!.Process(img);
             
-            var text = page.Text;
+            string? text = page.Text;
             _logger.LogDebug("Extracted {Length} characters from image", text?.Length ?? 0);
 
             return text ?? string.Empty;
@@ -93,11 +93,11 @@ public class TesseractEngine : IDisposable
         {
             _logger.LogDebug("Extracting text with confidence from image ({Size} bytes)", imageBytes.Length);
 
-            using var img = TesseractImage.LoadFromMemory(imageBytes);
-            using var page = _engine!.Process(img);
+            using TesseractImage? img = TesseractImage.LoadFromMemory(imageBytes);
+            using Page? page = _engine!.Process(img);
             
-            var text = page.Text ?? string.Empty;
-            var confidence = page.MeanConfidence / 100f; // Convert to 0.0-1.0 range
+            string text = page.Text ?? string.Empty;
+            float confidence = page.MeanConfidence / 100f; // Convert to 0.0-1.0 range
 
             _logger.LogDebug("Extracted {Length} characters with {Confidence:P1} confidence", 
                 text.Length, confidence);
@@ -124,11 +124,11 @@ public class TesseractEngine : IDisposable
 
         await Task.Run(() =>
         {
-            foreach (var imageBytes in images)
+            foreach (byte[] imageBytes in images)
             {
                 try
                 {
-                    var text = ExtractText(imageBytes);
+                    string text = ExtractText(imageBytes);
                     if (!string.IsNullOrWhiteSpace(text))
                     {
                         results.Add(text);
@@ -159,7 +159,7 @@ public class TesseractEngine : IDisposable
             @"C:\tesseract\tessdata"
         ];
 
-        foreach (var path in possiblePaths)
+        foreach (string path in possiblePaths)
         {
             if (Directory.Exists(path))
             {

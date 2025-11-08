@@ -51,7 +51,7 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
 
     private int CalculateSalaryScore(EnhancedJobListing job, SalaryPreferences prefs)
     {
-        var salary = ExtractSalaryFromJob(job);
+        int? salary = ExtractSalaryFromJob(job);
         
         if (salary == null)
             return 50; // Neutral score if no salary info
@@ -66,19 +66,19 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
             return 60; // Acceptable score for minimum+ salary
         
         // Linear scaling below minimum
-        var ratio = (double)salary / prefs.MinSalary;
+        double ratio = (double)salary / prefs.MinSalary;
         return (int)(ratio * 60);
     }
 
     private int CalculateTechnologyScore(EnhancedJobListing job, TechnologyPreferences prefs)
     {
         var score = 0;
-        var jobText = GetJobTextForAnalysis(job).ToLower();
-        var technologies = job.Technologies?.Select(t => t.ToLower()).ToList() ?? [];
+        string jobText = GetJobTextForAnalysis(job).ToLower();
+        List<string> technologies = job.Technologies?.Select(t => t.ToLower()).ToList() ?? [];
 
         // Core technologies (required) - 50 points max
         var coreMatches = 0;
-        foreach (var tech in prefs.CoreTechnologies)
+        foreach (string tech in prefs.CoreTechnologies)
         {
             if (jobText.Contains(tech.ToLower()) || technologies.Any(t => t.Contains(tech.ToLower())))
             {
@@ -89,7 +89,7 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
 
         // Preferred technologies - 30 points max
         var preferredMatches = 0;
-        foreach (var tech in prefs.PreferredTechnologies)
+        foreach (string tech in prefs.PreferredTechnologies)
         {
             if (jobText.Contains(tech.ToLower()) || technologies.Any(t => t.Contains(tech.ToLower())))
             {
@@ -100,7 +100,7 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
 
         // Bonus technologies - 20 points max
         var bonusMatches = 0;
-        foreach (var tech in prefs.BonusTechnologies)
+        foreach (string tech in prefs.BonusTechnologies)
         {
             if (jobText.Contains(tech.ToLower()) || technologies.Any(t => t.Contains(tech.ToLower())))
             {
@@ -115,11 +115,11 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
     private int CalculateCompanyScore(EnhancedJobListing job, CompanyPreferences prefs)
     {
         var score = 50; // Base score
-        var companyInfo = (job.Notes ?? "").ToLower();
-        var description = (job.Description ?? "").ToLower();
+        string companyInfo = (job.Notes ?? "").ToLower();
+        string description = (job.Description ?? "").ToLower();
 
         // Company stage preferences
-        foreach (var preferredStage in prefs.PreferredStages)
+        foreach (string preferredStage in prefs.PreferredStages)
         {
             if (companyInfo.Contains(preferredStage.ToLower()) || description.Contains(preferredStage.ToLower()))
             {
@@ -129,7 +129,7 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
         }
 
         // Penalize avoided stages
-        foreach (var avoidStage in prefs.AvoidStages)
+        foreach (string avoidStage in prefs.AvoidStages)
         {
             if (companyInfo.Contains(avoidStage.ToLower()) || description.Contains(avoidStage.ToLower()))
             {
@@ -139,12 +139,12 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
         }
 
         // Look for company size indicators
-        var sizeMatch = Regex.Match(companyInfo, @"(\d+)[-\s]*(\d+)?\s*employees?", RegexOptions.IgnoreCase);
+        Match sizeMatch = Regex.Match(companyInfo, @"(\d+)[-\s]*(\d+)?\s*employees?", RegexOptions.IgnoreCase);
         if (sizeMatch.Success)
         {
-            if (int.TryParse(sizeMatch.Groups[1].Value, out var minSize))
+            if (int.TryParse(sizeMatch.Groups[1].Value, out int minSize))
             {
-                var maxSize = sizeMatch.Groups[2].Success && int.TryParse(sizeMatch.Groups[2].Value, out var max) 
+                int maxSize = sizeMatch.Groups[2].Success && int.TryParse(sizeMatch.Groups[2].Value, out int max) 
                     ? max : minSize;
 
                 if (minSize >= prefs.MinEmployeeCount && maxSize <= prefs.MaxEmployeeCount)
@@ -169,8 +169,8 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
         if (!prefs.PreferRemote)
             return 50; // Neutral if no remote preference
 
-        var location = (job.Location ?? "").ToLower();
-        var description = (job.Description ?? "").ToLower();
+        string location = (job.Location ?? "").ToLower();
+        string description = (job.Description ?? "").ToLower();
 
         // Perfect score for remote work
         if (job.IsRemote || location.Contains("remote") || description.Contains("remote"))
@@ -179,7 +179,7 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
         }
 
         // Check for acceptable locations
-        foreach (var acceptableLocation in prefs.AcceptableLocations)
+        foreach (string acceptableLocation in prefs.AcceptableLocations)
         {
             if (location.Contains(acceptableLocation.ToLower()))
             {
@@ -199,11 +199,11 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
 
     private int CalculateExperienceScore(EnhancedJobListing job, ExperiencePreferences prefs)
     {
-        var jobText = GetJobTextForAnalysis(job).ToLower();
+        string jobText = GetJobTextForAnalysis(job).ToLower();
         var score = 50; // Base score
 
         // Check for target experience levels
-        foreach (var targetLevel in prefs.TargetLevels)
+        foreach (string targetLevel in prefs.TargetLevels)
         {
             if (jobText.Contains(targetLevel.ToLower()))
             {
@@ -213,7 +213,7 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
         }
 
         // Penalize avoided experience levels
-        foreach (var avoidLevel in prefs.AvoidLevels)
+        foreach (string avoidLevel in prefs.AvoidLevels)
         {
             if (jobText.Contains(avoidLevel.ToLower()))
             {
@@ -223,8 +223,8 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
         }
 
         // Look for years of experience requirements
-        var expMatch = Regex.Match(jobText, @"(\d+)\+?\s*years?\s*(?:of\s*)?experience", RegexOptions.IgnoreCase);
-        if (expMatch.Success && int.TryParse(expMatch.Groups[1].Value, out var yearsRequired))
+        Match expMatch = Regex.Match(jobText, @"(\d+)\+?\s*years?\s*(?:of\s*)?experience", RegexOptions.IgnoreCase);
+        if (expMatch.Success && int.TryParse(expMatch.Groups[1].Value, out int yearsRequired))
         {
             if (yearsRequired is >= 5 and <= 15)
             {
@@ -245,7 +245,7 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
 
     private int? ExtractSalaryFromJob(EnhancedJobListing job)
     {
-        var textToSearch = GetJobTextForAnalysis(job);
+        string textToSearch = GetJobTextForAnalysis(job);
         
         // Common salary patterns
         var patterns = new[]
@@ -257,15 +257,15 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
             @"(\d{1,3})k", // 120k
         };
 
-        foreach (var pattern in patterns)
+        foreach (string pattern in patterns)
         {
-            var matches = Regex.Matches(textToSearch, pattern, RegexOptions.IgnoreCase);
+            MatchCollection matches = Regex.Matches(textToSearch, pattern, RegexOptions.IgnoreCase);
             foreach (Match match in matches)
             {
                 if (match.Groups.Count >= 2)
                 {
-                    var salaryText = match.Groups[1].Value.Replace(",", "");
-                    if (int.TryParse(salaryText, out var salary))
+                    string salaryText = match.Groups[1].Value.Replace(",", "");
+                    if (int.TryParse(salaryText, out int salary))
                     {
                         // Convert k notation to full number
                         if (match.Value.Contains("k"))
@@ -276,8 +276,8 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
                         // Return midpoint if range detected
                         if (match.Groups.Count >= 3 && !string.IsNullOrEmpty(match.Groups[2].Value))
                         {
-                            var highText = match.Groups[2].Value.Replace(",", "");
-                            if (int.TryParse(highText, out var high))
+                            string highText = match.Groups[2].Value.Replace(",", "");
+                            if (int.TryParse(highText, out int high))
                             {
                                 if (match.Value.Contains("k"))
                                 {

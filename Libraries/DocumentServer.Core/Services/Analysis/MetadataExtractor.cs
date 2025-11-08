@@ -57,10 +57,10 @@ public class MetadataExtractor
             }
 
             // Get document info
-            var infoResult = await _processor.GetDocumentInfoAsync(filePath, password);
+            ServiceResult<DocumentInfo> infoResult = await _processor.GetDocumentInfoAsync(filePath, password);
             if (infoResult.Success)
             {
-                var info = infoResult.Data!;
+                DocumentInfo info = infoResult.Data!;
                 enrichedMetadata.DocumentType = info.DocumentType.ToString();
                 enrichedMetadata.IsEncrypted = info.IsEncrypted;
                 enrichedMetadata.PageCount = info.PageCount;
@@ -75,12 +75,12 @@ public class MetadataExtractor
             }
 
             // Get detailed metadata from extractor
-            var detailedResult = 
+            ServiceResult<Dictionary<string, string>> detailedResult = 
                 await _processor.ExtractMetadataAsync(filePath, password);
             if (detailedResult is { Success: true, Data: not null })
             {
                 // Merge detailed metadata
-                foreach ((var key, var value) in detailedResult.Data)
+                foreach ((string key, string value) in detailedResult.Data)
                 {
                     if (!enrichedMetadata.DocumentMetadata.ContainsKey(key))
                     {
@@ -90,17 +90,17 @@ public class MetadataExtractor
             }
 
             // Calculate content statistics if possible
-            var textResult = await _processor.ExtractTextAsync(filePath, password);
+            ServiceResult<string> textResult = await _processor.ExtractTextAsync(filePath, password);
             if (textResult.Success)
             {
-                var text = textResult.Data!;
+                string text = textResult.Data!;
                 enrichedMetadata.ContentLength = text.Length;
                 
-                var words = text.Split([' ', '\n', '\r', '\t'], 
+                string[] words = text.Split([' ', '\n', '\r', '\t'], 
                     StringSplitOptions.RemoveEmptyEntries);
                 enrichedMetadata.WordCount = words.Length;
                 
-                var lines = text.Split('\n');
+                string[] lines = text.Split('\n');
                 enrichedMetadata.LineCount = lines.Length;
             }
 
@@ -134,11 +134,11 @@ public class MetadataExtractor
             var successCount = 0;
             var failureCount = 0;
 
-            foreach (var filePath in filePaths)
+            foreach (string filePath in filePaths)
             {
-                var password = passwords?.GetValueOrDefault(filePath);
+                string? password = passwords?.GetValueOrDefault(filePath);
                 
-                var result = await ExtractAsync(filePath, password);
+                ServiceResult<EnrichedMetadata> result = await ExtractAsync(filePath, password);
                 if (result is { Success: true, Data: not null })
                 {
                     results.Add(result.Data);

@@ -45,7 +45,7 @@ public class SessionManagementTools(
             }
 
             // Launch debug session using MiClient
-            var sessionId = await miClient.LaunchAsync(
+            string sessionId = await miClient.LaunchAsync(
                 executablePath,
                 workingDirectory,
                 argumentsArray);
@@ -96,7 +96,7 @@ public class SessionManagementTools(
         {
             logger.LogInformation("Stopping debug session {SessionId}", sessionId);
 
-            var session = sessionManager.GetSession(sessionId);
+            DebugSession? session = sessionManager.GetSession(sessionId);
             if (session is null)
             {
                 return JsonSerializer.Serialize(new
@@ -141,8 +141,8 @@ public class SessionManagementTools(
     {
         try
         {
-            var allSessions = sessionManager.GetAllSessions();
-            var activeSessions = miClient.GetActiveSessions();
+            IEnumerable<DebugSession> allSessions = sessionManager.GetAllSessions();
+            IReadOnlyList<string> activeSessions = miClient.GetActiveSessions();
 
             var sessions = allSessions.Select(s => new
             {
@@ -182,7 +182,7 @@ public class SessionManagementTools(
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            DebugSession? session = sessionManager.GetSession(sessionId);
             if (session is null)
             {
                 return JsonSerializer.Serialize(new
@@ -192,8 +192,8 @@ public class SessionManagementTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            var activeSessions = miClient.GetActiveSessions();
-            var isActive = activeSessions.Contains(sessionId);
+            IReadOnlyList<string> activeSessions = miClient.GetActiveSessions();
+            bool isActive = activeSessions.Contains(sessionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -238,12 +238,12 @@ public class SessionManagementTools(
         {
             logger.LogInformation("Stopping all debug sessions");
 
-            var sessions = sessionManager.GetAllSessions().ToList();
+            List<DebugSession> sessions = sessionManager.GetAllSessions().ToList();
             var successCount = 0;
             var errorCount = 0;
             var errors = new List<string>();
 
-            foreach (var session in sessions)
+            foreach (DebugSession session in sessions)
             {
                 try
                 {
@@ -296,7 +296,7 @@ public class SessionManagementTools(
         var currentArg = new System.Text.StringBuilder();
         var inQuotes = false;
 
-        foreach (var c in arguments)
+        foreach (char c in arguments)
         {
             switch (c)
             {

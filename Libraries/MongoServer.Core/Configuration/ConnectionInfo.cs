@@ -46,8 +46,8 @@ public class ConnectionInfo
             var uri = new Uri(connectionString);
             if (!string.IsNullOrEmpty(uri.UserInfo))
             {
-                var userInfo = uri.UserInfo.Split(':');
-                var maskedUserInfo = userInfo.Length > 1 ? $"{userInfo[0]}:***" : userInfo[0];
+                string[] userInfo = uri.UserInfo.Split(':');
+                string maskedUserInfo = userInfo.Length > 1 ? $"{userInfo[0]}:***" : userInfo[0];
                 return connectionString.Replace(uri.UserInfo, maskedUserInfo);
             }
         }

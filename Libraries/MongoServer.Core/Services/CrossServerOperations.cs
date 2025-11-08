@@ -14,8 +14,8 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
     {
         try
         {
-            var db1 = connectionManager.GetDatabase(server1);
-            var db2 = connectionManager.GetDatabase(server2);
+            IMongoDatabase? db1 = connectionManager.GetDatabase(server1);
+            IMongoDatabase? db2 = connectionManager.GetDatabase(server2);
             
             if (db1 == null || db2 == null)
             {
@@ -27,18 +27,18 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            var collection1 = db1.GetCollection<BsonDocument>(collectionName);
-            var collection2 = db2.GetCollection<BsonDocument>(collectionName);
+            IMongoCollection<BsonDocument>? collection1 = db1.GetCollection<BsonDocument>(collectionName);
+            IMongoCollection<BsonDocument>? collection2 = db2.GetCollection<BsonDocument>(collectionName);
             
-            var filter = BsonDocument.Parse(filterJson);
+            BsonDocument? filter = BsonDocument.Parse(filterJson);
             
             // Get document counts
-            var count1 = await collection1.CountDocumentsAsync(filter);
-            var count2 = await collection2.CountDocumentsAsync(filter);
+            long count1 = await collection1.CountDocumentsAsync(filter);
+            long count2 = await collection2.CountDocumentsAsync(filter);
             
             // Sample documents for comparison
-            var sample1 = await collection1.Find(filter).Limit(5).ToListAsync();
-            var sample2 = await collection2.Find(filter).Limit(5).ToListAsync();
+            List<BsonDocument>? sample1 = await collection1.Find(filter).Limit(5).ToListAsync();
+            List<BsonDocument>? sample2 = await collection2.Find(filter).Limit(5).ToListAsync();
             
             return JsonSerializer.Serialize(new
             {
@@ -76,8 +76,8 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
     {
         try
         {
-            var sourceDb = connectionManager.GetDatabase(sourceServer);
-            var targetDb = connectionManager.GetDatabase(targetServer);
+            IMongoDatabase? sourceDb = connectionManager.GetDatabase(sourceServer);
+            IMongoDatabase? targetDb = connectionManager.GetDatabase(targetServer);
             
             if (sourceDb == null || targetDb == null)
             {
@@ -89,22 +89,22 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            var sourceCollection = sourceDb.GetCollection<BsonDocument>(collectionName);
-            var targetCollection = targetDb.GetCollection<BsonDocument>(collectionName);
+            IMongoCollection<BsonDocument>? sourceCollection = sourceDb.GetCollection<BsonDocument>(collectionName);
+            IMongoCollection<BsonDocument>? targetCollection = targetDb.GetCollection<BsonDocument>(collectionName);
             
-            var filter = BsonDocument.Parse(filterJson);
+            BsonDocument? filter = BsonDocument.Parse(filterJson);
             
             // Get documents from source
-            var sourceDocuments = await sourceCollection.Find(filter).ToListAsync();
+            List<BsonDocument>? sourceDocuments = await sourceCollection.Find(filter).ToListAsync();
             
             var insertOperations = 0;
             var updateOperations = 0;
             var operations = new List<Dictionary<string, object>>();
             
-            foreach (var doc in sourceDocuments)
+            foreach (BsonDocument doc in sourceDocuments)
             {
-                var id = doc.GetValue("_id");
-                var existsInTarget = await targetCollection.CountDocumentsAsync(
+                BsonValue? id = doc.GetValue("_id");
+                bool existsInTarget = await targetCollection.CountDocumentsAsync(
                     Builders<BsonDocument>.Filter.Eq("_id", id)) > 0;
                 
                 if (existsInTarget)
@@ -172,13 +172,13 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
         try
         {
             var results = new List<CrossServerQueryResult>();
-            var filter = BsonDocument.Parse(filterJson);
+            BsonDocument? filter = BsonDocument.Parse(filterJson);
             
-            foreach (var serverName in serverNames)
+            foreach (string serverName in serverNames)
             {
                 try
                 {
-                    var db = connectionManager.GetDatabase(serverName);
+                    IMongoDatabase? db = connectionManager.GetDatabase(serverName);
                     if (db == null)
                     {
                         results.Add(new CrossServerQueryResult
@@ -192,8 +192,8 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
                         continue;
                     }
 
-                    var collection = db.GetCollection<BsonDocument>(collectionName);
-                    var documents = await collection.Find(filter).Limit(limitPerServer).ToListAsync();
+                    IMongoCollection<BsonDocument>? collection = db.GetCollection<BsonDocument>(collectionName);
+                    List<BsonDocument>? documents = await collection.Find(filter).Limit(limitPerServer).ToListAsync();
                     
                     results.Add(new CrossServerQueryResult
                     {
@@ -216,8 +216,8 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
                 }
             }
             
-            var successfulQueries = results.Count(r => r.Success);
-            var totalDocuments = results.Where(r => r.Success).Sum(r => r.Count);
+            int successfulQueries = results.Count(r => r.Success);
+            int totalDocuments = results.Where(r => r.Success).Sum(r => r.Count);
             
             return JsonSerializer.Serialize(new
             {
@@ -258,8 +258,8 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
     {
         try
         {
-            var sourceDb = connectionManager.GetDatabase(sourceServer);
-            var targetDb = connectionManager.GetDatabase(targetServer);
+            IMongoDatabase? sourceDb = connectionManager.GetDatabase(sourceServer);
+            IMongoDatabase? targetDb = connectionManager.GetDatabase(targetServer);
             
             if (sourceDb == null || targetDb == null)
             {
@@ -273,19 +273,19 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
 
             var transferResults = new List<BulkTransferResult>();
             
-            foreach (var collectionName in collectionNames)
+            foreach (string collectionName in collectionNames)
             {
                 try
                 {
-                    var sourceCollection = sourceDb.GetCollection<BsonDocument>(collectionName);
-                    var targetCollection = targetDb.GetCollection<BsonDocument>(collectionName);
+                    IMongoCollection<BsonDocument>? sourceCollection = sourceDb.GetCollection<BsonDocument>(collectionName);
+                    IMongoCollection<BsonDocument>? targetCollection = targetDb.GetCollection<BsonDocument>(collectionName);
                     
-                    var sourceCount = await sourceCollection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
-                    var targetCount = await targetCollection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
+                    long sourceCount = await sourceCollection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
+                    long targetCount = await targetCollection.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty);
                     
                     if (!dryRun && sourceCount > 0)
                     {
-                        var documents = await sourceCollection.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+                        List<BsonDocument>? documents = await sourceCollection.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
                         if (documents.Count > 0)
                         {
                             await targetCollection.InsertManyAsync(documents, new InsertManyOptions { IsOrdered = false });
@@ -313,8 +313,8 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
                 }
             }
             
-            var successfulTransfers = transferResults.Count(r => r.Success);
-            var totalDocumentsToTransfer = transferResults
+            int successfulTransfers = transferResults.Count(r => r.Success);
+            long totalDocumentsToTransfer = transferResults
                 .Where(r => r is { Success: true, SourceDocuments: not null })
                 .Sum(r => r.SourceDocuments ?? 0);
             
@@ -358,15 +358,15 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
     {
         try
         {
-            var serverNames = connectionManager.GetServerNames();
+            List<string> serverNames = connectionManager.GetServerNames();
             var results = new List<object>();
-            var commandDoc = BsonDocument.Parse(command);
+            BsonDocument? commandDoc = BsonDocument.Parse(command);
             
-            foreach (var serverName in serverNames)
+            foreach (string serverName in serverNames)
             {
                 try
                 {
-                    var db = connectionManager.GetDatabase(serverName);
+                    IMongoDatabase? db = connectionManager.GetDatabase(serverName);
                     if (db == null)
                     {
                         results.Add(new
@@ -397,10 +397,10 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
                 }
             }
             
-            var successfulOperations = results.Count(r => 
+            int successfulOperations = results.Count(r => 
             {
-                var type = r.GetType();
-                var errorProperty = type.GetProperty("error");
+                Type type = r.GetType();
+                PropertyInfo? errorProperty = type.GetProperty("error");
                 var errorValue = errorProperty?.GetValue(r) as string;
                 return string.IsNullOrEmpty(errorValue);
             });
@@ -433,15 +433,15 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
     {
         try
         {
-            var serverNames = connectionManager.GetServerNames();
+            List<string> serverNames = connectionManager.GetServerNames();
             var healthResults = new List<object>();
             
-            foreach (var serverName in serverNames)
+            foreach (string serverName in serverNames)
             {
                 try
                 {
-                    var isHealthy = await connectionManager.PingConnectionAsync(serverName);
-                    var info = connectionManager.GetConnectionInfo(serverName);
+                    bool isHealthy = await connectionManager.PingConnectionAsync(serverName);
+                    ConnectionInfo? info = connectionManager.GetConnectionInfo(serverName);
                     
                     healthResults.Add(new
                     {
@@ -466,15 +466,15 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
                 }
             }
             
-            var healthyServers = healthResults.Count(r => 
+            int healthyServers = healthResults.Count(r => 
             {
-                var type = r.GetType();
-                var healthyProperty = type.GetProperty("isHealthy");
-                var healthyValue = healthyProperty?.GetValue(r);
+                Type type = r.GetType();
+                PropertyInfo? healthyProperty = type.GetProperty("isHealthy");
+                object? healthyValue = healthyProperty?.GetValue(r);
                 return healthyValue is bool and true;
             });
             
-            var totalServers = healthResults.Count;
+            int totalServers = healthResults.Count;
             
             return JsonSerializer.Serialize(new
             {

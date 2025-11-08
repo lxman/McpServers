@@ -29,7 +29,7 @@ public static class RegistryEnvironmentReader
                     ? null
                     : registry.ReadValue(SYSTEM_ENVIRONMENT_PATH, variableName)?.ToString();
             
-            var value = registry.ReadValue(USER_ENVIRONMENT_PATH, variableName);
+            object? value = registry.ReadValue(USER_ENVIRONMENT_PATH, variableName);
             if (value != null)
             {
                 return value.ToString();
@@ -56,7 +56,7 @@ public static class RegistryEnvironmentReader
     public static string? GetEnvironmentVariableWithFallback(string variableName)
     {
         // First, try the normal process environment
-        var value = Environment.GetEnvironmentVariable(variableName);
+        string? value = Environment.GetEnvironmentVariable(variableName);
         return !string.IsNullOrEmpty(value) ? value :
             // Fall back to registry if not found
             GetEnvironmentVariable(variableName);

@@ -28,8 +28,8 @@ namespace MsOfficeCrypto.Algorithms
 
             try
             {
-                using var aes = CreateAesProvider(key, keySize);
-                using var encryptor = aes.CreateEncryptor();
+                using Aes aes = CreateAesProvider(key, keySize);
+                using ICryptoTransform encryptor = aes.CreateEncryptor();
                 return encryptor.TransformFinalBlock(data, 0, data.Length);
             }
             catch (Exception ex)
@@ -55,11 +55,11 @@ namespace MsOfficeCrypto.Algorithms
                 // - Complete 16-byte blocks are encrypted with AES-ECB
                 // - Incomplete final block (if any) remains unencrypted
                 const int blockSize = 16; // AES block size
-                var completeBlocks = encryptedData.Length / blockSize;
-                var remainder = encryptedData.Length % blockSize;
+                int completeBlocks = encryptedData.Length / blockSize;
+                int remainder = encryptedData.Length % blockSize;
 
-                using var aes = CreateAesProviderForOffCrypto(key, keySize);
-                using var decryptor = aes.CreateDecryptor();
+                using Aes aes = CreateAesProviderForOffCrypto(key, keySize);
+                using ICryptoTransform decryptor = aes.CreateDecryptor();
 
                 var result = new byte[encryptedData.Length];
 
@@ -129,7 +129,7 @@ namespace MsOfficeCrypto.Algorithms
             aes.KeySize = keySize;
             
             // Ensure key is correct length
-            var expectedKeyLength = GetKeyLengthBytes(keySize);
+            int expectedKeyLength = GetKeyLengthBytes(keySize);
             if (key.Length == expectedKeyLength)
             {
                 aes.Key = key;
@@ -166,7 +166,7 @@ namespace MsOfficeCrypto.Algorithms
             aes.KeySize = keySize;
             
             // Ensure key is correct length
-            var expectedKeyLength = GetKeyLengthBytes(keySize);
+            int expectedKeyLength = GetKeyLengthBytes(keySize);
             if (key.Length == expectedKeyLength)
             {
                 aes.Key = key;

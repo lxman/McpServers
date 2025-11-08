@@ -23,7 +23,7 @@ public class NotesExtractor(
 
         try
         {
-            using var presentation = await OpenPresentationAsync(filePath);
+            using Presentation presentation = await OpenPresentationAsync(filePath);
 
             if (slideNumber < 1 || slideNumber > presentation.Slides.Count)
             {
@@ -31,8 +31,8 @@ public class NotesExtractor(
                     $"Slide {slideNumber} not found (presentation has {presentation.Slides.Count} slides)");
             }
 
-            var slide = presentation.Slides[slideNumber - 1];
-            var notes = ExtractNotes(slide);
+            ISlide slide = presentation.Slides[slideNumber - 1];
+            string notes = ExtractNotes(slide);
 
             logger.LogInformation("Extracted {Length} characters of notes from slide #{Number}",
                 notes.Length, slideNumber);
@@ -56,14 +56,14 @@ public class NotesExtractor(
 
         try
         {
-            using var presentation = await OpenPresentationAsync(filePath);
+            using Presentation presentation = await OpenPresentationAsync(filePath);
 
             var allNotes = new Dictionary<int, string>();
             var slideNumber = 1;
 
-            foreach (var slide in presentation.Slides)
+            foreach (ISlide slide in presentation.Slides)
             {
-                var notes = ExtractNotes(slide);
+                string notes = ExtractNotes(slide);
 
                 if (!string.IsNullOrWhiteSpace(notes))
                 {
@@ -95,7 +95,7 @@ public class NotesExtractor(
 
         try
         {
-            using var presentation = await OpenPresentationAsync(filePath);
+            using Presentation presentation = await OpenPresentationAsync(filePath);
 
             if (slideNumber < 1 || slideNumber > presentation.Slides.Count)
             {
@@ -103,8 +103,8 @@ public class NotesExtractor(
                     $"Slide {slideNumber} not found (presentation has {presentation.Slides.Count} slides)");
             }
 
-            var slide = presentation.Slides[slideNumber - 1];
-            var hasNotes = slide.Notes is not null && !string.IsNullOrWhiteSpace(slide.Notes.Text);
+            ISlide slide = presentation.Slides[slideNumber - 1];
+            bool hasNotes = slide.Notes is not null && !string.IsNullOrWhiteSpace(slide.Notes.Text);
 
             logger.LogInformation("Slide #{Number} has notes: {HasNotes}", slideNumber, hasNotes);
 
@@ -127,12 +127,12 @@ public class NotesExtractor(
 
         try
         {
-            using var presentation = await OpenPresentationAsync(filePath);
+            using Presentation presentation = await OpenPresentationAsync(filePath);
 
             var slidesWithNotes = new List<int>();
             var slideNumber = 1;
 
-            foreach (var slide in presentation.Slides)
+            foreach (ISlide slide in presentation.Slides)
             {
                 if (slide.Notes is not null && !string.IsNullOrWhiteSpace(slide.Notes.Text))
                 {
@@ -166,7 +166,7 @@ public class NotesExtractor(
 
         try
         {
-            using var presentation = await OpenPresentationAsync(filePath);
+            using Presentation presentation = await OpenPresentationAsync(filePath);
 
             if (startSlide < 1 || endSlide > presentation.Slides.Count || startSlide > endSlide)
             {
@@ -176,10 +176,10 @@ public class NotesExtractor(
 
             var notes = new Dictionary<int, string>();
 
-            for (var i = startSlide - 1; i < endSlide; i++)
+            for (int i = startSlide - 1; i < endSlide; i++)
             {
-                var slide = presentation.Slides[i];
-                var slideNotes = ExtractNotes(slide);
+                ISlide slide = presentation.Slides[i];
+                string slideNotes = ExtractNotes(slide);
 
                 if (!string.IsNullOrWhiteSpace(slideNotes))
                 {
@@ -204,7 +204,7 @@ public class NotesExtractor(
 
     private async Task<Presentation> OpenPresentationAsync(string filePath)
     {
-        var cached = cache.Get(filePath);
+        LoadedDocument? cached = cache.Get(filePath);
         var presentation = cached?.DocumentObject as Presentation;
 
         if (presentation is not null)
@@ -212,11 +212,11 @@ public class NotesExtractor(
             return presentation;
         }
 
-        var password = passwordManager.GetPasswordForFile(filePath);
+        string? password = passwordManager.GetPasswordForFile(filePath);
 
         // Use MsOfficeCrypto to handle decryption (or pass through if not encrypted)
-        await using var fileStream = File.OpenRead(filePath);
-        await using var decryptedStream = await OfficeDocument.DecryptAsync(fileStream, password);
+        await using FileStream fileStream = File.OpenRead(filePath);
+        await using Stream decryptedStream = await OfficeDocument.DecryptAsync(fileStream, password);
         
         // Copy to memory stream and create presentation
         var memoryStream = new MemoryStream();

@@ -45,7 +45,7 @@ public class ToolService
     // Test Execution Helpers
     public static async Task<object> ExecuteTestStep(IPage page, object testStep)
     {
-        var stepJson = JsonSerializer.Serialize(testStep);
+        string stepJson = JsonSerializer.Serialize(testStep);
         var step = JsonSerializer.Deserialize<TestStep>(stepJson);
         
         if (step == null) return new { success = false, error = "Invalid test step" };
@@ -79,43 +79,43 @@ public class ToolService
     private static async Task<object> FillField(IPage page, string selector, string value)
     {
         // Support data-testid selectors
-        var fullSelector = DetermineSelector(selector);
+        string fullSelector = DetermineSelector(selector);
         await page.Locator(fullSelector).FillAsync(value);
         return new { success = true, message = $"Field {selector} filled with value {value}" };
     }
 
     private static async Task<object> ClickElement(IPage page, string selector)
     {
-        var fullSelector = DetermineSelector(selector);
+        string fullSelector = DetermineSelector(selector);
         await page.Locator(fullSelector).ClickAsync();
         return new { success = true, message = $"Clicked element {selector}" };
     }
 
     private static async Task<object> SelectOption(IPage page, string selector, string value)
     {
-        var fullSelector = DetermineSelector(selector);
+        string fullSelector = DetermineSelector(selector);
         await page.Locator(fullSelector).SelectOptionAsync(value);
         return new { success = true, message = $"Selected option {value} in {selector}" };
     }
 
     private static async Task<object> ValidateElement(IPage page, string selector, string validation)
     {
-        var fullSelector = DetermineSelector(selector);
-        var element = page.Locator(fullSelector);
-        var isVisible = await element.IsVisibleAsync();
+        string fullSelector = DetermineSelector(selector);
+        ILocator element = page.Locator(fullSelector);
+        bool isVisible = await element.IsVisibleAsync();
         return new { success = isVisible, message = $"Element {selector} validation: {validation}" };
     }
 
     private static async Task<object> WaitForElement(IPage page, string selector)
     {
-        var fullSelector = DetermineSelector(selector);
+        string fullSelector = DetermineSelector(selector);
         await page.Locator(fullSelector).WaitForAsync();
         return new { success = true, message = $"Successfully waited for element {selector}" };
     }
 
     private static async Task<object> ClearField(IPage page, string selector)
     {
-        var fullSelector = DetermineSelector(selector);
+        string fullSelector = DetermineSelector(selector);
         await page.Locator(fullSelector).ClearAsync();
         return new { success = true, message = $"Field {selector} cleared" };
     }
@@ -143,17 +143,17 @@ public class ToolService
     // Cleanup
     public async Task CleanupResources()
     {
-        foreach (var page in _pages.Values)
+        foreach (IPage page in _pages.Values)
         {
             try { await page.CloseAsync(); } catch { }
         }
         
-        foreach (var context in _browserContexts.Values)
+        foreach (IBrowserContext context in _browserContexts.Values)
         {
             try { await context.CloseAsync(); } catch { }
         }
         
-        foreach (var browser in _browsers.Values)
+        foreach (IBrowser browser in _browsers.Values)
         {
             try { await browser.CloseAsync(); } catch { }
         }

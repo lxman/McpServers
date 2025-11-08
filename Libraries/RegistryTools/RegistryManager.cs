@@ -76,14 +76,14 @@ namespace RegistryTools
                 throw new ArgumentException("Registry path cannot be null or empty.", nameof(path));
             }
 
-            var parts = path.Split(new[] { '\\' }, 2);
+            string[] parts = path.Split(new[] { '\\' }, 2);
             if (parts.Length == 0)
             {
                 throw new ArgumentException("Invalid registry path format.", nameof(path));
             }
 
-            var baseKey = GetBaseKey(parts[0]);
-            var subKeyPath = parts.Length > 1 ? parts[1] : string.Empty;
+            RegistryKey baseKey = GetBaseKey(parts[0]);
+            string subKeyPath = parts.Length > 1 ? parts[1] : string.Empty;
 
             return (baseKey, subKeyPath);
         }
@@ -103,14 +103,14 @@ namespace RegistryTools
 
             try
             {
-                (var baseKey, var subKeyPath) = ParseRegistryPath(path);
+                (RegistryKey baseKey, string subKeyPath) = ParseRegistryPath(path);
             
                 if (string.IsNullOrEmpty(subKeyPath))
                 {
                     return true; // Base keys always exist
                 }
 
-                using var key = baseKey.OpenSubKey(subKeyPath, writable: false);
+                using RegistryKey? key = baseKey.OpenSubKey(subKeyPath, writable: false);
                 return !(key is null);
             }
             catch
@@ -131,15 +131,15 @@ namespace RegistryTools
 
             try
             {
-                (var baseKey, var subKeyPath) = ParseRegistryPath(path);
-                using var key = baseKey.OpenSubKey(subKeyPath, writable: false);
+                (RegistryKey baseKey, string subKeyPath) = ParseRegistryPath(path);
+                using RegistryKey? key = baseKey.OpenSubKey(subKeyPath, writable: false);
             
                 if (key is null)
                 {
                     return false;
                 }
 
-                var valueNames = key.GetValueNames();
+                string[] valueNames = key.GetValueNames();
                 return valueNames.Contains(valueName);
             }
             catch
@@ -159,8 +159,8 @@ namespace RegistryTools
 
             try
             {
-                (var baseKey, var subKeyPath) = ParseRegistryPath(path);
-                using var key = baseKey.OpenSubKey(subKeyPath, writable: false);
+                (RegistryKey baseKey, string subKeyPath) = ParseRegistryPath(path);
+                using RegistryKey? key = baseKey.OpenSubKey(subKeyPath, writable: false);
             
                 if (key is null)
                 {
@@ -194,8 +194,8 @@ namespace RegistryTools
         {
             EnsureNotDisposed();
 
-            (var baseKey, var subKeyPath) = ParseRegistryPath(path);
-            using var key = baseKey.OpenSubKey(subKeyPath, writable: false);
+            (RegistryKey baseKey, string subKeyPath) = ParseRegistryPath(path);
+            using RegistryKey? key = baseKey.OpenSubKey(subKeyPath, writable: false);
         
             if (key is null)
             {
@@ -214,8 +214,8 @@ namespace RegistryTools
         {
             EnsureNotDisposed();
 
-            (var baseKey, var subKeyPath) = ParseRegistryPath(path);
-            using var key = baseKey.OpenSubKey(subKeyPath, writable: false);
+            (RegistryKey baseKey, string subKeyPath) = ParseRegistryPath(path);
+            using RegistryKey? key = baseKey.OpenSubKey(subKeyPath, writable: false);
         
             if (key is null)
             {
@@ -235,8 +235,8 @@ namespace RegistryTools
         {
             EnsureNotDisposed();
 
-            (var baseKey, var subKeyPath) = ParseRegistryPath(path);
-            using var key = baseKey.OpenSubKey(subKeyPath, writable: false);
+            (RegistryKey baseKey, string subKeyPath) = ParseRegistryPath(path);
+            using RegistryKey? key = baseKey.OpenSubKey(subKeyPath, writable: false);
         
             if (key is null)
             {
@@ -256,21 +256,21 @@ namespace RegistryTools
         {
             EnsureNotDisposed();
 
-            (var baseKey, var subKeyPath) = ParseRegistryPath(path);
-            using var key = baseKey.OpenSubKey(subKeyPath, writable: false);
+            (RegistryKey baseKey, string subKeyPath) = ParseRegistryPath(path);
+            using RegistryKey? key = baseKey.OpenSubKey(subKeyPath, writable: false);
         
             if (key is null)
             {
                 return null;
             }
 
-            var data = key.GetValue(valueName);
+            object? data = key.GetValue(valueName);
             if (data is null)
             {
                 return null;
             }
 
-            var kind = key.GetValueKind(valueName);
+            RegistryValueKind kind = key.GetValueKind(valueName);
             return new RegistryValue(valueName, data, kind);
         }
 
@@ -283,8 +283,8 @@ namespace RegistryTools
         {
             EnsureNotDisposed();
 
-            (var baseKey, var subKeyPath) = ParseRegistryPath(path);
-            using var key = baseKey.OpenSubKey(subKeyPath, writable: false);
+            (RegistryKey baseKey, string subKeyPath) = ParseRegistryPath(path);
+            using RegistryKey? key = baseKey.OpenSubKey(subKeyPath, writable: false);
         
             if (key is null)
             {
@@ -292,10 +292,10 @@ namespace RegistryTools
             }
 
             var values = new List<RegistryValue>();
-            foreach (var valueName in key.GetValueNames())
+            foreach (string valueName in key.GetValueNames())
             {
-                var data = key.GetValue(valueName);
-                var kind = key.GetValueKind(valueName);
+                object? data = key.GetValue(valueName);
+                RegistryValueKind kind = key.GetValueKind(valueName);
                 values.Add(new RegistryValue(valueName, data, kind));
             }
 
@@ -326,8 +326,8 @@ namespace RegistryTools
 
             try
             {
-                var subKeys = GetSubKeyNames(path);
-                foreach (var subKey in subKeys)
+                List<string> subKeys = GetSubKeyNames(path);
+                foreach (string? subKey in subKeys)
                 {
                     var fullPath = $"{path}\\{subKey}";
                     result.Add(fullPath);
@@ -356,8 +356,8 @@ namespace RegistryTools
 
             try
             {
-                (var baseKey, var subKeyPath) = ParseRegistryPath(path);
-                using var key = baseKey.CreateSubKey(subKeyPath);
+                (RegistryKey baseKey, string subKeyPath) = ParseRegistryPath(path);
+                using RegistryKey key = baseKey.CreateSubKey(subKeyPath);
                 return true;
             }
             catch
@@ -378,8 +378,8 @@ namespace RegistryTools
             EnsureNotDisposed();
             EnsureWriteAccess();
 
-            (var baseKey, var subKeyPath) = ParseRegistryPath(path);
-            using var key = baseKey.CreateSubKey(subKeyPath, writable: true);
+            (RegistryKey baseKey, string subKeyPath) = ParseRegistryPath(path);
+            using RegistryKey? key = baseKey.CreateSubKey(subKeyPath, writable: true);
         
             if (key is null)
             {
@@ -400,8 +400,8 @@ namespace RegistryTools
             EnsureNotDisposed();
             EnsureWriteAccess();
 
-            (var baseKey, var subKeyPath) = ParseRegistryPath(path);
-            using var key = baseKey.OpenSubKey(subKeyPath, writable: true);
+            (RegistryKey baseKey, string subKeyPath) = ParseRegistryPath(path);
+            using RegistryKey? key = baseKey.OpenSubKey(subKeyPath, writable: true);
         
             if (key is null)
             {
@@ -425,7 +425,7 @@ namespace RegistryTools
             EnsureNotDisposed();
             EnsureWriteAccess();
 
-            (var baseKey, var subKeyPath) = ParseRegistryPath(path);
+            (RegistryKey baseKey, string subKeyPath) = ParseRegistryPath(path);
         
             if (string.IsNullOrEmpty(subKeyPath))
             {
@@ -453,7 +453,7 @@ namespace RegistryTools
             EnsureNotDisposed();
             EnsureWriteAccess();
 
-            var valueWithType = ReadValueWithType(path, oldValueName);
+            RegistryValue? valueWithType = ReadValueWithType(path, oldValueName);
             if (valueWithType is null)
             {
                 throw new ArgumentException($"Value '{oldValueName}' not found in key: {path}");
@@ -483,8 +483,8 @@ namespace RegistryTools
             CreateKey(destinationPath);
 
             // Copy all values
-            var values = ReadAllValues(sourcePath);
-            foreach (var value in values)
+            List<RegistryValue> values = ReadAllValues(sourcePath);
+            foreach (RegistryValue? value in values)
             {
                 WriteValue(destinationPath, value.Name, value.Data!, value.Kind);
             }
@@ -492,8 +492,8 @@ namespace RegistryTools
             // Copy subkeys if recursive
             if (recursive)
             {
-                var subKeys = GetSubKeyNames(sourcePath);
-                foreach (var subKey in subKeys)
+                List<string> subKeys = GetSubKeyNames(sourcePath);
+                foreach (string? subKey in subKeys)
                 {
                     var sourceSubKeyPath = $"{sourcePath}\\{subKey}";
                     var destSubKeyPath = $"{destinationPath}\\{subKey}";
@@ -521,7 +521,7 @@ namespace RegistryTools
 
             if (disposing)
             {
-                foreach (var key in _openKeys.Values)
+                foreach (RegistryKey? key in _openKeys.Values)
                 {
                     key?.Dispose();
                 }

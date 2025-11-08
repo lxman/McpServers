@@ -21,7 +21,7 @@ try
 {
     Log.Information("Starting DebugMcp server");
 
-    var builder = Host.CreateApplicationBuilder(args);
+    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
     // Configure logging to use Serilog
     builder.Logging.ClearProviders();
@@ -40,7 +40,7 @@ try
         .WithTools<ExecutionTools>()
         .WithTools<InspectionTools>();
 
-    var host = builder.Build();
+    IHost host = builder.Build();
 
     // Register shutdown handler to ensure clean disconnect of debug sessions
     var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();

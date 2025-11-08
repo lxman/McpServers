@@ -9,24 +9,24 @@ using SqlServer.Core.Services.Interfaces;
 
 // Set the base path to the directory where the DLL is located
 // This ensures appsettings.json is found even when the working directory is different
-var executablePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-var executableDir = Path.GetDirectoryName(executablePath) ?? Directory.GetCurrentDirectory();
+string executablePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+string executableDir = Path.GetDirectoryName(executablePath) ?? Directory.GetCurrentDirectory();
 
-var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 {
     Args = args,
     ContentRootPath = executableDir
 });
 
 // Log diagnostic information about working directory and configuration
-var currentDir = Directory.GetCurrentDirectory();
-var appSettingsPath = Path.Combine(executableDir, "appsettings.json");
-var appSettingsExists = File.Exists(appSettingsPath);
+string currentDir = Directory.GetCurrentDirectory();
+string appSettingsPath = Path.Combine(executableDir, "appsettings.json");
+bool appSettingsExists = File.Exists(appSettingsPath);
 
 
 
 // Configure Serilog for file logging (STDIO servers cannot log to console)
-var logPath = Path.Combine(Path.GetTempPath(), "SqlMcp", "logs", "sqlmcp-.log");
+string logPath = Path.Combine(Path.GetTempPath(), "SqlMcp", "logs", "sqlmcp-.log");
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .WriteTo.File(
@@ -49,7 +49,7 @@ Log.Information("appsettings.json exists: {Exists}", appSettingsExists);
 Log.Information("Log file location: {LogPath}", logPath);
 
 // Log configuration source paths
-var configSources = builder.Configuration.Sources
+List<string> configSources = builder.Configuration.Sources
     .Select(s => s.GetType().Name)
     .ToList();
 Log.Information("Configuration sources: {Sources}", string.Join(", ", configSources));
@@ -75,11 +75,11 @@ builder.Services.AddMcpServer()
     .WithTools<SqlSchemaTools>()
     .WithTools<SqlTransactionTools>();
 
-var host = builder.Build();
+IHost host = builder.Build();
 
 // Log startup information
 var connectionManager = host.Services.GetRequiredService<IConnectionManager>();
-var availableConnections = connectionManager.GetAvailableConnections().ToList();
+List<string> availableConnections = connectionManager.GetAvailableConnections().ToList();
 Log.Information("SqlMcp starting with {ConnectionCount} configured connections: {Connections}",
     availableConnections.Count,
     string.Join(", ", availableConnections));

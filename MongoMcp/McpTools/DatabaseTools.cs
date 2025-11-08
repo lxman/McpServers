@@ -29,7 +29,7 @@ public class DatabaseTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
             }
 
-            var result = await mongoService.ListDatabasesAsync(serverName);
+            string result = await mongoService.ListDatabasesAsync(serverName);
 
             return result;
         }
@@ -58,7 +58,7 @@ public class DatabaseTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Database name is required" }, _jsonOptions);
             }
 
-            var result = await mongoService.SwitchDatabaseAsync(serverName, databaseName);
+            string result = await mongoService.SwitchDatabaseAsync(serverName, databaseName);
 
             return result;
         }
@@ -82,7 +82,7 @@ public class DatabaseTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
             }
 
-            var result = mongoService.GetCurrentDatabaseInfo(serverName);
+            string result = mongoService.GetCurrentDatabaseInfo(serverName);
 
             return result;
         }
@@ -111,7 +111,7 @@ public class DatabaseTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Database name is required" }, _jsonOptions);
             }
 
-            var result = await mongoService.ListCollectionsByDatabaseAsync(serverName, databaseName);
+            string result = await mongoService.ListCollectionsByDatabaseAsync(serverName, databaseName);
 
             return result;
         }

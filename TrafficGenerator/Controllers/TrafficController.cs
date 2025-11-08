@@ -18,7 +18,7 @@ public class TrafficController(ITrafficGenerationService trafficService, ILogger
         try
         {
             logger.LogInformation("Starting reconnaissance traffic generation for {TargetNetwork}", request.TargetNetwork);
-            var response = await trafficService.GenerateReconnaissanceTraffic(request);
+            TrafficGenerationResponse response = await trafficService.GenerateReconnaissanceTraffic(request);
             return Ok(response);
         }
         catch (Exception ex)
@@ -37,7 +37,7 @@ public class TrafficController(ITrafficGenerationService trafficService, ILogger
         try
         {
             logger.LogInformation("Starting MITM traffic generation with attack type {AttackType}", request.AttackType);
-            var response = await trafficService.GenerateMitmTraffic(request);
+            TrafficGenerationResponse response = await trafficService.GenerateMitmTraffic(request);
             return Ok(response);
         }
         catch (Exception ex)
@@ -56,7 +56,7 @@ public class TrafficController(ITrafficGenerationService trafficService, ILogger
         try
         {
             logger.LogInformation("Starting exfiltration traffic generation via {Method}", request.Method);
-            var response = await trafficService.GenerateExfiltrationTraffic(request);
+            TrafficGenerationResponse response = await trafficService.GenerateExfiltrationTraffic(request);
             return Ok(response);
         }
         catch (Exception ex)
@@ -75,7 +75,7 @@ public class TrafficController(ITrafficGenerationService trafficService, ILogger
         try
         {
             logger.LogInformation("Starting C2 communication traffic via {Protocol}", request.C2Protocol);
-            var response = await trafficService.GenerateC2Traffic(request);
+            TrafficGenerationResponse response = await trafficService.GenerateC2Traffic(request);
             return Ok(response);
         }
         catch (Exception ex)
@@ -93,7 +93,7 @@ public class TrafficController(ITrafficGenerationService trafficService, ILogger
     {
         try
         {
-            var sessions = await trafficService.GetActiveSessionsAsync();
+            IEnumerable<TrafficGenerationResponse> sessions = await trafficService.GetActiveSessionsAsync();
             return Ok(sessions);
         }
         catch (Exception ex)
@@ -111,7 +111,7 @@ public class TrafficController(ITrafficGenerationService trafficService, ILogger
     {
         try
         {
-            var session = await trafficService.GetSessionAsync(sessionId);
+            TrafficGenerationResponse? session = await trafficService.GetSessionAsync(sessionId);
             if (session == null)
                 return NotFound(new { error = "Session not found" });
             
@@ -132,7 +132,7 @@ public class TrafficController(ITrafficGenerationService trafficService, ILogger
     {
         try
         {
-            var success = await trafficService.StopSessionAsync(sessionId);
+            bool success = await trafficService.StopSessionAsync(sessionId);
             if (!success)
                 return NotFound(new { error = "Session not found or already stopped" });
             
@@ -153,7 +153,7 @@ public class TrafficController(ITrafficGenerationService trafficService, ILogger
     {
         try
         {
-            var interfaces = await trafficService.GetAvailableInterfacesAsync();
+            IEnumerable<object> interfaces = await trafficService.GetAvailableInterfacesAsync();
             return Ok(interfaces);
         }
         catch (Exception ex)

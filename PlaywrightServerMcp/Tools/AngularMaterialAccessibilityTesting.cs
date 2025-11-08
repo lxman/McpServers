@@ -35,50 +35,50 @@ public class AngularMaterialAccessibilityTesting(PlaywrightSessionManager sessio
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            var jsCode = """
+            string jsCode = """
 
-                                         (() => {
-                                             const results = {
-                                                 testSummary: {
-                                                     angularDetected: false,
-                                                     angularVersion: null,
-                                                     materialDetected: false,
-                                                     materialVersion: null,
-                                                     cdkDetected: false,
-                                                     testTimestamp: new Date().toISOString(),
-                                                     wcagLevel: '
-                         """ + wcagLevel + """
-                                           ',
-                                                                       overallComplianceScore: 0,
-                                                                       totalViolations: 0,
-                                                                       criticalViolations: 0,
-                                                                       testStatus: 'not_started'
-                                                                   },
-                                                                   materialComponentsAnalysis: {
-                                                                       componentsFound: [],
-                                                                       componentTypes: {},
-                                                                       totalComponents: 0,
-                                                                       accessibleComponents: 0,
-                                                                       componentsWithIssues: 0
-                                                                   },
-                                                                   accessibilityViolations: {
-                                                                       critical: [],
-                                                                       major: [],
-                                                                       minor: [],
-                                                                       summary: {
-                                                                           perceivable: { passed: 0, failed: 0, warnings: 0 },
-                                                                           operable: { passed: 0, failed: 0, warnings: 0 },
-                                                                           understandable: { passed: 0, failed: 0, warnings: 0 },
-                                                                           robust: { passed: 0, failed: 0, warnings: 0 }
-                                                                       }
-                                                                   },
-                                                                   colorContrastAnalysis: {
-                                                                       tested: 
-                                           """ + testColorContrast.ToString().ToLower() + """
+                                            (() => {
+                                                const results = {
+                                                    testSummary: {
+                                                        angularDetected: false,
+                                                        angularVersion: null,
+                                                        materialDetected: false,
+                                                        materialVersion: null,
+                                                        cdkDetected: false,
+                                                        testTimestamp: new Date().toISOString(),
+                                                        wcagLevel: '
+                            """ + wcagLevel + """
+                                              ',
+                                                                          overallComplianceScore: 0,
+                                                                          totalViolations: 0,
+                                                                          criticalViolations: 0,
+                                                                          testStatus: 'not_started'
+                                                                      },
+                                                                      materialComponentsAnalysis: {
+                                                                          componentsFound: [],
+                                                                          componentTypes: {},
+                                                                          totalComponents: 0,
+                                                                          accessibleComponents: 0,
+                                                                          componentsWithIssues: 0
+                                                                      },
+                                                                      accessibilityViolations: {
+                                                                          critical: [],
+                                                                          major: [],
+                                                                          minor: [],
+                                                                          summary: {
+                                                                              perceivable: { passed: 0, failed: 0, warnings: 0 },
+                                                                              operable: { passed: 0, failed: 0, warnings: 0 },
+                                                                              understandable: { passed: 0, failed: 0, warnings: 0 },
+                                                                              robust: { passed: 0, failed: 0, warnings: 0 }
+                                                                          }
+                                                                      },
+                                                                      colorContrastAnalysis: {
+                                                                          tested: 
+                                              """ + testColorContrast.ToString().ToLower() + """
                 ,
                                             violations: [],
                                             passedElements: [],
@@ -1111,7 +1111,7 @@ public class AngularMaterialAccessibilityTesting(PlaywrightSessionManager sessio
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 

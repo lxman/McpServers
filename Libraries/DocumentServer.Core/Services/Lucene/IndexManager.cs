@@ -46,13 +46,13 @@ public class IndexManager : IDisposable
                 return;
             }
 
-            var indexDirectories = SystemDirectory.GetDirectories(_indexBasePath);
-            foreach (var indexDir in indexDirectories)
+            string[] indexDirectories = SystemDirectory.GetDirectories(_indexBasePath);
+            foreach (string indexDir in indexDirectories)
             {
-                var indexName = Path.GetFileName(indexDir);
+                string indexName = Path.GetFileName(indexDir);
 
                 // Verify it looks like a Lucene index (has segments files)
-                var hasSegments = SystemDirectory.GetFiles(indexDir, "segments*").Any();
+                bool hasSegments = SystemDirectory.GetFiles(indexDir, "segments*").Any();
                 if (hasSegments)
                 {
                     _discoveredIndexNames.Add(indexName);
@@ -100,7 +100,7 @@ public class IndexManager : IDisposable
         }
 
         // Return if already loaded
-        if (_loadedIndexes.TryGetValue(indexName, out var resources))
+        if (_loadedIndexes.TryGetValue(indexName, out IndexResources? resources))
         {
             _logger.LogDebug("Using already loaded index: {IndexName}", indexName);
             return resources;
@@ -119,14 +119,14 @@ public class IndexManager : IDisposable
     /// </summary>
     private IndexResources LoadIndex(string indexName)
     {
-        var indexPath = Path.Combine(_indexBasePath, indexName);
+        string indexPath = Path.Combine(_indexBasePath, indexName);
 
         if (!SystemDirectory.Exists(indexPath))
         {
             throw new DirectoryNotFoundException($"Index directory not found: {indexPath}");
         }
 
-        var directory = FSDirectory.Open(indexPath);
+        FSDirectory? directory = FSDirectory.Open(indexPath);
         var analyzer = new StandardAnalyzer(LUCENE_VERSION);
         var config = new IndexWriterConfig(LUCENE_VERSION, analyzer);
         var writer = new IndexWriter(directory, config);
@@ -155,7 +155,7 @@ public class IndexManager : IDisposable
     /// </summary>
     public bool UnloadIndex(string indexName)
     {
-        if (_loadedIndexes.TryGetValue(indexName, out var resources))
+        if (_loadedIndexes.TryGetValue(indexName, out IndexResources? resources))
         {
             try
             {
@@ -182,10 +182,10 @@ public class IndexManager : IDisposable
     /// </summary>
     public int UnloadAllIndexes()
     {
-        var indexesToUnload = _loadedIndexes.Keys.ToList();
+        List<string> indexesToUnload = _loadedIndexes.Keys.ToList();
         var unloadedCount = 0;
 
-        foreach (var indexName in indexesToUnload)
+        foreach (string indexName in indexesToUnload)
         {
             if (UnloadIndex(indexName))
             {
@@ -204,7 +204,7 @@ public class IndexManager : IDisposable
     {
         var status = new Dictionary<string, IndexMemoryStatus>();
 
-        foreach (var indexName in _discoveredIndexNames)
+        foreach (string indexName in _discoveredIndexNames)
         {
             status[indexName] = new IndexMemoryStatus
             {
@@ -231,7 +231,7 @@ public class IndexManager : IDisposable
         UnloadIndex(indexName);
 
         // Then remove from discovery
-        var removed = _discoveredIndexNames.Remove(indexName);
+        bool removed = _discoveredIndexNames.Remove(indexName);
 
         if (removed)
         {
@@ -252,7 +252,7 @@ public class IndexManager : IDisposable
             RemoveIndex(indexName);
 
             // Then delete files from disk
-            var indexPath = Path.Combine(_indexBasePath, indexName);
+            string indexPath = Path.Combine(_indexBasePath, indexName);
             if (SystemDirectory.Exists(indexPath))
             {
                 SystemDirectory.Delete(indexPath, recursive: true);
@@ -281,12 +281,12 @@ public class IndexManager : IDisposable
 
         try
         {
-            var indexPath = Path.Combine(_indexBasePath, indexName);
+            string indexPath = Path.Combine(_indexBasePath, indexName);
 
             if (SystemDirectory.Exists(indexPath))
             {
-                var indexFiles = SystemDirectory.GetFiles(indexPath);
-                var totalBytes = indexFiles.Sum(f => new FileInfo(f).Length);
+                string[] indexFiles = SystemDirectory.GetFiles(indexPath);
+                long totalBytes = indexFiles.Sum(f => new FileInfo(f).Length);
                 return totalBytes / (1024.0 * 1024.0); // Convert to MB
             }
         }
@@ -310,7 +310,7 @@ public class IndexManager : IDisposable
     {
         // This would require storing index metadata about what directories they cover
         // For now, we'll just check if there's an index with a matching name
-        var dirName = Path.GetFileName(directoryPath.TrimEnd(Path.DirectorySeparatorChar));
+        string dirName = Path.GetFileName(directoryPath.TrimEnd(Path.DirectorySeparatorChar));
 
         return _discoveredIndexNames.FirstOrDefault(name =>
             name.Contains(dirName, StringComparison.OrdinalIgnoreCase));
@@ -318,7 +318,7 @@ public class IndexManager : IDisposable
 
     public void Dispose()
     {
-        foreach (var resources in _loadedIndexes.Values)
+        foreach (IndexResources resources in _loadedIndexes.Values)
         {
             try
             {

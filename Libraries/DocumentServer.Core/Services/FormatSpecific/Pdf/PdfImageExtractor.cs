@@ -28,7 +28,7 @@ public class PdfImageExtractor(
 
         try
         {
-            using var pdf = await OpenPdfAsync(filePath);
+            using PdfDocument pdf = await OpenPdfAsync(filePath);
 
             if (pageNumber < 1 || pageNumber > pdf.NumberOfPages)
             {
@@ -36,8 +36,8 @@ public class PdfImageExtractor(
                     $"Page {pageNumber} not found (document has {pdf.NumberOfPages} pages)");
             }
 
-            var page = pdf.GetPage(pageNumber);
-            var images = ExtractImagesFromPage(page, includeImageData);
+            Page page = pdf.GetPage(pageNumber);
+            List<PdfImageInfo> images = ExtractImagesFromPage(page, includeImageData);
 
             logger.LogInformation("Extracted {Count} images from page {Page}",
                 images.Count, pageNumber);
@@ -63,13 +63,13 @@ public class PdfImageExtractor(
 
         try
         {
-            using var pdf = await OpenPdfAsync(filePath);
+            using PdfDocument pdf = await OpenPdfAsync(filePath);
 
             var allImages = new List<PdfImageInfo>();
 
-            foreach (var page in pdf.GetPages())
+            foreach (Page page in pdf.GetPages())
             {
-                var pageImages = ExtractImagesFromPage(page, includeImageData);
+                List<PdfImageInfo> pageImages = ExtractImagesFromPage(page, includeImageData);
                 allImages.AddRange(pageImages);
             }
 
@@ -93,17 +93,17 @@ public class PdfImageExtractor(
 
         try
         {
-            using var pdf = await OpenPdfAsync(filePath);
+            using PdfDocument pdf = await OpenPdfAsync(filePath);
 
             var imageCounts = new Dictionary<int, int>();
 
-            foreach (var page in pdf.GetPages())
+            foreach (Page page in pdf.GetPages())
             {
-                var imageCount = page.GetImages().Count();
+                int imageCount = page.GetImages().Count();
                 imageCounts[page.Number] = imageCount;
             }
 
-            var totalImages = imageCounts.Values.Sum();
+            int totalImages = imageCounts.Values.Sum();
             logger.LogInformation("Document has {Total} images across {Pages} pages",
                 totalImages, pdf.NumberOfPages);
 
@@ -125,11 +125,11 @@ public class PdfImageExtractor(
 
         try
         {
-            using var pdf = await OpenPdfAsync(filePath);
+            using PdfDocument pdf = await OpenPdfAsync(filePath);
 
             var totalCount = 0;
 
-            foreach (var page in pdf.GetPages())
+            foreach (Page page in pdf.GetPages())
             {
                 totalCount += page.GetImages().Count();
             }
@@ -158,7 +158,7 @@ public class PdfImageExtractor(
 
         try
         {
-            using var pdf = await OpenPdfAsync(filePath);
+            using PdfDocument pdf = await OpenPdfAsync(filePath);
 
             if (pageNumber < 1 || pageNumber > pdf.NumberOfPages)
             {
@@ -166,8 +166,8 @@ public class PdfImageExtractor(
                     $"Page {pageNumber} not found (document has {pdf.NumberOfPages} pages)");
             }
 
-            var page = pdf.GetPage(pageNumber);
-            var images = page.GetImages().ToList();
+            Page page = pdf.GetPage(pageNumber);
+            List<IPdfImage> images = page.GetImages().ToList();
 
             if (imageId < 0 || imageId >= images.Count)
             {
@@ -175,8 +175,8 @@ public class PdfImageExtractor(
                     $"Image {imageId} not found on page {pageNumber} (page has {images.Count} images)");
             }
 
-            var pdfImage = images[imageId];
-            var imageInfo = ConvertToImageInfo(pdfImage, pageNumber, imageId, true);
+            IPdfImage pdfImage = images[imageId];
+            PdfImageInfo imageInfo = ConvertToImageInfo(pdfImage, pageNumber, imageId, true);
 
             logger.LogInformation("Successfully extracted image #{ImageId} from page {Page}",
                 imageId, pageNumber);
@@ -197,7 +197,7 @@ public class PdfImageExtractor(
     {
         return await Task.Run(() =>
         {
-            var cached = cache.Get(filePath);
+            LoadedDocument? cached = cache.Get(filePath);
             var pdf = cached?.DocumentObject as PdfDocument;
 
             if (pdf is not null)
@@ -205,7 +205,7 @@ public class PdfImageExtractor(
                 return pdf;
             }
 
-            var password = passwordManager.GetPasswordForFile(filePath);
+            string? password = passwordManager.GetPasswordForFile(filePath);
 
             if (password is not null)
             {
@@ -220,12 +220,12 @@ public class PdfImageExtractor(
     private static List<PdfImageInfo> ExtractImagesFromPage(Page page, bool includeImageData)
     {
         var images = new List<PdfImageInfo>();
-        var pdfImages = page.GetImages();
+        IEnumerable<IPdfImage> pdfImages = page.GetImages();
         var imageId = 0;
 
-        foreach (var pdfImage in pdfImages)
+        foreach (IPdfImage pdfImage in pdfImages)
         {
-            var imageInfo = ConvertToImageInfo(pdfImage, page.Number, imageId, includeImageData);
+            PdfImageInfo imageInfo = ConvertToImageInfo(pdfImage, page.Number, imageId, includeImageData);
             images.Add(imageInfo);
             imageId++;
         }

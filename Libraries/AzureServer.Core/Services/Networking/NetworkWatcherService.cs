@@ -19,7 +19,7 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var watchers = new List<NetworkWatcherDto>();
 
             switch (string.IsNullOrEmpty(subscriptionId))
@@ -27,10 +27,10 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
                 case false when !string.IsNullOrEmpty(resourceGroupName):
                 {
                     // List watchers in specific resource group
-                    var resourceGroup = armClient.GetResourceGroupResource(
+                    ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
                         ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
                 
-                    await foreach (var watcher in resourceGroup.GetNetworkWatchers())
+                    await foreach (NetworkWatcherResource? watcher in resourceGroup.GetNetworkWatchers())
                     {
                         watchers.Add(new NetworkWatcherDto
                         {
@@ -47,10 +47,10 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
                 case false:
                 {
                     // List watchers in specific subscription
-                    var subscription = armClient.GetSubscriptionResource(
+                    SubscriptionResource? subscription = armClient.GetSubscriptionResource(
                         new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
-                    await foreach (var watcher in subscription.GetNetworkWatchersAsync())
+                    await foreach (NetworkWatcherResource? watcher in subscription.GetNetworkWatchersAsync())
                     {
                         watchers.Add(new NetworkWatcherDto
                         {
@@ -67,9 +67,9 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
                 default:
                 {
                     // List watchers across all subscriptions
-                    await foreach (var subscription in armClient.GetSubscriptions())
+                    await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
                     {
-                        await foreach (var watcher in subscription.GetNetworkWatchersAsync())
+                        await foreach (NetworkWatcherResource? watcher in subscription.GetNetworkWatchersAsync())
                         {
                             watchers.Add(new NetworkWatcherDto
                             {
@@ -99,12 +99,12 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             
-            var watcherId = NetworkWatcherResource.CreateResourceIdentifier(
+            ResourceIdentifier? watcherId = NetworkWatcherResource.CreateResourceIdentifier(
                 subscriptionId, resourceGroupName, watcherName);
             
-            var watcher = armClient.GetNetworkWatcherResource(watcherId);
+            NetworkWatcherResource? watcher = armClient.GetNetworkWatcherResource(watcherId);
             Response<NetworkWatcherResource> response = await watcher.GetAsync();
 
             return new NetworkWatcherDto
@@ -133,9 +133,9 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             
-            var resourceGroup = armClient.GetResourceGroupResource(
+            ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
                 ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
 
             var watcherData = new NetworkWatcherData
@@ -146,19 +146,19 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
             // Add tags if provided
             if (request.Tags != null)
             {
-                foreach (var tag in request.Tags)
+                foreach (KeyValuePair<string, string> tag in request.Tags)
                 {
                     watcherData.Tags.Add(tag.Key, tag.Value);
                 }
             }
 
-            var watcherCollection = resourceGroup.GetNetworkWatchers();
+            NetworkWatcherCollection? watcherCollection = resourceGroup.GetNetworkWatchers();
             ArmOperation<NetworkWatcherResource> operation = await watcherCollection.CreateOrUpdateAsync(
                 WaitUntil.Completed, 
                 request.Name, 
                 watcherData);
 
-            var watcher = operation.Value;
+            NetworkWatcherResource? watcher = operation.Value;
 
             logger.LogInformation("Created network watcher {WatcherName} in resource group {ResourceGroupName}", 
                 request.Name, resourceGroupName);
@@ -183,12 +183,12 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             
-            var watcherId = NetworkWatcherResource.CreateResourceIdentifier(
+            ResourceIdentifier? watcherId = NetworkWatcherResource.CreateResourceIdentifier(
                 subscriptionId, resourceGroupName, watcherName);
             
-            var watcher = armClient.GetNetworkWatcherResource(watcherId);
+            NetworkWatcherResource? watcher = armClient.GetNetworkWatcherResource(watcherId);
             
             // Check if the watcher exists before attempting to delete
             try
@@ -203,7 +203,7 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
             }
 
             // Delete the watcher
-            var deleteOperation = await watcher.DeleteAsync(WaitUntil.Completed);
+            ArmOperation? deleteOperation = await watcher.DeleteAsync(WaitUntil.Completed);
 
             logger.LogInformation("Deleted network watcher {WatcherName} from resource group {ResourceGroupName}", 
                 watcherName, resourceGroupName);
@@ -221,12 +221,12 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             
-            var watcherId = NetworkWatcherResource.CreateResourceIdentifier(
+            ResourceIdentifier? watcherId = NetworkWatcherResource.CreateResourceIdentifier(
                 subscriptionId, resourceGroupName, watcherName);
             
-            var watcher = armClient.GetNetworkWatcherResource(watcherId);
+            NetworkWatcherResource? watcher = armClient.GetNetworkWatcherResource(watcherId);
 
             // Build connectivity parameters
             var parameters = new ConnectivityContent(
@@ -256,7 +256,7 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
             ArmOperation<ConnectivityInformation> operation = 
                 await watcher.CheckConnectivityAsync(WaitUntil.Completed, parameters);
 
-            var result = operation.Value;
+            ConnectivityInformation? result = operation.Value;
 
             logger.LogInformation("Completed connectivity check from {Source} to {Destination}", 
                 request.SourceResourceId, request.DestinationResourceId);
@@ -291,12 +291,12 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             
-            var watcherId = NetworkWatcherResource.CreateResourceIdentifier(
+            ResourceIdentifier? watcherId = NetworkWatcherResource.CreateResourceIdentifier(
                 subscriptionId, resourceGroupName, watcherName);
             
-            var watcher = armClient.GetNetworkWatcherResource(watcherId);
+            NetworkWatcherResource? watcher = armClient.GetNetworkWatcherResource(watcherId);
 
             // Build next hop parameters
             var parameters = new NextHopContent(
@@ -308,7 +308,7 @@ public class NetworkWatcherService(ArmClientFactory armClientFactory, ILogger<Ne
             ArmOperation<Azure.ResourceManager.Network.Models.NextHopResult> operation = 
                 await watcher.GetNextHopAsync(WaitUntil.Completed, parameters);
 
-            var result = operation.Value;
+            Azure.ResourceManager.Network.Models.NextHopResult? result = operation.Value;
 
             logger.LogInformation("Completed next hop check for VM {VmId} from {SourceIP} to {DestinationIP}", 
                 request.TargetVirtualMachineId, request.SourceIPAddress, request.DestinationIPAddress);

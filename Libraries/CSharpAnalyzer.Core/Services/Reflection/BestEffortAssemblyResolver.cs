@@ -16,10 +16,10 @@ public class BestEffortAssemblyResolver(IEnumerable<string> searchPaths) : Metad
     public override Assembly? Resolve(MetadataLoadContext context, AssemblyName assemblyName)
     {
         // Try to find the assembly in search paths
-        foreach (var searchPath in _searchPaths)
+        foreach (string searchPath in _searchPaths)
         {
             // Try with .dll extension
-            var dllPath = Path.Combine(searchPath, $"{assemblyName.Name}.dll");
+            string dllPath = Path.Combine(searchPath, $"{assemblyName.Name}.dll");
             if (File.Exists(dllPath))
             {
                 try
@@ -33,7 +33,7 @@ public class BestEffortAssemblyResolver(IEnumerable<string> searchPaths) : Metad
             }
 
             // Try with .exe extension
-            var exePath = Path.Combine(searchPath, $"{assemblyName.Name}.exe");
+            string exePath = Path.Combine(searchPath, $"{assemblyName.Name}.exe");
             if (!File.Exists(exePath)) continue;
             try
             {

@@ -31,7 +31,7 @@ public class CloudWatchTools(
         try
         {
             logger.LogDebug("Listing CloudWatch log groups with prefix {Prefix}", prefix);
-            var response = await logsService.ListLogGroupsAsync(prefix, limit);
+            DescribeLogGroupsResponse response = await logsService.ListLogGroupsAsync(prefix, limit);
 
             return JsonSerializer.Serialize(new
             {
@@ -145,14 +145,14 @@ public class CloudWatchTools(
         {
             logger.LogDebug("Listing log streams for group {LogGroupName}", logGroupName);
 
-            var orderByEnum = orderBy?.ToUpperInvariant() switch
+            OrderBy? orderByEnum = orderBy?.ToUpperInvariant() switch
             {
                 "LASTEVENTTIME" => OrderBy.LastEventTime,
                 "LOGSTREAMNAME" => OrderBy.LogStreamName,
                 _ => null
             };
 
-            var response = await logsService.ListLogStreamsAsync(
+            DescribeLogStreamsResponse response = await logsService.ListLogStreamsAsync(
                 logGroupName, prefix, orderByEnum, descending, limit);
 
             return JsonSerializer.Serialize(new
@@ -197,7 +197,7 @@ public class CloudWatchTools(
 
             if (!string.IsNullOrEmpty(startTime))
             {
-                if (long.TryParse(startTime, out var unixStart))
+                if (long.TryParse(startTime, out long unixStart))
                     start = DateTimeOffset.FromUnixTimeMilliseconds(unixStart).UtcDateTime;
                 else
                     start = DateTime.Parse(startTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
@@ -205,13 +205,13 @@ public class CloudWatchTools(
 
             if (!string.IsNullOrEmpty(endTime))
             {
-                if (long.TryParse(endTime, out var unixEnd))
+                if (long.TryParse(endTime, out long unixEnd))
                     end = DateTimeOffset.FromUnixTimeMilliseconds(unixEnd).UtcDateTime;
                 else
                     end = DateTime.Parse(endTime, null, System.Globalization.DateTimeStyles.RoundtripKind);
             }
 
-            var response = await logsService.GetLogEventsAsync(logGroupName, logStreamName, start, end, limit);
+            GetLogEventsResponse response = await logsService.GetLogEventsAsync(logGroupName, logStreamName, start, end, limit);
 
             return JsonSerializer.Serialize(new
             {
@@ -246,10 +246,10 @@ public class CloudWatchTools(
         {
             logger.LogDebug("Filtering logs in {LogGroupName} with pattern {Pattern}", logGroupName, filterPattern);
 
-            var start = ParseDateTime(startTime);
-            var end = ParseDateTime(endTime);
+            DateTime? start = ParseDateTime(startTime);
+            DateTime? end = ParseDateTime(endTime);
 
-            var response = await logsService.FilterLogsAsync(logGroupName, filterPattern, start, end, limit);
+            FilterLogEventsResponse response = await logsService.FilterLogsAsync(logGroupName, filterPattern, start, end, limit);
 
             return JsonSerializer.Serialize(new
             {
@@ -284,10 +284,10 @@ public class CloudWatchTools(
         {
             logger.LogDebug("Getting recent logs from {LogGroupName} for last {Minutes} minutes", logGroupName, minutes);
 
-            var end = DateTime.UtcNow;
-            var start = end.AddMinutes(-minutes);
+            DateTime end = DateTime.UtcNow;
+            DateTime start = end.AddMinutes(-minutes);
 
-            var response = await logsService.FilterLogsAsync(logGroupName, filterPattern, start, end, limit);
+            FilterLogEventsResponse response = await logsService.FilterLogsAsync(logGroupName, filterPattern, start, end, limit);
 
             return JsonSerializer.Serialize(new
             {
@@ -319,21 +319,21 @@ public class CloudWatchTools(
     {
         try
         {
-            var groups = logGroupNames.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            List<string> groups = logGroupNames.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(g => g.Trim()).ToList();
 
             logger.LogDebug("Filtering logs across {Count} groups", groups.Count);
 
-            var end = DateTime.UtcNow;
-            var start = end.AddMinutes(-minutes);
+            DateTime end = DateTime.UtcNow;
+            DateTime start = end.AddMinutes(-minutes);
 
             var results = new List<object>();
 
-            foreach (var group in groups)
+            foreach (string group in groups)
             {
                 try
                 {
-                    var response = await logsService.FilterLogsAsync(group, filterPattern, start, end, limit);
+                    FilterLogEventsResponse response = await logsService.FilterLogsAsync(group, filterPattern, start, end, limit);
                     results.Add(new
                     {
                         logGroupName = group,
@@ -390,13 +390,13 @@ public class CloudWatchTools(
         {
             logger.LogDebug("Getting error logs from {LogGroupName}", logGroupName);
 
-            var end = DateTime.UtcNow;
-            var start = end.AddMinutes(-minutes);
+            DateTime end = DateTime.UtcNow;
+            DateTime start = end.AddMinutes(-minutes);
 
             // Common error patterns
             var errorPattern = "[ERROR] OR [FATAL] OR Exception OR Failed OR Failure";
 
-            var response = await logsService.FilterLogsAsync(logGroupName, errorPattern, start, end, limit);
+            FilterLogEventsResponse response = await logsService.FilterLogsAsync(logGroupName, errorPattern, start, end, limit);
 
             return JsonSerializer.Serialize(new
             {
@@ -452,11 +452,11 @@ public class CloudWatchTools(
         {
             logger.LogDebug("Getting log context for timestamp {Timestamp}", timestamp);
 
-            var targetTime = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).UtcDateTime;
-            var startTime = targetTime.AddMinutes(-5);
-            var endTime = targetTime.AddMinutes(5);
+            DateTime targetTime = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).UtcDateTime;
+            DateTime startTime = targetTime.AddMinutes(-5);
+            DateTime endTime = targetTime.AddMinutes(5);
 
-            var response = await logsService.GetLogEventsAsync(
+            GetLogEventsResponse response = await logsService.GetLogEventsAsync(
                 logGroupName, logStreamName, startTime, endTime, contextLines * 2);
 
             // Find the event closest to the timestamp
@@ -498,13 +498,13 @@ public class CloudWatchTools(
     {
         try
         {
-            var groups = logGroupNames.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            List<string> groups = logGroupNames.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(g => g.Trim()).ToList();
 
             logger.LogDebug("Running Insights query on {Count} groups", groups.Count);
 
-            var start = ParseDateTime(startTime);
-            var end = ParseDateTime(endTime);
+            DateTime? start = ParseDateTime(startTime);
+            DateTime? end = ParseDateTime(endTime);
 
             if (start == null || end == null)
             {
@@ -515,7 +515,7 @@ public class CloudWatchTools(
                 }, _jsonOptions);
             }
 
-            var queryId = await logsService.StartInsightsQueryAsync(groups, queryString, start.Value, end.Value);
+            string queryId = await logsService.StartInsightsQueryAsync(groups, queryString, start.Value, end.Value);
 
             // Wait for query to complete (with timeout)
             var maxWait = 30; // seconds
@@ -526,7 +526,7 @@ public class CloudWatchTools(
                 await Task.Delay(1000);
                 waited++;
 
-                var results = await logsService.GetInsightsQueryResultsAsync(queryId);
+                GetQueryResultsResponse results = await logsService.GetInsightsQueryResultsAsync(queryId);
                 if (results.Status == QueryStatus.Complete)
                 {
                     return JsonSerializer.Serialize(new
@@ -574,13 +574,13 @@ public class CloudWatchTools(
     {
         try
         {
-            var groups = logGroupNames.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            List<string> groups = logGroupNames.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(g => g.Trim()).ToList();
 
             logger.LogDebug("Starting Insights query on {Count} groups", groups.Count);
 
-            var start = ParseDateTime(startTime);
-            var end = ParseDateTime(endTime);
+            DateTime? start = ParseDateTime(startTime);
+            DateTime? end = ParseDateTime(endTime);
 
             if (start == null || end == null)
             {
@@ -591,7 +591,7 @@ public class CloudWatchTools(
                 }, _jsonOptions);
             }
 
-            var queryId = await logsService.StartInsightsQueryAsync(groups, queryString, start.Value, end.Value);
+            string queryId = await logsService.StartInsightsQueryAsync(groups, queryString, start.Value, end.Value);
 
             return JsonSerializer.Serialize(new
             {
@@ -616,7 +616,7 @@ public class CloudWatchTools(
         {
             logger.LogDebug("Getting Insights results for query {QueryId}", queryId);
 
-            var results = await logsService.GetInsightsQueryResultsAsync(queryId);
+            GetQueryResultsResponse results = await logsService.GetInsightsQueryResultsAsync(queryId);
 
             return JsonSerializer.Serialize(new
             {
@@ -693,7 +693,7 @@ public class CloudWatchTools(
                 }
             };
 
-            var response = await metricsService.PutMetricDataAsync(namespaceName, metricData);
+            PutMetricDataResponse response = await metricsService.PutMetricDataAsync(namespaceName, metricData);
 
             return JsonSerializer.Serialize(new
             {
@@ -728,14 +728,14 @@ public class CloudWatchTools(
             logger.LogDebug("Filtering logs from {Count} log groups", logGroupNames.Count);
             var results = new List<object>();
 
-            foreach (var logGroupName in logGroupNames)
+            foreach (string logGroupName in logGroupNames)
             {
                 try
                 {
                     DateTime? start = string.IsNullOrEmpty(startTime) ? null : DateTime.Parse(startTime);
                     DateTime? end = string.IsNullOrEmpty(endTime) ? null : DateTime.Parse(endTime);
 
-                    var response = await logsService.FilterLogsAsync(
+                    FilterLogEventsResponse response = await logsService.FilterLogsAsync(
                         logGroupName, filterPattern, start, end, limit);
 
                     results.Add(new
@@ -787,14 +787,14 @@ public class CloudWatchTools(
         {
             logger.LogDebug("Getting recent logs from {Count} log groups", logGroupNames.Count);
             var results = new List<object>();
-            var startTime = DateTime.UtcNow.AddMinutes(-minutesBack);
-            var endTime = DateTime.UtcNow;
+            DateTime startTime = DateTime.UtcNow.AddMinutes(-minutesBack);
+            DateTime endTime = DateTime.UtcNow;
 
-            foreach (var logGroupName in logGroupNames)
+            foreach (string logGroupName in logGroupNames)
             {
                 try
                 {
-                    var response = await logsService.FilterLogsAsync(
+                    FilterLogEventsResponse response = await logsService.FilterLogsAsync(
                         logGroupName, null, startTime, endTime, limit);
 
                     results.Add(new
@@ -847,15 +847,15 @@ public class CloudWatchTools(
         {
             logger.LogDebug("Getting error logs from {Count} log groups", logGroupNames.Count);
             var results = new List<object>();
-            var startTime = DateTime.UtcNow.AddMinutes(-minutesBack);
-            var endTime = DateTime.UtcNow;
+            DateTime startTime = DateTime.UtcNow.AddMinutes(-minutesBack);
+            DateTime endTime = DateTime.UtcNow;
             var filterPattern = "?ERROR ?EXCEPTION ?FAIL ?FATAL ?CRITICAL";
 
-            foreach (var logGroupName in logGroupNames)
+            foreach (string logGroupName in logGroupNames)
             {
                 try
                 {
-                    var response = await logsService.FilterLogsAsync(
+                    FilterLogEventsResponse response = await logsService.FilterLogsAsync(
                         logGroupName, filterPattern, startTime, endTime, limit);
 
                     results.Add(new
@@ -910,10 +910,10 @@ public class CloudWatchTools(
         try
         {
             logger.LogDebug("Searching for pattern '{Pattern}' in {LogGroupName}", searchPattern, logGroupName);
-            var startTime = DateTime.UtcNow.AddMinutes(-minutesBack);
-            var endTime = DateTime.UtcNow;
+            DateTime startTime = DateTime.UtcNow.AddMinutes(-minutesBack);
+            DateTime endTime = DateTime.UtcNow;
 
-            var response = await logsService.FilterLogsAsync(
+            FilterLogEventsResponse response = await logsService.FilterLogsAsync(
                 logGroupName, searchPattern, startTime, endTime, limit);
 
             return JsonSerializer.Serialize(new
@@ -947,9 +947,9 @@ public class CloudWatchTools(
         try
         {
             logger.LogDebug("Listing CloudWatch metric namespaces");
-            var response = await metricsService.ListMetricsAsync();
+            ListMetricsResponse response = await metricsService.ListMetricsAsync();
 
-            var namespaces = response.Metrics
+            List<string> namespaces = response.Metrics
                 .Select(m => m.Namespace)
                 .Distinct()
                 .OrderBy(n => n)
@@ -976,7 +976,7 @@ public class CloudWatchTools(
         try
         {
             logger.LogDebug("Deleting {Count} metric alarms", alarmNames.Count);
-            var response = await metricsService.DeleteAlarmsAsync(alarmNames);
+            DeleteAlarmsResponse response = await metricsService.DeleteAlarmsAsync(alarmNames);
 
             return JsonSerializer.Serialize(new
             {
@@ -999,7 +999,7 @@ public class CloudWatchTools(
         try
         {
             logger.LogDebug("Enabling {Count} metric alarms", alarmNames.Count);
-            var response = await metricsService.EnableAlarmActionsAsync(alarmNames);
+            EnableAlarmActionsResponse response = await metricsService.EnableAlarmActionsAsync(alarmNames);
 
             return JsonSerializer.Serialize(new
             {
@@ -1022,7 +1022,7 @@ public class CloudWatchTools(
         try
         {
             logger.LogDebug("Disabling {Count} metric alarms", alarmNames.Count);
-            var response = await metricsService.DisableAlarmActionsAsync(alarmNames);
+            DisableAlarmActionsResponse response = await metricsService.DisableAlarmActionsAsync(alarmNames);
 
             return JsonSerializer.Serialize(new
             {
@@ -1055,7 +1055,7 @@ public class CloudWatchTools(
             DateTime? start = string.IsNullOrEmpty(startDate) ? null : DateTime.Parse(startDate);
             DateTime? end = string.IsNullOrEmpty(endDate) ? null : DateTime.Parse(endDate);
 
-            var response = await metricsService.DescribeAlarmHistoryAsync(
+            DescribeAlarmHistoryResponse response = await metricsService.DescribeAlarmHistoryAsync(
                 alarmName, alarmTypes, historyItemType, start, end, maxRecords);
 
             return JsonSerializer.Serialize(new
@@ -1089,7 +1089,7 @@ public class CloudWatchTools(
         if (string.IsNullOrEmpty(dateTimeString))
             return null;
 
-        if (long.TryParse(dateTimeString, out var unixTime))
+        if (long.TryParse(dateTimeString, out long unixTime))
             return DateTimeOffset.FromUnixTimeMilliseconds(unixTime).UtcDateTime;
 
         return DateTime.Parse(dateTimeString, null, System.Globalization.DateTimeStyles.RoundtripKind);

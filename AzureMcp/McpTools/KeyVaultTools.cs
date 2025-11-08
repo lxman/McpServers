@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using AzureServer.Core.Services.KeyVault;
+using AzureServer.Core.Services.KeyVault.Models;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -25,7 +26,7 @@ public class KeyVaultTools(
         try
         {
             logger.LogDebug("Listing secrets in vault {VaultName}", vaultName);
-            var secrets = await keyVaultService.ListSecretsAsync(vaultName);
+            IEnumerable<SecretPropertiesDto> secrets = await keyVaultService.ListSecretsAsync(vaultName);
 
             return JsonSerializer.Serialize(new
             {
@@ -63,7 +64,7 @@ public class KeyVaultTools(
         try
         {
             logger.LogDebug("Getting secret {SecretName} from vault {VaultName}", secretName, vaultName);
-            var secret = await keyVaultService.GetSecretAsync(vaultName, secretName, version);
+            SecretDto? secret = await keyVaultService.GetSecretAsync(vaultName, secretName, version);
 
             if (secret is null)
             {
@@ -122,7 +123,7 @@ public class KeyVaultTools(
             DateTime? expiresOnDate = string.IsNullOrEmpty(expiresOn) ? null : DateTime.Parse(expiresOn);
             DateTime? notBeforeDate = string.IsNullOrEmpty(notBefore) ? null : DateTime.Parse(notBefore);
 
-            var secret = await keyVaultService.SetSecretAsync(
+            SecretDto secret = await keyVaultService.SetSecretAsync(
                 vaultName, secretName, value,
                 contentType, expiresOnDate, notBeforeDate, tags);
 
@@ -163,7 +164,7 @@ public class KeyVaultTools(
         try
         {
             logger.LogDebug("Deleting secret {SecretName} from vault {VaultName}", secretName, vaultName);
-            var deletedSecret = await keyVaultService.DeleteSecretAsync(vaultName, secretName);
+            DeletedSecretDto deletedSecret = await keyVaultService.DeleteSecretAsync(vaultName, secretName);
 
             return JsonSerializer.Serialize(new
             {
@@ -197,7 +198,7 @@ public class KeyVaultTools(
         try
         {
             logger.LogDebug("Getting versions for secret {SecretName} in vault {VaultName}", secretName, vaultName);
-            var versions = await keyVaultService.GetSecretVersionsAsync(vaultName, secretName);
+            IEnumerable<SecretPropertiesDto> versions = await keyVaultService.GetSecretVersionsAsync(vaultName, secretName);
 
             return JsonSerializer.Serialize(new
             {
@@ -240,7 +241,7 @@ public class KeyVaultTools(
         try
         {
             logger.LogDebug("Listing deleted secrets in vault {VaultName}", vaultName);
-            var deletedSecrets = await keyVaultService.ListDeletedSecretsAsync(vaultName);
+            IEnumerable<DeletedSecretDto> deletedSecrets = await keyVaultService.ListDeletedSecretsAsync(vaultName);
 
             return JsonSerializer.Serialize(new
             {
@@ -274,7 +275,7 @@ public class KeyVaultTools(
         try
         {
             logger.LogDebug("Getting deleted secret {SecretName} from vault {VaultName}", secretName, vaultName);
-            var deletedSecret = await keyVaultService.GetDeletedSecretAsync(vaultName, secretName);
+            DeletedSecretDto? deletedSecret = await keyVaultService.GetDeletedSecretAsync(vaultName, secretName);
 
             if (deletedSecret is null)
             {
@@ -317,7 +318,7 @@ public class KeyVaultTools(
         try
         {
             logger.LogDebug("Recovering deleted secret {SecretName} in vault {VaultName}", secretName, vaultName);
-            var properties = await keyVaultService.RecoverDeletedSecretAsync(vaultName, secretName);
+            SecretPropertiesDto properties = await keyVaultService.RecoverDeletedSecretAsync(vaultName, secretName);
 
             return JsonSerializer.Serialize(new
             {
@@ -399,7 +400,7 @@ public class KeyVaultTools(
             DateTime? expiresOnDate = string.IsNullOrEmpty(expiresOn) ? null : DateTime.Parse(expiresOn);
             DateTime? notBeforeDate = string.IsNullOrEmpty(notBefore) ? null : DateTime.Parse(notBefore);
 
-            var properties = await keyVaultService.UpdateSecretPropertiesAsync(
+            SecretPropertiesDto properties = await keyVaultService.UpdateSecretPropertiesAsync(
                 vaultName, secretName, version, enabled,
                 expiresOnDate, notBeforeDate, contentType, tags);
 

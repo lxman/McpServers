@@ -19,7 +19,7 @@ public class RoslynAnalysisService
 
         try
         {
-            var syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
             
             // Create a compilation to get semantic diagnostics
             var compilation = CSharpCompilation.Create(
@@ -29,11 +29,11 @@ public class RoslynAnalysisService
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
             );
 
-            var diagnostics = compilation.GetDiagnostics();
+            ImmutableArray<Diagnostic> diagnostics = compilation.GetDiagnostics();
             
-            foreach (var diagnostic in diagnostics)
+            foreach (Diagnostic? diagnostic in diagnostics)
             {
-                var lineSpan = diagnostic.Location.GetLineSpan();
+                FileLinePositionSpan lineSpan = diagnostic.Location.GetLineSpan();
                 
                 response.Diagnostics.Add(new DiagnosticInfo
                 {
@@ -85,8 +85,8 @@ public class RoslynAnalysisService
 
         try
         {
-            var syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
-            var root = await syntaxTree.GetRootAsync();
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
+            SyntaxNode root = await syntaxTree.GetRootAsync();
 
             var compilation = CSharpCompilation.Create(
                 "TempAssembly",
@@ -95,27 +95,27 @@ public class RoslynAnalysisService
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
             );
 
-            var semanticModel = compilation.GetSemanticModel(syntaxTree);
+            SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
 
             // Find all member declarations
-            var members = root.DescendantNodes()
+            List<SyntaxNode> members = root.DescendantNodes()
                 .Where(n => n is MemberDeclarationSyntax)
                 .ToList();
 
-            foreach (var member in members)
+            foreach (SyntaxNode member in members)
             {
-                var symbol = semanticModel.GetDeclaredSymbol(member);
+                ISymbol? symbol = semanticModel.GetDeclaredSymbol(member);
                 if (symbol == null) continue;
 
                 // Apply filter if specified
                 if (!string.IsNullOrEmpty(filter))
                 {
-                    var symbolKind = GetSymbolKind(symbol);
+                    string symbolKind = GetSymbolKind(symbol);
                     if (!symbolKind.Equals(filter, StringComparison.OrdinalIgnoreCase))
                         continue;
                 }
 
-                var location = member.GetLocation().GetLineSpan();
+                FileLinePositionSpan location = member.GetLocation().GetLineSpan();
 
                 response.Symbols.Add(new SymbolInfo
                 {
@@ -149,12 +149,12 @@ public class RoslynAnalysisService
 
         try
         {
-            var syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
-            var root = await syntaxTree.GetRootAsync();
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
+            SyntaxNode root = await syntaxTree.GetRootAsync();
 
             // Format using Roslyn's formatting API
             var workspace = new AdhocWorkspace();
-            var formattedRoot = Formatter.Format(
+            SyntaxNode formattedRoot = Formatter.Format(
                 root, 
                 workspace, 
                 workspace.Options);
@@ -177,8 +177,8 @@ public class RoslynAnalysisService
 
         try
         {
-            var syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
-            var root = await syntaxTree.GetRootAsync();
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
+            SyntaxNode root = await syntaxTree.GetRootAsync();
 
             var compilation = CSharpCompilation.Create(
                 "TempAssembly",
@@ -187,16 +187,16 @@ public class RoslynAnalysisService
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
             );
 
-            var semanticModel = compilation.GetSemanticModel(syntaxTree);
+            SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
 
             // Convert line/column to position (0-based)
-            var position = syntaxTree.GetText().Lines[line - 1].Start + (column - 1);
-            var node = root.FindToken(position).Parent;
+            int position = syntaxTree.GetText().Lines[line - 1].Start + (column - 1);
+            SyntaxNode? node = root.FindToken(position).Parent;
 
             if (node != null)
             {
-                var symbolInfo = semanticModel.GetSymbolInfo(node);
-                var typeInfo = semanticModel.GetTypeInfo(node);
+                RoslynSymbolInfo symbolInfo = semanticModel.GetSymbolInfo(node);
+                TypeInfo typeInfo = semanticModel.GetTypeInfo(node);
 
                 response.TypeName = typeInfo.Type?.ToDisplayString() ?? "Unknown";
                 response.SymbolName = symbolInfo.Symbol?.Name ?? string.Empty;
@@ -204,7 +204,7 @@ public class RoslynAnalysisService
                 response.ContainingType = symbolInfo.Symbol?.ContainingType?.ToDisplayString() ?? string.Empty;
 
                 // Get documentation if available
-                var documentation = symbolInfo.Symbol?.GetDocumentationCommentXml();
+                string? documentation = symbolInfo.Symbol?.GetDocumentationCommentXml();
                 if (!string.IsNullOrEmpty(documentation))
                 {
                     response.Documentation = documentation;
@@ -231,8 +231,8 @@ public class RoslynAnalysisService
 
         try
         {
-            var syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
-            var root = await syntaxTree.GetRootAsync();
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
+            SyntaxNode root = await syntaxTree.GetRootAsync();
 
             var compilation = CSharpCompilation.Create(
                 "TempAssembly",
@@ -241,7 +241,7 @@ public class RoslynAnalysisService
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
             );
 
-            var semanticModel = compilation.GetSemanticModel(syntaxTree);
+            SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
 
             // Calculate basic metrics
             response.TotalLines = code.Split('\n').Length;
@@ -250,12 +250,12 @@ public class RoslynAnalysisService
             response.TotalProperties = root.DescendantNodes().OfType<PropertyDeclarationSyntax>().Count();
 
             // Calculate cyclomatic complexity for each method
-            var methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
+            IEnumerable<MethodDeclarationSyntax> methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
             var complexities = new List<int>();
 
-            foreach (var method in methods)
+            foreach (MethodDeclarationSyntax method in methods)
             {
-                var complexity = CalculateCyclomaticComplexity(method);
+                int complexity = CalculateCyclomaticComplexity(method);
                 complexities.Add(complexity);
             }
 
@@ -281,7 +281,7 @@ public class RoslynAnalysisService
         var complexity = 1;
 
         // Add 1 for each decision point
-        var decisionPoints = method.DescendantNodes().Where(node =>
+        IEnumerable<SyntaxNode> decisionPoints = method.DescendantNodes().Where(node =>
             node is IfStatementSyntax ||
             node is WhileStatementSyntax ||
             node is ForStatementSyntax ||
@@ -345,8 +345,8 @@ public class RoslynAnalysisService
 
         try
         {
-            var syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
-            var root = await syntaxTree.GetRootAsync();
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
+            SyntaxNode root = await syntaxTree.GetRootAsync();
 
             var compilation = CSharpCompilation.Create(
                 "TempAssembly",
@@ -355,13 +355,13 @@ public class RoslynAnalysisService
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
             );
 
-            var semanticModel = compilation.GetSemanticModel(syntaxTree);
+            SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
 
             // Get all using directives
-            var usings = root.DescendantNodes().OfType<UsingDirectiveSyntax>().ToList();
+            List<UsingDirectiveSyntax> usings = root.DescendantNodes().OfType<UsingDirectiveSyntax>().ToList();
             var unusedUsings = new List<UsingDirectiveSyntax>();
 
-            foreach (var usingDirective in usings)
+            foreach (UsingDirectiveSyntax usingDirective in usings)
             {
                 var usingName = usingDirective.Name?.ToString();
 
@@ -369,9 +369,9 @@ public class RoslynAnalysisService
                     continue;
 
                 // Check if any symbols from this namespace are used
-                var allNodes = root.DescendantNodes().Where(n => n != usingDirective);
+                IEnumerable<SyntaxNode> allNodes = root.DescendantNodes().Where(n => n != usingDirective);
 
-                var isUsed = allNodes
+                bool isUsed = allNodes
                     .Select(node => semanticModel.GetSymbolInfo(node))
                     .Select(symbolInfo => symbolInfo.Symbol?.ContainingNamespace?.ToDisplayString())
                     .OfType<string>()
@@ -403,8 +403,8 @@ public class RoslynAnalysisService
 
         try
         {
-            var syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
-            var root = await syntaxTree.GetRootAsync();
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
+            SyntaxNode root = await syntaxTree.GetRootAsync();
 
             var compilation = CSharpCompilation.Create(
                 "TempAssembly",
@@ -413,16 +413,16 @@ public class RoslynAnalysisService
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
             );
 
-            var semanticModel = compilation.GetSemanticModel(syntaxTree);
+            SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
 
             // Find unreachable code from diagnostics
-            var diagnostics = compilation.GetDiagnostics()
+            List<Diagnostic> diagnostics = compilation.GetDiagnostics()
                 .Where(d => d.Id == "CS0162") // Unreachable code detected
                 .ToList();
 
-            foreach (var diagnostic in diagnostics)
+            foreach (Diagnostic diagnostic in diagnostics)
             {
-                var lineSpan = diagnostic.Location.GetLineSpan();
+                FileLinePositionSpan lineSpan = diagnostic.Location.GetLineSpan();
                 response.DeadCode.Add(new DeadCodeInfo
                 {
                     Kind = "UnreachableCode",
@@ -435,32 +435,32 @@ public class RoslynAnalysisService
             }
 
             // Find unused private members
-            var privateMembers = root.DescendantNodes()
+            List<SyntaxNode> privateMembers = root.DescendantNodes()
                 .Where(n => n is MethodDeclarationSyntax || n is FieldDeclarationSyntax || n is PropertyDeclarationSyntax)
                 .ToList();
 
-            foreach (var member in privateMembers)
+            foreach (SyntaxNode member in privateMembers)
             {
-                var isPrivate = member.ChildTokens().Any(t => t.IsKind(SyntaxKind.PrivateKeyword)) ||
-                                !member.ChildTokens().Any(t => 
-                                    t.IsKind(SyntaxKind.PublicKeyword) ||
-                                    t.IsKind(SyntaxKind.ProtectedKeyword) ||
-                                    t.IsKind(SyntaxKind.InternalKeyword));
+                bool isPrivate = member.ChildTokens().Any(t => t.IsKind(SyntaxKind.PrivateKeyword)) ||
+                                 !member.ChildTokens().Any(t => 
+                                     t.IsKind(SyntaxKind.PublicKeyword) ||
+                                     t.IsKind(SyntaxKind.ProtectedKeyword) ||
+                                     t.IsKind(SyntaxKind.InternalKeyword));
 
                 if (!isPrivate)
                     continue;
 
-                var symbol = semanticModel.GetDeclaredSymbol(member);
+                ISymbol? symbol = semanticModel.GetDeclaredSymbol(member);
                 if (symbol == null)
                     continue;
 
                 // Simple check if the symbol is referenced anywhere
-                var hasReferences = FindSymbolReferences(root, symbol, semanticModel);
+                bool hasReferences = FindSymbolReferences(root, symbol, semanticModel);
 
                 if (hasReferences) continue;
-                var location = member.GetLocation().GetLineSpan();
-                var memberName = symbol.Name;
-                var kind = symbol.Kind == SymbolKind.Method ? "UnusedMethod" :
+                FileLinePositionSpan location = member.GetLocation().GetLineSpan();
+                string memberName = symbol.Name;
+                string kind = symbol.Kind == SymbolKind.Method ? "UnusedMethod" :
                     symbol.Kind == SymbolKind.Field ? "UnusedField" :
                     "UnusedProperty";
 
@@ -493,8 +493,8 @@ public class RoslynAnalysisService
 
         try
         {
-            var syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
-            var root = await syntaxTree.GetRootAsync();
+            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code, path: filePath ?? "temp.cs");
+            SyntaxNode root = await syntaxTree.GetRootAsync();
 
             var compilation = CSharpCompilation.Create(
                 "TempAssembly",
@@ -503,18 +503,18 @@ public class RoslynAnalysisService
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
             );
 
-            var semanticModel = compilation.GetSemanticModel(syntaxTree);
+            SemanticModel semanticModel = compilation.GetSemanticModel(syntaxTree);
 
             // Get diagnostics that have potential fixes
-            var diagnostics = compilation.GetDiagnostics()
+            List<Diagnostic> diagnostics = compilation.GetDiagnostics()
                 .Where(d => d.Severity == DiagnosticSeverity.Error || d.Severity == DiagnosticSeverity.Warning)
                 .ToList();
 
-            foreach (var diagnostic in diagnostics)
+            foreach (Diagnostic diagnostic in diagnostics)
             {
-                var lineSpan = diagnostic.Location.GetLineSpan();
-                var fixDescription = GetFixDescription(diagnostic.Id);
-                var fixedCode = TryApplySimpleFix(diagnostic, root, semanticModel);
+                FileLinePositionSpan lineSpan = diagnostic.Location.GetLineSpan();
+                string fixDescription = GetFixDescription(diagnostic.Id);
+                string? fixedCode = TryApplySimpleFix(diagnostic, root, semanticModel);
 
                 response.CodeFixes.Add(new CodeFixInfo
                 {
@@ -572,10 +572,10 @@ public class RoslynAnalysisService
     private static bool FindSymbolReferences(SyntaxNode root, ISymbol targetSymbol, SemanticModel semanticModel)
     {
         // Search for any references to the target symbol in the syntax tree
-        foreach (var node in root.DescendantNodes())
+        foreach (SyntaxNode node in root.DescendantNodes())
         {
             // Skip the declaration itself
-            var declaredSymbol = semanticModel.GetDeclaredSymbol(node);
+            ISymbol? declaredSymbol = semanticModel.GetDeclaredSymbol(node);
             if (SymbolEqualityComparer.Default.Equals(declaredSymbol, targetSymbol))
                 continue;
 
@@ -584,7 +584,7 @@ public class RoslynAnalysisService
                 // Check identifiers
                 case IdentifierNameSyntax identifier:
                 {
-                    var symbolInfo = ModelExtensions.GetSymbolInfo(semanticModel, identifier);
+                    RoslynSymbolInfo symbolInfo = ModelExtensions.GetSymbolInfo(semanticModel, identifier);
                     if (SymbolEqualityComparer.Default.Equals(symbolInfo.Symbol, targetSymbol))
                     {
                         return true;
@@ -595,7 +595,7 @@ public class RoslynAnalysisService
                 // Check member access (e.g., this.MyMethod)
                 case MemberAccessExpressionSyntax memberAccess:
                 {
-                    var symbolInfo = ModelExtensions.GetSymbolInfo(semanticModel, memberAccess);
+                    RoslynSymbolInfo symbolInfo = ModelExtensions.GetSymbolInfo(semanticModel, memberAccess);
                     if (SymbolEqualityComparer.Default.Equals(symbolInfo.Symbol, targetSymbol))
                     {
                         return true;

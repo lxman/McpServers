@@ -40,7 +40,7 @@ public class AzureCredentialManager : ICredentialManager
         try
         {
             var context = new TokenRequestContext(["https://management.azure.com/.default"]);
-            var token = await _credential.GetTokenAsync(context, CancellationToken.None);
+            AccessToken token = await _credential.GetTokenAsync(context, CancellationToken.None);
             
             _logger.LogDebug("Azure credential validation successful");
             return !string.IsNullOrEmpty(token.Token);

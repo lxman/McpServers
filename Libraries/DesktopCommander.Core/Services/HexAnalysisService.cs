@@ -12,7 +12,7 @@ public class HexAnalysisService(SecurityManager securityManager)
     /// </summary>
     public HexDumpResult ReadHexBytes(string filePath, long offset, int length, HexFormat format = HexFormat.HexAscii)
     {
-        var canonicalPath = Path.GetFullPath(filePath);
+        string canonicalPath = Path.GetFullPath(filePath);
         securityManager.ValidateFileAccess(canonicalPath, FileAccessType.Read);
 
         if (!File.Exists(canonicalPath))
@@ -23,15 +23,15 @@ public class HexAnalysisService(SecurityManager securityManager)
             throw new ArgumentException($"Offset {offset} is outside file bounds (file size: {fileInfo.Length})");
 
         // Adjust length if it would exceed file size
-        var maxLength = fileInfo.Length - offset;
+        long maxLength = fileInfo.Length - offset;
         if (length > maxLength)
             length = (int)maxLength;
 
         var buffer = new byte[length];
-        using (var stream = File.OpenRead(canonicalPath))
+        using (FileStream stream = File.OpenRead(canonicalPath))
         {
             stream.Seek(offset, SeekOrigin.Begin);
-            var bytesRead = stream.Read(buffer, 0, length);
+            int bytesRead = stream.Read(buffer, 0, length);
             if (bytesRead < length)
                 Array.Resize(ref buffer, bytesRead);
         }
@@ -57,8 +57,8 @@ public class HexAnalysisService(SecurityManager securityManager)
         int? length = null,
         bool showMatches = false)
     {
-        var canonical1 = Path.GetFullPath(file1Path);
-        var canonical2 = Path.GetFullPath(file2Path);
+        string canonical1 = Path.GetFullPath(file1Path);
+        string canonical2 = Path.GetFullPath(file2Path);
 
         securityManager.ValidateFileAccess(canonical1, FileAccessType.Read);
         securityManager.ValidateFileAccess(canonical2, FileAccessType.Read);
@@ -72,9 +72,9 @@ public class HexAnalysisService(SecurityManager securityManager)
         var file2Info = new FileInfo(canonical2);
 
         // Determine comparison length
-        var maxLength1 = file1Info.Length - offset;
-        var maxLength2 = file2Info.Length - offset;
-        var compareLength = length ?? (int)Math.Min(maxLength1, maxLength2);
+        long maxLength1 = file1Info.Length - offset;
+        long maxLength2 = file2Info.Length - offset;
+        int compareLength = length ?? (int)Math.Min(maxLength1, maxLength2);
 
         if (compareLength > maxLength1)
             compareLength = (int)maxLength1;
@@ -84,8 +84,8 @@ public class HexAnalysisService(SecurityManager securityManager)
         var buffer1 = new byte[compareLength];
         var buffer2 = new byte[compareLength];
 
-        using (var stream1 = File.OpenRead(canonical1))
-        using (var stream2 = File.OpenRead(canonical2))
+        using (FileStream stream1 = File.OpenRead(canonical1))
+        using (FileStream stream2 = File.OpenRead(canonical2))
         {
             stream1.Seek(offset, SeekOrigin.Begin);
             stream2.Seek(offset, SeekOrigin.Begin);
@@ -139,26 +139,26 @@ public class HexAnalysisService(SecurityManager securityManager)
         long startOffset = 0,
         int maxResults = 100)
     {
-        var canonicalPath = Path.GetFullPath(filePath);
+        string canonicalPath = Path.GetFullPath(filePath);
         securityManager.ValidateFileAccess(canonicalPath, FileAccessType.Read);
 
         if (!File.Exists(canonicalPath))
             throw new FileNotFoundException($"File not found: {canonicalPath}");
 
         // Parse hex pattern (supports wildcards with ??)
-        var pattern = ParseHexPattern(hexPattern, out var wildcards);
+        byte[] pattern = ParseHexPattern(hexPattern, out bool[] wildcards);
 
         var matches = new List<HexMatch>();
         var fileInfo = new FileInfo(canonicalPath);
 
-        using (var stream = File.OpenRead(canonicalPath))
+        using (FileStream stream = File.OpenRead(canonicalPath))
         {
             if (startOffset > 0)
                 stream.Seek(startOffset, SeekOrigin.Begin);
 
             var buffer = new byte[64 * 1024]; // 64KB buffer
             int bytesRead;
-            var currentOffset = startOffset;
+            long currentOffset = startOffset;
 
             while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0 && matches.Count < maxResults)
             {
@@ -201,7 +201,7 @@ public class HexAnalysisService(SecurityManager securityManager)
         int length = 512,
         int bytesPerLine = 16)
     {
-        var result = ReadHexBytes(filePath, offset, length);
+        HexDumpResult result = ReadHexBytes(filePath, offset, length);
         return FormatHexDump(result.Data, offset, HexFormat.HexAscii, bytesPerLine);
     }
 
@@ -225,7 +225,7 @@ public class HexAnalysisService(SecurityManager securityManager)
             case HexFormat.HexAscii:
                 for (var i = 0; i < data.Length; i += bytesPerLine)
                 {
-                    var lineLength = Math.Min(bytesPerLine, data.Length - i);
+                    int lineLength = Math.Min(bytesPerLine, data.Length - i);
 
                     // Address
                     sb.Append($"{startOffset + i:X8}:  ");
@@ -247,8 +247,8 @@ public class HexAnalysisService(SecurityManager securityManager)
                     // ASCII representation
                     for (var j = 0; j < lineLength; j++)
                     {
-                        var b = data[i + j];
-                        var c = (b >= 32 && b <= 126) ? (char)b : '.';
+                        byte b = data[i + j];
+                        char c = (b >= 32 && b <= 126) ? (char)b : '.';
                         sb.Append(c);
                     }
 
@@ -291,9 +291,9 @@ public class HexAnalysisService(SecurityManager securityManager)
         sb.AppendLine("Offset     File1  File2  Diff");
         sb.AppendLine("--------   -----  -----  ----");
 
-        var diffsToShow = showAll ? differences : differences.Take(50).ToList();
+        List<ByteDifference> diffsToShow = showAll ? differences : differences.Take(50).ToList();
 
-        foreach (var diff in diffsToShow)
+        foreach (ByteDifference diff in diffsToShow)
         {
             sb.AppendLine($"{diff.Offset:X8}   {diff.Byte1:X2}     {diff.Byte2:X2}     {(diff.Byte1 > diff.Byte2 ? ">" : "<")}");
         }
@@ -314,13 +314,13 @@ public class HexAnalysisService(SecurityManager securityManager)
         if (hexPattern.Length % 2 != 0)
             throw new ArgumentException("Hex pattern must have an even number of characters");
 
-        var byteCount = hexPattern.Length / 2;
+        int byteCount = hexPattern.Length / 2;
         var pattern = new byte[byteCount];
         wildcards = new bool[byteCount];
 
         for (var i = 0; i < byteCount; i++)
         {
-            var byteStr = hexPattern.Substring(i * 2, 2);
+            string byteStr = hexPattern.Substring(i * 2, 2);
             if (byteStr == "??")
             {
                 wildcards[i] = true;

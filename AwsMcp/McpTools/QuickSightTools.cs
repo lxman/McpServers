@@ -50,7 +50,7 @@ public class QuickSightTools(
         {
             EnsureAccountIdSet();
             logger.LogDebug("Listing QuickSight dashboards");
-            var response = await quickSightService.ListDashboardsAsync(_awsAccountId!);
+            ListDashboardsResponse response = await quickSightService.ListDashboardsAsync(_awsAccountId!);
 
             return JsonSerializer.Serialize(new
             {
@@ -84,7 +84,7 @@ public class QuickSightTools(
         {
             EnsureAccountIdSet();
             logger.LogDebug("Describing QuickSight dashboard {DashboardId}", dashboardId);
-            var response = await quickSightService.DescribeDashboardAsync(_awsAccountId!, dashboardId);
+            DescribeDashboardResponse response = await quickSightService.DescribeDashboardAsync(_awsAccountId!, dashboardId);
 
             return JsonSerializer.Serialize(new
             {
@@ -116,7 +116,7 @@ public class QuickSightTools(
         {
             EnsureAccountIdSet();
             logger.LogDebug("Listing QuickSight analyses");
-            var response = await quickSightService.ListAnalysesAsync(_awsAccountId!);
+            ListAnalysesResponse response = await quickSightService.ListAnalysesAsync(_awsAccountId!);
 
             return JsonSerializer.Serialize(new
             {
@@ -148,7 +148,7 @@ public class QuickSightTools(
         {
             EnsureAccountIdSet();
             logger.LogDebug("Listing QuickSight datasets");
-            var response = await quickSightService.ListDataSetsAsync(_awsAccountId!);
+            ListDataSetsResponse response = await quickSightService.ListDataSetsAsync(_awsAccountId!);
 
             return JsonSerializer.Serialize(new
             {
@@ -182,7 +182,7 @@ public class QuickSightTools(
         {
             EnsureAccountIdSet();
             logger.LogDebug("Listing QuickSight data sources");
-            var response = await quickSightService.ListDataSourcesAsync(_awsAccountId!);
+            ListDataSourcesResponse response = await quickSightService.ListDataSourcesAsync(_awsAccountId!);
 
             return JsonSerializer.Serialize(new
             {
@@ -230,7 +230,7 @@ public class QuickSightTools(
                 $"arn:aws:quicksight:{region}:{_awsAccountId}:dashboard/{dashboardId}"
             };
 
-            var response = await quickSightService.GenerateEmbedUrlForAnonymousUserAsync(
+            GenerateEmbedUrlForAnonymousUserResponse response = await quickSightService.GenerateEmbedUrlForAnonymousUserAsync(
                 _awsAccountId!,
                 namespaceName,
                 authorizedResourceArns,
@@ -260,7 +260,7 @@ public class QuickSightTools(
         {
             EnsureAccountIdSet();
             logger.LogDebug("Describing QuickSight analysis {AnalysisId}", analysisId);
-            var response = await quickSightService.DescribeAnalysisAsync(_awsAccountId!, analysisId);
+            DescribeAnalysisResponse response = await quickSightService.DescribeAnalysisAsync(_awsAccountId!, analysisId);
 
             return JsonSerializer.Serialize(new
             {
@@ -296,7 +296,7 @@ public class QuickSightTools(
         {
             EnsureAccountIdSet();
             logger.LogDebug("Describing QuickSight dataset {DataSetId}", dataSetId);
-            var response = await quickSightService.DescribeDataSetAsync(_awsAccountId!, dataSetId);
+            DescribeDataSetResponse response = await quickSightService.DescribeDataSetAsync(_awsAccountId!, dataSetId);
 
             return JsonSerializer.Serialize(new
             {
@@ -329,7 +329,7 @@ public class QuickSightTools(
         {
             EnsureAccountIdSet();
             logger.LogDebug("Describing QuickSight data source {DataSourceId}", dataSourceId);
-            var response = await quickSightService.DescribeDataSourceAsync(_awsAccountId!, dataSourceId);
+            DescribeDataSourceResponse response = await quickSightService.DescribeDataSourceAsync(_awsAccountId!, dataSourceId);
 
             return JsonSerializer.Serialize(new
             {
@@ -366,7 +366,7 @@ public class QuickSightTools(
         {
             EnsureAccountIdSet();
             logger.LogDebug("Listing QuickSight users in namespace {Namespace}", namespaceName);
-            var response = await quickSightService.ListUsersAsync(_awsAccountId!, namespaceName);
+            ListUsersResponse response = await quickSightService.ListUsersAsync(_awsAccountId!, namespaceName);
 
             return JsonSerializer.Serialize(new
             {
@@ -399,7 +399,7 @@ public class QuickSightTools(
         {
             EnsureAccountIdSet();
             logger.LogDebug("Describing QuickSight user {UserName} in namespace {Namespace}", userName, namespaceName);
-            var response = await quickSightService.DescribeUserAsync(_awsAccountId!, userName, namespaceName);
+            DescribeUserResponse response = await quickSightService.DescribeUserAsync(_awsAccountId!, userName, namespaceName);
 
             return JsonSerializer.Serialize(new
             {

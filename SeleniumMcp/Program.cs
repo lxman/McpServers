@@ -11,7 +11,7 @@ using SeleniumMcp.McpTools;
 using Serilog;
 
 // Configure Serilog to write to a file (stdout is reserved for MCP protocol)
-var logPath = Path.Combine(AppContext.BaseDirectory, "logs", "seleniummcp.log");
+string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "seleniummcp.log");
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
@@ -19,19 +19,21 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    var builder = Host.CreateApplicationBuilder(args);
+    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
     // Add Serilog
     builder.Services.AddSerilog();
 
-    // MongoDB configuration
-    var mongoSettings = builder.Configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>();
-    if (mongoSettings != null && !string.IsNullOrEmpty(mongoSettings.ConnectionString))
-    {
-        builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings.ConnectionString));
-        builder.Services.AddScoped(provider =>
-            provider.GetRequiredService<IMongoClient>().GetDatabase(mongoSettings.DatabaseName));
-    }
+    // MongoDB configuration - required for most services
+    MongoDbSettings mongoSettings = builder.Configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>()
+                                    ?? throw new InvalidOperationException("MongoDbSettings configuration is required");
+
+    if (string.IsNullOrEmpty(mongoSettings.ConnectionString))
+        throw new InvalidOperationException("MongoDB ConnectionString is required in configuration");
+
+    builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings.ConnectionString));
+    builder.Services.AddScoped(provider =>
+        provider.GetRequiredService<IMongoClient>().GetDatabase(mongoSettings.DatabaseName));
 
     // HttpClient for web requests
     builder.Services.AddHttpClient();
@@ -48,6 +50,7 @@ try
     builder.Services.AddScoped<HubSpotScraper>();
     builder.Services.AddScoped<SimplifyJobsScraper>();
     builder.Services.AddScoped<GoogleSimplifyJobsService>();
+    builder.Services.AddScoped<SimplifyJobsApiService>();
 
     // Email alerts
     builder.Services.AddScoped<EmailJobAlertService>();
@@ -72,7 +75,7 @@ try
         .WithTools<ApplicationTrackingTools>()
         .WithTools<ConfigurationTools>();
 
-    var host = builder.Build();
+    IHost host = builder.Build();
 
     Log.Information("SeleniumMcp starting...");
     await host.RunAsync();

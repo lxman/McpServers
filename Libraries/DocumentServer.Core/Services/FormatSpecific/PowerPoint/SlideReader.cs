@@ -25,7 +25,7 @@ public class SlideReader(
 
         try
         {
-            using var presentation = await OpenPresentationAsync(filePath);
+            using Presentation presentation = await OpenPresentationAsync(filePath);
 
             if (slideNumber < 1 || slideNumber > presentation.Slides.Count)
             {
@@ -33,8 +33,8 @@ public class SlideReader(
                     $"Slide {slideNumber} not found (presentation has {presentation.Slides.Count} slides)");
             }
 
-            var slide = presentation.Slides[slideNumber - 1];
-            var slideModel = await ProcessSlideAsync(slide, slideNumber);
+            ISlide slide = presentation.Slides[slideNumber - 1];
+            PowerPointSlide slideModel = await ProcessSlideAsync(slide, slideNumber);
 
             logger.LogInformation("Successfully read slide #{Number}: {Title}", slideNumber, slideModel.Title);
 
@@ -60,7 +60,7 @@ public class SlideReader(
 
         try
         {
-            using var presentation = await OpenPresentationAsync(filePath);
+            using Presentation presentation = await OpenPresentationAsync(filePath);
 
             if (startSlide < 1 || endSlide > presentation.Slides.Count || startSlide > endSlide)
             {
@@ -70,10 +70,10 @@ public class SlideReader(
 
             var slides = new List<PowerPointSlide>();
 
-            for (var i = startSlide - 1; i < endSlide; i++)
+            for (int i = startSlide - 1; i < endSlide; i++)
             {
-                var slide = presentation.Slides[i];
-                var slideModel = await ProcessSlideAsync(slide, i + 1);
+                ISlide slide = presentation.Slides[i];
+                PowerPointSlide slideModel = await ProcessSlideAsync(slide, i + 1);
                 slides.Add(slideModel);
             }
 
@@ -98,14 +98,14 @@ public class SlideReader(
 
         try
         {
-            using var presentation = await OpenPresentationAsync(filePath);
+            using Presentation presentation = await OpenPresentationAsync(filePath);
 
             var slides = new List<PowerPointSlide>();
             var slideNumber = 1;
 
-            foreach (var slide in presentation.Slides)
+            foreach (ISlide slide in presentation.Slides)
             {
-                var slideModel = await ProcessSlideAsync(slide, slideNumber++);
+                PowerPointSlide slideModel = await ProcessSlideAsync(slide, slideNumber++);
                 slides.Add(slideModel);
             }
 
@@ -129,9 +129,9 @@ public class SlideReader(
 
         try
         {
-            using var presentation = await OpenPresentationAsync(filePath);
+            using Presentation presentation = await OpenPresentationAsync(filePath);
 
-            var count = presentation.Slides.Count;
+            int count = presentation.Slides.Count;
 
             logger.LogInformation("Presentation has {Count} slides", count);
 
@@ -153,14 +153,14 @@ public class SlideReader(
 
         try
         {
-            using var presentation = await OpenPresentationAsync(filePath);
+            using Presentation presentation = await OpenPresentationAsync(filePath);
 
             var titles = new List<string>();
             var slideNumber = 1;
 
-            foreach (var slide in presentation.Slides)
+            foreach (ISlide slide in presentation.Slides)
             {
-                var title = ExtractSlideTitle(slide, slideNumber);
+                string title = ExtractSlideTitle(slide, slideNumber);
                 titles.Add(title);
                 slideNumber++;
             }
@@ -180,7 +180,7 @@ public class SlideReader(
 
     private async Task<Presentation> OpenPresentationAsync(string filePath)
     {
-        var cached = cache.Get(filePath);
+        LoadedDocument? cached = cache.Get(filePath);
         var presentation = cached?.DocumentObject as Presentation;
 
         if (presentation is not null)
@@ -188,11 +188,11 @@ public class SlideReader(
             return presentation;
         }
 
-        var password = passwordManager.GetPasswordForFile(filePath);
+        string? password = passwordManager.GetPasswordForFile(filePath);
 
         // Use MsOfficeCrypto to handle decryption (or pass through if not encrypted)
-        await using var fileStream = File.OpenRead(filePath);
-        await using var decryptedStream = await OfficeDocument.DecryptAsync(fileStream, password);
+        await using FileStream fileStream = File.OpenRead(filePath);
+        await using Stream decryptedStream = await OfficeDocument.DecryptAsync(fileStream, password);
         
         // Copy to memory stream and create presentation
         var memoryStream = new MemoryStream();
@@ -216,9 +216,9 @@ public class SlideReader(
             var isFirstShape = true;
 
             // Extract text from all shapes
-            foreach (var shape in slide.Shapes)
+            foreach (IShape shape in slide.Shapes)
             {
-                var shapeText = GetShapeText(shape);
+                string? shapeText = GetShapeText(shape);
 
                 if (string.IsNullOrWhiteSpace(shapeText))
                 {
@@ -255,9 +255,9 @@ public class SlideReader(
 
     private string ExtractSlideTitle(ISlide slide, int slideNumber)
     {
-        foreach (var shape in slide.Shapes)
+        foreach (IShape shape in slide.Shapes)
         {
-            var shapeText = GetShapeText(shape);
+            string? shapeText = GetShapeText(shape);
 
             if (!string.IsNullOrWhiteSpace(shapeText))
             {
@@ -276,10 +276,10 @@ public class SlideReader(
             if (shape.Table is not null)
             {
                 var tableText = new StringBuilder();
-                foreach (var row in shape.Table.Rows)
+                foreach (ITableRow row in shape.Table.Rows)
                 {
                     var rowText = new List<string>();
-                    foreach (var cell in row.Cells)
+                    foreach (ITableCell cell in row.Cells)
                     {
                         if (!string.IsNullOrWhiteSpace(cell.TextBox.Text))
                         {

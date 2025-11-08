@@ -98,7 +98,7 @@ public class ConfigurationTools(
     {
         try
         {
-            var isAllowed = securityManager.IsDirectoryAllowed(directoryPath);
+            bool isAllowed = securityManager.IsDirectoryAllowed(directoryPath);
             
             return Task.FromResult(JsonSerializer.Serialize(new
             {
@@ -124,7 +124,7 @@ public class ConfigurationTools(
     {
         try
         {
-            var isAllowed = !securityManager.IsCommandBlocked(command);
+            bool isAllowed = !securityManager.IsCommandBlocked(command);
             
             return Task.FromResult(JsonSerializer.Serialize(new
             {
@@ -150,7 +150,7 @@ public class ConfigurationTools(
     {
         try
         {
-            var result = auditLogger.GetRecentEntries(count);
+            object result = auditLogger.GetRecentEntries(count);
             
             return Task.FromResult(JsonSerializer.Serialize(result, 
                 SerializerOptions.JsonOptionsIndented));

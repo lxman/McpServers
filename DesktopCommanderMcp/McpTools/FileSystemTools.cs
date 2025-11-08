@@ -21,9 +21,9 @@ public class FileSystemTools(
     [McpServerTool, DisplayName("get_skills_location")]
     public static string GetSkillsLocation()
     {
-        var appDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        var settingsPath = Path.Combine(appDirectory, "appsettings.json");
-        var skillsInfo = File.ReadAllText(settingsPath);
+        string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        string settingsPath = Path.Combine(appDirectory, "appsettings.json");
+        string skillsInfo = File.ReadAllText(settingsPath);
         return skillsInfo;
     }
     
@@ -44,15 +44,15 @@ public class FileSystemTools(
                     SerializerOptions.JsonOptionsIndented);
             }
             
-            var versionToken = FileVersionService.ComputeVersionToken(path);
+            string versionToken = FileVersionService.ComputeVersionToken(path);
             var fileInfo = new FileInfo(path);
-            var allLines = await File.ReadAllLinesAsync(path);
-            var totalLines = allLines.Length;
+            string[] allLines = await File.ReadAllLinesAsync(path);
+            int totalLines = allLines.Length;
 
             maxLines = Math.Clamp(maxLines, 1, 1000);
             
-            var start = startLine.HasValue ? startLine.Value - 1 : 0;
-            var end = Math.Min(start + maxLines, totalLines);
+            int start = startLine.HasValue ? startLine.Value - 1 : 0;
+            int end = Math.Min(start + maxLines, totalLines);
             
             if (start >= totalLines)
             {
@@ -65,8 +65,8 @@ public class FileSystemTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
             
-            var linesToReturn = allLines.Skip(start).Take(end - start).ToArray();
-            var content = string.Join(Environment.NewLine, linesToReturn);
+            string[] linesToReturn = allLines.Skip(start).Take(end - start).ToArray();
+            string content = string.Join(Environment.NewLine, linesToReturn);
             
             var result = new
             {
@@ -112,11 +112,11 @@ public class FileSystemTools(
                     SerializerOptions.JsonOptionsIndented);
             }
 
-            var fileExists = File.Exists(path);
+            bool fileExists = File.Exists(path);
             
             if (mode == "overwrite" && fileExists && !string.IsNullOrEmpty(versionToken))
             {
-                var currentVersion = FileVersionService.ComputeVersionToken(path);
+                string currentVersion = FileVersionService.ComputeVersionToken(path);
                 if (currentVersion != versionToken)
                 {
                     return JsonSerializer.Serialize(new 
@@ -130,7 +130,7 @@ public class FileSystemTools(
                 }
             }
             
-            var directory = Path.GetDirectoryName(path);
+            string? directory = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);
@@ -146,7 +146,7 @@ public class FileSystemTools(
             }
             
             auditLogger.LogOperation("write_file", path, true);
-            var newVersionToken = FileVersionService.ComputeVersionToken(path);
+            string newVersionToken = FileVersionService.ComputeVersionToken(path);
             
             return JsonSerializer.Serialize(new
             {
@@ -192,7 +192,7 @@ public class FileSystemTools(
             var allItems = new List<object>();
 
             // Add directories first
-            foreach (var dir in directoryInfo.GetDirectories())
+            foreach (DirectoryInfo dir in directoryInfo.GetDirectories())
             {
                 allItems.Add(new
                 {
@@ -204,7 +204,7 @@ public class FileSystemTools(
             }
 
             // Then add files
-            foreach (var file in directoryInfo.GetFiles())
+            foreach (FileInfo file in directoryInfo.GetFiles())
             {
                 allItems.Add(new
                 {
@@ -217,10 +217,10 @@ public class FileSystemTools(
             }
 
             // Apply pagination
-            var totalItems = allItems.Count;
-            var paginatedItems = allItems.Skip(skip).Take(take).ToList();
-            var itemsReturned = paginatedItems.Count;
-            var hasMore = skip + itemsReturned < totalItems;
+            int totalItems = allItems.Count;
+            List<object> paginatedItems = allItems.Skip(skip).Take(take).ToList();
+            int itemsReturned = paginatedItems.Count;
+            bool hasMore = skip + itemsReturned < totalItems;
 
             var result = new
             {
@@ -243,10 +243,10 @@ public class FileSystemTools(
             };
 
             // Check response size before returning
-            var jsonResult = JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
+            string jsonResult = JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
 
             // Estimate token count (rough approximation: 1 token ≈ 4 characters)
-            var estimatedTokens = jsonResult.Length / 4;
+            int estimatedTokens = jsonResult.Length / 4;
             const int maxTokens = 20000; // Safe limit below the 25000 hard limit
 
             if (estimatedTokens > maxTokens)
@@ -294,8 +294,8 @@ public class FileSystemTools(
                     SerializerOptions.JsonOptionsIndented));
             }
 
-            var isDirectory = Directory.Exists(path);
-            var isFile = File.Exists(path);
+            bool isDirectory = Directory.Exists(path);
+            bool isFile = File.Exists(path);
 
             if (!isDirectory && !isFile)
             {
@@ -351,8 +351,8 @@ public class FileSystemTools(
                     SerializerOptions.JsonOptionsIndented));
             }
 
-            var isDirectory = Directory.Exists(sourcePath);
-            var isFile = File.Exists(sourcePath);
+            bool isDirectory = Directory.Exists(sourcePath);
+            bool isFile = File.Exists(sourcePath);
 
             if (!isDirectory && !isFile)
             {
@@ -415,8 +415,8 @@ public class FileSystemTools(
             maxResults = Math.Clamp(maxResults, 1, 1000);
             skip = Math.Max(0, skip);
 
-            var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-            var allFiles = Directory.GetFiles(searchPath, pattern, searchOption);
+            SearchOption searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+            string[] allFiles = Directory.GetFiles(searchPath, pattern, searchOption);
 
             // Sort files based on sortBy parameter
             IEnumerable<FileInfo> sortedFiles = sortBy?.ToLower() switch
@@ -435,7 +435,7 @@ public class FileSystemTools(
                 modified = fi.LastWriteTime
             }).ToArray();
 
-            var totalCount = allResults.Length;
+            int totalCount = allResults.Length;
 
             // Summary mode - return overview with sample
             if (summaryOnly)
@@ -463,7 +463,7 @@ public class FileSystemTools(
                         : "Call again without summaryOnly to get full results"
                 };
 
-                var summaryCheck = responseSizeGuard.CheckResponseSize(summary, "search_files");
+                ResponseSizeCheck summaryCheck = responseSizeGuard.CheckResponseSize(summary, "search_files");
                 return Task.FromResult(summaryCheck.IsWithinLimit
                     ? summaryCheck.SerializedJson!
                     : JsonSerializer.Serialize(summary, SerializerOptions.JsonOptionsIndented));
@@ -471,7 +471,7 @@ public class FileSystemTools(
 
             // Paginate results
             var paginatedResults = allResults.Skip(skip).Take(maxResults).ToArray();
-            var hasMore = skip + paginatedResults.Length < totalCount;
+            bool hasMore = skip + paginatedResults.Length < totalCount;
 
             var responseObject = new
             {
@@ -493,7 +493,7 @@ public class FileSystemTools(
             };
 
             // Check response size before returning
-            var sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "search_files");
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "search_files");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -551,8 +551,8 @@ public class FileSystemTools(
         {
             path = Path.GetFullPath(path);
 
-            var isDirectory = Directory.Exists(path);
-            var isFile = File.Exists(path);
+            bool isDirectory = Directory.Exists(path);
+            bool isFile = File.Exists(path);
 
             if (!isDirectory && !isFile)
             {
@@ -634,7 +634,7 @@ public class FileSystemTools(
                     SerializerOptions.JsonOptionsIndented));
             }
 
-            var dirInfo = Directory.CreateDirectory(path);
+            DirectoryInfo dirInfo = Directory.CreateDirectory(path);
             auditLogger.LogOperation("create_directory", path, dirInfo.Exists);
 
             return Task.FromResult(JsonSerializer.Serialize(new

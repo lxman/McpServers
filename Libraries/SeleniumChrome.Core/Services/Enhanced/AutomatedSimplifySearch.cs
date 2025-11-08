@@ -33,23 +33,23 @@ public class AutomatedSimplifySearch(
         {
             logger.LogInformation("Starting comprehensive .NET job search with automation");
 
-            var searchTerms = GetNetFocusedSearchTerms(request);
-            var locations = GetTargetLocations(request);
-            var experienceLevels = GetExperienceLevels(request);
+            List<string> searchTerms = GetNetFocusedSearchTerms(request);
+            List<string> locations = GetTargetLocations(request);
+            List<string> experienceLevels = GetExperienceLevels(request);
 
             logger.LogInformation($"Will search across {searchTerms.Count} terms, {locations.Count} locations, {experienceLevels.Count} experience levels");
 
-            var config = scraper.GetDefaultConfiguration();
+            SiteConfiguration config = scraper.GetDefaultConfiguration();
             
             // Track consecutive low-scoring jobs to determine when to stop
             var consecutiveLowScoreJobs = 0;
             const int maxConsecutiveLowScore = 3;
 
-            foreach (var searchTerm in searchTerms)
+            foreach (string searchTerm in searchTerms)
             {
-                foreach (var location in locations)
+                foreach (string location in locations)
                 {
-                    foreach (var experienceLevel in experienceLevels)
+                    foreach (string experienceLevel in experienceLevels)
                     {
                         if (results.TotalJobsFound >= request.MaxTotalResults)
                         {
@@ -78,15 +78,15 @@ public class AutomatedSimplifySearch(
 
                         try
                         {
-                            var jobs = await scraper.ScrapeJobsAsync(searchRequest, config);
+                            List<EnhancedJobListing> jobs = await scraper.ScrapeJobsAsync(searchRequest, config);
                             logger.LogInformation($"Found {jobs.Count} jobs for search: {searchTerm}");
 
                             var foundHighScoringJob = false;
 
-                            foreach (var job in jobs)
+                            foreach (EnhancedJobListing job in jobs)
                             {
                                 // Enhanced scoring using NetDeveloperJobScorer
-                                var scoringResult = scorer.CalculateEnhancedMatchScore(job, request.ScoringProfile);
+                                JobScoringResult scoringResult = scorer.CalculateEnhancedMatchScore(job, request.ScoringProfile);
                                 job.MatchScore = scoringResult.TotalScore;
 
                                 // Store detailed scoring info in job notes

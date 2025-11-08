@@ -28,7 +28,7 @@ public class NetworkingTools(
         try
         {
             logger.LogDebug("Listing virtual networks");
-            var vnets = await virtualNetworkService.ListVirtualNetworksAsync(subscriptionId, resourceGroupName);
+            IEnumerable<VirtualNetworkDto> vnets = await virtualNetworkService.ListVirtualNetworksAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -59,7 +59,7 @@ public class NetworkingTools(
         try
         {
             logger.LogDebug("Getting virtual network {VNetName}", vnetName);
-            var vnet = await virtualNetworkService.GetVirtualNetworkAsync(resourceGroupName, vnetName, subscriptionId);
+            VirtualNetworkDto? vnet = await virtualNetworkService.GetVirtualNetworkAsync(resourceGroupName, vnetName, subscriptionId);
 
             if (vnet is null)
             {
@@ -99,7 +99,7 @@ public class NetworkingTools(
         try
         {
             logger.LogDebug("Listing subnets in VNet {VNetName}", vnetName);
-            var subnets = await subnetService.ListSubnetsAsync(resourceGroupName, vnetName, subscriptionId);
+            IEnumerable<SubnetDto> subnets = await subnetService.ListSubnetsAsync(resourceGroupName, vnetName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -127,7 +127,7 @@ public class NetworkingTools(
         try
         {
             logger.LogDebug("Listing network security groups");
-            var nsgs = await networkSecurityGroupService.ListNetworkSecurityGroupsAsync(subscriptionId, resourceGroupName);
+            IEnumerable<NetworkSecurityGroupDto> nsgs = await networkSecurityGroupService.ListNetworkSecurityGroupsAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -158,7 +158,7 @@ public class NetworkingTools(
         try
         {
             logger.LogDebug("Getting network security group {NsgName}", nsgName);
-            var nsg = await networkSecurityGroupService.GetNetworkSecurityGroupAsync(resourceGroupName, nsgName, subscriptionId);
+            NetworkSecurityGroupDto? nsg = await networkSecurityGroupService.GetNetworkSecurityGroupAsync(resourceGroupName, nsgName, subscriptionId);
 
             if (nsg is null)
             {
@@ -195,7 +195,7 @@ public class NetworkingTools(
         try
         {
             logger.LogDebug("Listing public IP addresses");
-            var publicIps = await publicIpAddressService.ListPublicIpAddressesAsync(subscriptionId, resourceGroupName);
+            IEnumerable<PublicIPAddressDto> publicIps = await publicIpAddressService.ListPublicIpAddressesAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -223,7 +223,7 @@ public class NetworkingTools(
         try
         {
             logger.LogDebug("Listing load balancers");
-            var loadBalancers = await loadBalancerService.ListLoadBalancersAsync(subscriptionId, resourceGroupName);
+            IEnumerable<LoadBalancerDto> loadBalancers = await loadBalancerService.ListLoadBalancersAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {

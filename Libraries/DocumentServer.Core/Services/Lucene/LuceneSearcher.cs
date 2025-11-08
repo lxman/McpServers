@@ -37,28 +37,28 @@ public class LuceneSearcher(ILogger<LuceneSearcher> logger, IndexManager indexMa
             // Verify index exists
             if (!indexManager.IndexExists(indexName))
             {
-                var availableIndexes = string.Join(", ", indexManager.GetIndexNames().OrderBy(x => x));
+                string availableIndexes = string.Join(", ", indexManager.GetIndexNames().OrderBy(x => x));
                 throw new ArgumentException(
                     $"Index '{indexName}' not found. Available indexes: {availableIndexes}");
             }
 
             // Get index resources (lazy load if needed)
-            var indexResources = indexManager.GetIndexResources(indexName);
+            IndexResources indexResources = indexManager.GetIndexResources(indexName);
 
-            using var reader = DirectoryReader.Open(indexResources.Directory);
+            using DirectoryReader? reader = DirectoryReader.Open(indexResources.Directory);
             var searcher = new IndexSearcher(reader);
 
             // Parse query
             var parser = new MultiFieldQueryParser(LUCENE_VERSION,
                 ["content", "title", "filename"], indexResources.Analyzer);
 
-            var luceneQuery = parser.Parse(options.Query);
+            Query? luceneQuery = parser.Parse(options.Query);
 
             // Apply filters
-            var finalQuery = ApplyFilters(luceneQuery, options);
+            Query finalQuery = ApplyFilters(luceneQuery, options);
 
             // Execute search
-            var topDocs = searcher.Search(finalQuery, options.MaxResults);
+            TopDocs topDocs = searcher.Search(finalQuery, options.MaxResults);
 
             logger.LogInformation("Search found {TotalHits} hits in {ElapsedMs}ms",
                 topDocs.TotalHits, stopwatch.Elapsed.TotalMilliseconds);
@@ -71,9 +71,9 @@ public class LuceneSearcher(ILogger<LuceneSearcher> logger, IndexManager indexMa
                 SearchTimeMs = stopwatch.Elapsed.TotalMilliseconds
             };
 
-            foreach (var scoreDoc in topDocs.ScoreDocs)
+            foreach (ScoreDoc? scoreDoc in topDocs.ScoreDocs)
             {
-                var doc = searcher.Doc(scoreDoc.Doc);
+                Document doc = searcher.Doc(scoreDoc.Doc);
                 var result = new LuceneSearchResult
                 {
                     FilePath = doc.Get("filepath") ?? "",
@@ -82,10 +82,10 @@ public class LuceneSearcher(ILogger<LuceneSearcher> logger, IndexManager indexMa
                     DocumentType = Enum.TryParse(doc.Get("doctype"), out DocumentType dt)
                         ? dt.ToString()
                         : nameof(DocumentType.Unknown),
-                    ModifiedDate = DateTime.TryParse(doc.Get("modified"), out var modified)
+                    ModifiedDate = DateTime.TryParse(doc.Get("modified"), out DateTime modified)
                         ? modified
                         : DateTime.MinValue,
-                    FileSizeBytes = long.TryParse(doc.Get("filesize"), out var size) ? size : 0
+                    FileSizeBytes = long.TryParse(doc.Get("filesize"), out long size) ? size : 0
                 };
 
                 // Add snippets if requested
@@ -97,10 +97,10 @@ public class LuceneSearcher(ILogger<LuceneSearcher> logger, IndexManager indexMa
                 results.Results.Add(result);
 
                 // Update statistics
-                var docType = result.DocumentType;
+                string docType = result.DocumentType;
                 results.FileTypeCounts[docType] = results.FileTypeCounts.GetValueOrDefault(docType, 0) + 1;
 
-                var dirPath = Path.GetDirectoryName(result.FilePath) ?? "";
+                string dirPath = Path.GetDirectoryName(result.FilePath) ?? "";
                 results.DirectoryCounts[dirPath] = results.DirectoryCounts.GetValueOrDefault(dirPath, 0) + 1;
             }
 
@@ -137,16 +137,16 @@ public class LuceneSearcher(ILogger<LuceneSearcher> logger, IndexManager indexMa
                 throw new ArgumentException($"Index '{indexName}' not found");
             }
 
-            var indexResources = indexManager.GetIndexResources(indexName);
+            IndexResources indexResources = indexManager.GetIndexResources(indexName);
 
-            using var reader = DirectoryReader.Open(indexResources.Directory);
+            using DirectoryReader? reader = DirectoryReader.Open(indexResources.Directory);
             var searcher = new IndexSearcher(reader);
 
             var parser = new MultiFieldQueryParser(LUCENE_VERSION,
                 ["content", "title", "filename"], indexResources.Analyzer);
 
-            var luceneQuery = parser.Parse(query);
-            var topDocs = searcher.Search(luceneQuery, 1); // Just get count
+            Query? luceneQuery = parser.Parse(query);
+            TopDocs topDocs = searcher.Search(luceneQuery, 1); // Just get count
 
             logger.LogInformation("Test query found {TotalHits} hits", topDocs.TotalHits);
             return topDocs.TotalHits;
@@ -169,7 +169,7 @@ public class LuceneSearcher(ILogger<LuceneSearcher> logger, IndexManager indexMa
         if (options.FileTypes.Count != 0)
         {
             var fileTypeQuery = new BooleanQuery();
-            foreach (var fileType in options.FileTypes)
+            foreach (string fileType in options.FileTypes)
             {
                 fileTypeQuery.Add(new TermQuery(new Term("doctype", fileType)), Occur.SHOULD);
             }
@@ -179,8 +179,8 @@ public class LuceneSearcher(ILogger<LuceneSearcher> logger, IndexManager indexMa
         // Date range filter
         if (options.StartDate.HasValue || options.EndDate.HasValue)
         {
-            var startDate = options.StartDate?.ToString("O") ?? DateTime.MinValue.ToString("O");
-            var endDate = options.EndDate?.ToString("O") ?? DateTime.MaxValue.ToString("O");
+            string startDate = options.StartDate?.ToString("O") ?? DateTime.MinValue.ToString("O");
+            string endDate = options.EndDate?.ToString("O") ?? DateTime.MaxValue.ToString("O");
 
             filters.Add(TermRangeQuery.NewStringRange("modified", startDate, endDate, true, true));
         }
@@ -192,7 +192,7 @@ public class LuceneSearcher(ILogger<LuceneSearcher> logger, IndexManager indexMa
         var combinedQuery = new BooleanQuery();
         combinedQuery.Add(baseQuery, Occur.MUST);
 
-        foreach (var filter in filters)
+        foreach (Query filter in filters)
         {
             combinedQuery.Add(filter, Occur.MUST);
         }
@@ -206,16 +206,16 @@ public class LuceneSearcher(ILogger<LuceneSearcher> logger, IndexManager indexMa
     private static List<string> ExtractSnippets(string content, string query, int maxSnippets)
     {
         var snippets = new List<string>();
-        var queryTerms = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var lines = content.Split('\n');
+        string[] queryTerms = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string[] lines = content.Split('\n');
 
-        foreach (var line in lines)
+        foreach (string line in lines)
         {
             if (snippets.Count >= maxSnippets) break;
 
             if (queryTerms.Any(term => line.Contains(term, StringComparison.OrdinalIgnoreCase)))
             {
-                var snippet = line.Trim();
+                string snippet = line.Trim();
                 if (snippet.Length > 200)
                 {
                     snippet = snippet.Substring(0, 200) + "...";

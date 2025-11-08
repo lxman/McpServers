@@ -26,7 +26,7 @@ public class InspectionTools(
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            DebugSession? session = sessionManager.GetSession(sessionId);
             if (session is null)
             {
                 return JsonSerializer.Serialize(new
@@ -41,11 +41,11 @@ public class InspectionTools(
 
             // Send MI command: -stack-list-frames
             const string command = "-stack-list-frames";
-            var response = await miClient.SendCommandAsync(sessionId, command);
+            MiResponse? response = await miClient.SendCommandAsync(sessionId, command);
 
             if (response is null || !response.Success)
             {
-                var errorMsg = ExtractErrorMessage(response);
+                string errorMsg = ExtractErrorMessage(response);
                 return JsonSerializer.Serialize(new
                 {
                     success = false,
@@ -55,7 +55,7 @@ public class InspectionTools(
 
             // Parse stack frames from response
             // Expected format: ^done,stack=[frame={level="0",...},frame={level="1",...}]
-            var frames = ParseStackFrames(response);
+            List<StackFrameInfo> frames = ParseStackFrames(response);
 
             return JsonSerializer.Serialize(new
             {
@@ -90,7 +90,7 @@ public class InspectionTools(
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            DebugSession? session = sessionManager.GetSession(sessionId);
             if (session is null)
             {
                 return JsonSerializer.Serialize(new
@@ -105,11 +105,11 @@ public class InspectionTools(
             // Send MI command: -stack-list-variables
             // Use --simple-values to get primitive values inline
             const string command = "-stack-list-variables --simple-values";
-            var response = await miClient.SendCommandAsync(sessionId, command);
+            MiResponse? response = await miClient.SendCommandAsync(sessionId, command);
 
             if (response is null || !response.Success)
             {
-                var errorMsg = ExtractErrorMessage(response);
+                string errorMsg = ExtractErrorMessage(response);
                 return JsonSerializer.Serialize(new
                 {
                     success = false,
@@ -119,7 +119,7 @@ public class InspectionTools(
 
             // Parse variables from response
             // Expected format: ^done,variables=[{name="x",value="42"},{name="y",value="\"hello\""}]
-            var variables = ParseVariables(response);
+            List<VariableInfo> variables = ParseVariables(response);
 
             return JsonSerializer.Serialize(new
             {
@@ -152,7 +152,7 @@ public class InspectionTools(
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            DebugSession? session = sessionManager.GetSession(sessionId);
             if (session is null)
             {
                 return JsonSerializer.Serialize(new
@@ -167,11 +167,11 @@ public class InspectionTools(
 
             // Send MI command: -data-evaluate-expression <expr>
             var command = $"-data-evaluate-expression \"{expression}\"";
-            var response = await miClient.SendCommandAsync(sessionId, command);
+            MiResponse? response = await miClient.SendCommandAsync(sessionId, command);
 
             if (response is null || !response.Success)
             {
-                var errorMsg = ExtractErrorMessage(response);
+                string errorMsg = ExtractErrorMessage(response);
                 return JsonSerializer.Serialize(new
                 {
                     success = false,
@@ -182,7 +182,7 @@ public class InspectionTools(
 
             // Parse result from response
             // Expected format: ^done,value="..."
-            var resultValue = ExtractValue(response);
+            string? resultValue = ExtractValue(response);
 
             return JsonSerializer.Serialize(new
             {
@@ -210,7 +210,7 @@ public class InspectionTools(
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            DebugSession? session = sessionManager.GetSession(sessionId);
             if (session is null)
             {
                 return JsonSerializer.Serialize(new
@@ -224,11 +224,11 @@ public class InspectionTools(
 
             // Send MI command: -thread-info
             const string command = "-thread-info";
-            var response = await miClient.SendCommandAsync(sessionId, command);
+            MiResponse? response = await miClient.SendCommandAsync(sessionId, command);
 
             if (response is null || !response.Success)
             {
-                var errorMsg = ExtractErrorMessage(response);
+                string errorMsg = ExtractErrorMessage(response);
                 return JsonSerializer.Serialize(new
                 {
                     success = false,
@@ -237,7 +237,7 @@ public class InspectionTools(
             }
 
             // Parse threads from response
-            var threads = ParseThreads(response);
+            List<ThreadInfo> threads = ParseThreads(response);
 
             return JsonSerializer.Serialize(new
             {
@@ -275,42 +275,42 @@ public class InspectionTools(
     private static List<StackFrameInfo> ParseStackFrames(MiResponse response)
     {
         var frames = new List<StackFrameInfo>();
-        var resultRecord = response.GetResultRecord();
+        string? resultRecord = response.GetResultRecord();
         
         if (string.IsNullOrEmpty(resultRecord))
             return frames;
 
         // Find all frame={...} patterns
-        var frameMatches = Regex.Matches(resultRecord, @"frame=\{([^}]+)\}");
+        MatchCollection frameMatches = Regex.Matches(resultRecord, @"frame=\{([^}]+)\}");
         
         foreach (Match frameMatch in frameMatches)
         {
-            var frameData = frameMatch.Groups[1].Value;
+            string frameData = frameMatch.Groups[1].Value;
             var frame = new StackFrameInfo();
 
             // Parse level
-            var levelMatch = Regex.Match(frameData, @"level=""(\d+)""");
-            if (levelMatch.Success && int.TryParse(levelMatch.Groups[1].Value, out var level))
+            Match levelMatch = Regex.Match(frameData, @"level=""(\d+)""");
+            if (levelMatch.Success && int.TryParse(levelMatch.Groups[1].Value, out int level))
             {
                 frame.Level = level;
             }
 
             // Parse function
-            var funcMatch = Regex.Match(frameData, @"func=""([^""]+)""");
+            Match funcMatch = Regex.Match(frameData, @"func=""([^""]+)""");
             if (funcMatch.Success)
             {
                 frame.Function = funcMatch.Groups[1].Value;
             }
 
             // Parse file (prefer fullname over file)
-            var fullnameMatch = Regex.Match(frameData, @"fullname=""([^""]+)""");
+            Match fullnameMatch = Regex.Match(frameData, @"fullname=""([^""]+)""");
             if (fullnameMatch.Success)
             {
                 frame.File = fullnameMatch.Groups[1].Value;
             }
             else
             {
-                var fileMatch = Regex.Match(frameData, @"file=""([^""]+)""");
+                Match fileMatch = Regex.Match(frameData, @"file=""([^""]+)""");
                 if (fileMatch.Success)
                 {
                     frame.File = fileMatch.Groups[1].Value;
@@ -318,14 +318,14 @@ public class InspectionTools(
             }
 
             // Parse line
-            var lineMatch = Regex.Match(frameData, @"line=""(\d+)""");
-            if (lineMatch.Success && int.TryParse(lineMatch.Groups[1].Value, out var line))
+            Match lineMatch = Regex.Match(frameData, @"line=""(\d+)""");
+            if (lineMatch.Success && int.TryParse(lineMatch.Groups[1].Value, out int line))
             {
                 frame.Line = line;
             }
 
             // Parse address
-            var addrMatch = Regex.Match(frameData, @"addr=""(0x[0-9a-fA-F]+)""");
+            Match addrMatch = Regex.Match(frameData, @"addr=""(0x[0-9a-fA-F]+)""");
             if (addrMatch.Success)
             {
                 frame.Address = addrMatch.Groups[1].Value;
@@ -344,13 +344,13 @@ public class InspectionTools(
     private static List<VariableInfo> ParseVariables(MiResponse response)
     {
         var variables = new List<VariableInfo>();
-        var resultRecord = response.GetResultRecord();
+        string? resultRecord = response.GetResultRecord();
         
         if (string.IsNullOrEmpty(resultRecord))
             return variables;
 
         // Find all {name="...",value="..."} patterns
-        var varMatches = Regex.Matches(resultRecord, @"\{name=""([^""]+)"",value=""([^""]*)""\}");
+        MatchCollection varMatches = Regex.Matches(resultRecord, @"\{name=""([^""]+)"",value=""([^""]*)""\}");
         
         foreach (Match varMatch in varMatches)
         {
@@ -376,61 +376,61 @@ public class InspectionTools(
     private static List<ThreadInfo> ParseThreads(MiResponse response)
     {
         var threads = new List<ThreadInfo>();
-        var resultRecord = response.GetResultRecord();
+        string? resultRecord = response.GetResultRecord();
         
         if (string.IsNullOrEmpty(resultRecord))
             return threads;
 
         // Find all thread entries
-        var threadMatches = Regex.Matches(resultRecord, @"\{id=""([^""]+)""[^}]*\}");
+        MatchCollection threadMatches = Regex.Matches(resultRecord, @"\{id=""([^""]+)""[^}]*\}");
         
         foreach (Match threadMatch in threadMatches)
         {
-            var threadData = threadMatch.Value;
+            string threadData = threadMatch.Value;
             var thread = new ThreadInfo();
 
             // Parse id
-            var idMatch = Regex.Match(threadData, @"id=""([^""]+)""");
+            Match idMatch = Regex.Match(threadData, @"id=""([^""]+)""");
             if (idMatch.Success)
             {
                 thread.Id = idMatch.Groups[1].Value;
             }
 
             // Parse state
-            var stateMatch = Regex.Match(threadData, @"state=""([^""]+)""");
+            Match stateMatch = Regex.Match(threadData, @"state=""([^""]+)""");
             if (stateMatch.Success)
             {
                 thread.State = stateMatch.Groups[1].Value;
             }
 
             // Parse name
-            var nameMatch = Regex.Match(threadData, @"name=""([^""]+)""");
+            Match nameMatch = Regex.Match(threadData, @"name=""([^""]+)""");
             if (nameMatch.Success)
             {
                 thread.Name = nameMatch.Groups[1].Value;
             }
 
             // Parse frame if present
-            var frameMatch = Regex.Match(threadData, @"frame=\{([^}]+)\}");
+            Match frameMatch = Regex.Match(threadData, @"frame=\{([^}]+)\}");
             if (frameMatch.Success)
             {
-                var frameData = frameMatch.Groups[1].Value;
+                string frameData = frameMatch.Groups[1].Value;
                 thread.Frame = new FrameInfo();
 
-                var funcMatch = Regex.Match(frameData, @"func=""([^""]+)""");
+                Match funcMatch = Regex.Match(frameData, @"func=""([^""]+)""");
                 if (funcMatch.Success)
                 {
                     thread.Frame.Function = funcMatch.Groups[1].Value;
                 }
 
-                var fileMatch = Regex.Match(frameData, @"file=""([^""]+)""");
+                Match fileMatch = Regex.Match(frameData, @"file=""([^""]+)""");
                 if (fileMatch.Success)
                 {
                     thread.Frame.File = fileMatch.Groups[1].Value;
                 }
 
-                var lineMatch = Regex.Match(frameData, @"line=""(\d+)""");
-                if (lineMatch.Success && int.TryParse(lineMatch.Groups[1].Value, out var line))
+                Match lineMatch = Regex.Match(frameData, @"line=""(\d+)""");
+                if (lineMatch.Success && int.TryParse(lineMatch.Groups[1].Value, out int line))
                 {
                     thread.Frame.Line = line;
                 }
@@ -448,11 +448,11 @@ public class InspectionTools(
     /// </summary>
     private static string? ExtractValue(MiResponse response)
     {
-        var resultRecord = response.GetResultRecord();
+        string? resultRecord = response.GetResultRecord();
         if (string.IsNullOrEmpty(resultRecord))
             return null;
 
-        var match = Regex.Match(resultRecord, @"value=""([^""]*)""");
+        Match match = Regex.Match(resultRecord, @"value=""([^""]*)""");
         return match.Success
             ? match.Groups[1].Value
             : null;
@@ -501,12 +501,12 @@ public class InspectionTools(
         if (response is null)
             return "No response received from debugger";
 
-        var resultRecord = response.GetResultRecord();
+        string? resultRecord = response.GetResultRecord();
         if (string.IsNullOrEmpty(resultRecord))
             return "Empty response from debugger";
 
         // Look for error message: ^error,msg="..."
-        var match = Regex.Match(resultRecord, @"msg=""([^""]+)""");
+        Match match = Regex.Match(resultRecord, @"msg=""([^""]+)""");
         return match.Success
             ? match.Groups[1].Value
             : $"Command failed: {response.ResultClass}";

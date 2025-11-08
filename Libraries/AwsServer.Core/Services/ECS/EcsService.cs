@@ -54,7 +54,7 @@ public class EcsService
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            var credentials = credentialsProvider.GetCredentials();
+            AWSCredentials? credentials = credentialsProvider.GetCredentials();
             
             if (credentials != null)
             {
@@ -328,7 +328,7 @@ public class EcsService
             request.Cluster = cluster;
         }
         
-        var response = await _ecsClient!.ListContainerInstancesAsync(request);
+        ListContainerInstancesResponse? response = await _ecsClient!.ListContainerInstancesAsync(request);
         
         if (response.ContainerInstanceArns.Count != 0)
         {
@@ -342,7 +342,7 @@ public class EcsService
                 describeRequest.Cluster = cluster;
             }
             
-            var describeResponse = await _ecsClient!.DescribeContainerInstancesAsync(describeRequest);
+            DescribeContainerInstancesResponse? describeResponse = await _ecsClient!.DescribeContainerInstancesAsync(describeRequest);
             return describeResponse.ContainerInstances;
         }
         
@@ -358,7 +358,7 @@ public class EcsService
         {
             if (_discoveryService.AutoInitialize())
             {
-                var accountInfo = await _discoveryService.GetAccountInfoAsync();
+                AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
                 
                 var config = new AwsConfiguration
                 {
@@ -386,7 +386,7 @@ public class EcsService
         if (!IsInitialized && _ecsClient == null)
         {
             // Wait up to 5 seconds for auto-initialization
-            var timeout = DateTime.UtcNow.AddSeconds(5);
+            DateTime timeout = DateTime.UtcNow.AddSeconds(5);
             while (!IsInitialized && DateTime.UtcNow < timeout)
             {
                 await Task.Delay(100);

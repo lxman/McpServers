@@ -19,10 +19,10 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     {
         try
         {
-            var page = toolService.GetPage(sessionId);
+            IPage? page = toolService.GetPage(sessionId);
             if (page == null) return $"Session {sessionId} not found.";
 
-            var cdp = await page.Context.NewCDPSessionAsync(page);
+            ICDPSession cdp = await page.Context.NewCDPSessionAsync(page);
             
             var networkConditions = networkType.ToLower() switch
             {
@@ -59,12 +59,12 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     {
         try
         {
-            var page = toolService.GetPage(sessionId);
+            IPage? page = toolService.GetPage(sessionId);
             if (page == null) return $"Session {sessionId} not found.";
 
             var files = new List<FilePayload>();
             
-            foreach (var filePath in filePaths)
+            foreach (string filePath in filePaths)
             {
                 // Generate test files if needed
                 switch (filePath.ToLower())
@@ -107,7 +107,7 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
                 }
             }
 
-            var fullSelector = DetermineSelector(selector);
+            string fullSelector = DetermineSelector(selector);
             await page.SetInputFilesAsync(fullSelector, files.ToArray());
 
             return $"Uploaded {files.Count} files: {string.Join(", ", files.Select(f => f.Name))}";
@@ -126,7 +126,7 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     {
         try
         {
-            var page = toolService.GetPage(sessionId);
+            IPage? page = toolService.GetPage(sessionId);
             if (page == null) return $"Session {sessionId} not found.";
 
             var deviceConfig = deviceType.ToLower() switch
@@ -161,7 +161,7 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     {
         try
         {
-            var page = toolService.GetPage(sessionId);
+            IPage? page = toolService.GetPage(sessionId);
             if (page == null) return $"Session {sessionId} not found.";
 
             return testType.ToLower() switch
@@ -188,10 +188,10 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     {
         try
         {
-            var page = toolService.GetPage(sessionId);
+            IPage? page = toolService.GetPage(sessionId);
             if (page == null) return $"Session {sessionId} not found.";
 
-            var payload = payloadType.ToLower() switch
+            string payload = payloadType.ToLower() switch
             {
                 "xss" => "<script>alert('XSS Test')</script>",
                 "sql_injection" => "'; DROP TABLE users; --",
@@ -200,15 +200,15 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
                 _ => throw new ArgumentException($"Unknown payload type: {payloadType}")
             };
 
-            var fullSelector = DetermineSelector(selector);
+            string fullSelector = DetermineSelector(selector);
             
             // Clear field first
             await page.Locator(fullSelector).ClearAsync();
             await page.Locator(fullSelector).FillAsync(payload);
             
             // Check if payload was sanitized
-            var fieldValue = await page.Locator(fullSelector).InputValueAsync();
-            var isSanitized = fieldValue != payload;
+            string fieldValue = await page.Locator(fullSelector).InputValueAsync();
+            bool isSanitized = fieldValue != payload;
             
             return $"Security payload '{payloadType}' injected into {selector}.\nOriginal: {payload}\nActual: {fieldValue}\nSanitized: {isSanitized}";
         }
@@ -231,7 +231,7 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
 
             for (var i = 0; i < count; i++)
             {
-                var data = dataType.ToLower() switch
+                object data = dataType.ToLower() switch
                 {
                     "person" => GeneratePersonData(random),
                     "address" => GenerateAddressData(random),
@@ -260,7 +260,7 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     {
         try
         {
-            var page = toolService.GetPage(sessionId);
+            IPage? page = toolService.GetPage(sessionId);
             if (page == null) return $"Session {sessionId} not found.";
 
             // Navigate to enrollment form
@@ -278,7 +278,7 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
             await page.Locator("[data-testid='citizenship-us-citizen-yes']").ClickAsync();
             
             // Check progress indicators
-            var personalInfoComplete = await page.Locator("[data-testid='progress-personal-info']").IsVisibleAsync();
+            bool personalInfoComplete = await page.Locator("[data-testid='progress-personal-info']").IsVisibleAsync();
             
             return $"TADERATCS enrollment test completed successfully. Personal info complete: {personalInfoComplete}";
         }
@@ -295,7 +295,7 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     {
         try
         {
-            var page = toolService.GetPage(sessionId);
+            IPage? page = toolService.GetPage(sessionId);
             if (page == null) return $"Session {sessionId} not found.";
 
             // Fill some form data
@@ -315,7 +315,7 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
             await page.ReloadAsync();
             await page.WaitForTimeoutAsync(2000); // Wait for reload and restore
             
-            var restoredValue = await page.Locator("[data-testid='personal-first-name']").InputValueAsync();
+            string restoredValue = await page.Locator("[data-testid='personal-first-name']").InputValueAsync();
             
             return $"Auto-save test: Saved data: {savedData}, Restored value: {restoredValue}";
         }
@@ -377,9 +377,9 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
     private static object GenerateSsnData(Random random)
     {
         // Generate valid SSN format (not real SSNs)
-        var area = random.Next(100, 665);
-        var group = random.Next(1, 99);
-        var serial = random.Next(1, 9999);
+        int area = random.Next(100, 665);
+        int group = random.Next(1, 99);
+        int serial = random.Next(1, 9999);
         
         return new
         {
@@ -428,7 +428,7 @@ public class AdvancedTestingTools(ToolService toolService, ChromeService chromeS
 
     private static string GetMimeType(string filePath)
     {
-        var extension = Path.GetExtension(filePath).ToLower();
+        string extension = Path.GetExtension(filePath).ToLower();
         return extension switch
         {
             ".pdf" => "application/pdf",

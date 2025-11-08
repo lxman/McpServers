@@ -47,12 +47,12 @@ public class ConnectionManager : IDisposable
             RemoveConnection(serverName);
 
             var client = new MongoClient(connectionString);
-            var database = client.GetDatabase(databaseName);
+            IMongoDatabase? database = client.GetDatabase(databaseName);
             
             // Test connection with timeout
-            var startTime = DateTime.UtcNow;
+            DateTime startTime = DateTime.UtcNow;
             await database.RunCommandAsync<BsonDocument>(new BsonDocument("ping", 1));
-            var pingDuration = DateTime.UtcNow - startTime;
+            TimeSpan pingDuration = DateTime.UtcNow - startTime;
             
             _clients[serverName] = client;
             _databases[serverName] = database;
@@ -85,7 +85,7 @@ public class ConnectionManager : IDisposable
 
         try
         {
-            var client = GetClient(serverName);
+            MongoClient? client = GetClient(serverName);
             if (client == null)
                 throw new InvalidOperationException($"Server '{serverName}' is not connected");
 
@@ -109,12 +109,12 @@ public class ConnectionManager : IDisposable
 
         try
         {
-            var client = GetClient(serverName);
+            MongoClient? client = GetClient(serverName);
             if (client == null)
                 throw new InvalidOperationException($"Server '{serverName}' is not connected");
 
             // Get the new database and test it
-            var newDatabase = client.GetDatabase(databaseName);
+            IMongoDatabase? newDatabase = client.GetDatabase(databaseName);
             await newDatabase.RunCommandAsync<BsonDocument>(new BsonDocument("ping", 1));
 
             // Update stored database and current database tracking
@@ -122,7 +122,7 @@ public class ConnectionManager : IDisposable
             _currentDatabases[serverName] = databaseName;
 
             // Update connection info
-            if (_connectionInfo.TryGetValue(serverName, out var info))
+            if (_connectionInfo.TryGetValue(serverName, out ConnectionInfo? info))
             {
                 info.DatabaseName = databaseName;
             }
@@ -147,7 +147,7 @@ public class ConnectionManager : IDisposable
 
     public IMongoDatabase? GetDatabase(string serverName, string databaseName)
     {
-        var client = GetClient(serverName);
+        MongoClient? client = GetClient(serverName);
         return client?.GetDatabase(databaseName);
     }
 
@@ -159,7 +159,7 @@ public class ConnectionManager : IDisposable
         try
         {
             // Remove from all dictionaries
-            _clients.TryRemove(serverName, out var client);
+            _clients.TryRemove(serverName, out MongoClient? client);
             _databases.TryRemove(serverName, out _);
             _connectionInfo.TryRemove(serverName, out _);
             _currentDatabases.TryRemove(serverName, out _); // NEW: Remove current database tracking
@@ -199,7 +199,7 @@ public class ConnectionManager : IDisposable
             serverName = _defaultServer;
 
         return _databases.ContainsKey(serverName) && 
-               _connectionInfo.TryGetValue(serverName, out var info) && 
+               _connectionInfo.TryGetValue(serverName, out ConnectionInfo? info) && 
                info.IsHealthy;
     }
 
@@ -210,15 +210,15 @@ public class ConnectionManager : IDisposable
 
         try
         {
-            var database = GetDatabase(serverName);
+            IMongoDatabase? database = GetDatabase(serverName);
             if (database == null)
                 return false;
 
-            var startTime = DateTime.UtcNow;
+            DateTime startTime = DateTime.UtcNow;
             await database.RunCommandAsync<BsonDocument>(new BsonDocument("ping", 1));
-            var pingDuration = DateTime.UtcNow - startTime;
+            TimeSpan pingDuration = DateTime.UtcNow - startTime;
 
-            if (_connectionInfo.TryGetValue(serverName, out var info))
+            if (_connectionInfo.TryGetValue(serverName, out ConnectionInfo? info))
             {
                 info.UpdateHealth(true, pingDuration);
             }
@@ -229,7 +229,7 @@ public class ConnectionManager : IDisposable
         {
             _logger.LogWarning(ex, "Ping failed for server '{ServerName}'", serverName);
             
-            if (_connectionInfo.TryGetValue(serverName, out var info))
+            if (_connectionInfo.TryGetValue(serverName, out ConnectionInfo? info))
             {
                 info.UpdateHealth(false);
             }
@@ -290,8 +290,8 @@ public class ConnectionManager : IDisposable
         if (_disposed)
             return;
 
-        var serverNames = GetServerNames();
-        foreach (var serverName in serverNames)
+        List<string> serverNames = GetServerNames();
+        foreach (string serverName in serverNames)
         {
             try
             {
@@ -306,10 +306,10 @@ public class ConnectionManager : IDisposable
 
     public void CleanupConnections()
     {
-        var serverNames = GetServerNames().ToList();
-        foreach (var serverName in serverNames)
+        List<string> serverNames = GetServerNames().ToList();
+        foreach (string serverName in serverNames)
         {
-            if (!_connectionInfo.TryGetValue(serverName, out var info) || info.IsHealthy) continue;
+            if (!_connectionInfo.TryGetValue(serverName, out ConnectionInfo? info) || info.IsHealthy) continue;
             _logger.LogInformation("Cleaning up unhealthy connection to '{ServerName}'", serverName);
             RemoveConnection(serverName);
         }
@@ -324,7 +324,7 @@ public class ConnectionManager : IDisposable
         
         _healthCheckTimer?.Dispose();
         
-        foreach (var client in _clients.Values)
+        foreach (MongoClient client in _clients.Values)
         {
             try
             {

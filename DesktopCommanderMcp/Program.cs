@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-var builder = Host.CreateApplicationBuilder(args);
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
 // Configure logging
 builder.Logging.ClearProviders();
@@ -68,6 +68,6 @@ builder.Services.AddMcpServer()
     // Configuration
     .WithTools<ConfigurationTools>();
 
-var host = builder.Build();
+IHost host = builder.Build();
 
 await host.RunAsync();

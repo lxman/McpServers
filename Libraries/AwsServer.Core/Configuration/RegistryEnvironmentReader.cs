@@ -26,7 +26,7 @@ public static class RegistryEnvironmentReader
             // Try the user environment first
             if (registry.ValueExists(USER_ENVIRONMENT_PATH, variableName))
             {
-                var value = registry.ReadValue(USER_ENVIRONMENT_PATH, variableName);
+                object? value = registry.ReadValue(USER_ENVIRONMENT_PATH, variableName);
                 if (value != null)
                 {
                     return value.ToString();
@@ -35,7 +35,7 @@ public static class RegistryEnvironmentReader
 
             // Fall back to system environment
             if (!registry.ValueExists(SYSTEM_ENVIRONMENT_PATH, variableName)) return null;
-            var regValue = registry.ReadValue(SYSTEM_ENVIRONMENT_PATH, variableName);
+            object? regValue = registry.ReadValue(SYSTEM_ENVIRONMENT_PATH, variableName);
             return regValue?.ToString();
         }
         catch (Exception)
@@ -54,7 +54,7 @@ public static class RegistryEnvironmentReader
     public static string? GetEnvironmentVariableWithFallback(string variableName)
     {
         // First, try the normal process environment
-        var value = Environment.GetEnvironmentVariable(variableName);
+        string? value = Environment.GetEnvironmentVariable(variableName);
         return !string.IsNullOrEmpty(value) ? value :
             // Fall back to registry if not found
             GetEnvironmentVariable(variableName);
@@ -66,8 +66,8 @@ public static class RegistryEnvironmentReader
     /// <returns>AWS configuration from environment, or null if not found</returns>
     public static AwsConfiguration? GetAwsCredentialsFromEnvironment()
     {
-        var accessKeyId = GetEnvironmentVariableWithFallback("AWS_ACCESS_KEY_ID");
-        var secretAccessKey = GetEnvironmentVariableWithFallback("AWS_SECRET_ACCESS_KEY");
+        string? accessKeyId = GetEnvironmentVariableWithFallback("AWS_ACCESS_KEY_ID");
+        string? secretAccessKey = GetEnvironmentVariableWithFallback("AWS_SECRET_ACCESS_KEY");
 
         // Need at least an access key to be valid
         if (string.IsNullOrEmpty(accessKeyId))
@@ -82,20 +82,20 @@ public static class RegistryEnvironmentReader
         };
 
         // Optional environment variables
-        var sessionToken = GetEnvironmentVariableWithFallback("AWS_SESSION_TOKEN");
+        string? sessionToken = GetEnvironmentVariableWithFallback("AWS_SESSION_TOKEN");
         if (!string.IsNullOrEmpty(sessionToken))
         {
             config.SessionToken = sessionToken;
         }
 
-        var region = GetEnvironmentVariableWithFallback("AWS_DEFAULT_REGION") 
-                     ?? GetEnvironmentVariableWithFallback("AWS_REGION");
+        string? region = GetEnvironmentVariableWithFallback("AWS_DEFAULT_REGION") 
+                         ?? GetEnvironmentVariableWithFallback("AWS_REGION");
         if (!string.IsNullOrEmpty(region))
         {
             config.Region = region;
         }
 
-        var profile = GetEnvironmentVariableWithFallback("AWS_PROFILE");
+        string? profile = GetEnvironmentVariableWithFallback("AWS_PROFILE");
         if (!string.IsNullOrEmpty(profile))
         {
             config.ProfileName = profile;

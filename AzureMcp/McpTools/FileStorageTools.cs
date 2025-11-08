@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using AzureServer.Core.Services.Storage;
+using AzureServer.Core.Services.Storage.Models;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -25,7 +26,7 @@ public class FileStorageTools(
         try
         {
             logger.LogDebug("Listing file shares in account {AccountName}", accountName);
-            var shares = await fileStorageService.ListFileSharesAsync(accountName, prefix);
+            IEnumerable<FileShareDto> shares = await fileStorageService.ListFileSharesAsync(accountName, prefix);
 
             return JsonSerializer.Serialize(new
             {
@@ -47,7 +48,7 @@ public class FileStorageTools(
         try
         {
             logger.LogDebug("Getting file share {ShareName}", shareName);
-            var share = await fileStorageService.GetFileShareAsync(accountName, shareName);
+            FileShareDto? share = await fileStorageService.GetFileShareAsync(accountName, shareName);
 
             return JsonSerializer.Serialize(new
             {
@@ -73,7 +74,7 @@ public class FileStorageTools(
         try
         {
             logger.LogDebug("Creating file share {ShareName}", shareName);
-            var share = await fileStorageService.CreateFileShareAsync(accountName, shareName, quotaInGB, metadata);
+            FileShareDto share = await fileStorageService.CreateFileShareAsync(accountName, shareName, quotaInGB, metadata);
 
             return JsonSerializer.Serialize(new
             {
@@ -95,7 +96,7 @@ public class FileStorageTools(
         try
         {
             logger.LogDebug("Deleting file share {ShareName}", shareName);
-            var deleted = await fileStorageService.DeleteFileShareAsync(accountName, shareName);
+            bool deleted = await fileStorageService.DeleteFileShareAsync(accountName, shareName);
 
             return JsonSerializer.Serialize(new
             {
@@ -117,7 +118,7 @@ public class FileStorageTools(
         try
         {
             logger.LogDebug("Checking if file share {ShareName} exists", shareName);
-            var exists = await fileStorageService.FileShareExistsAsync(accountName, shareName);
+            bool exists = await fileStorageService.FileShareExistsAsync(accountName, shareName);
 
             return JsonSerializer.Serialize(new
             {
@@ -146,7 +147,7 @@ public class FileStorageTools(
         try
         {
             logger.LogDebug("Creating directory {DirectoryPath}", directoryPath);
-            var created = await fileStorageService.CreateDirectoryAsync(accountName, shareName, directoryPath);
+            bool created = await fileStorageService.CreateDirectoryAsync(accountName, shareName, directoryPath);
 
             return JsonSerializer.Serialize(new
             {
@@ -171,7 +172,7 @@ public class FileStorageTools(
         try
         {
             logger.LogDebug("Deleting directory {DirectoryPath}", directoryPath);
-            var deleted = await fileStorageService.DeleteDirectoryAsync(accountName, shareName, directoryPath);
+            bool deleted = await fileStorageService.DeleteDirectoryAsync(accountName, shareName, directoryPath);
 
             return JsonSerializer.Serialize(new
             {

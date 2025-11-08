@@ -39,7 +39,7 @@ public class CrossServerTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
             }
 
-            var result = await crossServerOps.CompareCollectionsAsync(server1, server2, collectionName, filterJson ?? "{}");
+            string result = await crossServerOps.CompareCollectionsAsync(server1, server2, collectionName, filterJson ?? "{}");
 
             return result;
         }
@@ -74,7 +74,7 @@ public class CrossServerTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
             }
 
-            var result = await crossServerOps.SyncDataAsync(sourceServer, targetServer, collectionName, filterJson ?? "{}", dryRun);
+            string result = await crossServerOps.SyncDataAsync(sourceServer, targetServer, collectionName, filterJson ?? "{}", dryRun);
 
             return result;
         }
@@ -104,7 +104,7 @@ public class CrossServerTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
             }
 
-            var result = await crossServerOps.CrossServerQueryAsync(serverNames, collectionName, filterJson ?? "{}", limitPerServer);
+            string result = await crossServerOps.CrossServerQueryAsync(serverNames, collectionName, filterJson ?? "{}", limitPerServer);
 
             return result;
         }
@@ -139,7 +139,7 @@ public class CrossServerTools(
                 return JsonSerializer.Serialize(new { success = false, error = "At least one collection name is required" }, _jsonOptions);
             }
 
-            var result = await crossServerOps.BulkTransferAsync(sourceServer, targetServer, collectionNames, dryRun);
+            string result = await crossServerOps.BulkTransferAsync(sourceServer, targetServer, collectionNames, dryRun);
 
             return result;
         }
@@ -163,7 +163,7 @@ public class CrossServerTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Command JSON is required" }, _jsonOptions);
             }
 
-            var result = await crossServerOps.ExecuteOnAllServersAsync(command);
+            string result = await crossServerOps.ExecuteOnAllServersAsync(command);
 
             return result;
         }
@@ -182,7 +182,7 @@ public class CrossServerTools(
         {
             logger.LogDebug("Getting health dashboard for all connected servers");
 
-            var result = await crossServerOps.GetHealthDashboardAsync();
+            string result = await crossServerOps.GetHealthDashboardAsync();
 
             return result;
         }

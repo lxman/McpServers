@@ -53,14 +53,14 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
         try
         {
             // Determine netcoredbg path
-            var netcoredbgPath = FindNetcoredbg();
+            string netcoredbgPath = FindNetcoredbg();
             if (string.IsNullOrEmpty(netcoredbgPath))
             {
                 throw new FileNotFoundException("netcoredbg.exe not found in PATH");
             }
 
             // Build command line: netcoredbg.exe --interpreter=mi -- dotnet <dll> [args]
-            var commandLine = BuildCommandLine(executablePath, arguments);
+            string commandLine = BuildCommandLine(executablePath, arguments);
 
             // Configure process
             var startInfo = new ProcessStartInfo
@@ -130,7 +130,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
     {
         timeout ??= TimeSpan.FromSeconds(DefaultTimeoutSeconds);
 
-        if (!_inputStreams.TryGetValue(sessionId, out var value))
+        if (!_inputStreams.TryGetValue(sessionId, out StreamWriter? value))
         {
             throw new InvalidOperationException($"Session {sessionId} not found");
         }
@@ -186,7 +186,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
 
         try
         {
-            var response = await tcs.Task;
+            MiResponse response = await tcs.Task;
             logger.LogDebug("Command {Token} completed successfully", token);
             return response;
         }
@@ -198,7 +198,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
         finally
         {
             // Clean up pending command entry
-            if (_pendingCommands.TryGetValue(sessionId, out var commands))
+            if (_pendingCommands.TryGetValue(sessionId, out ConcurrentDictionary<int, PendingCommand>? commands))
             {
                 commands.TryRemove(token, out _);
             }
@@ -233,7 +233,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var line = await output.ReadLineAsync(cancellationToken);
+                string? line = await output.ReadLineAsync(cancellationToken);
 
                 if (line == null)
                 {
@@ -245,7 +245,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
                 logger.LogTrace("[{SessionId}] MI RAW: {Line}", sessionId, line);
 
                 // Queue for processing
-                if (!_outputQueues.TryGetValue(sessionId, out var queue)) continue;
+                if (!_outputQueues.TryGetValue(sessionId, out BlockingCollection<string>? queue)) continue;
                 if (!queue.TryAdd(line, TimeSpan.FromSeconds(1)))
                 {
                     logger.LogError("Output queue full for session {SessionId}, dropping line", sessionId);
@@ -269,7 +269,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
     {
         logger.LogDebug("Starting output processor for session {SessionId}", sessionId);
 
-        if (!_outputQueues.TryGetValue(sessionId, out var queue))
+        if (!_outputQueues.TryGetValue(sessionId, out BlockingCollection<string>? queue))
         {
             logger.LogError("No output queue found for session {SessionId}", sessionId);
             return;
@@ -277,7 +277,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
 
         try
         {
-            foreach (var line in queue.GetConsumingEnumerable(cancellationToken))
+            foreach (string line in queue.GetConsumingEnumerable(cancellationToken))
             {
                 try
                 {
@@ -338,18 +338,18 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
 
     private void HandleResultRecord(string sessionId, string line)
     {
-        var match = Regex.Match(line, @"^(\d+)\^(\w+)(?:,(.*))?$");
+        Match match = Regex.Match(line, @"^(\d+)\^(\w+)(?:,(.*))?$");
         if (!match.Success)
         {
             logger.LogWarning("Malformed result record: {Line}", line);
             return;
         }
 
-        var token = int.Parse(match.Groups[1].Value);
-        var resultClass = match.Groups[2].Value;
-        var data = match.Groups[3].Success ? match.Groups[3].Value : null;
+        int token = int.Parse(match.Groups[1].Value);
+        string resultClass = match.Groups[2].Value;
+        string? data = match.Groups[3].Success ? match.Groups[3].Value : null;
 
-        if (!_pendingCommands[sessionId].TryGetValue(token, out var cmd))
+        if (!_pendingCommands[sessionId].TryGetValue(token, out PendingCommand? cmd))
         {
             logger.LogWarning("Received response for unknown token {Token}", token);
             return;
@@ -371,19 +371,19 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
 
     private void HandleAsyncExecRecord(string sessionId, string line)
     {
-        var match = Regex.Match(line, @"^\*(\w+)(?:,(.*))?$");
+        Match match = Regex.Match(line, @"^\*(\w+)(?:,(.*))?$");
         if (!match.Success)
         {
             logger.LogWarning("Malformed async exec record: {Line}", line);
             return;
         }
 
-        var reason = match.Groups[1].Value;
+        string reason = match.Groups[1].Value;
 
         // If this is a *stopped event, attach it to any running command
         if (reason == "stopped")
         {
-            var runningCmd = _pendingCommands[sessionId].Values
+            PendingCommand? runningCmd = _pendingCommands[sessionId].Values
                 .FirstOrDefault(c => c.State == CommandState.Running);
 
             if (runningCmd != null)
@@ -400,14 +400,14 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
 
     private void HandleAsyncNotifyRecord(string sessionId, string line)
     {
-        var match = Regex.Match(line, @"^=(\S+)(?:,(.*))?$");
+        Match match = Regex.Match(line, @"^=(\S+)(?:,(.*))?$");
         if (!match.Success)
         {
             logger.LogWarning("Malformed async notify record: {Line}", line);
             return;
         }
 
-        var eventType = match.Groups[1].Value;
+        string eventType = match.Groups[1].Value;
 
         // Fire event for async notify records
         FireAsyncEvent(sessionId, line, eventType);
@@ -416,9 +416,9 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
     private void HandleStreamRecord(string sessionId, string line)
     {
         // Parse stream record: ~"text\n"
-        var match = Regex.Match(line, @"^[~@&]""(.*)""$");
+        Match match = Regex.Match(line, @"^[~@&]""(.*)""$");
         if (!match.Success) return;
-        var content = match.Groups[1].Value;
+        string content = match.Groups[1].Value;
             
         // Unescape content
         content = Regex.Unescape(content);
@@ -428,7 +428,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
 
     private void HandlePrompt(string sessionId)
     {
-        if (!_pendingCommands.TryGetValue(sessionId, out var commands))
+        if (!_pendingCommands.TryGetValue(sessionId, out ConcurrentDictionary<int, PendingCommand>? commands))
             return;
         
         if (commands.IsEmpty)
@@ -438,9 +438,9 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
         }
 
         // Check which pending commands can complete
-        foreach (var cmd in commands.Values.ToList())
+        foreach (PendingCommand cmd in commands.Values.ToList())
         {
-            var shouldComplete = cmd.State switch
+            bool shouldComplete = cmd.State switch
             {
                 CommandState.DoneOk => true,
                 CommandState.Error => true,
@@ -468,12 +468,12 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
 
     private static string DetermineResultClass(PendingCommand cmd)
     {
-        var resultRecord = cmd.AccumulatedRecords
+        string? resultRecord = cmd.AccumulatedRecords
             .FirstOrDefault(r => Regex.IsMatch(r, @"^\d+\^"));
 
         if (resultRecord != null)
         {
-            var match = Regex.Match(resultRecord, @"^\d+\^(\w+)");
+            Match match = Regex.Match(resultRecord, @"^\d+\^(\w+)");
             if (match.Success)
                 return match.Groups[1].Value;
         }
@@ -532,7 +532,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
         var result = new Dictionary<string, string>();
 
         // Simple key=value parsing (would need a more sophisticated parser for production)
-        var matches = Regex.Matches(record, @"(\w+)=""([^""]*)""|(\w+)=(\{[^}]*\})|(\w+)=(\w+)");
+        MatchCollection matches = Regex.Matches(record, @"(\w+)=""([^""]*)""|(\w+)=(\{[^}]*\})|(\w+)=(\w+)");
         
         foreach (Match match in matches)
         {
@@ -556,7 +556,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
     private async Task WaitForInitialPromptAsync(string sessionId, CancellationToken cancellationToken)
     {
         // Wait up to 5 seconds for initial (gdb) prompt
-        var timeout = TimeSpan.FromSeconds(5);
+        TimeSpan timeout = TimeSpan.FromSeconds(5);
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(timeout);
 
@@ -589,9 +589,9 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
         logger.LogWarning("Stream closed for session {SessionId}, failing pending commands", sessionId);
 
         // Fail all pending commands
-        if (_pendingCommands.TryGetValue(sessionId, out var commands))
+        if (_pendingCommands.TryGetValue(sessionId, out ConcurrentDictionary<int, PendingCommand>? commands))
         {
-            foreach (var cmd in commands.Values)
+            foreach (PendingCommand cmd in commands.Values)
             {
                 cmd.CompletionSource.TrySetException(
                     new InvalidOperationException("Debugger process exited unexpectedly")
@@ -625,9 +625,9 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
         logger.LogError(exception, "Reader error for session {SessionId}", sessionId);
 
         // Fail all pending commands
-        if (_pendingCommands.TryGetValue(sessionId, out var commands))
+        if (_pendingCommands.TryGetValue(sessionId, out ConcurrentDictionary<int, PendingCommand>? commands))
         {
-            foreach (var cmd in commands.Values)
+            foreach (PendingCommand cmd in commands.Values)
             {
                 cmd.CompletionSource.TrySetException(exception);
             }
@@ -659,7 +659,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
         logger.LogInformation("Cleaning up session {SessionId}", sessionId);
 
         // 1. Cancel background reader
-        if (_readerCancellations.TryGetValue(sessionId, out var cts))
+        if (_readerCancellations.TryGetValue(sessionId, out CancellationTokenSource? cts))
         {
             await cts.CancelAsync();
             _readerCancellations.Remove(sessionId);
@@ -667,12 +667,12 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
 
         // 2. Wait for reader and processor to stop (with timeout)
         var tasks = new List<Task>();
-        if (_outputReaders.TryGetValue(sessionId, out var readerTask))
+        if (_outputReaders.TryGetValue(sessionId, out Task? readerTask))
         {
             tasks.Add(readerTask);
             _outputReaders.Remove(sessionId);
         }
-        if (_outputProcessors.TryGetValue(sessionId, out var processorTask))
+        if (_outputProcessors.TryGetValue(sessionId, out Task? processorTask))
         {
             tasks.Add(processorTask);
             _outputProcessors.Remove(sessionId);
@@ -684,7 +684,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
         }
 
         // 3. Dispose queue
-        if (_outputQueues.TryGetValue(sessionId, out var queue))
+        if (_outputQueues.TryGetValue(sessionId, out BlockingCollection<string>? queue))
         {
             queue.CompleteAdding();
             queue.Dispose();
@@ -695,14 +695,14 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
         _pendingCommands.Remove(sessionId, out _);
 
         // 5. Close streams
-        if (_inputStreams.TryGetValue(sessionId, out var inputStream))
+        if (_inputStreams.TryGetValue(sessionId, out StreamWriter? inputStream))
         {
             await inputStream.DisposeAsync();
             _inputStreams.Remove(sessionId);
         }
 
         // 6. Kill the process if still running
-        if (_debuggerProcesses.TryGetValue(sessionId, out var process))
+        if (_debuggerProcesses.TryGetValue(sessionId, out Process? process))
         {
             try
             {
@@ -725,7 +725,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
 
     private int GetNextToken()
     {
-        var token = Interlocked.Increment(ref _nextToken);
+        int token = Interlocked.Increment(ref _nextToken);
         
         // Reset on overflow
         if (_nextToken > 999999)
@@ -748,12 +748,12 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
     private static string FindNetcoredbg()
     {
         // Try PATH environment variable
-        var pathEnv = Environment.GetEnvironmentVariable("PATH");
+        string? pathEnv = Environment.GetEnvironmentVariable("PATH");
         if (pathEnv != null)
         {
-            foreach (var path in pathEnv.Split(Path.PathSeparator))
+            foreach (string path in pathEnv.Split(Path.PathSeparator))
             {
-                var fullPath = Path.Combine(path, "netcoredbg.exe");
+                string fullPath = Path.Combine(path, "netcoredbg.exe");
                 if (File.Exists(fullPath))
                 {
                     return fullPath;
@@ -769,7 +769,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet", "tools", "netcoredbg.exe")
         ];
 
-        foreach (var path in commonPaths)
+        foreach (string path in commonPaths)
         {
             if (File.Exists(path))
             {
@@ -794,7 +794,7 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
 
     public void Dispose()
     {
-        foreach (var sessionId in _debuggerProcesses.Keys.ToList())
+        foreach (string sessionId in _debuggerProcesses.Keys.ToList())
         {
             CleanupSessionAsync(sessionId).Wait(TimeSpan.FromSeconds(5));
         }

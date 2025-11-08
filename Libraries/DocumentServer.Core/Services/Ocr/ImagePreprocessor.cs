@@ -23,11 +23,11 @@ public class ImagePreprocessor(ILogger<ImagePreprocessor> logger)
             logger.LogDebug("Enhancing image for OCR (scale factor: {ScaleFactor}x)", scaleFactor);
 
             using var inputStream = new MemoryStream(imageBytes);
-            using var image = Image.Load(inputStream);
+            using Image image = Image.Load(inputStream);
 
             // Calculate target dimensions
-            var targetWidth = image.Width * scaleFactor;
-            var targetHeight = image.Height * scaleFactor;
+            int targetWidth = image.Width * scaleFactor;
+            int targetHeight = image.Height * scaleFactor;
             
             logger.LogDebug("Original size: {Width}x{Height}, Target size: {TargetWidth}x{TargetHeight}",
                 image.Width, image.Height, targetWidth, targetHeight);
@@ -47,7 +47,7 @@ public class ImagePreprocessor(ILogger<ImagePreprocessor> logger)
             
             using var outputStream = new MemoryStream();
             image.Save(outputStream, new PngEncoder());
-            var enhancedBytes = outputStream.ToArray();
+            byte[] enhancedBytes = outputStream.ToArray();
 
             logger.LogDebug("Image enhanced successfully. Original: {OriginalSize} bytes, Enhanced: {EnhancedSize} bytes",
                 imageBytes.Length, enhancedBytes.Length);
@@ -74,13 +74,13 @@ public class ImagePreprocessor(ILogger<ImagePreprocessor> logger)
             logger.LogDebug("Applying custom image enhancements for OCR");
 
             using var inputStream = new MemoryStream(imageBytes);
-            using var image = Image.Load(inputStream);
+            using Image image = Image.Load(inputStream);
 
             image.Mutate(operations);
             
             using var outputStream = new MemoryStream();
             image.Save(outputStream, new PngEncoder());
-            var enhancedBytes = outputStream.ToArray();
+            byte[] enhancedBytes = outputStream.ToArray();
 
             logger.LogDebug("Custom enhancements applied successfully");
             return enhancedBytes;
@@ -100,7 +100,7 @@ public class ImagePreprocessor(ILogger<ImagePreprocessor> logger)
         try
         {
             using var inputStream = new MemoryStream(imageBytes);
-            var imageInfo = Image.Identify(inputStream);
+            ImageInfo imageInfo = Image.Identify(inputStream);
             return (imageInfo.Width, imageInfo.Height);
         }
         catch (Exception ex)

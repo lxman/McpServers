@@ -47,7 +47,7 @@ public class DocumentProcessor
         try
         {
             // Check if already cached
-            var cached = _cache.Get(filePath);
+            LoadedDocument? cached = _cache.Get(filePath);
             if (cached is not null)
             {
                 _logger.LogDebug("Document already cached: {FilePath}", filePath);
@@ -55,10 +55,10 @@ public class DocumentProcessor
             }
 
             // Get appropriate loader
-            var loader = _loaderFactory.GetLoader(filePath);
+            IDocumentLoader? loader = _loaderFactory.GetLoader(filePath);
             if (loader is null)
             {
-                var extension = Path.GetExtension(filePath);
+                string extension = Path.GetExtension(filePath);
                 _logger.LogWarning("No loader found for: {FilePath}, Extension: {Extension}",
                     filePath, extension);
                 return ServiceResult<LoadedDocument>.CreateFailure(
@@ -69,7 +69,7 @@ public class DocumentProcessor
             password ??= _passwordManager.GetPasswordForFile(filePath);
 
             // Load the document
-            var loadResult = await loader.LoadAsync(filePath, password);
+            ServiceResult<LoadedDocument> loadResult = await loader.LoadAsync(filePath, password);
             if (!loadResult.Success)
             {
                 _logger.LogWarning("Failed to load document: {FilePath}, Error: {Error}",
@@ -78,7 +78,7 @@ public class DocumentProcessor
             }
 
             // Add to cache
-            var cached_success = await _cache.AddAsync(filePath, loadResult.Data!);
+            bool cached_success = await _cache.AddAsync(filePath, loadResult.Data!);
             if (!cached_success)
             {
                 _logger.LogWarning("Failed to cache document (cache full): {FilePath}", filePath);
@@ -113,16 +113,16 @@ public class DocumentProcessor
         try
         {
             // Ensure document is loaded
-            var loadResult = await LoadDocumentAsync(filePath, password);
+            ServiceResult<LoadedDocument> loadResult = await LoadDocumentAsync(filePath, password);
             if (!loadResult.Success)
             {
                 return ServiceResult<string>.CreateFailure(loadResult.Error!);
             }
 
-            var document = loadResult.Data!;
+            LoadedDocument document = loadResult.Data!;
 
             // Get appropriate extractor
-            var extractor = _extractors.FirstOrDefault(e =>
+            IContentExtractor? extractor = _extractors.FirstOrDefault(e =>
                 e.SupportedType == document.DocumentType ||
                 (e.SupportedType == DocumentType.Word && (
                     document.DocumentType == DocumentType.Word ||
@@ -137,7 +137,7 @@ public class DocumentProcessor
             }
 
             // Extract text with page range parameters
-            var extractResult = await extractor.ExtractTextAsync(document, startPage, endPage, maxPages);
+            ServiceResult<string> extractResult = await extractor.ExtractTextAsync(document, startPage, endPage, maxPages);
             
             if (extractResult.Success)
             {
@@ -168,16 +168,16 @@ public class DocumentProcessor
         try
         {
             // Ensure document is loaded
-            var loadResult = await LoadDocumentAsync(filePath, password);
+            ServiceResult<LoadedDocument> loadResult = await LoadDocumentAsync(filePath, password);
             if (!loadResult.Success)
             {
                 return ServiceResult<Dictionary<string, string>>.CreateFailure(loadResult.Error!);
             }
 
-            var document = loadResult.Data!;
+            LoadedDocument document = loadResult.Data!;
 
             // Get appropriate extractor
-            var extractor = _extractors.FirstOrDefault(e =>
+            IContentExtractor? extractor = _extractors.FirstOrDefault(e =>
                 e.SupportedType == document.DocumentType ||
                 (e.SupportedType == DocumentType.Word && (
                     document.DocumentType == DocumentType.Word ||
@@ -191,7 +191,7 @@ public class DocumentProcessor
             }
 
             // Extract metadata
-            var metadataResult = 
+            ServiceResult<Dictionary<string, string>> metadataResult = 
                 await extractor.ExtractMetadataAsync(document);
 
             if (metadataResult.Success)
@@ -223,16 +223,16 @@ public class DocumentProcessor
         try
         {
             // Ensure document is loaded
-            var loadResult = await LoadDocumentAsync(filePath, password);
+            ServiceResult<LoadedDocument> loadResult = await LoadDocumentAsync(filePath, password);
             if (!loadResult.Success)
             {
                 return ServiceResult<object>.CreateFailure(loadResult.Error!);
             }
 
-            var document = loadResult.Data!;
+            LoadedDocument document = loadResult.Data!;
 
             // Get appropriate extractor
-            var extractor = _extractors.FirstOrDefault(e =>
+            IContentExtractor? extractor = _extractors.FirstOrDefault(e =>
                 e.SupportedType == document.DocumentType ||
                 (e.SupportedType == DocumentType.Word && (
                     document.DocumentType == DocumentType.Word ||
@@ -246,7 +246,7 @@ public class DocumentProcessor
             }
 
             // Extract structured content
-            var contentResult = await extractor.ExtractStructuredContentAsync(document);
+            ServiceResult<object> contentResult = await extractor.ExtractStructuredContentAsync(document);
 
             if (contentResult.Success)
             {
@@ -270,7 +270,7 @@ public class DocumentProcessor
     public bool UnloadDocument(string filePath)
     {
         _logger.LogInformation("Unloading document: {FilePath}", filePath);
-        var removed = _cache.Remove(filePath);
+        bool removed = _cache.Remove(filePath);
 
         if (removed)
         {
@@ -291,7 +291,7 @@ public class DocumentProcessor
     public int ClearAllDocuments()
     {
         _logger.LogInformation("Clearing all cached documents");
-        var count = _cache.GetCount();
+        int count = _cache.GetCount();
         _cache.Clear();
         _logger.LogInformation("Cleared {Count} documents from cache", count);
         return count;
@@ -319,7 +319,7 @@ public class DocumentProcessor
 
         try
         {
-            var loader = _loaderFactory.GetLoader(filePath);
+            IDocumentLoader? loader = _loaderFactory.GetLoader(filePath);
             if (loader is null)
             {
                 return ServiceResult<DocumentInfo>.CreateFailure(

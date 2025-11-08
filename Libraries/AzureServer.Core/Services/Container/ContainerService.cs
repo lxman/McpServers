@@ -30,12 +30,12 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var containerGroups = new List<ContainerGroupDto>();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
-                await foreach (var subscription in client.GetSubscriptions())
+                await foreach (SubscriptionResource? subscription in client.GetSubscriptions())
                 {
                     containerGroups.AddRange(subscription.GetContainerGroups().Select(MapToContainerGroupDto));
                 }
@@ -47,7 +47,7 @@ public class ContainerService(
                 if (!string.IsNullOrEmpty(resourceGroupName))
                 {
                     Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
-                    await foreach (var group in resourceGroup.Value.GetContainerGroups())
+                    await foreach (ContainerGroupResource? group in resourceGroup.Value.GetContainerGroups())
                     {
                         containerGroups.Add(MapToContainerGroupDto(group));
                     }
@@ -71,7 +71,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerGroupResource>? containerGroup = await resourceGroup.Value.GetContainerGroupAsync(containerGroupName);
@@ -93,11 +93,11 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
 
-            var containers = request.Containers.Select(c => new ContainerInstanceContainer(
+            List<ContainerInstanceContainer> containers = request.Containers.Select(c => new ContainerInstanceContainer(
                 c.Name,
                 c.Image,
                 new ContainerResourceRequirements(new ContainerResourceRequestsContent(c.MemoryInGb, c.CpuCores))
@@ -106,19 +106,19 @@ public class ContainerService(
             // Add ports and environment variables to each container
             for (var i = 0; i < containers.Count; i++)
             {
-                var container = containers[i];
-                var requestContainer = request.Containers[i];
+                ContainerInstanceContainer container = containers[i];
+                ContainerCreateRequest requestContainer = request.Containers[i];
     
                 if (requestContainer.Ports is not null)
                 {
-                    foreach (var port in requestContainer.Ports)
+                    foreach (int port in requestContainer.Ports)
                     {
                         container.Ports.Add(new ContainerPort(port) { Protocol = ContainerNetworkProtocol.Tcp });
                     }
                 }
 
                 if (requestContainer.EnvironmentVariables is null) continue;
-                foreach (var kv in requestContainer.EnvironmentVariables)
+                foreach (KeyValuePair<string, string> kv in requestContainer.EnvironmentVariables)
                 {
                     container.EnvironmentVariables.Add(new ContainerEnvironmentVariable(kv.Key) { Value = kv.Value });
                 }
@@ -131,7 +131,7 @@ public class ContainerService(
 
             if (request.Tags is not null)
             {
-                foreach (var tag in request.Tags)
+                foreach (KeyValuePair<string, string> tag in request.Tags)
                 {
                     data.Tags.Add(tag.Key, tag.Value);
                 }
@@ -172,7 +172,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerGroupResource>? containerGroup = await resourceGroup.Value.GetContainerGroupAsync(containerGroupName);
@@ -191,7 +191,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerGroupResource>? containerGroup = await resourceGroup.Value.GetContainerGroupAsync(containerGroupName);
@@ -212,7 +212,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerGroupResource>? containerGroup = await resourceGroup.Value.GetContainerGroupAsync(containerGroupName);
@@ -233,7 +233,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerGroupResource>? containerGroup = await resourceGroup.Value.GetContainerGroupAsync(containerGroupName);
@@ -254,7 +254,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             
@@ -262,7 +262,7 @@ public class ContainerService(
             Response<ContainerGroupResource>? containerGroupResource = await resourceGroup.Value.GetContainerGroupAsync(containerGroupName);
             
             // Get the specific container from the group
-            var container = containerGroupResource.Value.Data.Containers
+            ContainerInstanceContainer? container = containerGroupResource.Value.Data.Containers
                 .FirstOrDefault(c => c.Name.Equals(containerName, StringComparison.OrdinalIgnoreCase));
             
             if (container is null)
@@ -271,7 +271,7 @@ public class ContainerService(
             }
 
             // Get logs using container operations
-            var logs = await GetContainerLogsInternalAsync(containerGroupResource.Value, containerName, tail);
+            string? logs = await GetContainerLogsInternalAsync(containerGroupResource.Value, containerName, tail);
             
             return logs ?? string.Empty;
         }
@@ -286,7 +286,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerGroupResource>? containerGroup = await resourceGroup.Value.GetContainerGroupAsync(containerGroupName);
@@ -315,12 +315,12 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var registries = new List<ContainerRegistryDto>();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
-                await foreach (var subscription in client.GetSubscriptions())
+                await foreach (SubscriptionResource? subscription in client.GetSubscriptions())
                 {
                     registries.AddRange(subscription.GetContainerRegistries().Select(MapToContainerRegistryDto));
                 }
@@ -332,7 +332,7 @@ public class ContainerService(
                 if (!string.IsNullOrEmpty(resourceGroupName))
                 {
                     Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
-                    await foreach (var registry in resourceGroup.Value.GetContainerRegistries())
+                    await foreach (ContainerRegistryResource? registry in resourceGroup.Value.GetContainerRegistries())
                     {
                         registries.Add(MapToContainerRegistryDto(registry));
                     }
@@ -356,7 +356,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerRegistryResource>? registry = await resourceGroup.Value.GetContainerRegistryAsync(registryName);
@@ -378,11 +378,11 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
 
-            var sku = request.Sku switch
+            ContainerRegistrySkuName sku = request.Sku switch
             {
                 "Basic" => ContainerRegistrySkuName.Basic,
                 "Standard" => ContainerRegistrySkuName.Standard,
@@ -397,7 +397,7 @@ public class ContainerService(
 
             if (request.Tags is not null)
             {
-                foreach (var tag in request.Tags)
+                foreach (KeyValuePair<string, string> tag in request.Tags)
                 {
                     data.Tags.Add(tag.Key, tag.Value);
                 }
@@ -419,7 +419,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerRegistryResource>? registry = await resourceGroup.Value.GetContainerRegistryAsync(registryName);
@@ -438,14 +438,14 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerRegistryResource>? registry = await resourceGroup.Value.GetContainerRegistryAsync(registryName);
 
             Response<ContainerRegistryListCredentialsResult>? credentials = await registry.Value.GetCredentialsAsync();
 
-            var first = credentials.Value.Passwords.FirstOrDefault();
+            ContainerRegistryPassword? first = credentials.Value.Passwords.FirstOrDefault();
 
             return new RegistryCredentialsDto
             {
@@ -465,7 +465,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerRegistryResource>? registry = await resourceGroup.Value.GetContainerRegistryAsync(registryName);
@@ -477,7 +477,7 @@ public class ContainerService(
 
             Response<ContainerRegistryListCredentialsResult>? credentials = await registry.Value.RegenerateCredentialAsync(regenerateCredential);
 
-            var first = credentials.Value.Passwords.FirstOrDefault();
+            ContainerRegistryPassword? first = credentials.Value.Passwords.FirstOrDefault();
 
             return new RegistryCredentialsDto
             {
@@ -501,13 +501,13 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerRegistryResource>? registry = await resourceGroup.Value.GetContainerRegistryAsync(registryName);
 
             // Get the login server URL
-            var loginServer = registry.Value.Data.LoginServer;
+            string? loginServer = registry.Value.Data.LoginServer;
         
             // Get credentials for the registry
             Response<ContainerRegistryListCredentialsResult>? credentials = await registry.Value.GetCredentialsAsync();
@@ -519,7 +519,7 @@ public class ContainerService(
 
             var repositories = new List<ContainerRepositoryDto>();
         
-            await foreach (var repositoryName in containerRegistryClient.GetRepositoryNamesAsync())
+            await foreach (string? repositoryName in containerRegistryClient.GetRepositoryNamesAsync())
             {
                 repositories.Add(new ContainerRepositoryDto
                 {
@@ -542,12 +542,12 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerRegistryResource>? registry = await resourceGroup.Value.GetContainerRegistryAsync(registryName);
 
-            var loginServer = registry.Value.Data.LoginServer;
+            string? loginServer = registry.Value.Data.LoginServer;
             
             var containerRegistryClient = new ContainerRegistryClient(
                 new Uri($"https://{loginServer}"),
@@ -557,9 +557,9 @@ public class ContainerService(
 
             if (!string.IsNullOrEmpty(repositoryName))
             {
-                var repository = containerRegistryClient.GetRepository(repositoryName);
+                ContainerRepository? repository = containerRegistryClient.GetRepository(repositoryName);
                 
-                await foreach (var manifest in repository.GetAllManifestPropertiesAsync())
+                await foreach (ArtifactManifestProperties? manifest in repository.GetAllManifestPropertiesAsync())
                 {
                     images.Add(new ContainerImageDto
                     {
@@ -575,11 +575,11 @@ public class ContainerService(
             else
             {
                 // List all images from all repositories
-                await foreach (var repoName in containerRegistryClient.GetRepositoryNamesAsync())
+                await foreach (string? repoName in containerRegistryClient.GetRepositoryNamesAsync())
                 {
-                    var repository = containerRegistryClient.GetRepository(repoName);
+                    ContainerRepository? repository = containerRegistryClient.GetRepository(repoName);
                     
-                    await foreach (var manifest in repository.GetAllManifestPropertiesAsync())
+                    await foreach (ArtifactManifestProperties? manifest in repository.GetAllManifestPropertiesAsync())
                     {
                         images.Add(new ContainerImageDto
                         {
@@ -607,19 +607,19 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerRegistryResource>? registry = await resourceGroup.Value.GetContainerRegistryAsync(registryName);
 
-            var loginServer = registry.Value.Data.LoginServer;
+            string? loginServer = registry.Value.Data.LoginServer;
         
             var containerRegistryClient = new ContainerRegistryClient(
                 new Uri($"https://{loginServer}"),
                 new DefaultAzureCredential());
 
-            var repository = containerRegistryClient.GetRepository(repositoryName);
-            var artifact = repository.GetArtifact(tag);
+            ContainerRepository? repository = containerRegistryClient.GetRepository(repositoryName);
+            RegistryArtifact? artifact = repository.GetArtifact(tag);
         
             Response<ArtifactManifestProperties> properties = await artifact.GetManifestPropertiesAsync();
 
@@ -650,19 +650,19 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerRegistryResource>? registry = await resourceGroup.Value.GetContainerRegistryAsync(registryName);
 
-            var loginServer = registry.Value.Data.LoginServer;
+            string? loginServer = registry.Value.Data.LoginServer;
         
             var containerRegistryClient = new ContainerRegistryClient(
                 new Uri($"https://{loginServer}"),
                 new DefaultAzureCredential());
 
-            var repository = containerRegistryClient.GetRepository(repositoryName);
-            var artifact = repository.GetArtifact(tag);
+            ContainerRepository? repository = containerRegistryClient.GetRepository(repositoryName);
+            RegistryArtifact? artifact = repository.GetArtifact(tag);
         
             await artifact.DeleteAsync();
             return true;
@@ -678,18 +678,18 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerRegistryResource>? registry = await resourceGroup.Value.GetContainerRegistryAsync(registryName);
 
-            var loginServer = registry.Value.Data.LoginServer;
+            string? loginServer = registry.Value.Data.LoginServer;
         
             var containerRegistryClient = new ContainerRegistryClient(
                 new Uri($"https://{loginServer}"),
                 new DefaultAzureCredential());
 
-            var repository = containerRegistryClient.GetRepository(repositoryName);
+            ContainerRepository? repository = containerRegistryClient.GetRepository(repositoryName);
             await repository.DeleteAsync();
         
             return true;
@@ -709,7 +709,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerRegistryResource>? registry = await resourceGroup.Value.GetContainerRegistryAsync(registryName);
@@ -751,7 +751,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerRegistryResource>? registry = await resourceGroup.Value.GetContainerRegistryAsync(registryName);
@@ -783,14 +783,14 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerRegistryResource>? registry = await resourceGroup.Value.GetContainerRegistryAsync(registryName);
 
             var runs = new List<BuildRunDto>();
         
-            await foreach (var run in registry.Value.GetContainerRegistryRuns())
+            await foreach (ContainerRegistryRunResource? run in registry.Value.GetContainerRegistryRuns())
             {
                 runs.Add(new BuildRunDto
                 {
@@ -816,13 +816,13 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerRegistryResource>? registry = await resourceGroup.Value.GetContainerRegistryAsync(registryName);
 
             // Get the run resource
-            var runName = runId.Split('/').Last();
+            string runName = runId.Split('/').Last();
             Response<ContainerRegistryRunResource>? run = await registry.Value.GetContainerRegistryRunAsync(runName);
 
             // Get logs URL
@@ -849,12 +849,12 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             var clusters = new List<KubernetesClusterDto>();
 
             if (string.IsNullOrEmpty(subscriptionId))
             {
-                await foreach (var subscription in client.GetSubscriptions())
+                await foreach (SubscriptionResource? subscription in client.GetSubscriptions())
                 {
                     clusters.AddRange(subscription.GetContainerServiceManagedClusters().Select(MapToKubernetesClusterDto));
                 }
@@ -866,7 +866,7 @@ public class ContainerService(
                 if (!string.IsNullOrEmpty(resourceGroupName))
                 {
                     Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
-                    await foreach (var cluster in resourceGroup.Value.GetContainerServiceManagedClusters())
+                    await foreach (ContainerServiceManagedClusterResource? cluster in resourceGroup.Value.GetContainerServiceManagedClusters())
                     {
                         clusters.Add(MapToKubernetesClusterDto(cluster));
                     }
@@ -890,7 +890,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerServiceManagedClusterResource>? cluster = await resourceGroup.Value.GetContainerServiceManagedClusterAsync(clusterName);
@@ -912,7 +912,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
 
@@ -937,7 +937,7 @@ public class ContainerService(
 
             if (request.Tags is not null)
             {
-                foreach (var tag in request.Tags)
+                foreach (KeyValuePair<string, string> tag in request.Tags)
                 {
                     data.Tags.Add(tag.Key, tag.Value);
                 }
@@ -959,7 +959,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerServiceManagedClusterResource>? cluster = await resourceGroup.Value.GetContainerServiceManagedClusterAsync(clusterName);
@@ -978,14 +978,14 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerServiceManagedClusterResource>? cluster = await resourceGroup.Value.GetContainerServiceManagedClusterAsync(clusterName);
         
             Response<ContainerServiceAgentPoolResource>? agentPool = await cluster.Value.GetContainerServiceAgentPoolAsync(nodePoolName);
         
-            var data = agentPool.Value.Data;
+            ContainerServiceAgentPoolData? data = agentPool.Value.Data;
             data.Count = nodeCount;
         
             ArmOperation<ContainerServiceAgentPoolResource> operation = await cluster.Value.GetContainerServiceAgentPools()
@@ -1005,12 +1005,12 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerServiceManagedClusterResource>? cluster = await resourceGroup.Value.GetContainerServiceManagedClusterAsync(clusterName);
 
-            var data = cluster.Value.Data;
+            ContainerServiceManagedClusterData? data = cluster.Value.Data;
             data.KubernetesVersion = kubernetesVersion;
 
             ArmOperation<ContainerServiceManagedClusterResource> operation = await resourceGroup.Value.GetContainerServiceManagedClusters()
@@ -1029,7 +1029,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerServiceManagedClusterResource>? cluster = await resourceGroup.Value.GetContainerServiceManagedClusterAsync(clusterName);
@@ -1052,7 +1052,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerServiceManagedClusterResource>? cluster = await resourceGroup.Value.GetContainerServiceManagedClusterAsync(clusterName);
@@ -1073,7 +1073,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerServiceManagedClusterResource>? cluster = await resourceGroup.Value.GetContainerServiceManagedClusterAsync(clusterName);
@@ -1098,14 +1098,14 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerServiceManagedClusterResource>? cluster = await resourceGroup.Value.GetContainerServiceManagedClusterAsync(clusterName);
 
             var nodePools = new List<NodePoolDto>();
         
-            await foreach (var nodePool in cluster.Value.GetContainerServiceAgentPools())
+            await foreach (ContainerServiceAgentPoolResource? nodePool in cluster.Value.GetContainerServiceAgentPools())
             {
                 nodePools.Add(MapToNodePoolDto(nodePool));
             }
@@ -1123,7 +1123,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerServiceManagedClusterResource>? cluster = await resourceGroup.Value.GetContainerServiceManagedClusterAsync(clusterName);
@@ -1146,7 +1146,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerServiceManagedClusterResource>? cluster = await resourceGroup.Value.GetContainerServiceManagedClusterAsync(clusterName);
@@ -1178,7 +1178,7 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerServiceManagedClusterResource>? cluster = await resourceGroup.Value.GetContainerServiceManagedClusterAsync(clusterName);
@@ -1198,13 +1198,13 @@ public class ContainerService(
     {
         try
         {
-            var client = await armClientFactory.GetArmClientAsync();
+            ArmClient client = await armClientFactory.GetArmClientAsync();
             Response<SubscriptionResource>? subscription = await client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}")).GetAsync();
             Response<ResourceGroupResource>? resourceGroup = await subscription.Value.GetResourceGroupAsync(resourceGroupName);
             Response<ContainerServiceManagedClusterResource>? cluster = await resourceGroup.Value.GetContainerServiceManagedClusterAsync(clusterName);
             Response<ContainerServiceAgentPoolResource>? nodePool = await cluster.Value.GetContainerServiceAgentPoolAsync(nodePoolName);
 
-            var data = nodePool.Value.Data;
+            ContainerServiceAgentPoolData? data = nodePool.Value.Data;
         
             if (request.Count.HasValue)
                 data.Count = request.Count.Value;
@@ -1235,7 +1235,7 @@ public class ContainerService(
 
     private ContainerGroupDto MapToContainerGroupDto(ContainerGroupResource resource)
     {
-        var data = resource.Data;
+        ContainerGroupData? data = resource.Data;
         return new ContainerGroupDto
         {
             Id = resource.Id?.ToString(),
@@ -1271,7 +1271,7 @@ public class ContainerService(
 
     private static ContainerRegistryDto MapToContainerRegistryDto(ContainerRegistryResource resource)
     {
-        var data = resource.Data;
+        ContainerRegistryData? data = resource.Data;
         return new ContainerRegistryDto
         {
             Id = resource.Id?.ToString(),
@@ -1313,7 +1313,7 @@ public class ContainerService(
     
     private static KubernetesClusterDto MapToKubernetesClusterDto(ContainerServiceManagedClusterResource resource)
     {
-        var data = resource.Data;
+        ContainerServiceManagedClusterData? data = resource.Data;
         return new KubernetesClusterDto
         {
             Id = resource.Id?.ToString(),
@@ -1335,7 +1335,7 @@ public class ContainerService(
 
     private static NodePoolDto MapToNodePoolDto(ContainerServiceAgentPoolResource resource)
     {
-        var data = resource.Data;
+        ContainerServiceAgentPoolData? data = resource.Data;
         return new NodePoolDto
         {
             Id = resource.Id?.ToString(),

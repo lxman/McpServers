@@ -22,15 +22,15 @@ public class SqlSchemaTools(
     {
         try
         {
-            var tables = await schemaInspector.GetTablesAsync(connectionName);
+            IEnumerable<TableInfo> tables = await schemaInspector.GetTablesAsync(connectionName);
             var responseObject = new { success = true, tables };
 
             // Check response size before returning
-            var sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "list_tables");
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "list_tables");
 
             if (!sizeCheck.IsWithinLimit)
             {
-                var tableCount = tables.Count();
+                int tableCount = tables.Count();
                 return responseSizeGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"Database contains {tableCount} tables, resulting in {sizeCheck.EstimatedTokens:N0} estimated tokens.",
@@ -61,7 +61,7 @@ public class SqlSchemaTools(
     {
         try
         {
-            var schema = await schemaInspector.GetTableSchemaAsync(connectionName, tableName);
+            TableSchema schema = await schemaInspector.GetTableSchemaAsync(connectionName, tableName);
             return JsonSerializer.Serialize(new { success = true, schema }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
@@ -79,7 +79,7 @@ public class SqlSchemaTools(
     {
         try
         {
-            var indexes = await schemaInspector.GetIndexesAsync(connectionName, tableName);
+            IEnumerable<IndexInfo> indexes = await schemaInspector.GetIndexesAsync(connectionName, tableName);
             return JsonSerializer.Serialize(new { success = true, indexes }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
@@ -97,7 +97,7 @@ public class SqlSchemaTools(
     {
         try
         {
-            var foreignKeys = await schemaInspector.GetForeignKeysAsync(connectionName, tableName);
+            IEnumerable<ForeignKeyInfo> foreignKeys = await schemaInspector.GetForeignKeysAsync(connectionName, tableName);
             return JsonSerializer.Serialize(new { success = true, foreignKeys }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)

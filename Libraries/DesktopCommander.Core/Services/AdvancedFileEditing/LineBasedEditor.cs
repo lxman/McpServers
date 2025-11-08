@@ -22,13 +22,13 @@ public class LineBasedEditor(DiffPatchService diffPatchService, IndentationManag
                 return (false, originalLines, $"Line range {range} is outside file bounds (1-{originalLines.Length})");
             }
             
-            var operation = EditOperation.Replace(startLine, endLine, newContent);
-            (var isValid, var validationError) = DiffPatchService.ValidateEdit(originalLines, operation);
+            EditOperation operation = EditOperation.Replace(startLine, endLine, newContent);
+            (bool isValid, string? validationError) = DiffPatchService.ValidateEdit(originalLines, operation);
             
             if (!isValid)
                 return (false, originalLines, validationError);
             
-            var result = ApplyOperation(originalLines, operation);
+            string[] result = ApplyOperation(originalLines, operation);
             return (true, result, null);
         }
         catch (Exception ex)
@@ -52,13 +52,13 @@ public class LineBasedEditor(DiffPatchService diffPatchService, IndentationManag
                 return (false, originalLines, $"Insert position {afterLine} is outside valid range (0-{originalLines.Length})");
             }
             
-            var operation = EditOperation.Insert(afterLine, content);
-            (var isValid, var validationError) = DiffPatchService.ValidateEdit(originalLines, operation);
+            EditOperation operation = EditOperation.Insert(afterLine, content);
+            (bool isValid, string? validationError) = DiffPatchService.ValidateEdit(originalLines, operation);
             
             if (!isValid)
                 return (false, originalLines, validationError);
             
-            var result = ApplyOperation(originalLines, operation);
+            string[] result = ApplyOperation(originalLines, operation);
             return (true, result, null);
         }
         catch (Exception ex)
@@ -78,13 +78,13 @@ public class LineBasedEditor(DiffPatchService diffPatchService, IndentationManag
         try
         {
             // Detect the file's indentation style
-            var fileIndentation = IndentationManager.DetectFileIndentation(originalLines);
+            IndentationInfo fileIndentation = IndentationManager.DetectFileIndentation(originalLines);
             
             // Determine the appropriate indentation level for the insertion point
-            var targetLevel = IndentationManager.DetermineInsertionIndentLevel(originalLines, afterLine);
+            int targetLevel = IndentationManager.DetermineInsertionIndentLevel(originalLines, afterLine);
             
             // Fix the indentation of the content to match
-            var indentedContent = IndentationManager.FixIndentation(content, fileIndentation, targetLevel);
+            string indentedContent = IndentationManager.FixIndentation(content, fileIndentation, targetLevel);
             
             return InsertAfterLine(originalLines, afterLine, indentedContent);
         }
@@ -110,13 +110,13 @@ public class LineBasedEditor(DiffPatchService diffPatchService, IndentationManag
                 return (false, originalLines, $"Line range {range} is outside file bounds (1-{originalLines.Length})");
             }
             
-            var operation = EditOperation.Delete(startLine, endLine);
-            (var isValid, var validationError) = DiffPatchService.ValidateEdit(originalLines, operation);
+            EditOperation operation = EditOperation.Delete(startLine, endLine);
+            (bool isValid, string? validationError) = DiffPatchService.ValidateEdit(originalLines, operation);
             
             if (!isValid)
                 return (false, originalLines, validationError);
             
-            var result = ApplyOperation(originalLines, operation);
+            string[] result = ApplyOperation(originalLines, operation);
             return (true, result, null);
         }
         catch (Exception ex)
@@ -131,7 +131,7 @@ public class LineBasedEditor(DiffPatchService diffPatchService, IndentationManag
     public static int[] FindLines(string[] lines, string pattern, bool useRegex = false, bool caseSensitive = false)
     {
         var matches = new List<int>();
-        var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+        StringComparison comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
         
         for (var i = 0; i < lines.Length; i++)
         {
@@ -177,7 +177,7 @@ public class LineBasedEditor(DiffPatchService diffPatchService, IndentationManag
         {
             List<string> result = [..originalLines];
             var replacementCount = 0;
-            var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+            StringComparison comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
             
             for (var i = 0; i < result.Count; i++)
             {
@@ -229,12 +229,12 @@ public class LineBasedEditor(DiffPatchService diffPatchService, IndentationManag
         switch (operation.Type)
         {
             case EditOperationType.Replace:
-                var removeCount = operation.EndLine - operation.StartLine + 1;
+                int removeCount = operation.EndLine - operation.StartLine + 1;
                 result.RemoveRange(operation.StartLine - 1, removeCount);
                 
                 if (!string.IsNullOrEmpty(operation.Content))
                 {
-                    var newLines = SplitContent(operation.Content);
+                    string[] newLines = SplitContent(operation.Content);
                     result.InsertRange(operation.StartLine - 1, newLines);
                 }
                 break;
@@ -242,13 +242,13 @@ public class LineBasedEditor(DiffPatchService diffPatchService, IndentationManag
             case EditOperationType.Insert:
                 if (!string.IsNullOrEmpty(operation.Content))
                 {
-                    var newLines = SplitContent(operation.Content);
+                    string[] newLines = SplitContent(operation.Content);
                     result.InsertRange(operation.StartLine, newLines);
                 }
                 break;
                 
             case EditOperationType.Delete:
-                var deleteCount = operation.EndLine - operation.StartLine + 1;
+                int deleteCount = operation.EndLine - operation.StartLine + 1;
                 result.RemoveRange(operation.StartLine - 1, deleteCount);
                 break;
             default:

@@ -21,7 +21,7 @@ try
 {
     Log.Information("Starting AWS MCP server");
 
-    var builder = Host.CreateApplicationBuilder(args);
+    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
     // Configure logging
     builder.Logging.ClearProviders();
@@ -40,7 +40,7 @@ try
         .WithTools<EcrTools>()
         .WithTools<QuickSightTools>();
 
-    var host = builder.Build();
+    IHost host = builder.Build();
     await host.RunAsync();
 }
 catch (Exception ex)

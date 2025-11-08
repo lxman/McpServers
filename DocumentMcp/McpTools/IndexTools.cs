@@ -47,7 +47,7 @@ public class IndexTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Root path does not exist" }, _jsonOptions);
             }
 
-            var result = await indexer.BuildIndexAsync(
+            ServiceResult<IndexingResult> result = await indexer.BuildIndexAsync(
                 indexName,
                 rootPath,
                 includePatterns,
@@ -90,10 +90,10 @@ public class IndexTools(
         {
             logger.LogDebug("Listing all indexes");
 
-            var indexNames = indexManager.GetIndexNames();
-            var memoryStatus = indexManager.GetIndexMemoryStatus();
+            List<string> indexNames = indexManager.GetIndexNames();
+            Dictionary<string, IndexMemoryStatus> memoryStatus = indexManager.GetIndexMemoryStatus();
 
-            var loadedCount = memoryStatus.Count(kvp => kvp.Value.IsLoadedInMemory);
+            int loadedCount = memoryStatus.Count(kvp => kvp.Value.IsLoadedInMemory);
 
             logger.LogInformation("Found {TotalCount} indexes, {LoadedCount} loaded in memory",
                 indexNames.Count, loadedCount);
@@ -164,7 +164,7 @@ public class IndexTools(
                 EndDate = endDate
             };
 
-            var results = searcher.Search(query, indexName, searchOptions);
+            LuceneSearchResults results = searcher.Search(query, indexName, searchOptions);
 
             logger.LogInformation("Search completed: {IndexName}, Found {TotalHits} hits, Returned {Count} results",
                 indexName, results.TotalHits, results.Results.Count);
@@ -222,7 +222,7 @@ public class IndexTools(
 
             try
             {
-                var totalHits = searcher.TestQuery(query, indexName);
+                int totalHits = searcher.TestQuery(query, indexName);
 
                 logger.LogInformation("Test query succeeded: {IndexName}, Query: {Query}, Hits: {TotalHits}",
                     indexName, query, totalHits);
@@ -277,7 +277,7 @@ public class IndexTools(
                 return JsonSerializer.Serialize(new { success = false, error = $"Index '{indexName}' not found" }, _jsonOptions);
             }
 
-            var unloaded = indexManager.UnloadIndex(indexName);
+            bool unloaded = indexManager.UnloadIndex(indexName);
 
             logger.LogInformation("Unload result: {IndexName}, Success: {Success}", indexName, unloaded);
 
@@ -306,7 +306,7 @@ public class IndexTools(
         {
             logger.LogInformation("Unloading all indexes from memory");
 
-            var unloadedCount = indexManager.UnloadAllIndexes();
+            int unloadedCount = indexManager.UnloadAllIndexes();
 
             logger.LogInformation("Unloaded all indexes: {Count} total", unloadedCount);
 
@@ -348,7 +348,7 @@ public class IndexTools(
                 }, _jsonOptions);
             }
 
-            var deleted = indexManager.DeleteIndex(indexName);
+            bool deleted = indexManager.DeleteIndex(indexName);
 
             logger.LogInformation("Index deleted: {IndexName}, Success: {Success}", indexName, deleted);
 
@@ -381,11 +381,11 @@ public class IndexTools(
         {
             logger.LogDebug("Getting memory status for all indexes");
 
-            var memoryStatus = indexManager.GetIndexMemoryStatus();
+            Dictionary<string, IndexMemoryStatus> memoryStatus = indexManager.GetIndexMemoryStatus();
 
-            var totalIndexes = memoryStatus.Count;
-            var loadedIndexes = memoryStatus.Count(kvp => kvp.Value.IsLoadedInMemory);
-            var totalMemoryMb = memoryStatus.Sum(kvp => kvp.Value.EstimatedMemoryUsageMb);
+            int totalIndexes = memoryStatus.Count;
+            int loadedIndexes = memoryStatus.Count(kvp => kvp.Value.IsLoadedInMemory);
+            double totalMemoryMb = memoryStatus.Sum(kvp => kvp.Value.EstimatedMemoryUsageMb);
 
             logger.LogInformation("Memory status retrieved: {Count} indexes tracked, {Loaded} loaded, {MemoryMb:F2} MB total",
                 totalIndexes, loadedIndexes, totalMemoryMb);
@@ -425,7 +425,7 @@ public class IndexTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Directory path is required" }, _jsonOptions);
             }
 
-            var indexName = indexManager.FindIndexForDirectory(directoryPath);
+            string? indexName = indexManager.FindIndexForDirectory(directoryPath);
 
             logger.LogInformation("Index lookup for directory: {DirectoryPath}, Found: {IndexName}",
                 directoryPath, indexName ?? "none");

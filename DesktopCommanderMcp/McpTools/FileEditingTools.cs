@@ -35,7 +35,7 @@ public class FileEditingTools(
         {
             filePath = Path.GetFullPath(filePath);
             
-            var result = await fileEditor.PrepareReplaceFileLines(
+            EditResult result = await fileEditor.PrepareReplaceFileLines(
                 filePath,
                 startLine,
                 endLine,
@@ -68,7 +68,7 @@ public class FileEditingTools(
         {
             filePath = Path.GetFullPath(filePath);
             
-            var result = await fileEditor.PrepareInsertAfterLine(
+            EditResult result = await fileEditor.PrepareInsertAfterLine(
                 filePath,
                 afterLine,
                 content,
@@ -100,7 +100,7 @@ public class FileEditingTools(
         {
             filePath = Path.GetFullPath(filePath);
             
-            var result = await fileEditor.PrepareDeleteLines(
+            EditResult result = await fileEditor.PrepareDeleteLines(
                 filePath,
                 startLine,
                 endLine,
@@ -133,7 +133,7 @@ public class FileEditingTools(
         {
             filePath = Path.GetFullPath(filePath);
             
-            var result = await fileEditor.PrepareReplaceInFile(
+            EditResult result = await fileEditor.PrepareReplaceInFile(
                 filePath,
                 searchPattern,
                 replaceWith,
@@ -169,8 +169,8 @@ public class FileEditingTools(
             }
 
             // Get the pending edit to check if it exists
-            var pendingEdits = approvalService.GetAllPendingEdits();
-            var pendingEdit = pendingEdits.FirstOrDefault(pe => pe.ApprovalToken == approvalToken);
+            IReadOnlyList<PendingEdit> pendingEdits = approvalService.GetAllPendingEdits();
+            PendingEdit? pendingEdit = pendingEdits.FirstOrDefault(pe => pe.ApprovalToken == approvalToken);
             
             if (pendingEdit == null)
             {
@@ -180,12 +180,12 @@ public class FileEditingTools(
                     SerializerOptions.JsonOptionsIndented);
             }
 
-            var fullPath = Path.GetFullPath(pendingEdit.FilePath);
+            string fullPath = Path.GetFullPath(pendingEdit.FilePath);
             
             // Get the current version token to validate the file hasn't changed
-            var currentVersionToken = FileVersionService.ComputeVersionToken(fullPath);
+            string currentVersionToken = FileVersionService.ComputeVersionToken(fullPath);
             
-            var result = await fileEditor.ApplyPendingEdit(approvalToken, currentVersionToken);
+            EditResult result = await fileEditor.ApplyPendingEdit(approvalToken, currentVersionToken);
             
             if (!result.Success)
             {
@@ -214,7 +214,7 @@ public class FileEditingTools(
     {
         try
         {
-            var result = approvalService.CancelPendingEdit(approvalToken);
+            bool result = approvalService.CancelPendingEdit(approvalToken);
             
             return Task.FromResult(JsonSerializer.Serialize(new
             {
@@ -238,7 +238,7 @@ public class FileEditingTools(
     {
         try
         {
-            var result = approvalService.GetAllPendingEdits();
+            IReadOnlyList<PendingEdit> result = approvalService.GetAllPendingEdits();
             
             return Task.FromResult(JsonSerializer.Serialize(new
             {
@@ -284,7 +284,7 @@ public class FileEditingTools(
             skip = Math.Max(0, skip);
             contextLines = Math.Clamp(contextLines, 0, 10);
 
-            var allLines = await File.ReadAllLinesAsync(filePath);
+            string[] allLines = await File.ReadAllLinesAsync(filePath);
             var allMatches = new List<(int lineNumber, string content)>();
 
             // Find all matches
@@ -303,7 +303,7 @@ public class FileEditingTools(
                 }
                 else
                 {
-                    var comparison = caseSensitive
+                    StringComparison comparison = caseSensitive
                         ? StringComparison.Ordinal
                         : StringComparison.OrdinalIgnoreCase;
                     isMatch = allLines[i].Contains(pattern, comparison);
@@ -315,7 +315,7 @@ public class FileEditingTools(
                 }
             }
 
-            var totalMatches = allMatches.Count;
+            int totalMatches = allMatches.Count;
 
             // Count-only mode - just return statistics
             if (countOnly)
@@ -341,20 +341,20 @@ public class FileEditingTools(
             }
 
             // Paginate matches
-            var paginatedMatches = allMatches.Skip(skip).Take(maxMatches).ToList();
-            var hasMore = skip + paginatedMatches.Count < totalMatches;
+            List<(int lineNumber, string content)> paginatedMatches = allMatches.Skip(skip).Take(maxMatches).ToList();
+            bool hasMore = skip + paginatedMatches.Count < totalMatches;
 
             // Build match objects with optional context
             var matchObjects = new List<object>();
-            foreach (var (lineNumber, content) in paginatedMatches)
+            foreach ((int lineNumber, string content) in paginatedMatches)
             {
                 if (includeContext)
                 {
-                    var startLine = Math.Max(0, lineNumber - 1 - contextLines);
-                    var endLine = Math.Min(allLines.Length - 1, lineNumber - 1 + contextLines);
+                    int startLine = Math.Max(0, lineNumber - 1 - contextLines);
+                    int endLine = Math.Min(allLines.Length - 1, lineNumber - 1 + contextLines);
 
                     var contextLinesData = new List<object>();
-                    for (var i = startLine; i <= endLine; i++)
+                    for (int i = startLine; i <= endLine; i++)
                     {
                         contextLinesData.Add(new
                         {
@@ -402,7 +402,7 @@ public class FileEditingTools(
             };
 
             // Check response size before returning
-            var sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "find_in_file");
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "find_in_file");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -465,20 +465,20 @@ public class FileEditingTools(
                     SerializerOptions.JsonOptionsIndented);
             }
 
-            var lines = await File.ReadAllLinesAsync(filePath);
+            string[] lines = await File.ReadAllLinesAsync(filePath);
             var spacesCount = 0;
             var tabsCount = 0;
             var mixedCount = 0;
 
-            foreach (var line in lines)
+            foreach (string line in lines)
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
                 
-                var leadingWhitespace = line.TakeWhile(char.IsWhiteSpace).ToArray();
+                char[] leadingWhitespace = line.TakeWhile(char.IsWhiteSpace).ToArray();
                 if (leadingWhitespace.Length == 0) continue;
 
-                var hasSpaces = leadingWhitespace.Contains(' ');
-                var hasTabs = leadingWhitespace.Contains('\t');
+                bool hasSpaces = leadingWhitespace.Contains(' ');
+                bool hasTabs = leadingWhitespace.Contains('\t');
 
                 if (hasSpaces && hasTabs)
                     mixedCount++;
@@ -488,7 +488,7 @@ public class FileEditingTools(
                     tabsCount++;
             }
 
-            var recommendation = mixedCount > 0 
+            string recommendation = mixedCount > 0 
                 ? "Mixed indentation detected - should standardize"
                 : spacesCount > tabsCount 
                     ? "Predominantly spaces - continue using spaces"
@@ -533,12 +533,12 @@ public class FileEditingTools(
                     SerializerOptions.JsonOptionsIndented));
             }
 
-            var cutoffTime = DateTime.Now.AddHours(-olderThanHours);
-            var backupFiles = Directory.GetFiles(directoryPath, pattern, SearchOption.AllDirectories)
+            DateTime cutoffTime = DateTime.Now.AddHours(-olderThanHours);
+            List<string> backupFiles = Directory.GetFiles(directoryPath, pattern, SearchOption.AllDirectories)
                 .Where(f => olderThanHours == 0 || File.GetLastWriteTime(f) < cutoffTime)
                 .ToList();
 
-            foreach (var file in backupFiles)
+            foreach (string file in backupFiles)
             {
                 File.Delete(file);
             }

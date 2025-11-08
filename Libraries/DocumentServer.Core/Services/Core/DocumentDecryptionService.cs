@@ -20,7 +20,7 @@ public class DocumentDecryptionService(ILogger<DocumentDecryptionService> logger
             logger.LogDebug("Decrypting document from stream");
             
             // The MsOfficeCrypto facade handles all the complexity
-            var stream = await OfficeDocument.DecryptAsync(inputStream, password, cancellationToken);
+            Stream stream = await OfficeDocument.DecryptAsync(inputStream, password, cancellationToken);
             
             logger.LogDebug("Successfully decrypted document from stream");
             return stream;

@@ -110,7 +110,7 @@ public class CredentialInfo
 
         if (TokenExpiresOn.HasValue)
         {
-            var timeToExpiry = TokenExpiresOn.Value - DateTimeOffset.UtcNow;
+            TimeSpan timeToExpiry = TokenExpiresOn.Value - DateTimeOffset.UtcNow;
             if (timeToExpiry.TotalMinutes > 0)
                 lines.Add($"   Token expires: {timeToExpiry.TotalHours:F1} hours");
             else

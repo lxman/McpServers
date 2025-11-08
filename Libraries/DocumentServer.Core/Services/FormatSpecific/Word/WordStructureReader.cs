@@ -27,8 +27,8 @@ public class WordStructureReader(
 
         try
         {
-            using var doc = await OpenDocumentAsync(filePath);
-            var body = doc.MainDocumentPart?.Document?.Body;
+            using WordprocessingDocument doc = await OpenDocumentAsync(filePath);
+            Body? body = doc.MainDocumentPart?.Document?.Body;
 
             if (body is null)
             {
@@ -39,7 +39,7 @@ public class WordStructureReader(
             var currentSection = new WordSection { Title = "Main Document", Level = 0 };
             var currentSectionContent = new StringBuilder();
 
-            foreach (var element in body.Elements())
+            foreach (OpenXmlElement element in body.Elements())
             {
                 if (element is Paragraph paragraph)
                 {
@@ -74,8 +74,8 @@ public class WordStructureReader(
 
         try
         {
-            using var doc = await OpenDocumentAsync(filePath);
-            var body = doc.MainDocumentPart?.Document?.Body;
+            using WordprocessingDocument doc = await OpenDocumentAsync(filePath);
+            Body? body = doc.MainDocumentPart?.Document?.Body;
 
             if (body is null)
             {
@@ -84,13 +84,13 @@ public class WordStructureReader(
 
             var headings = new List<WordSection>();
 
-            foreach (var paragraph in body.Elements<Paragraph>())
+            foreach (Paragraph paragraph in body.Elements<Paragraph>())
             {
-                var paragraphText = GetParagraphText(paragraph);
+                string paragraphText = GetParagraphText(paragraph);
                 if (string.IsNullOrWhiteSpace(paragraphText)) continue;
 
-                var styleId = paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value;
-                var isHeading = IsHeadingStyle(styleId, paragraphText);
+                string? styleId = paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value;
+                bool isHeading = IsHeadingStyle(styleId, paragraphText);
 
                 if (isHeading)
                 {
@@ -123,13 +123,13 @@ public class WordStructureReader(
 
         try
         {
-            var sectionsResult = await ExtractSectionsAsync(filePath);
+            ServiceResult<List<WordSection>> sectionsResult = await ExtractSectionsAsync(filePath);
             if (!sectionsResult.Success)
             {
                 return ServiceResult<WordSection>.CreateFailure(sectionsResult.Error!);
             }
 
-            var section = sectionsResult.Data!.FirstOrDefault(s => 
+            WordSection? section = sectionsResult.Data!.FirstOrDefault(s => 
                 s.Title.Equals(headingTitle, StringComparison.OrdinalIgnoreCase));
 
             if (section is null)
@@ -153,7 +153,7 @@ public class WordStructureReader(
 
     private async Task<WordprocessingDocument> OpenDocumentAsync(string filePath)
     {
-        var cached = cache.Get(filePath);
+        LoadedDocument? cached = cache.Get(filePath);
         var doc = cached?.DocumentObject as WordprocessingDocument;
 
         if (doc is not null)
@@ -161,11 +161,11 @@ public class WordStructureReader(
             return doc;
         }
 
-        var password = passwordManager.GetPasswordForFile(filePath);
+        string? password = passwordManager.GetPasswordForFile(filePath);
         
         // Use MsOfficeCrypto to handle decryption (or pass through if not encrypted)
-        await using var fileStream = File.OpenRead(filePath);
-        await using var decryptedStream = await OfficeDocument.DecryptAsync(fileStream, password);
+        await using FileStream fileStream = File.OpenRead(filePath);
+        await using Stream decryptedStream = await OfficeDocument.DecryptAsync(fileStream, password);
         
         // Copy to memory stream and open document
         var memoryStream = new MemoryStream();
@@ -177,12 +177,12 @@ public class WordStructureReader(
     private static void ProcessParagraph(Paragraph paragraph, List<WordSection> sections, 
         ref WordSection currentSection, ref StringBuilder currentSectionContent)
     {
-        var paragraphText = GetParagraphText(paragraph);
+        string paragraphText = GetParagraphText(paragraph);
         if (string.IsNullOrWhiteSpace(paragraphText)) return;
 
         // Check if this is a heading
-        var styleId = paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value;
-        var isHeading = IsHeadingStyle(styleId, paragraphText);
+        string? styleId = paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value;
+        bool isHeading = IsHeadingStyle(styleId, paragraphText);
 
         if (isHeading)
         {
@@ -212,9 +212,9 @@ public class WordStructureReader(
     {
         var textBuilder = new StringBuilder();
 
-        foreach (var run in paragraph.Elements<Run>())
+        foreach (Run run in paragraph.Elements<Run>())
         {
-            foreach (var element in run.Elements())
+            foreach (OpenXmlElement element in run.Elements())
             {
                 switch (element)
                 {

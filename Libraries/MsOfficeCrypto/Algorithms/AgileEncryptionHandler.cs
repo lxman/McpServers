@@ -40,10 +40,10 @@ namespace MsOfficeCrypto.Algorithms
             try
             {
                 // Step 1: Convert password to UTF-16LE
-                var passwordBytes = Encoding.Unicode.GetBytes(password);
+                byte[] passwordBytes = Encoding.Unicode.GetBytes(password);
 
                 // Step 2: Derive key using Agile algorithm - returns FULL hash
-                var derivedKey = DeriveAgileKeyInternal(passwordBytes, salt, spinCount, hashAlgorithm);
+                byte[] derivedKey = DeriveAgileKeyInternal(passwordBytes, salt, spinCount, hashAlgorithm);
 
                 // Step 3: Apply block key if provided
                 // H_final = H(derivedKey || blockKey), then truncate
@@ -54,7 +54,7 @@ namespace MsOfficeCrypto.Algorithms
                 else
                 {
                     // No block key, just truncate
-                    var keyLength = keyBits / 8;
+                    int keyLength = keyBits / 8;
                     if (derivedKey.Length <= keyLength) return derivedKey;
                     var truncated = new byte[keyLength];
                     Array.Copy(derivedKey, 0, truncated, 0, keyLength);
@@ -76,21 +76,21 @@ namespace MsOfficeCrypto.Algorithms
         private static byte[] DeriveAgileKeyInternal(byte[] password, byte[] salt, int spinCount, 
             HashAlgorithmName hashAlgorithm)
         {
-            using var hasher = HashAlgorithm.Create(hashAlgorithm.Name) ??
-                               throw new UnsupportedEncryptionException($"Hash algorithm not supported: {hashAlgorithm.Name}");
+            using HashAlgorithm hasher = HashAlgorithm.Create(hashAlgorithm.Name) ??
+                                         throw new UnsupportedEncryptionException($"Hash algorithm not supported: {hashAlgorithm.Name}");
 
             // Step 1: H_0 = H(salt || password)
             var combined = new byte[salt.Length + password.Length];
             Array.Copy(salt, 0, combined, 0, salt.Length);
             Array.Copy(password, 0, combined, salt.Length, password.Length);
     
-            var hash = hasher.ComputeHash(combined);
+            byte[] hash = hasher.ComputeHash(combined);
 
             // Step 2: Iterate spinCount times
             // H_i = H(iterator || H_{i-1}) where iterator is 32-bit little-endian integer
             for (var i = 0; i < spinCount; i++)
             {
-                var iterator = BitConverter.GetBytes(i);
+                byte[] iterator = BitConverter.GetBytes(i);
                 if (!BitConverter.IsLittleEndian)
                     Array.Reverse(iterator);
         
@@ -116,22 +116,22 @@ namespace MsOfficeCrypto.Algorithms
             try
             {
                 // Derive the password verification key
-                var pwdVerifierKey = DeriveAgileKey(password, passwordSalt, spinCount, 
+                byte[] pwdVerifierKey = DeriveAgileKey(password, passwordSalt, spinCount, 
                     hashAlgorithm, keyBits, GetBlockKey("verifierHashInput"));
 
                 // FIXED: Use salt as IV for verifier data (not extracted from data)
-                var verifierHashInput = DecryptVerifierData(encryptedVerifierHashInput, 
+                byte[] verifierHashInput = DecryptVerifierData(encryptedVerifierHashInput, 
                     pwdVerifierKey, passwordSalt);
 
                 // Calculate hash of the decrypted input
-                var computedHash = ComputeHash(verifierHashInput, hashAlgorithm);
+                byte[] computedHash = ComputeHash(verifierHashInput, hashAlgorithm);
 
                 // Derive key for verifier hash value
-                var hashVerifierKey = DeriveAgileKey(password, passwordSalt, spinCount,
+                byte[] hashVerifierKey = DeriveAgileKey(password, passwordSalt, spinCount,
                     hashAlgorithm, keyBits, GetBlockKey("verifierHashValue"));
 
                 // FIXED: Use salt as IV for verifier data (not extracted from data)
-                var expectedHash = DecryptVerifierData(encryptedVerifierHashValue, 
+                byte[] expectedHash = DecryptVerifierData(encryptedVerifierHashValue, 
                     hashVerifierKey, passwordSalt);
 
                 // Compare hashes
@@ -154,11 +154,11 @@ namespace MsOfficeCrypto.Algorithms
             try
             {
                 // Step 1: Derive the password key to decrypt the encryptedKeyValue
-                var passwordKey = DeriveAgileKey(password, passwordSalt, spinCount, 
+                byte[] passwordKey = DeriveAgileKey(password, passwordSalt, spinCount, 
                     hashAlgorithm, keyBits, GetBlockKey("encryptedKey"));
 
                 // Step 2: FIXED - Use salt as IV for encrypted key value
-                var documentEncryptionKey = DecryptVerifierData(encryptedKeyValue, 
+                byte[] documentEncryptionKey = DecryptVerifierData(encryptedKeyValue, 
                     passwordKey, passwordSalt);
 
                 // Step 3: Use the document encryption key to decrypt the package
@@ -186,10 +186,10 @@ namespace MsOfficeCrypto.Algorithms
             Array.Copy(derivedKey, 0, combined, 0, derivedKey.Length);
             Array.Copy(blockKey, 0, combined, derivedKey.Length, blockKey.Length);
 
-            var hash = ComputeHash(combined, hashAlgorithm);
+            byte[] hash = ComputeHash(combined, hashAlgorithm);
     
             // Truncate to keyBits/8
-            var keyLength = keyBits / 8;
+            int keyLength = keyBits / 8;
             if (hash.Length <= keyLength)
                 return hash;
     
@@ -223,7 +223,7 @@ namespace MsOfficeCrypto.Algorithms
             aes.Key = EnsureKeyLength(key, key.Length * 8);
             aes.IV = EnsureKeyLength(salt, 128);  // Use salt as IV directly
 
-            using var decryptor = aes.CreateDecryptor();
+            using ICryptoTransform decryptor = aes.CreateDecryptor();
             return decryptor.TransformFinalBlock(encryptedData, 0, encryptedData.Length);
         }
 
@@ -235,7 +235,7 @@ namespace MsOfficeCrypto.Algorithms
             byte[] keyDataSalt, long totalSize, HashAlgorithmName hashAlgorithm, string chainingMode, int keyBits)
         {
             // Validate chaining mode
-            var mode = chainingMode.ToUpper() switch
+            CipherMode mode = chainingMode.ToUpper() switch
             {
                 "CBC" => CipherMode.CBC,
                 "CHAININGMODECBC" => CipherMode.CBC,
@@ -247,7 +247,7 @@ namespace MsOfficeCrypto.Algorithms
             // Step 1: Process the document in 4096-byte segments
             const int SEGMENT_LENGTH = 4096;
             var output = new MemoryStream();
-            var remaining = totalSize;
+            long remaining = totalSize;
             var offset = 0;  // Start at the beginning - NO 8-byte header to skip
             var blockNumber = 0;
 
@@ -255,7 +255,7 @@ namespace MsOfficeCrypto.Algorithms
             {
                 // Calculate segment size - read up to SEGMENT_LENGTH bytes
                 // Encrypted data is already block-aligned from encryption
-                var segmentSize = Math.Min(SEGMENT_LENGTH, encryptedData.Length - offset);
+                int segmentSize = Math.Min(SEGMENT_LENGTH, encryptedData.Length - offset);
         
                 // Extract segment
                 var segment = new byte[segmentSize];
@@ -263,10 +263,10 @@ namespace MsOfficeCrypto.Algorithms
 
                 // Step 2: Compute IV for this segment
                 // IV = H(keyDataSalt || blockNumber)[0:16]
-                var iv = ComputeSegmentIV(keyDataSalt, blockNumber, hashAlgorithm);
+                byte[] iv = ComputeSegmentIV(keyDataSalt, blockNumber, hashAlgorithm);
 
                 // Step 3: Decrypt segment
-                var decrypted = DecryptSegment(segment, key, iv, mode, keyBits);
+                byte[] decrypted = DecryptSegment(segment, key, iv, mode, keyBits);
         
                 // Write to output (truncate based on the remaining plaintext size)
                 var writeLength = (int)Math.Min(decrypted.Length, remaining);
@@ -290,7 +290,7 @@ namespace MsOfficeCrypto.Algorithms
         private static byte[] ComputeSegmentIV(byte[] keyDataSalt, int blockNumber, HashAlgorithmName hashAlgorithm)
         {
             // Create: keyDataSalt || blockNumber (as 32-bit LE)
-            var blockBytes = BitConverter.GetBytes(blockNumber);
+            byte[] blockBytes = BitConverter.GetBytes(blockNumber);
             if (!BitConverter.IsLittleEndian)
                 Array.Reverse(blockBytes);
             
@@ -299,7 +299,7 @@ namespace MsOfficeCrypto.Algorithms
             Array.Copy(blockBytes, 0, combined, keyDataSalt.Length, blockBytes.Length);
             
             // Hash it
-            var hash = ComputeHash(combined, hashAlgorithm);
+            byte[] hash = ComputeHash(combined, hashAlgorithm);
             
             // Take the first 16 bytes as IV
             var iv = new byte[16];
@@ -319,7 +319,7 @@ namespace MsOfficeCrypto.Algorithms
             aes.Padding = PaddingMode.None;  // CRITICAL: No padding
             aes.IV = iv;
             
-            using var decryptor = aes.CreateDecryptor();
+            using ICryptoTransform decryptor = aes.CreateDecryptor();
             return decryptor.TransformFinalBlock(segment, 0, segment.Length);
         }
 
@@ -328,8 +328,8 @@ namespace MsOfficeCrypto.Algorithms
         /// </summary>
         private static byte[] ComputeHash(byte[] data, HashAlgorithmName hashAlgorithm)
         {
-            using var hasher = HashAlgorithm.Create(hashAlgorithm.Name) ??
-                               throw new UnsupportedEncryptionException($"Hash algorithm not supported: {hashAlgorithm.Name}");
+            using HashAlgorithm hasher = HashAlgorithm.Create(hashAlgorithm.Name) ??
+                                         throw new UnsupportedEncryptionException($"Hash algorithm not supported: {hashAlgorithm.Name}");
             
             return hasher.ComputeHash(data);
         }
@@ -355,7 +355,7 @@ namespace MsOfficeCrypto.Algorithms
         /// </summary>
         private static byte[] EnsureKeyLength(byte[] key, int keyBits)
         {
-            var requiredBytes = keyBits / 8;
+            int requiredBytes = keyBits / 8;
             
             if (key.Length == requiredBytes)
                 return key;

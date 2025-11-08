@@ -38,7 +38,7 @@ public class TerminalTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            var result = await processManager.StartProcessAsync(command, sessionId, timeoutMs, workingDirectory);
+            ProcessResult result = await processManager.StartProcessAsync(command, sessionId, timeoutMs, workingDirectory);
 
             var responseObject = new
             {
@@ -52,7 +52,7 @@ public class TerminalTools(
             };
 
             // Check response size before returning
-            var sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "execute_command");
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "execute_command");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -89,7 +89,7 @@ public class TerminalTools(
     {
         try
         {
-            var success = await processManager.SendInputAsync(sessionId, input);
+            bool success = await processManager.SendInputAsync(sessionId, input);
             
             if (!success)
             {
@@ -121,7 +121,7 @@ public class TerminalTools(
     {
         try
         {
-            var result = processManager.GetProcessOutput(sessionId);
+            ProcessResult? result = processManager.GetProcessOutput(sessionId);
             
             if (result == null)
             {
@@ -142,7 +142,7 @@ public class TerminalTools(
             };
 
             // Check response size before returning
-            var sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "get_session_output");
+            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "get_session_output");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -177,7 +177,7 @@ public class TerminalTools(
     {
         try
         {
-            var sessions = processManager.ListActiveSessions();
+            List<ProcessInfo> sessions = processManager.ListActiveSessions();
             
             var sessionList = sessions.Select(s => new
             {
@@ -212,7 +212,7 @@ public class TerminalTools(
     {
         try
         {
-            var success = processManager.KillProcess(sessionId);
+            bool success = processManager.KillProcess(sessionId);
             
             if (!success)
             {

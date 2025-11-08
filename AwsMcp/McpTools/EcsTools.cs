@@ -24,7 +24,7 @@ public class EcsTools(
         try
         {
             logger.LogDebug("Listing ECS clusters");
-            var response = await ecsService.ListClustersAsync();
+            ListClustersResponse response = await ecsService.ListClustersAsync();
 
             return JsonSerializer.Serialize(new
             {
@@ -48,7 +48,7 @@ public class EcsTools(
         try
         {
             logger.LogDebug("Listing ECS services in cluster {ClusterName}", clusterName);
-            var response = await ecsService.ListServicesAsync(clusterName);
+            ListServicesResponse response = await ecsService.ListServicesAsync(clusterName);
 
             return JsonSerializer.Serialize(new
             {
@@ -73,7 +73,7 @@ public class EcsTools(
         try
         {
             logger.LogDebug("Listing ECS tasks in cluster {ClusterName}", clusterName);
-            var response = await ecsService.ListTasksAsync(clusterName, serviceName);
+            ListTasksResponse response = await ecsService.ListTasksAsync(clusterName, serviceName);
 
             return JsonSerializer.Serialize(new
             {
@@ -99,7 +99,7 @@ public class EcsTools(
         try
         {
             logger.LogDebug("Running {Count} ECS task(s) in cluster {ClusterName}", count, clusterName);
-            var response = await ecsService.RunTaskAsync(clusterName, taskDefinition, count);
+            RunTaskResponse response = await ecsService.RunTaskAsync(clusterName, taskDefinition, count);
 
             return JsonSerializer.Serialize(new
             {
@@ -138,7 +138,7 @@ public class EcsTools(
         try
         {
             logger.LogDebug("Stopping ECS task {TaskArn} in cluster {ClusterName}", taskArn, clusterName);
-            var response = await ecsService.StopTaskAsync(clusterName, taskArn, reason);
+            StopTaskResponse response = await ecsService.StopTaskAsync(clusterName, taskArn, reason);
 
             return JsonSerializer.Serialize(new
             {
@@ -167,7 +167,7 @@ public class EcsTools(
         try
         {
             logger.LogDebug("Describing ECS cluster {ClusterName}", clusterName);
-            var response = await ecsService.DescribeClustersAsync([clusterName]);
+            DescribeClustersResponse response = await ecsService.DescribeClustersAsync([clusterName]);
 
             return JsonSerializer.Serialize(new
             {
@@ -204,7 +204,7 @@ public class EcsTools(
         try
         {
             logger.LogDebug("Describing ECS services in cluster {ClusterName}", clusterName);
-            var response = await ecsService.DescribeServicesAsync(serviceNames, clusterName);
+            DescribeServicesResponse response = await ecsService.DescribeServicesAsync(serviceNames, clusterName);
 
             return JsonSerializer.Serialize(new
             {
@@ -243,7 +243,7 @@ public class EcsTools(
         try
         {
             logger.LogDebug("Describing ECS tasks in cluster {ClusterName}", clusterName);
-            var response = await ecsService.DescribeTasksAsync(taskArns, clusterName);
+            DescribeTasksResponse response = await ecsService.DescribeTasksAsync(taskArns, clusterName);
 
             return JsonSerializer.Serialize(new
             {
@@ -285,7 +285,7 @@ public class EcsTools(
         try
         {
             logger.LogDebug("Listing ECS task definitions with prefix {FamilyPrefix}", familyPrefix);
-            var response = await ecsService.ListTaskDefinitionsAsync(familyPrefix);
+            ListTaskDefinitionsResponse response = await ecsService.ListTaskDefinitionsAsync(familyPrefix);
 
             return JsonSerializer.Serialize(new
             {
@@ -308,7 +308,7 @@ public class EcsTools(
         try
         {
             logger.LogDebug("Describing ECS task definition {TaskDefinition}", taskDefinition);
-            var response = await ecsService.DescribeTaskDefinitionAsync(taskDefinition);
+            DescribeTaskDefinitionResponse response = await ecsService.DescribeTaskDefinitionAsync(taskDefinition);
 
             return JsonSerializer.Serialize(new
             {
@@ -353,7 +353,7 @@ public class EcsTools(
         try
         {
             logger.LogDebug("Updating ECS service {ServiceName} in cluster {ClusterName}", serviceName, clusterName);
-            var response = await ecsService.UpdateServiceAsync(
+            UpdateServiceResponse response = await ecsService.UpdateServiceAsync(
                 clusterName,
                 serviceName,
                 desiredCount,

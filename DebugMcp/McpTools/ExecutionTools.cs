@@ -25,7 +25,7 @@ public class ExecutionTools(
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            DebugSession? session = sessionManager.GetSession(sessionId);
             if (session is null)
             {
                 return JsonSerializer.Serialize(new
@@ -40,7 +40,7 @@ public class ExecutionTools(
             // Send MI command: -exec-run
             // This will return: ^running, then eventually *stopped
             var command = "-exec-run";
-            var response = await miClient.SendCommandAsync(
+            MiResponse? response = await miClient.SendCommandAsync(
                 sessionId, 
                 command,
                 TimeSpan.FromSeconds(60)); // Longer timeout for startup
@@ -55,7 +55,7 @@ public class ExecutionTools(
             }
 
             // Parse the stop reason from *stopped record
-            var stoppedInfo = ParseStoppedInfo(response);
+            StoppedInfo stoppedInfo = ParseStoppedInfo(response);
 
             if (response.Success)
             {
@@ -71,7 +71,7 @@ public class ExecutionTools(
             }
 
             // Extract error message
-            var errorMsg = ExtractErrorMessage(response);
+            string errorMsg = ExtractErrorMessage(response);
             logger.LogError("Run command failed: {Error}", errorMsg);
 
             return JsonSerializer.Serialize(new
@@ -101,7 +101,7 @@ public class ExecutionTools(
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            DebugSession? session = sessionManager.GetSession(sessionId);
             if (session is null)
             {
                 return JsonSerializer.Serialize(new
@@ -116,7 +116,7 @@ public class ExecutionTools(
             // Send MI command: -exec-continue
             // This will return: ^running, then eventually *stopped or exit
             const string command = "-exec-continue";
-            var response = await miClient.SendCommandAsync(
+            MiResponse? response = await miClient.SendCommandAsync(
                 sessionId, 
                 command,
                 TimeSpan.FromSeconds(60)); // Longer timeout for execution
@@ -131,7 +131,7 @@ public class ExecutionTools(
             }
 
             // Parse the stop reason from *stopped record
-            var stoppedInfo = ParseStoppedInfo(response);
+            StoppedInfo stoppedInfo = ParseStoppedInfo(response);
 
             if (response.Success)
             {
@@ -161,7 +161,7 @@ public class ExecutionTools(
             }
 
             // Extract error message
-            var errorMsg = ExtractErrorMessage(response);
+            string errorMsg = ExtractErrorMessage(response);
             logger.LogError("Continue command failed: {Error}", errorMsg);
 
             return JsonSerializer.Serialize(new
@@ -190,7 +190,7 @@ public class ExecutionTools(
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            DebugSession? session = sessionManager.GetSession(sessionId);
             if (session is null)
             {
                 return JsonSerializer.Serialize(new
@@ -204,7 +204,7 @@ public class ExecutionTools(
 
             // Send MI command: -exec-next
             const string command = "-exec-next";
-            var response = await miClient.SendCommandAsync(sessionId, command);
+            MiResponse? response = await miClient.SendCommandAsync(sessionId, command);
 
             if (response is null)
             {
@@ -215,7 +215,7 @@ public class ExecutionTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            var stoppedInfo = ParseStoppedInfo(response);
+            StoppedInfo stoppedInfo = ParseStoppedInfo(response);
 
             if (response.Success)
             {
@@ -228,7 +228,7 @@ public class ExecutionTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            var errorMsg = ExtractErrorMessage(response);
+            string errorMsg = ExtractErrorMessage(response);
             return JsonSerializer.Serialize(new
             {
                 success = false,
@@ -253,7 +253,7 @@ public class ExecutionTools(
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            DebugSession? session = sessionManager.GetSession(sessionId);
             if (session is null)
             {
                 return JsonSerializer.Serialize(new
@@ -267,7 +267,7 @@ public class ExecutionTools(
 
             // Send MI command: -exec-step
             const string command = "-exec-step";
-            var response = await miClient.SendCommandAsync(sessionId, command);
+            MiResponse? response = await miClient.SendCommandAsync(sessionId, command);
 
             if (response is null)
             {
@@ -278,7 +278,7 @@ public class ExecutionTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            var stoppedInfo = ParseStoppedInfo(response);
+            StoppedInfo stoppedInfo = ParseStoppedInfo(response);
 
             if (response.Success)
             {
@@ -291,7 +291,7 @@ public class ExecutionTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            var errorMsg = ExtractErrorMessage(response);
+            string errorMsg = ExtractErrorMessage(response);
             return JsonSerializer.Serialize(new
             {
                 success = false,
@@ -316,7 +316,7 @@ public class ExecutionTools(
     {
         try
         {
-            var session = sessionManager.GetSession(sessionId);
+            DebugSession? session = sessionManager.GetSession(sessionId);
             if (session is null)
             {
                 return JsonSerializer.Serialize(new
@@ -330,7 +330,7 @@ public class ExecutionTools(
 
             // Send MI command: -exec-finish
             const string command = "-exec-finish";
-            var response = await miClient.SendCommandAsync(sessionId, command);
+            MiResponse? response = await miClient.SendCommandAsync(sessionId, command);
 
             if (response is null)
             {
@@ -341,7 +341,7 @@ public class ExecutionTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            var stoppedInfo = ParseStoppedInfo(response);
+            StoppedInfo stoppedInfo = ParseStoppedInfo(response);
 
             if (response.Success)
             {
@@ -354,7 +354,7 @@ public class ExecutionTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            var errorMsg = ExtractErrorMessage(response);
+            string errorMsg = ExtractErrorMessage(response);
             return JsonSerializer.Serialize(new
             {
                 success = false,
@@ -380,7 +380,7 @@ public class ExecutionTools(
         var info = new StoppedInfo();
 
         // Find the *stopped record
-        var stoppedRecord = response.GetAsyncExecRecords()
+        string? stoppedRecord = response.GetAsyncExecRecords()
             .FirstOrDefault(r => r.StartsWith("*stopped"));
 
         if (stoppedRecord is null)
@@ -394,40 +394,40 @@ public class ExecutionTools(
         }
 
         // Parse reason
-        var reasonMatch = Regex.Match(stoppedRecord, @"reason=""([^""]+)""");
+        Match reasonMatch = Regex.Match(stoppedRecord, @"reason=""([^""]+)""");
         if (reasonMatch.Success)
         {
             info.Reason = reasonMatch.Groups[1].Value;
         }
 
         // Parse thread-id
-        var threadMatch = Regex.Match(stoppedRecord, @"thread-id=""([^""]+)""");
+        Match threadMatch = Regex.Match(stoppedRecord, @"thread-id=""([^""]+)""");
         if (threadMatch.Success)
         {
             info.ThreadId = threadMatch.Groups[1].Value;
         }
 
         // Parse breakpoint number
-        var bkptMatch = Regex.Match(stoppedRecord, @"bkptno=""([^""]+)""");
-        if (bkptMatch.Success && int.TryParse(bkptMatch.Groups[1].Value, out var bkptNo))
+        Match bkptMatch = Regex.Match(stoppedRecord, @"bkptno=""([^""]+)""");
+        if (bkptMatch.Success && int.TryParse(bkptMatch.Groups[1].Value, out int bkptNo))
         {
             info.BreakpointNumber = bkptNo;
         }
 
         // Parse exit code
-        var exitMatch = Regex.Match(stoppedRecord, @"exit-code=""([^""]+)""");
+        Match exitMatch = Regex.Match(stoppedRecord, @"exit-code=""([^""]+)""");
         if (exitMatch.Success)
         {
             info.ExitCode = exitMatch.Groups[1].Value;
         }
 
         // Parse frame info (basic extraction)
-        var frameMatch = Regex.Match(stoppedRecord, @"frame=\{([^}]+)\}");
+        Match frameMatch = Regex.Match(stoppedRecord, @"frame=\{([^}]+)\}");
         if (!frameMatch.Success) return info;
-        var frameData = frameMatch.Groups[1].Value;
+        string frameData = frameMatch.Groups[1].Value;
             
         // Extract file
-        var fileMatch = Regex.Match(frameData, @"file=""([^""]+)""");
+        Match fileMatch = Regex.Match(frameData, @"file=""([^""]+)""");
         if (fileMatch.Success)
         {
             info.Frame ??= new FrameInfo();
@@ -435,15 +435,15 @@ public class ExecutionTools(
         }
 
         // Extract line
-        var lineMatch = Regex.Match(frameData, @"line=""(\d+)""");
-        if (lineMatch.Success && int.TryParse(lineMatch.Groups[1].Value, out var line))
+        Match lineMatch = Regex.Match(frameData, @"line=""(\d+)""");
+        if (lineMatch.Success && int.TryParse(lineMatch.Groups[1].Value, out int line))
         {
             info.Frame ??= new FrameInfo();
             info.Frame.Line = line;
         }
 
         // Extract function
-        var funcMatch = Regex.Match(frameData, @"func=""([^""]+)""");
+        Match funcMatch = Regex.Match(frameData, @"func=""([^""]+)""");
         if (!funcMatch.Success) return info;
         info.Frame ??= new FrameInfo();
         info.Frame.Function = funcMatch.Groups[1].Value;
@@ -456,12 +456,12 @@ public class ExecutionTools(
     /// </summary>
     private static string ExtractErrorMessage(MiResponse response)
     {
-        var resultRecord = response.GetResultRecord();
+        string? resultRecord = response.GetResultRecord();
         if (string.IsNullOrEmpty(resultRecord))
             return "Empty response from debugger";
 
         // Look for error message: ^error,msg="..."
-        var match = Regex.Match(resultRecord, @"msg=""([^""]+)""");
+        Match match = Regex.Match(resultRecord, @"msg=""([^""]+)""");
         return match.Success
             ? match.Groups[1].Value
             : $"Command failed: {response.ResultClass}";

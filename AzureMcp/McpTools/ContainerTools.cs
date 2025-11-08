@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using AzureServer.Core.Services.Container;
+using AzureServer.Core.Services.Container.Models;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -25,7 +26,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Listing container groups");
-            var groups = await containerService.ListContainerGroupsAsync(subscriptionId, resourceGroupName);
+            IEnumerable<ContainerGroupDto> groups = await containerService.ListContainerGroupsAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -50,7 +51,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Getting container group {GroupName}", containerGroupName);
-            var group = await containerService.GetContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
+            ContainerGroupDto? group = await containerService.GetContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -75,7 +76,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Creating container group {GroupName}", request.Name);
-            var group = await containerService.CreateContainerGroupAsync(subscriptionId, resourceGroupName, request);
+            ContainerGroupDto group = await containerService.CreateContainerGroupAsync(subscriptionId, resourceGroupName, request);
 
             return JsonSerializer.Serialize(new
             {
@@ -100,7 +101,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Deleting container group {GroupName}", containerGroupName);
-            var result = await containerService.DeleteContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
+            bool result = await containerService.DeleteContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -125,7 +126,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Restarting container group {GroupName}", containerGroupName);
-            var group = await containerService.RestartContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
+            ContainerGroupDto group = await containerService.RestartContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -150,7 +151,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Stopping container group {GroupName}", containerGroupName);
-            var group = await containerService.StopContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
+            ContainerGroupDto group = await containerService.StopContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -175,7 +176,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Starting container group {GroupName}", containerGroupName);
-            var group = await containerService.StartContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
+            ContainerGroupDto group = await containerService.StartContainerGroupAsync(subscriptionId, resourceGroupName, containerGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -202,7 +203,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Getting logs for container {ContainerName}", containerName);
-            var logs = await containerService.GetContainerLogsAsync(subscriptionId, resourceGroupName, containerGroupName, containerName, tail);
+            string logs = await containerService.GetContainerLogsAsync(subscriptionId, resourceGroupName, containerGroupName, containerName, tail);
 
             return JsonSerializer.Serialize(new
             {
@@ -229,7 +230,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Executing command in container {ContainerName}", containerName);
-            var result = await containerService.ExecuteCommandAsync(subscriptionId, resourceGroupName, containerGroupName, containerName, command);
+            ContainerExecResult result = await containerService.ExecuteCommandAsync(subscriptionId, resourceGroupName, containerGroupName, containerName, command);
 
             return JsonSerializer.Serialize(new
             {
@@ -255,7 +256,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Listing container registries");
-            var registries = await containerService.ListRegistriesAsync(subscriptionId, resourceGroupName);
+            IEnumerable<ContainerRegistryDto> registries = await containerService.ListRegistriesAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -280,7 +281,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Getting registry {RegistryName}", registryName);
-            var registry = await containerService.GetRegistryAsync(subscriptionId, resourceGroupName, registryName);
+            ContainerRegistryDto? registry = await containerService.GetRegistryAsync(subscriptionId, resourceGroupName, registryName);
 
             return JsonSerializer.Serialize(new
             {
@@ -305,7 +306,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Creating registry {RegistryName}", request.Name);
-            var registry = await containerService.CreateRegistryAsync(subscriptionId, resourceGroupName, request);
+            ContainerRegistryDto registry = await containerService.CreateRegistryAsync(subscriptionId, resourceGroupName, request);
 
             return JsonSerializer.Serialize(new
             {
@@ -330,7 +331,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Deleting registry {RegistryName}", registryName);
-            var result = await containerService.DeleteRegistryAsync(subscriptionId, resourceGroupName, registryName);
+            bool result = await containerService.DeleteRegistryAsync(subscriptionId, resourceGroupName, registryName);
 
             return JsonSerializer.Serialize(new
             {
@@ -355,7 +356,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Getting credentials for registry {RegistryName}", registryName);
-            var credentials = await containerService.GetRegistryCredentialsAsync(subscriptionId, resourceGroupName, registryName);
+            RegistryCredentialsDto credentials = await containerService.GetRegistryCredentialsAsync(subscriptionId, resourceGroupName, registryName);
 
             return JsonSerializer.Serialize(new
             {
@@ -381,7 +382,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Regenerating credential for registry {RegistryName}", registryName);
-            var credentials = await containerService.RegenerateRegistryCredentialAsync(subscriptionId, resourceGroupName, registryName, passwordName);
+            RegistryCredentialsDto credentials = await containerService.RegenerateRegistryCredentialAsync(subscriptionId, resourceGroupName, registryName, passwordName);
 
             return JsonSerializer.Serialize(new
             {
@@ -410,7 +411,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Listing repositories in registry {RegistryName}", registryName);
-            var repositories = await containerService.ListRepositoriesAsync(subscriptionId, resourceGroupName, registryName);
+            IEnumerable<ContainerRepositoryDto> repositories = await containerService.ListRepositoriesAsync(subscriptionId, resourceGroupName, registryName);
 
             return JsonSerializer.Serialize(new
             {
@@ -436,7 +437,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Listing images in registry {RegistryName}", registryName);
-            var images = await containerService.ListImagesAsync(subscriptionId, resourceGroupName, registryName, repositoryName);
+            IEnumerable<ContainerImageDto> images = await containerService.ListImagesAsync(subscriptionId, resourceGroupName, registryName, repositoryName);
 
             return JsonSerializer.Serialize(new
             {
@@ -463,7 +464,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Getting image {Repository}:{Tag}", repositoryName, tag);
-            var image = await containerService.GetImageAsync(subscriptionId, resourceGroupName, registryName, repositoryName, tag);
+            ContainerImageDto? image = await containerService.GetImageAsync(subscriptionId, resourceGroupName, registryName, repositoryName, tag);
 
             return JsonSerializer.Serialize(new
             {
@@ -490,7 +491,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Deleting image {Repository}:{Tag}", repositoryName, tag);
-            var result = await containerService.DeleteImageAsync(subscriptionId, resourceGroupName, registryName, repositoryName, tag);
+            bool result = await containerService.DeleteImageAsync(subscriptionId, resourceGroupName, registryName, repositoryName, tag);
 
             return JsonSerializer.Serialize(new
             {
@@ -516,7 +517,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Deleting repository {Repository}", repositoryName);
-            var result = await containerService.DeleteRepositoryAsync(subscriptionId, resourceGroupName, registryName, repositoryName);
+            bool result = await containerService.DeleteRepositoryAsync(subscriptionId, resourceGroupName, registryName, repositoryName);
 
             return JsonSerializer.Serialize(new
             {
@@ -546,7 +547,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Creating build task {TaskName}", request.Name);
-            var buildTask = await containerService.CreateBuildTaskAsync(subscriptionId, resourceGroupName, registryName, request);
+            BuildTaskDto buildTask = await containerService.CreateBuildTaskAsync(subscriptionId, resourceGroupName, registryName, request);
 
             return JsonSerializer.Serialize(new
             {
@@ -572,7 +573,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Running build task {TaskName}", buildTaskName);
-            var buildRun = await containerService.RunBuildTaskAsync(subscriptionId, resourceGroupName, registryName, buildTaskName);
+            BuildRunDto buildRun = await containerService.RunBuildTaskAsync(subscriptionId, resourceGroupName, registryName, buildTaskName);
 
             return JsonSerializer.Serialize(new
             {
@@ -597,7 +598,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Listing build runs for registry {RegistryName}", registryName);
-            var buildRuns = await containerService.ListBuildRunsAsync(subscriptionId, resourceGroupName, registryName);
+            IEnumerable<BuildRunDto> buildRuns = await containerService.ListBuildRunsAsync(subscriptionId, resourceGroupName, registryName);
 
             return JsonSerializer.Serialize(new
             {
@@ -623,7 +624,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Getting build log for run {RunId}", runId);
-            var log = await containerService.GetBuildLogAsync(subscriptionId, resourceGroupName, registryName, runId);
+            string log = await containerService.GetBuildLogAsync(subscriptionId, resourceGroupName, registryName, runId);
 
             return JsonSerializer.Serialize(new
             {
@@ -649,7 +650,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Listing Kubernetes clusters");
-            var clusters = await containerService.ListKubernetesClustersAsync(subscriptionId, resourceGroupName);
+            IEnumerable<KubernetesClusterDto> clusters = await containerService.ListKubernetesClustersAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -674,7 +675,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Getting Kubernetes cluster {ClusterName}", clusterName);
-            var cluster = await containerService.GetKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
+            KubernetesClusterDto? cluster = await containerService.GetKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
 
             return JsonSerializer.Serialize(new
             {
@@ -699,7 +700,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Creating Kubernetes cluster {ClusterName}", request.Name);
-            var cluster = await containerService.CreateKubernetesClusterAsync(subscriptionId, resourceGroupName, request);
+            KubernetesClusterDto cluster = await containerService.CreateKubernetesClusterAsync(subscriptionId, resourceGroupName, request);
 
             return JsonSerializer.Serialize(new
             {
@@ -724,7 +725,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Deleting Kubernetes cluster {ClusterName}", clusterName);
-            var result = await containerService.DeleteKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
+            bool result = await containerService.DeleteKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
 
             return JsonSerializer.Serialize(new
             {
@@ -751,7 +752,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Scaling Kubernetes cluster {ClusterName}", clusterName);
-            var cluster = await containerService.ScaleKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName, nodePoolName, nodeCount);
+            KubernetesClusterDto cluster = await containerService.ScaleKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName, nodePoolName, nodeCount);
 
             return JsonSerializer.Serialize(new
             {
@@ -777,7 +778,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Upgrading Kubernetes cluster {ClusterName}", clusterName);
-            var cluster = await containerService.UpgradeKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName, kubernetesVersion);
+            KubernetesClusterDto cluster = await containerService.UpgradeKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName, kubernetesVersion);
 
             return JsonSerializer.Serialize(new
             {
@@ -802,7 +803,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Getting credentials for Kubernetes cluster {ClusterName}", clusterName);
-            var credentials = await containerService.GetKubernetesCredentialsAsync(subscriptionId, resourceGroupName, clusterName);
+            KubernetesCredentialsDto credentials = await containerService.GetKubernetesCredentialsAsync(subscriptionId, resourceGroupName, clusterName);
 
             return JsonSerializer.Serialize(new
             {
@@ -827,7 +828,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Starting Kubernetes cluster {ClusterName}", clusterName);
-            var cluster = await containerService.StartKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
+            KubernetesClusterDto cluster = await containerService.StartKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
 
             return JsonSerializer.Serialize(new
             {
@@ -852,7 +853,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Stopping Kubernetes cluster {ClusterName}", clusterName);
-            var cluster = await containerService.StopKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
+            KubernetesClusterDto cluster = await containerService.StopKubernetesClusterAsync(subscriptionId, resourceGroupName, clusterName);
 
             return JsonSerializer.Serialize(new
             {
@@ -881,7 +882,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Listing node pools for cluster {ClusterName}", clusterName);
-            var nodePools = await containerService.ListNodePoolsAsync(subscriptionId, resourceGroupName, clusterName);
+            IEnumerable<NodePoolDto> nodePools = await containerService.ListNodePoolsAsync(subscriptionId, resourceGroupName, clusterName);
 
             return JsonSerializer.Serialize(new
             {
@@ -907,7 +908,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Getting node pool {NodePoolName}", nodePoolName);
-            var nodePool = await containerService.GetNodePoolAsync(subscriptionId, resourceGroupName, clusterName, nodePoolName);
+            NodePoolDto? nodePool = await containerService.GetNodePoolAsync(subscriptionId, resourceGroupName, clusterName, nodePoolName);
 
             return JsonSerializer.Serialize(new
             {
@@ -933,7 +934,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Creating node pool {NodePoolName}", request.Name);
-            var nodePool = await containerService.CreateNodePoolAsync(subscriptionId, resourceGroupName, clusterName, request);
+            NodePoolDto nodePool = await containerService.CreateNodePoolAsync(subscriptionId, resourceGroupName, clusterName, request);
 
             return JsonSerializer.Serialize(new
             {
@@ -959,7 +960,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Deleting node pool {NodePoolName}", nodePoolName);
-            var result = await containerService.DeleteNodePoolAsync(subscriptionId, resourceGroupName, clusterName, nodePoolName);
+            bool result = await containerService.DeleteNodePoolAsync(subscriptionId, resourceGroupName, clusterName, nodePoolName);
 
             return JsonSerializer.Serialize(new
             {
@@ -986,7 +987,7 @@ public class ContainerTools(
         try
         {
             logger.LogDebug("Updating node pool {NodePoolName}", nodePoolName);
-            var nodePool = await containerService.UpdateNodePoolAsync(subscriptionId, resourceGroupName, clusterName, nodePoolName, request);
+            NodePoolDto nodePool = await containerService.UpdateNodePoolAsync(subscriptionId, resourceGroupName, clusterName, nodePoolName, request);
 
             return JsonSerializer.Serialize(new
             {

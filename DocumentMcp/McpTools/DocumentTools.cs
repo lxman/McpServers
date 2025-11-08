@@ -43,7 +43,7 @@ public class DocumentTools(
             }
 
             // Check if already loaded
-            var cached = cache.Get(filePath);
+            LoadedDocument? cached = cache.Get(filePath);
             if (cached is not null)
             {
                 return JsonSerializer.Serialize(new
@@ -58,14 +58,14 @@ public class DocumentTools(
             }
 
             // Get appropriate loader
-            var loader = loaderFactory.GetLoader(filePath);
+            IDocumentLoader? loader = loaderFactory.GetLoader(filePath);
             if (loader is null)
             {
                 return JsonSerializer.Serialize(new { success = false, error = "Unsupported document type" }, _jsonOptions);
             }
 
             // Load document
-            var result = await loader.LoadAsync(filePath, password);
+            ServiceResult<LoadedDocument> result = await loader.LoadAsync(filePath, password);
 
             if (!result.Success)
             {
@@ -108,7 +108,7 @@ public class DocumentTools(
                 return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
             }
 
-            var removed = cache.Remove(filePath);
+            bool removed = cache.Remove(filePath);
 
             return JsonSerializer.Serialize(new
             {
@@ -132,13 +132,13 @@ public class DocumentTools(
         {
             logger.LogDebug("Listing all loaded documents");
 
-            var cachedPaths = cache.GetCachedPaths();
-            var totalMemory = cache.GetTotalMemoryUsage();
+            List<string> cachedPaths = cache.GetCachedPaths();
+            long totalMemory = cache.GetTotalMemoryUsage();
 
             var documents = new List<object>();
-            foreach (var path in cachedPaths)
+            foreach (string path in cachedPaths)
             {
-                var doc = cache.Get(path);
+                LoadedDocument? doc = cache.Get(path);
                 if (doc is not null)
                 {
                     documents.Add(new
@@ -185,7 +185,7 @@ public class DocumentTools(
                 return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
             }
 
-            var result = await processor.ExtractTextAsync(filePath, null, startPage, endPage, maxPages);
+            ServiceResult<string> result = await processor.ExtractTextAsync(filePath, null, startPage, endPage, maxPages);
 
             if (!result.Success)
             {
@@ -195,7 +195,7 @@ public class DocumentTools(
             Dictionary<string, string>? metadata = null;
             if (includeMetadata)
             {
-                var metadataResult = await metadataExtractor.ExtractAsync(filePath);
+                ServiceResult<EnrichedMetadata> metadataResult = await metadataExtractor.ExtractAsync(filePath);
                 if (metadataResult is { Success: true, Data: not null })
                 {
                     metadata = metadataResult.Data.DocumentMetadata;
@@ -231,7 +231,7 @@ public class DocumentTools(
                 return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
             }
 
-            var result = await metadataExtractor.ExtractAsync(filePath);
+            ServiceResult<EnrichedMetadata> result = await metadataExtractor.ExtractAsync(filePath);
 
             if (!result.Success)
             {
@@ -280,7 +280,7 @@ public class DocumentTools(
                 return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
             }
 
-            var result = await validator.ValidateAsync(filePath);
+            ServiceResult<ValidationResult> result = await validator.ValidateAsync(filePath);
 
             if (!result.Success)
             {
@@ -324,7 +324,7 @@ public class DocumentTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Both file paths are required" }, _jsonOptions);
             }
 
-            var result = await comparator.CompareAsync(filePath1, filePath2);
+            ServiceResult<ComparisonResult> result = await comparator.CompareAsync(filePath1, filePath2);
 
             if (!result.Success)
             {
@@ -366,8 +366,8 @@ public class DocumentTools(
         {
             logger.LogDebug("Clearing document cache");
 
-            var countBefore = cache.GetCachedPaths().Count;
-            var memoryBefore = cache.GetTotalMemoryUsage();
+            int countBefore = cache.GetCachedPaths().Count;
+            long memoryBefore = cache.GetTotalMemoryUsage();
 
             cache.Clear();
 
@@ -394,8 +394,8 @@ public class DocumentTools(
         {
             logger.LogDebug("Getting document status");
 
-            var cachedPaths = cache.GetCachedPaths();
-            var totalMemory = cache.GetTotalMemoryUsage();
+            List<string> cachedPaths = cache.GetCachedPaths();
+            long totalMemory = cache.GetTotalMemoryUsage();
 
             string[] supportedFormats =
             [

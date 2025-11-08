@@ -26,7 +26,7 @@ public class S3Tools(
         try
         {
             logger.LogDebug("Listing S3 buckets");
-            var buckets = await s3Service.ListBucketsAsync();
+            List<S3Bucket> buckets = await s3Service.ListBucketsAsync();
 
             return JsonSerializer.Serialize(new
             {
@@ -57,7 +57,7 @@ public class S3Tools(
         try
         {
             logger.LogDebug("Listing objects in bucket {BucketName} with prefix {Prefix}", bucketName, prefix);
-            var result = await s3Service.ListObjectsAsync(bucketName, prefix, maxKeys, continuationToken);
+            ListObjectsResult result = await s3Service.ListObjectsAsync(bucketName, prefix, maxKeys, continuationToken);
 
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
@@ -77,7 +77,7 @@ public class S3Tools(
         try
         {
             logger.LogDebug("Getting object {Key} from bucket {BucketName}", key, bucketName);
-            var content = await s3Service.GetObjectContentAsync(bucketName, key);
+            string content = await s3Service.GetObjectContentAsync(bucketName, key);
 
             return JsonSerializer.Serialize(new
             {
@@ -105,7 +105,7 @@ public class S3Tools(
         try
         {
             logger.LogDebug("Putting object {Key} to bucket {BucketName}", key, bucketName);
-            var response = await s3Service.PutObjectAsync(bucketName, key, content, contentType);
+            PutObjectResponse response = await s3Service.PutObjectAsync(bucketName, key, content, contentType);
 
             return JsonSerializer.Serialize(new
             {
@@ -183,8 +183,8 @@ public class S3Tools(
         try
         {
             logger.LogDebug("Generating presigned URL for {Key} in bucket {BucketName}", key, bucketName);
-            var expiry = DateTime.UtcNow.AddHours(expirationHours);
-            var httpVerb = httpMethod.ToUpperInvariant() switch
+            DateTime expiry = DateTime.UtcNow.AddHours(expirationHours);
+            HttpVerb httpVerb = httpMethod.ToUpperInvariant() switch
             {
                 "GET" => HttpVerb.GET,
                 "PUT" => HttpVerb.PUT,
@@ -192,7 +192,7 @@ public class S3Tools(
                 _ => HttpVerb.GET
             };
 
-            var url = await s3Service.GeneratePresignedUrl(bucketName, key, expiry, httpVerb);
+            string url = await s3Service.GeneratePresignedUrl(bucketName, key, expiry, httpVerb);
 
             return JsonSerializer.Serialize(new
             {
@@ -240,7 +240,7 @@ public class S3Tools(
         try
         {
             logger.LogDebug("Checking if S3 bucket {BucketName} exists", bucketName);
-            var exists = await s3Service.BucketExistsAsync(bucketName);
+            bool exists = await s3Service.BucketExistsAsync(bucketName);
 
             return JsonSerializer.Serialize(new
             {
@@ -263,7 +263,7 @@ public class S3Tools(
         try
         {
             logger.LogDebug("Checking if S3 object {Key} exists in bucket {BucketName}", key, bucketName);
-            var exists = await s3Service.ObjectExistsAsync(bucketName, key);
+            bool exists = await s3Service.ObjectExistsAsync(bucketName, key);
 
             return JsonSerializer.Serialize(new
             {
@@ -287,7 +287,7 @@ public class S3Tools(
         try
         {
             logger.LogDebug("Getting versioning for S3 bucket {BucketName}", bucketName);
-            var response = await s3Service.GetBucketVersioningAsync(bucketName);
+            GetBucketVersioningResponse response = await s3Service.GetBucketVersioningAsync(bucketName);
 
             return JsonSerializer.Serialize(new
             {
@@ -311,7 +311,7 @@ public class S3Tools(
         try
         {
             logger.LogDebug("Listing object versions in S3 bucket {BucketName}", bucketName);
-            var response = await s3Service.ListObjectVersionsAsync(bucketName, prefix);
+            ListVersionsResponse response = await s3Service.ListObjectVersionsAsync(bucketName, prefix);
 
             return JsonSerializer.Serialize(new
             {

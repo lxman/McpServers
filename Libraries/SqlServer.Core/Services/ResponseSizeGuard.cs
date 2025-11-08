@@ -38,11 +38,11 @@ public class ResponseSizeGuard
     public ResponseSizeCheck CheckResponseSize(object responseObject, string toolName)
     {
         // Serialize once to measure size
-        var jsonResult = JsonSerializer.Serialize(responseObject, SerializerOptions.JsonOptionsIndented);
+        string jsonResult = JsonSerializer.Serialize(responseObject, SerializerOptions.JsonOptionsIndented);
 
-        var characterCount = jsonResult.Length;
-        var estimatedTokens = characterCount / CharsPerToken;
-        var exceeds = estimatedTokens > SafeTokenLimit;
+        int characterCount = jsonResult.Length;
+        int estimatedTokens = characterCount / CharsPerToken;
+        bool exceeds = estimatedTokens > SafeTokenLimit;
 
         return new ResponseSizeCheck
         {
@@ -58,9 +58,9 @@ public class ResponseSizeGuard
     /// </summary>
     public ResponseSizeCheck CheckStringSize(string content, string toolName)
     {
-        var characterCount = content.Length;
-        var estimatedTokens = characterCount / CharsPerToken;
-        var exceeds = estimatedTokens > SafeTokenLimit;
+        int characterCount = content.Length;
+        int estimatedTokens = characterCount / CharsPerToken;
+        bool exceeds = estimatedTokens > SafeTokenLimit;
 
         return new ResponseSizeCheck
         {

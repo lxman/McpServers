@@ -17,8 +17,8 @@ public class TransactionManager(
     {
         try
         {
-            var connection = await connectionManager.GetConnectionAsync(connectionName);
-            var transaction = isolationLevel switch
+            IDbConnection connection = await connectionManager.GetConnectionAsync(connectionName);
+            IDbTransaction transaction = isolationLevel switch
             {
                 "ReadUncommitted" => connection.BeginTransaction(IsolationLevel.ReadUncommitted),
                 "ReadCommitted" => connection.BeginTransaction(IsolationLevel.ReadCommitted),
@@ -50,7 +50,7 @@ public class TransactionManager(
 
     public async Task CommitTransactionAsync(string transactionId)
     {
-        if (!_transactions.TryGetValue(transactionId, out var context))
+        if (!_transactions.TryGetValue(transactionId, out TransactionContext? context))
             throw new ArgumentException($"Transaction '{transactionId}' not found");
 
         try
@@ -68,7 +68,7 @@ public class TransactionManager(
 
     public async Task RollbackTransactionAsync(string transactionId)
     {
-        if (!_transactions.TryGetValue(transactionId, out var context))
+        if (!_transactions.TryGetValue(transactionId, out TransactionContext? context))
             throw new ArgumentException($"Transaction '{transactionId}' not found");
 
         try

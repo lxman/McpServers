@@ -21,7 +21,7 @@ public class ExpiryTools(
         {
             logger.LogDebug("Getting TTL for Redis key: {Key}", key);
 
-            var result = await redisService.GetTtlAsync(key);
+            string result = await redisService.GetTtlAsync(key);
             return result;
         }
         catch (Exception ex)
@@ -39,8 +39,8 @@ public class ExpiryTools(
         {
             logger.LogDebug("Setting expiry for Redis key: {Key}, Seconds: {ExpirySeconds}", key, expirySeconds);
 
-            var expiry = TimeSpan.FromSeconds(expirySeconds);
-            var result = await redisService.SetExpireAsync(key, expiry);
+            TimeSpan expiry = TimeSpan.FromSeconds(expirySeconds);
+            string result = await redisService.SetExpireAsync(key, expiry);
             return result;
         }
         catch (Exception ex)

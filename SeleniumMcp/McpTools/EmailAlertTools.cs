@@ -25,7 +25,7 @@ public class EmailAlertTools(
         {
             logger.LogDebug("Retrieving email alert summary for last {DaysBack} days", daysBack);
 
-            var result = await emailService.GetJobAlertSummaryAsync(daysBack);
+            EmailJobAlertSummary result = await emailService.GetJobAlertSummaryAsync(daysBack);
 
             return JsonSerializer.Serialize(new
             {
@@ -88,7 +88,7 @@ public class EmailAlertTools(
         {
             logger.LogDebug("Retrieving recent email alerts");
 
-            var result = await emailService.GetRecentJobAlertsAsync();
+            List<EnhancedJobListing> result = await emailService.GetRecentJobAlertsAsync();
 
             return JsonSerializer.Serialize(new
             {
@@ -111,8 +111,8 @@ public class EmailAlertTools(
         {
             logger.LogDebug("Retrieving enhanced email alerts for last {DaysBack} days", daysBack);
 
-            var jobs = await emailService.GetJobAlertsAsync(daysBack);
-            var enhancedJobs = await emailService.EnhanceJobsWithDetails(jobs);
+            List<EnhancedJobListing> jobs = await emailService.GetJobAlertsAsync(daysBack);
+            List<EnhancedJobListing> enhancedJobs = await emailService.EnhanceJobsWithDetails(jobs);
 
             return JsonSerializer.Serialize(new
             {

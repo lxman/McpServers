@@ -17,17 +17,17 @@ public class PrivateEndpointService(ArmClientFactory armClientFactory, ILogger<P
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
             var privateEndpoints = new List<PrivateEndpointDto>();
 
             switch (string.IsNullOrEmpty(subscriptionId))
             {
                 case false when !string.IsNullOrEmpty(resourceGroupName):
                 {
-                    var resourceGroup = armClient.GetResourceGroupResource(
+                    ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
                         ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
                 
-                    await foreach (var privateEndpoint in resourceGroup.GetPrivateEndpoints())
+                    await foreach (PrivateEndpointResource? privateEndpoint in resourceGroup.GetPrivateEndpoints())
                     {
                         privateEndpoints.Add(MappingService.MapToPrivateEndpointDto(privateEndpoint.Data));
                     }
@@ -36,10 +36,10 @@ public class PrivateEndpointService(ArmClientFactory armClientFactory, ILogger<P
                 }
                 case false:
                 {
-                    var subscription = armClient.GetSubscriptionResource(
+                    SubscriptionResource? subscription = armClient.GetSubscriptionResource(
                         new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
-                    await foreach (var privateEndpoint in subscription.GetPrivateEndpointsAsync())
+                    await foreach (PrivateEndpointResource? privateEndpoint in subscription.GetPrivateEndpointsAsync())
                     {
                         privateEndpoints.Add(MappingService.MapToPrivateEndpointDto(privateEndpoint.Data));
                     }
@@ -48,9 +48,9 @@ public class PrivateEndpointService(ArmClientFactory armClientFactory, ILogger<P
                 }
                 default:
                 {
-                    await foreach (var subscription in armClient.GetSubscriptions())
+                    await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
                     {
-                        await foreach (var privateEndpoint in subscription.GetPrivateEndpointsAsync())
+                        await foreach (PrivateEndpointResource? privateEndpoint in subscription.GetPrivateEndpointsAsync())
                         {
                             privateEndpoints.Add(MappingService.MapToPrivateEndpointDto(privateEndpoint.Data));
                         }
@@ -73,8 +73,8 @@ public class PrivateEndpointService(ArmClientFactory armClientFactory, ILogger<P
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = PrivateEndpointResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, privateEndpointName);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = PrivateEndpointResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, privateEndpointName);
             Response<PrivateEndpointResource>? response = await armClient.GetPrivateEndpointResource(resourceId).GetAsync();
             
             return response.HasValue ? MappingService.MapToPrivateEndpointDto(response.Value.Data) : null;
@@ -94,8 +94,8 @@ public class PrivateEndpointService(ArmClientFactory armClientFactory, ILogger<P
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceGroup = armClient.GetResourceGroupResource(
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
                 ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
 
             var privateEndpointData = new PrivateEndpointData
@@ -114,7 +114,7 @@ public class PrivateEndpointService(ArmClientFactory armClientFactory, ILogger<P
 
                 if (request.GroupIds is not null)
                 {
-                    foreach (var groupId in request.GroupIds)
+                    foreach (string groupId in request.GroupIds)
                     {
                         connection.GroupIds.Add(groupId);
                     }
@@ -125,7 +125,7 @@ public class PrivateEndpointService(ArmClientFactory armClientFactory, ILogger<P
 
             if (request.Tags is not null)
             {
-                foreach (var tag in request.Tags)
+                foreach (KeyValuePair<string, string> tag in request.Tags)
                     privateEndpointData.Tags.Add(tag.Key, tag.Value);
             }
 
@@ -145,9 +145,9 @@ public class PrivateEndpointService(ArmClientFactory armClientFactory, ILogger<P
     {
         try
         {
-            var armClient = await armClientFactory.GetArmClientAsync();
-            var resourceId = PrivateEndpointResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, privateEndpointName);
-            var privateEndpoint = armClient.GetPrivateEndpointResource(resourceId);
+            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            ResourceIdentifier? resourceId = PrivateEndpointResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, privateEndpointName);
+            PrivateEndpointResource? privateEndpoint = armClient.GetPrivateEndpointResource(resourceId);
             
             await privateEndpoint.DeleteAsync(WaitUntil.Completed);
             return true;

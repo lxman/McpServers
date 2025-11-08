@@ -69,7 +69,7 @@ namespace SeleniumChrome.Core.Services.Scrapers
                 var searchQuery = $"site:simplify.jobs {request.SearchTerm}";
                 Logger.LogInformation($"🌐 Google Custom Search query: {searchQuery}");
                 
-                var discoveredJobIds = await PerformGoogleCustomSearchAsync(searchQuery, request.MaxResults);
+                List<string> discoveredJobIds = await PerformGoogleCustomSearchAsync(searchQuery, request.MaxResults);
 
                 if (!discoveredJobIds.Any())
                 {
@@ -93,7 +93,7 @@ namespace SeleniumChrome.Core.Services.Scrapers
                 Logger.LogInformation($"✅ Discovered {discoveredJobIds.Count} job IDs from Google Custom Search");
 
                 // Step 2: Use the working SimplifyJobsApiService to fetch detailed job data
-                var jobs = await apiService.FetchJobsByIdsAsync(discoveredJobIds.ToArray(), request.UserId);
+                List<EnhancedJobListing> jobs = await apiService.FetchJobsByIdsAsync(discoveredJobIds.ToArray(), request.UserId);
                 
                 Logger.LogInformation($"🎯 Successfully fetched {jobs.Count} jobs using proven API method");
                 Logger.LogInformation("📊 Method: Google Custom Search API + SimplifyJobs Direct API");
@@ -119,57 +119,57 @@ namespace SeleniumChrome.Core.Services.Scrapers
                 Logger.LogInformation($"📡 Calling Google Custom Search API with query: {searchQuery}");
                 
                 // Build the API request URL
-                var requestUrl = $"{CUSTOM_SEARCH_API_URL}?" +
-                                 $"key={Uri.EscapeDataString(GOOGLE_API_KEY)}&" +
-                                 $"cx={Uri.EscapeDataString(SEARCH_ENGINE_ID)}&" +
-                                 $"q={Uri.EscapeDataString(searchQuery)}&" +
-                                 $"num={Math.Min(maxResults, 10)}"; // Google allows max 10 results per call
+                string requestUrl = $"{CUSTOM_SEARCH_API_URL}?" +
+                                    $"key={Uri.EscapeDataString(GOOGLE_API_KEY)}&" +
+                                    $"cx={Uri.EscapeDataString(SEARCH_ENGINE_ID)}&" +
+                                    $"q={Uri.EscapeDataString(searchQuery)}&" +
+                                    $"num={Math.Min(maxResults, 10)}"; // Google allows max 10 results per call
                 
                 Logger.LogInformation($"🌐 API Request URL: {requestUrl.Replace(GOOGLE_API_KEY, "***API_KEY***")}");
                 
                 // Make the API call
-                var response = await httpClient.GetAsync(requestUrl);
+                HttpResponseMessage response = await httpClient.GetAsync(requestUrl);
                 
                 if (!response.IsSuccessStatusCode)
                 {
-                    var errorContent = await response.Content.ReadAsStringAsync();
+                    string errorContent = await response.Content.ReadAsStringAsync();
                     Logger.LogError($"❌ Google Custom Search API error: {response.StatusCode} - {errorContent}");
                     return jobIds;
                 }
                 
-                var jsonContent = await response.Content.ReadAsStringAsync();
-                var searchResults = JsonDocument.Parse(jsonContent);
+                string jsonContent = await response.Content.ReadAsStringAsync();
+                JsonDocument searchResults = JsonDocument.Parse(jsonContent);
                 
                 // Extract total results count for logging
-                if (searchResults.RootElement.TryGetProperty("searchInformation", out var searchInfo) &&
-                    searchInfo.TryGetProperty("totalResults", out var totalResults))
+                if (searchResults.RootElement.TryGetProperty("searchInformation", out JsonElement searchInfo) &&
+                    searchInfo.TryGetProperty("totalResults", out JsonElement totalResults))
                 {
                     Logger.LogInformation($"📊 Total results available: {totalResults.GetString()}");
                 }
                 
                 // Process search result items
-                if (searchResults.RootElement.TryGetProperty("items", out var items))
+                if (searchResults.RootElement.TryGetProperty("items", out JsonElement items))
                 {
-                    var itemsArray = items.EnumerateArray().ToList();
+                    List<JsonElement> itemsArray = items.EnumerateArray().ToList();
                     Logger.LogInformation($"📄 Processing {itemsArray.Count} search results");
                     
-                    foreach (var item in itemsArray)
+                    foreach (JsonElement item in itemsArray)
                     {
                         // Get the link from the result
-                        if (item.TryGetProperty("link", out var linkElement))
+                        if (item.TryGetProperty("link", out JsonElement linkElement))
                         {
-                            var url = linkElement.GetString();
+                            string? url = linkElement.GetString();
                             Logger.LogInformation($"🔗 Found URL: {url}");
                             
                             if (IsSimplifyJobsUrl(url))
                             {
-                                var jobId = ExtractJobIdFromUrl(url);
+                                string? jobId = ExtractJobIdFromUrl(url);
                                 if (!string.IsNullOrEmpty(jobId) && !jobIds.Contains(jobId))
                                 {
                                     jobIds.Add(jobId);
                                     
                                     // Log title if available for debugging
-                                    if (item.TryGetProperty("title", out var titleElement))
+                                    if (item.TryGetProperty("title", out JsonElement titleElement))
                                     {
                                         Logger.LogInformation($"🎯 Extracted job ID: {jobId} - {titleElement.GetString()}");
                                     }
@@ -187,29 +187,29 @@ namespace SeleniumChrome.Core.Services.Scrapers
                     {
                         Logger.LogInformation("📄 Need more results, making additional API call...");
                         
-                        var nextRequestUrl = $"{CUSTOM_SEARCH_API_URL}?" +
-                                             $"key={Uri.EscapeDataString(GOOGLE_API_KEY)}&" +
-                                             $"cx={Uri.EscapeDataString(SEARCH_ENGINE_ID)}&" +
-                                             $"q={Uri.EscapeDataString(searchQuery)}&" +
-                                             $"start=11&" +
-                                             $"num={Math.Min(maxResults - jobIds.Count, 10)}";
+                        string nextRequestUrl = $"{CUSTOM_SEARCH_API_URL}?" +
+                                                $"key={Uri.EscapeDataString(GOOGLE_API_KEY)}&" +
+                                                $"cx={Uri.EscapeDataString(SEARCH_ENGINE_ID)}&" +
+                                                $"q={Uri.EscapeDataString(searchQuery)}&" +
+                                                $"start=11&" +
+                                                $"num={Math.Min(maxResults - jobIds.Count, 10)}";
                         
-                        var nextResponse = await httpClient.GetAsync(nextRequestUrl);
+                        HttpResponseMessage nextResponse = await httpClient.GetAsync(nextRequestUrl);
                         if (nextResponse.IsSuccessStatusCode)
                         {
-                            var nextJsonContent = await nextResponse.Content.ReadAsStringAsync();
-                            var nextSearchResults = JsonDocument.Parse(nextJsonContent);
+                            string nextJsonContent = await nextResponse.Content.ReadAsStringAsync();
+                            JsonDocument nextSearchResults = JsonDocument.Parse(nextJsonContent);
                             
-                            if (nextSearchResults.RootElement.TryGetProperty("items", out var nextItems))
+                            if (nextSearchResults.RootElement.TryGetProperty("items", out JsonElement nextItems))
                             {
-                                foreach (var item in nextItems.EnumerateArray())
+                                foreach (JsonElement item in nextItems.EnumerateArray())
                                 {
-                                    if (item.TryGetProperty("link", out var linkElement))
+                                    if (item.TryGetProperty("link", out JsonElement linkElement))
                                     {
-                                        var url = linkElement.GetString();
+                                        string? url = linkElement.GetString();
                                         if (IsSimplifyJobsUrl(url))
                                         {
-                                            var jobId = ExtractJobIdFromUrl(url);
+                                            string? jobId = ExtractJobIdFromUrl(url);
                                             if (!string.IsNullOrEmpty(jobId) && !jobIds.Contains(jobId))
                                             {
                                                 jobIds.Add(jobId);
@@ -246,7 +246,7 @@ namespace SeleniumChrome.Core.Services.Scrapers
             if (string.IsNullOrEmpty(url))
                 return null;
 
-            var match = JobIdRegex.Match(url);
+            Match match = JobIdRegex.Match(url);
             return match.Success ? match.Groups[1].Value : null;
         }
 

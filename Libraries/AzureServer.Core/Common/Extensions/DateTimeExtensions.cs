@@ -26,7 +26,7 @@ public static class DateTimeExtensions
     /// </summary>
     public static string ToTimeAgo(this DateTime dateTime)
     {
-        var timeSpan = DateTime.UtcNow - dateTime.ToUniversalTime();
+        TimeSpan timeSpan = DateTime.UtcNow - dateTime.ToUniversalTime();
         
         return timeSpan.TotalDays switch
         {
@@ -59,7 +59,7 @@ public static class DateTimeExtensions
     /// </summary>
     public static bool IsWithinLastDays(this DateTime dateTime, int days)
     {
-        var cutoff = DateTime.UtcNow.AddDays(-days);
+        DateTime cutoff = DateTime.UtcNow.AddDays(-days);
         return dateTime.ToUniversalTime() >= cutoff;
     }
     

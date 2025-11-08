@@ -25,7 +25,7 @@ public class EcrTools(
         try
         {
             logger.LogDebug("Listing ECR repositories");
-            var response = await ecrService.ListRepositoriesAsync();
+            DescribeRepositoriesResponse response = await ecrService.ListRepositoriesAsync();
 
             return JsonSerializer.Serialize(new
             {
@@ -58,7 +58,7 @@ public class EcrTools(
         try
         {
             logger.LogDebug("Listing images in ECR repository {RepositoryName}", repositoryName);
-            var response = await ecrService.ListImagesAsync(repositoryName, maxResults);
+            ListImagesResult response = await ecrService.ListImagesAsync(repositoryName, maxResults);
 
             return JsonSerializer.Serialize(new
             {
@@ -97,7 +97,7 @@ public class EcrTools(
 
                 if (!string.IsNullOrEmpty(imageTags))
                 {
-                    foreach (var tag in imageTags.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                    foreach (string tag in imageTags.Split(',', StringSplitOptions.RemoveEmptyEntries))
                     {
                         imageIds.Add(new ImageIdentifier { ImageTag = tag.Trim() });
                     }
@@ -109,7 +109,7 @@ public class EcrTools(
                 }
             }
 
-            var response = await ecrService.DescribeImagesAsync(repositoryName, imageIds);
+            DescribeImagesResponse response = await ecrService.DescribeImagesAsync(repositoryName, imageIds);
 
             return JsonSerializer.Serialize(new
             {
@@ -156,7 +156,7 @@ public class EcrTools(
                 ScanOnPush = scanOnPush
             };
 
-            var response = await ecrService.CreateRepositoryAsync(repositoryName, scanConfig);
+            CreateRepositoryResponse response = await ecrService.CreateRepositoryAsync(repositoryName, scanConfig);
 
             return JsonSerializer.Serialize(new
             {
@@ -186,7 +186,7 @@ public class EcrTools(
         try
         {
             logger.LogDebug("Deleting ECR repository {RepositoryName}", repositoryName);
-            var response = await ecrService.DeleteRepositoryAsync(repositoryName, force);
+            DeleteRepositoryResponse response = await ecrService.DeleteRepositoryAsync(repositoryName, force);
 
             return JsonSerializer.Serialize(new
             {
@@ -213,7 +213,7 @@ public class EcrTools(
         try
         {
             logger.LogDebug("Describing ECR repositories");
-            var response = await ecrService.DescribeRepositoriesAsync(repositoryNames);
+            DescribeRepositoriesResponse response = await ecrService.DescribeRepositoriesAsync(repositoryNames);
 
             return JsonSerializer.Serialize(new
             {
@@ -245,8 +245,8 @@ public class EcrTools(
         try
         {
             logger.LogDebug("Batch deleting images from ECR repository {RepositoryName}", repositoryName);
-            var imageIds = imageTags.Select(tag => new ImageIdentifier { ImageTag = tag }).ToList();
-            var response = await ecrService.BatchDeleteImageAsync(repositoryName, imageIds);
+            List<ImageIdentifier> imageIds = imageTags.Select(tag => new ImageIdentifier { ImageTag = tag }).ToList();
+            BatchDeleteImageResponse response = await ecrService.BatchDeleteImageAsync(repositoryName, imageIds);
 
             return JsonSerializer.Serialize(new
             {
@@ -283,7 +283,7 @@ public class EcrTools(
         try
         {
             logger.LogDebug("Getting ECR authorization token");
-            var response = await ecrService.GetAuthorizationTokenAsync();
+            GetAuthorizationTokenResponse response = await ecrService.GetAuthorizationTokenAsync();
 
             return JsonSerializer.Serialize(new
             {
@@ -310,7 +310,7 @@ public class EcrTools(
         try
         {
             logger.LogDebug("Getting lifecycle policy for ECR repository {RepositoryName}", repositoryName);
-            var response = await ecrService.GetLifecyclePolicyAsync(repositoryName);
+            GetLifecyclePolicyResponse response = await ecrService.GetLifecyclePolicyAsync(repositoryName);
 
             return JsonSerializer.Serialize(new
             {
@@ -335,7 +335,7 @@ public class EcrTools(
         try
         {
             logger.LogDebug("Putting lifecycle policy for ECR repository {RepositoryName}", repositoryName);
-            var response = await ecrService.PutLifecyclePolicyAsync(repositoryName, lifecyclePolicyText);
+            PutLifecyclePolicyResponse response = await ecrService.PutLifecyclePolicyAsync(repositoryName, lifecyclePolicyText);
 
             return JsonSerializer.Serialize(new
             {

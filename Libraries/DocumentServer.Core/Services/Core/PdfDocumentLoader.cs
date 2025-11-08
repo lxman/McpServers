@@ -34,7 +34,7 @@ public class PdfDocumentLoader : IDocumentLoader
     /// <inheritdoc />
     public bool CanLoad(string filePath)
     {
-        var extension = Path.GetExtension(filePath).ToLowerInvariant();
+        string extension = Path.GetExtension(filePath).ToLowerInvariant();
         return SupportedExtensions.Contains(extension);
     }
 
@@ -83,10 +83,10 @@ public class PdfDocumentLoader : IDocumentLoader
             }
 
             // Extract basic metadata
-            var metadata = ExtractMetadata(pdfDocument, filePath);
+            Dictionary<string, string> metadata = ExtractMetadata(pdfDocument, filePath);
             
             // Calculate estimated memory size
-            var estimatedMemorySize = EstimateMemorySize(fileInfo.Length, pdfDocument.NumberOfPages);
+            long estimatedMemorySize = EstimateMemorySize(fileInfo.Length, pdfDocument.NumberOfPages);
 
             var loadedDocument = new LoadedDocument
             {
@@ -127,11 +127,11 @@ public class PdfDocumentLoader : IDocumentLoader
 
             var textBuilder = new StringBuilder();
             
-            foreach (var page in pdfDocument.GetPages())
+            foreach (Page page in pdfDocument.GetPages())
             {
                 try
                 {
-                    var pageText = ContentOrderTextExtractor.GetText(page);
+                    string? pageText = ContentOrderTextExtractor.GetText(page);
                     textBuilder.AppendLine($"--- Page {page.Number} ---");
                     textBuilder.AppendLine(pageText);
                     textBuilder.AppendLine();
@@ -241,7 +241,7 @@ public class PdfDocumentLoader : IDocumentLoader
 
         try
         {
-            var info = pdfDocument.Information;
+            DocumentInformation? info = pdfDocument.Information;
             
             metadata["Title"] = info?.Title ?? Path.GetFileNameWithoutExtension(filePath);
             metadata["Author"] = info?.Author ?? string.Empty;
@@ -252,13 +252,13 @@ public class PdfDocumentLoader : IDocumentLoader
             metadata["Version"] = pdfDocument.Version.ToString();
             metadata["PageCount"] = pdfDocument.NumberOfPages.ToString();
             
-            var creationDate = ParsePdfDate(info?.CreationDate);
+            DateTime? creationDate = ParsePdfDate(info?.CreationDate);
             if (creationDate.HasValue)
             {
                 metadata["CreationDate"] = creationDate.Value.ToString("yyyy-MM-dd HH:mm:ss");
             }
             
-            var modDate = ParsePdfDate(info?.ModifiedDate);
+            DateTime? modDate = ParsePdfDate(info?.ModifiedDate);
             if (modDate.HasValue)
             {
                 metadata["ModificationDate"] = modDate.Value.ToString("yyyy-MM-dd HH:mm:ss");
@@ -281,7 +281,7 @@ public class PdfDocumentLoader : IDocumentLoader
     {
         // Rough estimation: file size + overhead per page (images, objects, etc.)
         // PDF files in memory typically use 1.5-3x their disk size
-        var baseMemory = fileSize * 2;
+        long baseMemory = fileSize * 2;
         long pageOverhead = pageCount * 50_000; // ~50KB per page for structures
         
         return baseMemory + pageOverhead;
@@ -300,10 +300,10 @@ public class PdfDocumentLoader : IDocumentLoader
             // PDF dates are in format: D:YYYYMMDDHHmmSSOHH'mm
             if (pdfDate.StartsWith("D:"))
             {
-                var dateStr = pdfDate[2..]; // Remove "D:" prefix
+                string dateStr = pdfDate[2..]; // Remove "D:" prefix
                 
                 // Handle timezone offset
-                var timezoneIndex = dateStr.IndexOfAny(['+', '-']);
+                int timezoneIndex = dateStr.IndexOfAny(['+', '-']);
                 if (timezoneIndex > 0)
                 {
                     dateStr = dateStr[..timezoneIndex];
@@ -313,12 +313,12 @@ public class PdfDocumentLoader : IDocumentLoader
                 dateStr = dateStr.PadRight(14, '0');
                 
                 if (dateStr.Length >= 14 &&
-                    int.TryParse(dateStr[..4], out var year) &&
-                    int.TryParse(dateStr[4..6], out var month) &&
-                    int.TryParse(dateStr[6..8], out var day) &&
-                    int.TryParse(dateStr[8..10], out var hour) &&
-                    int.TryParse(dateStr[10..12], out var minute) &&
-                    int.TryParse(dateStr[12..14], out var second))
+                    int.TryParse(dateStr[..4], out int year) &&
+                    int.TryParse(dateStr[4..6], out int month) &&
+                    int.TryParse(dateStr[6..8], out int day) &&
+                    int.TryParse(dateStr[8..10], out int hour) &&
+                    int.TryParse(dateStr[10..12], out int minute) &&
+                    int.TryParse(dateStr[12..14], out int second))
                 {
                     if (year is >= 1900 and <= 9999 &&
                         month is >= 1 and <= 12 &&
@@ -341,7 +341,7 @@ public class PdfDocumentLoader : IDocumentLoader
             }
             
             // Fallback: try standard DateTime parsing
-            if (DateTime.TryParse(pdfDate, out var result))
+            if (DateTime.TryParse(pdfDate, out DateTime result))
                 return result;
         }
         catch (Exception ex)

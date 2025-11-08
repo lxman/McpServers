@@ -42,22 +42,22 @@ public class DocumentComparator
         try
         {
             // Extract text from both documents
-            var text1Result = await _processor.ExtractTextAsync(filePath1, password1);
+            ServiceResult<string> text1Result = await _processor.ExtractTextAsync(filePath1, password1);
             if (!text1Result.Success)
             {
                 return ServiceResult<ComparisonResult>.CreateFailure(
                     $"Failed to extract text from first document: {text1Result.Error}");
             }
 
-            var text2Result = await _processor.ExtractTextAsync(filePath2, password2);
+            ServiceResult<string> text2Result = await _processor.ExtractTextAsync(filePath2, password2);
             if (!text2Result.Success)
             {
                 return ServiceResult<ComparisonResult>.CreateFailure(
                     $"Failed to extract text from second document: {text2Result.Error}");
             }
 
-            var text1 = text1Result.Data!;
-            var text2 = text2Result.Data!;
+            string text1 = text1Result.Data!;
+            string text2 = text2Result.Data!;
 
             // Calculate similarity metrics
             var comparisonResult = new ComparisonResult
@@ -72,9 +72,9 @@ public class DocumentComparator
             comparisonResult.CharacterSimilarity = CalculateLevenshteinSimilarity(text1, text2);
 
             // Word-level comparison
-            var words1 = text1.Split([' ', '\n', '\r', '\t'], 
+            string[] words1 = text1.Split([' ', '\n', '\r', '\t'], 
                 StringSplitOptions.RemoveEmptyEntries);
-            var words2 = text2.Split([' ', '\n', '\r', '\t'], 
+            string[] words2 = text2.Split([' ', '\n', '\r', '\t'], 
                 StringSplitOptions.RemoveEmptyEntries);
 
             comparisonResult.Document1WordCount = words1.Length;
@@ -154,12 +154,12 @@ public class DocumentComparator
         if (str1.Length > maxLength) str1 = str1[..maxLength];
         if (str2.Length > maxLength) str2 = str2[..maxLength];
 
-        var distance = LevenshteinDistance(str1, str2);
-        var maxLengthActual = Math.Max(str1.Length, str2.Length);
+        int distance = LevenshteinDistance(str1, str2);
+        int maxLengthActual = Math.Max(str1.Length, str2.Length);
         
         if (maxLengthActual == 0) return 100.0;
         
-        var similarity = (1.0 - (double)distance / maxLengthActual) * 100.0;
+        double similarity = (1.0 - (double)distance / maxLengthActual) * 100.0;
         return Math.Max(0, Math.Min(100, similarity));
     }
 
@@ -180,7 +180,7 @@ public class DocumentComparator
         {
             for (var j = 1; j <= str2.Length; j++)
             {
-                var cost = str1[i - 1] == str2[j - 1] ? 0 : 1;
+                int cost = str1[i - 1] == str2[j - 1] ? 0 : 1;
                 matrix[i, j] = Math.Min(
                     Math.Min(matrix[i - 1, j] + 1, matrix[i, j - 1] + 1),
                     matrix[i - 1, j - 1] + cost);

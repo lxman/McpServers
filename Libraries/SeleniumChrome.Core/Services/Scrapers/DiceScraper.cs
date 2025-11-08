@@ -17,7 +17,7 @@ public class DiceScraper(ILogger<DiceScraper> logger) : BaseJobScraper(logger)
         {
             InitializeDriver(config.AntiDetection);
             
-            var searchUrl = BuildSearchUrl(request, config);
+            string searchUrl = BuildSearchUrl(request, config);
             Logger.LogInformation($"Scraping Dice: {searchUrl}");
             
             Driver!.Navigate().GoToUrl(searchUrl);
@@ -33,7 +33,7 @@ public class DiceScraper(ILogger<DiceScraper> logger) : BaseJobScraper(logger)
             Logger.LogInformation($"Page title: {Driver.Title}");
             
             // Try to find job cards with debugging
-            var jobCards = Driver.FindElements(By.CssSelector(config.Selectors["jobCard"]));
+            ReadOnlyCollection<IWebElement> jobCards = Driver.FindElements(By.CssSelector(config.Selectors["jobCard"]));
             Logger.LogInformation($"Found {jobCards.Count} job cards on Dice using selector: {config.Selectors["jobCard"]}");
             
             // If no job cards found, try alternate selectors
@@ -49,9 +49,9 @@ public class DiceScraper(ILogger<DiceScraper> logger) : BaseJobScraper(logger)
                     ".job-listing"
                 };
                 
-                foreach (var altSelector in alternateSelectors)
+                foreach (string altSelector in alternateSelectors)
                 {
-                    var altCards = Driver.FindElements(By.CssSelector(altSelector));
+                    ReadOnlyCollection<IWebElement> altCards = Driver.FindElements(By.CssSelector(altSelector));
                     Logger.LogInformation($"Alternate selector '{altSelector}' found {altCards.Count} elements");
                     if (altCards.Count > 0)
                     {
@@ -61,11 +61,11 @@ public class DiceScraper(ILogger<DiceScraper> logger) : BaseJobScraper(logger)
                 }
             }
 
-            foreach (var card in jobCards.Take(request.MaxResults))
+            foreach (IWebElement card in jobCards.Take(request.MaxResults))
             {
                 try
                 {
-                    var job = ExtractJobFromCard(card, config);
+                    EnhancedJobListing? job = ExtractJobFromCard(card, config);
                     if (job != null)
                     {
                         job.SourceSite = SupportedSite;
@@ -94,7 +94,7 @@ public class DiceScraper(ILogger<DiceScraper> logger) : BaseJobScraper(logger)
         try
         {
             // Smart wait: Wait for job cards to appear OR timeout after 2 seconds
-            var timeout = DateTime.Now.AddSeconds(2);
+            DateTime timeout = DateTime.Now.AddSeconds(2);
             var contentFound = false;
             
             while (DateTime.Now < timeout && !contentFound)
@@ -102,7 +102,7 @@ public class DiceScraper(ILogger<DiceScraper> logger) : BaseJobScraper(logger)
                 try
                 {
                     // Check if Dice job cards are available
-                    var elements = Driver.FindElements(By.CssSelector("[data-testid='job-search-serp-card'], [class*='job-card'], [class*='search-result']"));
+                    ReadOnlyCollection<IWebElement> elements = Driver.FindElements(By.CssSelector("[data-testid='job-search-serp-card'], [class*='job-card'], [class*='search-result']"));
                     if (elements.Count > 0)
                     {
                         contentFound = true;
@@ -111,7 +111,7 @@ public class DiceScraper(ILogger<DiceScraper> logger) : BaseJobScraper(logger)
                     }
                     
                     // Also check for Dice-specific content patterns
-                    var pageSource = Driver.PageSource;
+                    string pageSource = Driver.PageSource;
                     if (pageSource.Contains("job-search-serp-card") || pageSource.Contains("Search Results"))
                     {
                         contentFound = true;
@@ -158,7 +158,7 @@ public class DiceScraper(ILogger<DiceScraper> logger) : BaseJobScraper(logger)
                 "[data-cy='accept-all-button']"
             };
 
-            foreach (var buttonSelector in acceptButtons)
+            foreach (string buttonSelector in acceptButtons)
             {
                 try
                 {
@@ -210,15 +210,15 @@ public class DiceScraper(ILogger<DiceScraper> logger) : BaseJobScraper(logger)
         try
         {
             // Extract title and URL
-            var titleElement = card.FindElement(By.CssSelector(config.Selectors["title"]));
-            var title = titleElement.Text?.Trim() ?? "";
-            var jobUrl = titleElement.GetAttribute("href") ?? "";
+            IWebElement titleElement = card.FindElement(By.CssSelector(config.Selectors["title"]));
+            string title = titleElement.Text?.Trim() ?? "";
+            string jobUrl = titleElement.GetAttribute("href") ?? "";
             
             // Extract company - it's in a specific structure
             var company = "";
             try 
             {
-                var companyElement = card.FindElement(By.CssSelector(config.Selectors["company"]));
+                IWebElement companyElement = card.FindElement(By.CssSelector(config.Selectors["company"]));
                 company = companyElement.Text?.Trim() ?? "";
             }
             catch (NoSuchElementException) 
@@ -226,7 +226,7 @@ public class DiceScraper(ILogger<DiceScraper> logger) : BaseJobScraper(logger)
                 // Fallback to find any company link
                 try
                 {
-                    var companyLink = card.FindElement(By.CssSelector("a[href*='/company-profile']"));
+                    IWebElement companyLink = card.FindElement(By.CssSelector("a[href*='/company-profile']"));
                     company = companyLink.Text?.Trim() ?? "";
                 }
                 catch (NoSuchElementException) { }
@@ -236,10 +236,10 @@ public class DiceScraper(ILogger<DiceScraper> logger) : BaseJobScraper(logger)
             var location = "";
             try
             {
-                var locationElements = card.FindElements(By.CssSelector(".text-zinc-600"));
-                foreach (var elem in locationElements)
+                ReadOnlyCollection<IWebElement> locationElements = card.FindElements(By.CssSelector(".text-zinc-600"));
+                foreach (IWebElement elem in locationElements)
                 {
-                    var text = elem.Text?.Trim() ?? "";
+                    string text = elem.Text?.Trim() ?? "";
                     if (!string.IsNullOrEmpty(text) && text != "•" && text != "Today" && 
                         !text.Contains("Posted") && !text.Contains("ago"))
                     {
@@ -254,7 +254,7 @@ public class DiceScraper(ILogger<DiceScraper> logger) : BaseJobScraper(logger)
             var summary = "";
             try
             {
-                var summaryElement = card.FindElement(By.CssSelector(config.Selectors["summary"]));
+                IWebElement summaryElement = card.FindElement(By.CssSelector(config.Selectors["summary"]));
                 summary = summaryElement.Text?.Trim() ?? "";
             }
             catch (NoSuchElementException) { }
@@ -293,7 +293,7 @@ public class DiceScraper(ILogger<DiceScraper> logger) : BaseJobScraper(logger)
 
     private static bool IsRemoteJob(string location, string title, string summary)
     {
-        var text = $"{location} {title} {summary}".ToLower();
+        string text = $"{location} {title} {summary}".ToLower();
         return text.Contains("remote") || text.Contains("work from home") || text.Contains("telecommute");
     }
 

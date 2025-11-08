@@ -26,7 +26,7 @@ public static class RegistryEnvironmentReader
             // Try user environment first
             if (registry.ValueExists(UserEnvironmentPath, variableName))
             {
-                var value = registry.ReadValue(UserEnvironmentPath, variableName);
+                object? value = registry.ReadValue(UserEnvironmentPath, variableName);
                 if (value != null)
                 {
                     return value.ToString();
@@ -36,7 +36,7 @@ public static class RegistryEnvironmentReader
             // Fall back to system environment
             if (registry.ValueExists(SystemEnvironmentPath, variableName))
             {
-                var value = registry.ReadValue(SystemEnvironmentPath, variableName);
+                object? value = registry.ReadValue(SystemEnvironmentPath, variableName);
                 if (value != null)
                 {
                     return value.ToString();
@@ -61,7 +61,7 @@ public static class RegistryEnvironmentReader
     public static string? GetEnvironmentVariableWithFallback(string variableName)
     {
         // First try the normal process environment
-        var value = Environment.GetEnvironmentVariable(variableName);
+        string? value = Environment.GetEnvironmentVariable(variableName);
         if (!string.IsNullOrEmpty(value))
         {
             return value;
@@ -77,8 +77,8 @@ public static class RegistryEnvironmentReader
     /// <returns>Tuple of (ConnectionString, Database) if found, or (null, null) if not found</returns>
     public static (string? ConnectionString, string? Database) GetMongoConnectionFromEnvironment()
     {
-        var connectionString = GetEnvironmentVariableWithFallback("MONGODB_CONNECTION_STRING");
-        var database = GetEnvironmentVariableWithFallback("MONGODB_DATABASE");
+        string? connectionString = GetEnvironmentVariableWithFallback("MONGODB_CONNECTION_STRING");
+        string? database = GetEnvironmentVariableWithFallback("MONGODB_DATABASE");
 
         return (connectionString, database);
     }

@@ -28,7 +28,7 @@ public class WebKitService
         
         if (options != null)
         {
-            if (options.TryGetValue("viewport", out var option))
+            if (options.TryGetValue("viewport", out object? option))
             {
                 if (option is Dictionary<string, object> viewport)
                 {

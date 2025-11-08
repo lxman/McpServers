@@ -56,7 +56,7 @@ namespace MsOfficeCrypto.Structures
             var header = new EncryptionHeader();
             
             // CORRECTED: Read HeaderSize first (this was missing!)
-            var headerSize = reader.ReadUInt32(); // Offset 4: HeaderSize = 36
+            uint headerSize = reader.ReadUInt32(); // Offset 4: HeaderSize = 36
             Console.WriteLine($"Debug: HeaderSize = {headerSize} (at offset {reader.BaseStream.Position - 4})");
             
             header.Flags = reader.ReadUInt32(); // Offset 8: Flags = 140
@@ -65,7 +65,7 @@ namespace MsOfficeCrypto.Structures
             header.SizeExtra = reader.ReadUInt32(); // Offset 12: SizeExtra = 36
             Console.WriteLine($"Debug: SizeExtra = {header.SizeExtra} (at offset {reader.BaseStream.Position - 4})");
             
-            var reserved = reader.ReadUInt32(); // Offset 16: Reserved = 0
+            uint reserved = reader.ReadUInt32(); // Offset 16: Reserved = 0
             Console.WriteLine($"Debug: Reserved = 0x{reserved:X8} (at offset {reader.BaseStream.Position - 4})");
             
             header.AlgId = reader.ReadUInt32(); // Offset 20: AlgID = 0x0000660E (AES-128)
@@ -95,16 +95,16 @@ namespace MsOfficeCrypto.Structures
             
             // Read the full CSP name by looking for null termination
             var cspBytes = new List<byte>();
-            var cspStartPosition = reader.BaseStream.Position;
+            long cspStartPosition = reader.BaseStream.Position;
             
             // Read Unicode characters until we find the end of the CSP name
             // and the start of the verifier (salt size between 1-64)
             while (reader.BaseStream.Position < data.Length - 4)
             {
-                var currentPos = reader.BaseStream.Position;
+                long currentPos = reader.BaseStream.Position;
                 
                 // Check if this might be the start of the verifier
-                var potentialSaltSize = reader.ReadUInt32();
+                uint potentialSaltSize = reader.ReadUInt32();
                 
                 if (potentialSaltSize > 0 && potentialSaltSize <= 64)
                 {
@@ -128,7 +128,7 @@ namespace MsOfficeCrypto.Structures
             }
 
             // Store raw header data for debugging
-            var headerEndPosition = reader.BaseStream.Position;
+            long headerEndPosition = reader.BaseStream.Position;
             header.RawData = data[4..(int)headerEndPosition];
             Console.WriteLine($"Debug: Header ends at position {headerEndPosition}");
 
@@ -163,7 +163,7 @@ namespace MsOfficeCrypto.Structures
             // Read EncryptedVerifierHash
             if (verifier.VerifierHashSize > 0 && verifier.VerifierHashSize <= 64) // Sanity check
             {
-                var paddedHashSize = ((int)verifier.VerifierHashSize + 15) / 16 * 16;
+                int paddedHashSize = ((int)verifier.VerifierHashSize + 15) / 16 * 16;
                 verifier.EncryptedVerifierHash = reader.ReadBytes(paddedHashSize);
                 Console.WriteLine($"Debug: EncryptedVerifierHash = {BitConverter.ToString(verifier.EncryptedVerifierHash).Replace("-", "")}");
             }
@@ -196,53 +196,53 @@ namespace MsOfficeCrypto.Structures
                 var xmlData = new byte[data.Length - 8];
                 Array.Copy(data, 8, xmlData, 0, xmlData.Length);
                 
-                var xmlString = Encoding.UTF8.GetString(xmlData);
-                var doc = XDocument.Parse(xmlString);
+                string xmlString = Encoding.UTF8.GetString(xmlData);
+                XDocument doc = XDocument.Parse(xmlString);
 
                 // Define namespaces
                 XNamespace encNs = "http://schemas.microsoft.com/office/2006/encryption";
                 XNamespace keyEncNs = "http://schemas.microsoft.com/office/2006/keyEncryptor/password";
 
                 // Parse <keyData> element
-                var keyDataElem = doc.Root?.Element(encNs + "keyData")
-                                  ?? throw new CorruptedEncryptionInfoException("Missing keyData element");
+                XElement keyDataElem = doc.Root?.Element(encNs + "keyData")
+                                       ?? throw new CorruptedEncryptionInfoException("Missing keyData element");
 
-                var saltSize = int.Parse(keyDataElem.Attribute("saltSize")?.Value ?? "16");
-                var blockSize = int.Parse(keyDataElem.Attribute("blockSize")?.Value ?? "16");
-                var keyBits = int.Parse(keyDataElem.Attribute("keyBits")?.Value ?? "256");
-                var hashSize = int.Parse(keyDataElem.Attribute("hashSize")?.Value ?? "64");
-                var cipherAlgorithm = keyDataElem.Attribute("cipherAlgorithm")?.Value ?? "AES";
-                var cipherChaining = keyDataElem.Attribute("cipherChaining")?.Value ?? "ChainingModeCBC";
-                var hashAlgorithm = keyDataElem.Attribute("hashAlgorithm")?.Value ?? "SHA512";
-                var saltValue = keyDataElem.Attribute("saltValue")?.Value 
-                                ?? throw new CorruptedEncryptionInfoException("Missing saltValue");
+                int saltSize = int.Parse(keyDataElem.Attribute("saltSize")?.Value ?? "16");
+                int blockSize = int.Parse(keyDataElem.Attribute("blockSize")?.Value ?? "16");
+                int keyBits = int.Parse(keyDataElem.Attribute("keyBits")?.Value ?? "256");
+                int hashSize = int.Parse(keyDataElem.Attribute("hashSize")?.Value ?? "64");
+                string cipherAlgorithm = keyDataElem.Attribute("cipherAlgorithm")?.Value ?? "AES";
+                string cipherChaining = keyDataElem.Attribute("cipherChaining")?.Value ?? "ChainingModeCBC";
+                string hashAlgorithm = keyDataElem.Attribute("hashAlgorithm")?.Value ?? "SHA512";
+                string saltValue = keyDataElem.Attribute("saltValue")?.Value 
+                                   ?? throw new CorruptedEncryptionInfoException("Missing saltValue");
 
-                var keyDataSalt = Convert.FromBase64String(saltValue);
+                byte[] keyDataSalt = Convert.FromBase64String(saltValue);
 
                 Console.WriteLine($"Debug: Agile keyData parsed - keyBits={keyBits}, hash={hashAlgorithm}, cipher={cipherAlgorithm}");
 
                 // Parse <encryptedKey> element (password-based encryption)
-                var encryptedKeyElem = doc.Root?
-                                           .Element(encNs + "keyEncryptors")?
-                                           .Elements(encNs + "keyEncryptor")
-                                           .FirstOrDefault(e => e.Attribute("uri")?.Value?.Contains("password") == true)?
-                                           .Element(keyEncNs + "encryptedKey")
-                                       ?? throw new CorruptedEncryptionInfoException("Missing encryptedKey element");
+                XElement encryptedKeyElem = doc.Root?
+                                                .Element(encNs + "keyEncryptors")?
+                                                .Elements(encNs + "keyEncryptor")
+                                                .FirstOrDefault(e => e.Attribute("uri")?.Value?.Contains("password") == true)?
+                                                .Element(keyEncNs + "encryptedKey")
+                                            ?? throw new CorruptedEncryptionInfoException("Missing encryptedKey element");
 
-                var spinCount = int.Parse(encryptedKeyElem.Attribute("spinCount")?.Value ?? "100000");
-                var keySaltSize = int.Parse(encryptedKeyElem.Attribute("saltSize")?.Value ?? "16");
-                var keyBlockSize = int.Parse(encryptedKeyElem.Attribute("blockSize")?.Value ?? "16");
-                var keyKeyBits = int.Parse(encryptedKeyElem.Attribute("keyBits")?.Value ?? "256");
-                var keyHashAlgorithm = encryptedKeyElem.Attribute("hashAlgorithm")?.Value ?? "SHA512";
-                var keySaltValue = encryptedKeyElem.Attribute("saltValue")?.Value
-                                   ?? throw new CorruptedEncryptionInfoException("Missing encryptedKey saltValue");
+                int spinCount = int.Parse(encryptedKeyElem.Attribute("spinCount")?.Value ?? "100000");
+                int keySaltSize = int.Parse(encryptedKeyElem.Attribute("saltSize")?.Value ?? "16");
+                int keyBlockSize = int.Parse(encryptedKeyElem.Attribute("blockSize")?.Value ?? "16");
+                int keyKeyBits = int.Parse(encryptedKeyElem.Attribute("keyBits")?.Value ?? "256");
+                string keyHashAlgorithm = encryptedKeyElem.Attribute("hashAlgorithm")?.Value ?? "SHA512";
+                string keySaltValue = encryptedKeyElem.Attribute("saltValue")?.Value
+                                      ?? throw new CorruptedEncryptionInfoException("Missing encryptedKey saltValue");
 
-                var encryptedVerifierHashInput = encryptedKeyElem.Attribute("encryptedVerifierHashInput")?.Value
-                                                 ?? throw new CorruptedEncryptionInfoException("Missing encryptedVerifierHashInput");
-                var encryptedVerifierHashValue = encryptedKeyElem.Attribute("encryptedVerifierHashValue")?.Value
-                                                 ?? throw new CorruptedEncryptionInfoException("Missing encryptedVerifierHashValue");
-                var encryptedKeyValueStr = encryptedKeyElem.Attribute("encryptedKeyValue")?.Value
-                                           ?? throw new CorruptedEncryptionInfoException("Missing encryptedKeyValue");
+                string encryptedVerifierHashInput = encryptedKeyElem.Attribute("encryptedVerifierHashInput")?.Value
+                                                    ?? throw new CorruptedEncryptionInfoException("Missing encryptedVerifierHashInput");
+                string encryptedVerifierHashValue = encryptedKeyElem.Attribute("encryptedVerifierHashValue")?.Value
+                                                    ?? throw new CorruptedEncryptionInfoException("Missing encryptedVerifierHashValue");
+                string encryptedKeyValueStr = encryptedKeyElem.Attribute("encryptedKeyValue")?.Value
+                                              ?? throw new CorruptedEncryptionInfoException("Missing encryptedKeyValue");
 
                 Console.WriteLine($"Debug: Agile encryptedKey parsed - spinCount={spinCount}, keyBits={keyKeyBits}");
 
@@ -297,8 +297,8 @@ namespace MsOfficeCrypto.Structures
         public static void ValidateHeader(EncryptionHeader header, VersionInfo versionInfo)
         {
             // Validate algorithm ID matches version
-            var expectedAlgFamily = versionInfo.GetAlgorithmFamily();
-            var actualAlgFamily = header.GetAlgorithmName();
+            string expectedAlgFamily = versionInfo.GetAlgorithmFamily();
+            string actualAlgFamily = header.GetAlgorithmName();
 
             if (expectedAlgFamily == "AES" && !actualAlgFamily.Contains("AES"))
             {
@@ -307,7 +307,7 @@ namespace MsOfficeCrypto.Structures
             }
 
             // Validate key size
-            var expectedKeySize = versionInfo.GetKeyLengthBits();
+            int expectedKeySize = versionInfo.GetKeyLengthBits();
             if (expectedKeySize > 0 && header.KeySize != expectedKeySize)
             {
                 // This might be a warning rather than an error - some implementations vary

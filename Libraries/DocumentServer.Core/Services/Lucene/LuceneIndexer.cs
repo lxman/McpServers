@@ -75,18 +75,18 @@ public class LuceneIndexer
             }
 
             // Get index resources from IndexManager
-            var indexResources = _indexManager.GetIndexResources(indexName);
+            IndexResources indexResources = _indexManager.GetIndexResources(indexName);
 
             // Discover documents
-            var documents = DiscoverDocuments(rootPath, includePatterns, recursive);
+            List<FileInfo> documents = DiscoverDocuments(rootPath, includePatterns, recursive);
             _logger.LogInformation("Found {Count} documents to index", documents.Count);
 
             result.TotalDocuments = documents.Count;
 
             // Process documents
-            foreach (var fileInfo in documents)
+            foreach (FileInfo fileInfo in documents)
             {
-                var success = await ProcessDocumentAsync(fileInfo, indexResources.Writer, result);
+                bool success = await ProcessDocumentAsync(fileInfo, indexResources.Writer, result);
                 if (success)
                 {
                     result.IndexedDocuments++;
@@ -118,7 +118,7 @@ public class LuceneIndexer
     /// </summary>
     private void CreateNewIndex(string indexName)
     {
-        var indexPath = Path.Combine(_indexManager.GetIndexBasePath(), indexName);
+        string indexPath = Path.Combine(_indexManager.GetIndexBasePath(), indexName);
         Directory.CreateDirectory(indexPath);
         
         // Register with IndexManager so it knows about the new index
@@ -133,18 +133,18 @@ public class LuceneIndexer
     private List<FileInfo> DiscoverDocuments(string rootPath, string? includePatterns, bool recursive)
     {
         var documents = new List<FileInfo>();
-        var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        SearchOption searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
 
         // Parse include patterns
-        var patterns = string.IsNullOrWhiteSpace(includePatterns)
+        List<string> patterns = string.IsNullOrWhiteSpace(includePatterns)
             ? _processor.GetSupportedExtensions()
             : includePatterns.Split(',').Select(p => p.Trim()).ToList();
 
-        foreach (var pattern in patterns)
+        foreach (string pattern in patterns)
         {
             try
             {
-                var searchPattern = pattern.StartsWith("*") ? pattern : $"*{pattern}";
+                string searchPattern = pattern.StartsWith("*") ? pattern : $"*{pattern}";
                 documents.AddRange(Directory.GetFiles(rootPath, searchPattern, searchOption)
                     .Select(f => new FileInfo(f)));
             }
@@ -167,7 +167,7 @@ public class LuceneIndexer
             _logger.LogDebug("Indexing document: {FilePath}", fileInfo.FullName);
 
             // Extract content
-            var textResult = await _processor.ExtractTextAsync(fileInfo.FullName);
+            ServiceResult<string> textResult = await _processor.ExtractTextAsync(fileInfo.FullName);
             if (!textResult.Success)
             {
                 result.FailedDocuments++;

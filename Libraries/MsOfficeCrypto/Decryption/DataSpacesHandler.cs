@@ -52,11 +52,11 @@ namespace MsOfficeCrypto.Decryption
         {
             try
             {
-                var dataSpaces = rootStorage.OpenStorage("DataSpaces");
+                Storage dataSpaces = rootStorage.OpenStorage("DataSpaces");
                 
                 // Look for common DataSpaces indicators
-                var hasDataSpaceMap = HasStream(dataSpaces, "DataSpaceMap");
-                var hasTransformInfo = HasStorage(dataSpaces, "TransformInfo");
+                bool hasDataSpaceMap = HasStream(dataSpaces, "DataSpaceMap");
+                bool hasTransformInfo = HasStorage(dataSpaces, "TransformInfo");
                 
                 return hasDataSpaceMap && hasTransformInfo;
             }
@@ -80,16 +80,16 @@ namespace MsOfficeCrypto.Decryption
             try
             {
                 // Step 1: Find the data space for this stream
-                var dataSpace = FindDataSpaceForStream(streamName);
+                DataSpaceDefinition dataSpace = FindDataSpaceForStream(streamName);
                 
                 // Step 2: Get the transformation chain
-                var transformChain = GetTransformChain(dataSpace.TransformReference);
+                List<TransformDefinition> transformChain = GetTransformChain(dataSpace.TransformReference);
                 
                 // Step 3: Read the protected content
-                var protectedContent = ReadProtectedContent(streamName);
+                byte[] protectedContent = ReadProtectedContent(streamName);
                 
                 // Step 4: Apply reverse transformation chain
-                var decryptedContent = ApplyReverseTransforms(protectedContent, transformChain, password);
+                byte[] decryptedContent = ApplyReverseTransforms(protectedContent, transformChain, password);
                 
                 return decryptedContent;
             }
@@ -155,8 +155,8 @@ namespace MsOfficeCrypto.Decryption
         /// </summary>
         private void ParseDataSpaceMap()
         {
-            using var mapStream = _dataSpacesStorage.OpenStream("DataSpaceMap");
-            var mapData = ReadStreamData(mapStream);
+            using CfbStream mapStream = _dataSpacesStorage.OpenStream("DataSpaceMap");
+            byte[] mapData = ReadStreamData(mapStream);
 
             // DataSpaceMap format parsing (simplified)
             // This would need to be implemented according to the full specification
@@ -165,15 +165,15 @@ namespace MsOfficeCrypto.Decryption
             try
             {
                 // Header length
-                var headerLength = reader.ReadUInt32();
+                uint headerLength = reader.ReadUInt32();
                 
                 // Entry count
-                var entryCount = reader.ReadUInt32();
+                uint entryCount = reader.ReadUInt32();
                 
                 // Parse entries
                 for (uint i = 0; i < entryCount; i++)
                 {
-                    var entry = ParseDataSpaceMapEntry(reader);
+                    DataSpaceDefinition? entry = ParseDataSpaceMapEntry(reader);
                     if (entry != null)
                     {
                         _dataSpaces[entry.Name] = entry;
@@ -194,26 +194,26 @@ namespace MsOfficeCrypto.Decryption
             try
             {
                 // Length of the entry
-                var entryLength = reader.ReadUInt32();
-                var startPosition = reader.BaseStream.Position;
+                uint entryLength = reader.ReadUInt32();
+                long startPosition = reader.BaseStream.Position;
 
                 // Reference component count
-                var referenceComponentCount = reader.ReadUInt32();
+                uint referenceComponentCount = reader.ReadUInt32();
                 
                 // Read reference components (stream names)
                 var referenceComponents = new List<string>();
                 for (uint i = 0; i < referenceComponentCount; i++)
                 {
-                    var componentLength = reader.ReadUInt32();
-                    var componentData = reader.ReadBytes((int)componentLength);
-                    var component = Encoding.Unicode.GetString(componentData).TrimEnd('\0');
+                    uint componentLength = reader.ReadUInt32();
+                    byte[] componentData = reader.ReadBytes((int)componentLength);
+                    string? component = Encoding.Unicode.GetString(componentData).TrimEnd('\0');
                     referenceComponents.Add(component);
                 }
 
                 // Data space name length
-                var dataSpaceNameLength = reader.ReadUInt32();
-                var dataSpaceNameData = reader.ReadBytes((int)dataSpaceNameLength);
-                var dataSpaceName = Encoding.Unicode.GetString(dataSpaceNameData).TrimEnd('\0');
+                uint dataSpaceNameLength = reader.ReadUInt32();
+                byte[] dataSpaceNameData = reader.ReadBytes((int)dataSpaceNameLength);
+                string? dataSpaceName = Encoding.Unicode.GetString(dataSpaceNameData).TrimEnd('\0');
 
                 return new DataSpaceDefinition
                 {
@@ -233,8 +233,8 @@ namespace MsOfficeCrypto.Decryption
         /// </summary>
         private void ParseDataSpaceInfo()
         {
-            using var infoStream = _dataSpacesStorage.OpenStream("DataSpaceInfo");
-            var infoData = ReadStreamData(infoStream);
+            using CfbStream infoStream = _dataSpacesStorage.OpenStream("DataSpaceInfo");
+            byte[] infoData = ReadStreamData(infoStream);
 
             // DataSpaceInfo parsing would be implemented here
             // This contains additional metadata about data spaces
@@ -245,7 +245,7 @@ namespace MsOfficeCrypto.Decryption
         /// </summary>
         private void ParseTransformInfo()
         {
-            var transformInfoStorage = _dataSpacesStorage.OpenStorage("TransformInfo");
+            Storage transformInfoStorage = _dataSpacesStorage.OpenStorage("TransformInfo");
             
             // Enumerate transform definitions
             try
@@ -267,15 +267,15 @@ namespace MsOfficeCrypto.Decryption
         {
             try
             {
-                var transformStorage = transformInfoStorage.OpenStorage(transformName);
+                Storage transformStorage = transformInfoStorage.OpenStorage(transformName);
                 
                 // Parse primary transform stream
                 if (HasStream(transformStorage, "Primary"))
                 {
-                    using var primaryStream = transformStorage.OpenStream("Primary");
-                    var primaryData = ReadStreamData(primaryStream);
+                    using CfbStream primaryStream = transformStorage.OpenStream("Primary");
+                    byte[] primaryData = ReadStreamData(primaryStream);
                     
-                    var transform = ParseTransformDefinition(transformName, primaryData);
+                    TransformDefinition? transform = ParseTransformDefinition(transformName, primaryData);
                     if (transform != null)
                     {
                         _transforms[transformName] = transform;
@@ -313,7 +313,7 @@ namespace MsOfficeCrypto.Decryption
         /// </summary>
         private DataSpaceDefinition FindDataSpaceForStream(string streamName)
         {
-            foreach (var dataSpace in _dataSpaces.Values)
+            foreach (DataSpaceDefinition? dataSpace in _dataSpaces.Values)
             {
                 if (dataSpace.ReferenceComponents.Contains(streamName))
                 {
@@ -331,7 +331,7 @@ namespace MsOfficeCrypto.Decryption
         {
             var chain = new List<TransformDefinition>();
             
-            if (_transforms.TryGetValue(transformReference, out var transform))
+            if (_transforms.TryGetValue(transformReference, out TransformDefinition? transform))
             {
                 chain.Add(transform);
             }
@@ -346,7 +346,7 @@ namespace MsOfficeCrypto.Decryption
         {
             try
             {
-                using var stream = _rootStorage.OpenStream(streamName);
+                using CfbStream stream = _rootStorage.OpenStream(streamName);
                 return ReadStreamData(stream);
             }
             catch (Exception ex)
@@ -360,12 +360,12 @@ namespace MsOfficeCrypto.Decryption
         /// </summary>
         private byte[] ApplyReverseTransforms(byte[] content, List<TransformDefinition> transforms, string password)
         {
-            var currentContent = content;
+            byte[] currentContent = content;
 
             // Apply transforms in reverse order
-            for (var i = transforms.Count - 1; i >= 0; i--)
+            for (int i = transforms.Count - 1; i >= 0; i--)
             {
-                var transform = transforms[i];
+                TransformDefinition? transform = transforms[i];
                 currentContent = ApplyReverseTransform(currentContent, transform, password);
             }
 
@@ -403,10 +403,10 @@ namespace MsOfficeCrypto.Decryption
                 aes.Padding = PaddingMode.PKCS7;
                 
                 // Derive key from password (simplified)
-                var key = DeriveDataSpacesKey(password, transform.ConfigurationData);
+                byte[] key = DeriveDataSpacesKey(password, transform.ConfigurationData);
                 aes.Key = EnsureKeyLength(key, 128);
                 
-                using var decryptor = aes.CreateDecryptor();
+                using ICryptoTransform decryptor = aes.CreateDecryptor();
                 return decryptor.TransformFinalBlock(content, 0, content.Length);
             }
             catch (Exception ex)
@@ -431,9 +431,9 @@ namespace MsOfficeCrypto.Decryption
         private static byte[] DeriveDataSpacesKey(string password, byte[] configData)
         {
             // Simplified key derivation - real implementation would parse config data
-            var passwordBytes = Encoding.Unicode.GetBytes(password);
+            byte[] passwordBytes = Encoding.Unicode.GetBytes(password);
             using var sha1 = SHA1.Create();
-            var hash = sha1.ComputeHash(passwordBytes);
+            byte[] hash = sha1.ComputeHash(passwordBytes);
             
             // Return first 16 bytes for AES-128
             var key = new byte[16];
@@ -446,7 +446,7 @@ namespace MsOfficeCrypto.Decryption
         /// </summary>
         private static byte[] EnsureKeyLength(byte[] key, int keyBits)
         {
-            var requiredBytes = keyBits / 8;
+            int requiredBytes = keyBits / 8;
             
             if (key.Length == requiredBytes)
                 return key;
@@ -466,7 +466,7 @@ namespace MsOfficeCrypto.Decryption
             
             while (totalRead < data.Length)
             {
-                var read = stream.Read(data, totalRead, data.Length - totalRead);
+                int read = stream.Read(data, totalRead, data.Length - totalRead);
                 if (read == 0)
                     break;
                 totalRead += read;
@@ -482,7 +482,7 @@ namespace MsOfficeCrypto.Decryption
         {
             try
             {
-                using var stream = storage.OpenStream(streamName);
+                using CfbStream stream = storage.OpenStream(streamName);
                 return true;
             }
             catch
@@ -498,7 +498,7 @@ namespace MsOfficeCrypto.Decryption
         {
             try
             {
-                var subStorage = storage.OpenStorage(storageName);
+                Storage subStorage = storage.OpenStorage(storageName);
                 return true;
             }
             catch

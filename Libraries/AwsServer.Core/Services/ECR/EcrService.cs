@@ -54,7 +54,7 @@ public class EcrService
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            var credentials = credentialsProvider.GetCredentials();
+            AWSCredentials? credentials = credentialsProvider.GetCredentials();
             
             if (credentials != null)
             {
@@ -174,7 +174,7 @@ public class EcrService
         }
 
         // Execute the API call (fast - single page only)
-        var response = await _ecrClient!.ListImagesAsync(request);
+        ListImagesResponse? response = await _ecrClient!.ListImagesAsync(request);
 
         // Build paginated result
         var result = new ListImagesResult
@@ -412,7 +412,7 @@ public class EcrService
         {
             if (_discoveryService.AutoInitialize())
             {
-                var accountInfo = await _discoveryService.GetAccountInfoAsync();
+                AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
                 
                 var config = new AwsConfiguration
                 {
@@ -440,7 +440,7 @@ public class EcrService
         if (!IsInitialized && _ecrClient == null)
         {
             // Wait up to 5 seconds for auto-initialization
-            var timeout = DateTime.UtcNow.AddSeconds(5);
+            DateTime timeout = DateTime.UtcNow.AddSeconds(5);
             while (!IsInitialized && DateTime.UtcNow < timeout)
             {
                 await Task.Delay(100);

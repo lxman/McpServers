@@ -21,7 +21,7 @@ public class KeyTools(
         {
             logger.LogDebug("Getting Redis key: {Key}", key);
 
-            var result = await redisService.GetAsync(key);
+            string result = await redisService.GetAsync(key);
             return result;
         }
         catch (Exception ex)
@@ -40,7 +40,7 @@ public class KeyTools(
             logger.LogDebug("Setting Redis key: {Key}", key);
 
             TimeSpan? expiry = expirySeconds.HasValue ? TimeSpan.FromSeconds(expirySeconds.Value) : null;
-            var result = await redisService.SetAsync(key, value, expiry);
+            string result = await redisService.SetAsync(key, value, expiry);
             return result;
         }
         catch (Exception ex)
@@ -58,7 +58,7 @@ public class KeyTools(
         {
             logger.LogDebug("Deleting Redis key: {Key}", key);
 
-            var result = await redisService.DeleteAsync(key);
+            string result = await redisService.DeleteAsync(key);
             return result;
         }
         catch (Exception ex)
@@ -76,7 +76,7 @@ public class KeyTools(
         {
             logger.LogDebug("Checking if Redis key exists: {Key}", key);
 
-            var result = await redisService.ExistsAsync(key);
+            string result = await redisService.ExistsAsync(key);
             return result;
         }
         catch (Exception ex)
@@ -94,7 +94,7 @@ public class KeyTools(
         {
             logger.LogDebug("Getting Redis keys with pattern: {Pattern}", pattern);
 
-            var result = await redisService.GetKeysAsync(pattern, count);
+            string result = await redisService.GetKeysAsync(pattern, count);
             return result;
         }
         catch (Exception ex)
@@ -112,7 +112,7 @@ public class KeyTools(
         {
             logger.LogDebug("Getting Redis key type: {Key}", key);
 
-            var result = await redisService.GetKeyTypeAsync(key);
+            string result = await redisService.GetKeyTypeAsync(key);
             return result;
         }
         catch (Exception ex)

@@ -14,7 +14,7 @@ public class ProcessManager(ILogger<ProcessManager> logger, AuditLogger auditLog
     {
         try
         {
-            var processInfo = CreateProcessStartInfo(command, workingDirectory);
+            ProcessStartInfo processInfo = CreateProcessStartInfo(command, workingDirectory);
             var process = new Process { StartInfo = processInfo };
             
             var outputBuilder = new StringBuilder();
@@ -54,8 +54,8 @@ public class ProcessManager(ILogger<ProcessManager> logger, AuditLogger auditLog
 
             _processes.TryAdd(sessionId, managedProcess);
 
-            var processTask = process.WaitForExitAsync();
-            var completedTask = await Task.WhenAny(processTask, Task.Delay(timeoutMs));
+            Task processTask = process.WaitForExitAsync();
+            Task completedTask = await Task.WhenAny(processTask, Task.Delay(timeoutMs));
 
             if (completedTask == processTask)
             {
@@ -108,7 +108,7 @@ public class ProcessManager(ILogger<ProcessManager> logger, AuditLogger auditLog
 
     public ProcessResult? GetProcessOutput(string sessionId)
     {
-        if (_processes.TryGetValue(sessionId, out var managedProcess))
+        if (_processes.TryGetValue(sessionId, out ManagedProcess? managedProcess))
         {
             return new ProcessResult
             {
@@ -125,7 +125,7 @@ public class ProcessManager(ILogger<ProcessManager> logger, AuditLogger auditLog
 
     public async Task<bool> SendInputAsync(string sessionId, string input)
     {
-        if (!_processes.TryGetValue(sessionId, out var managedProcess) ||
+        if (!_processes.TryGetValue(sessionId, out ManagedProcess? managedProcess) ||
             managedProcess.Process.HasExited) return false;
         try
         {
@@ -142,7 +142,7 @@ public class ProcessManager(ILogger<ProcessManager> logger, AuditLogger auditLog
 
     public bool KillProcess(string sessionId)
     {
-        if (!_processes.TryGetValue(sessionId, out var managedProcess)) return false;
+        if (!_processes.TryGetValue(sessionId, out ManagedProcess? managedProcess)) return false;
         try
         {
             if (!managedProcess.Process.HasExited)
@@ -175,7 +175,7 @@ public class ProcessManager(ILogger<ProcessManager> logger, AuditLogger auditLog
 
     private static ProcessStartInfo CreateProcessStartInfo(string command, string? workingDirectory)
     {
-        var isWindows = OperatingSystem.IsWindows();
+        bool isWindows = OperatingSystem.IsWindows();
         
         return new ProcessStartInfo
         {

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using AzureServer.Core.Services.Sql.DbManagement;
+using AzureServer.Core.Services.Sql.DbManagement.Models;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -25,7 +26,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Listing SQL servers");
-            var servers = await databaseService.ListServersAsync(subscriptionId, resourceGroupName);
+            IEnumerable<ServerDto> servers = await databaseService.ListServersAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -47,7 +48,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Getting SQL server {ServerName}", serverName);
-            var server = await databaseService.GetServerAsync(serverName, resourceGroupName, subscriptionId);
+            ServerDto? server = await databaseService.GetServerAsync(serverName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -69,7 +70,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Deleting SQL server {ServerName}", serverName);
-            var result = await databaseService.DeleteServerAsync(serverName, resourceGroupName, subscriptionId);
+            bool result = await databaseService.DeleteServerAsync(serverName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -91,7 +92,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Listing databases on server {ServerName}", serverName);
-            var databases = await databaseService.ListDatabasesAsync(serverName, resourceGroupName, subscriptionId);
+            IEnumerable<DatabaseDto> databases = await databaseService.ListDatabasesAsync(serverName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -117,7 +118,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Getting database {DatabaseName}", databaseName);
-            var database = await databaseService.GetDatabaseAsync(databaseName, serverName, resourceGroupName, subscriptionId);
+            DatabaseDto? database = await databaseService.GetDatabaseAsync(databaseName, serverName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -147,7 +148,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Creating database {DatabaseName}", databaseName);
-            var database = await databaseService.CreateDatabaseAsync(
+            DatabaseDto database = await databaseService.CreateDatabaseAsync(
                 databaseName, serverName, resourceGroupName,
                 subscriptionId, edition, serviceObjective,
                 maxSizeBytes, tags);
@@ -176,7 +177,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Deleting database {DatabaseName}", databaseName);
-            var result = await databaseService.DeleteDatabaseAsync(databaseName, serverName, resourceGroupName, subscriptionId);
+            bool result = await databaseService.DeleteDatabaseAsync(databaseName, serverName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -198,7 +199,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Listing firewall rules for server {ServerName}", serverName);
-            var rules = await databaseService.ListFirewallRulesAsync(serverName, resourceGroupName, subscriptionId);
+            IEnumerable<FirewallRuleDto> rules = await databaseService.ListFirewallRulesAsync(serverName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -226,7 +227,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Creating firewall rule {RuleName}", ruleName);
-            var rule = await databaseService.CreateFirewallRuleAsync(
+            FirewallRuleDto rule = await databaseService.CreateFirewallRuleAsync(
                 ruleName, serverName, resourceGroupName,
                 startIpAddress, endIpAddress, subscriptionId);
 
@@ -254,7 +255,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Deleting firewall rule {RuleName}", ruleName);
-            var result = await databaseService.DeleteFirewallRuleAsync(ruleName, serverName, resourceGroupName, subscriptionId);
+            bool result = await databaseService.DeleteFirewallRuleAsync(ruleName, serverName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -276,7 +277,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Listing elastic pools for server {ServerName}", serverName);
-            var pools = await databaseService.ListElasticPoolsAsync(serverName, resourceGroupName, subscriptionId);
+            IEnumerable<ElasticPoolDto> pools = await databaseService.ListElasticPoolsAsync(serverName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -302,7 +303,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Listing PostgreSQL servers");
-            var servers = await databaseService.ListPostgreSqlServersAsync(subscriptionId, resourceGroupName);
+            IEnumerable<ServerDto> servers = await databaseService.ListPostgreSqlServersAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -324,7 +325,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Listing PostgreSQL databases on server {ServerName}", serverName);
-            var databases = await databaseService.ListPostgreSqlDatabasesAsync(serverName, resourceGroupName, subscriptionId);
+            IEnumerable<DatabaseDto> databases = await databaseService.ListPostgreSqlDatabasesAsync(serverName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -346,7 +347,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Deleting PostgreSQL server {ServerName}", serverName);
-            var result = await databaseService.DeletePostgreSqlServerAsync(serverName, resourceGroupName, subscriptionId);
+            bool result = await databaseService.DeletePostgreSqlServerAsync(serverName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -368,7 +369,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Listing PostgreSQL Flexible servers");
-            var servers = await databaseService.ListPostgreSqlFlexibleServersAsync(subscriptionId, resourceGroupName);
+            IEnumerable<ServerDto> servers = await databaseService.ListPostgreSqlFlexibleServersAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -394,7 +395,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Listing MySQL servers");
-            var servers = await databaseService.ListMySqlServersAsync(subscriptionId, resourceGroupName);
+            IEnumerable<ServerDto> servers = await databaseService.ListMySqlServersAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -416,7 +417,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Listing MySQL databases on server {ServerName}", serverName);
-            var databases = await databaseService.ListMySqlDatabasesAsync(serverName, resourceGroupName, subscriptionId);
+            IEnumerable<DatabaseDto> databases = await databaseService.ListMySqlDatabasesAsync(serverName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -438,7 +439,7 @@ public class SqlTools(
         try
         {
             logger.LogDebug("Deleting MySQL server {ServerName}", serverName);
-            var result = await databaseService.DeleteMySqlServerAsync(serverName, resourceGroupName, subscriptionId);
+            bool result = await databaseService.DeleteMySqlServerAsync(serverName, resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
