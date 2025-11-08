@@ -1,6 +1,6 @@
 """MCP tool handlers for Python analysis"""
 from typing import Dict, Any, Optional
-from services import PythonAnalyzer
+from ..services import PythonAnalyzer
 
 
 class PythonTools:

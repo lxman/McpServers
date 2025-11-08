@@ -61,7 +61,7 @@ try:
 except ImportError:
     HAS_AUTOPEP8 = False
 
-from models import DiagnosticInfo, SymbolInfo, CodeMetrics
+from ..models import DiagnosticInfo, SymbolInfo, CodeMetrics
 
 
 class PythonAnalyzer:
