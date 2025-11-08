@@ -5,13 +5,11 @@ using MongoMcp.McpTools;
 using MongoServer.Core;
 using MongoServer.Core.Services;
 using Serilog;
+using SerilogFileWriter;
 
 // Configure Serilog to write to a file (stdout is reserved for MCP protocol)
-string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "mongomcp.log");
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Debug()
-    .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "mongo-mcp-.log");
+Log.Logger = McpLoggingExtensions.SetupMcpLogging(logPath);
 
 try
 {
@@ -22,11 +20,8 @@ try
         DisableDefaults = true  // This prevents default console logging
     });
     
-    // Manually configure only what we need
-    builder.Services.AddSerilog(Log.Logger, dispose: true);
-
-    Console.SetOut(TextWriter.Null);
-    Console.SetError(TextWriter.Null);
+    builder.Logging.ClearProviders();
+    builder.Logging.AddSerilog(Log.Logger, dispose: false);
 
     // Register MongoServer.Core services
     builder.Services.AddSingleton<MongoDbService>();

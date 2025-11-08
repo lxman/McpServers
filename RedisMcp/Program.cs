@@ -1,24 +1,23 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using RedisBrowser.Core.Services;
 using RedisMcp.McpTools;
 using Serilog;
+using SerilogFileWriter;
 
 // Configure Serilog to write to a file (stdout is reserved for MCP protocol)
-string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "redismcp.log");
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Debug()
-    .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "redis-mcp-.log");
+Log.Logger = McpLoggingExtensions.SetupMcpLogging(logPath);
 
 try
 {
+    Log.Information("Starting RedisMcp");
+    
     HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-    Console.SetOut(TextWriter.Null);
-    Console.SetError(TextWriter.Null);
-
-    // Add Serilog
-    builder.Services.AddSerilog();
+    
+    builder.Logging.ClearProviders();
+    builder.Logging.AddSerilog(Log.Logger, dispose: false);
 
     // Register RedisBrowser.Core services
     builder.Services.AddSingleton<RedisService>();

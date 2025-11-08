@@ -16,6 +16,7 @@
         <PackageReference Include="AWSSDK.QuickSight" Version="4.0.7.5" />
         <PackageReference Include="AWSSDK.S3" Version="4.0.10" />
         <PackageReference Include="AWSSDK.SecurityToken" Version="4.0.3.1" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.0-rc.2.25502.107" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0-rc.2.25502.107" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0-rc.2.25502.107" />
         <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="6.0.0-preview.4.21253.5" />

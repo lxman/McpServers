@@ -9,16 +9,16 @@ using SeleniumChrome.Core.Services.Enhanced;
 using SeleniumChrome.Core.Services.Scrapers;
 using SeleniumMcp.McpTools;
 using Serilog;
+using SerilogFileWriter;
 
 // Configure Serilog to write to a file (stdout is reserved for MCP protocol)
-string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "seleniummcp.log");
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Debug()
-    .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "selenium-mcp-.log");
+Log.Logger = McpLoggingExtensions.SetupMcpLogging(logPath);
 
 try
 {
+    Log.Information("Starting SeleniumMcp");
+    
     // Configure builder to use the executable's directory as the content root
     HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
     {
@@ -26,8 +26,8 @@ try
         ContentRootPath = AppContext.BaseDirectory
     });
 
-    // Add Serilog
-    builder.Services.AddSerilog();
+    builder.Logging.ClearProviders();
+    builder.Logging.AddSerilog(Log.Logger, dispose: false);
 
     Log.Logger.Debug($"AppContext.BaseDirectory is {AppContext.BaseDirectory}");
     Log.Logger.Debug($"Content root is {builder.Environment.ContentRootPath}");
@@ -87,7 +87,6 @@ try
 
     IHost host = builder.Build();
 
-    Log.Information("SeleniumMcp starting...");
     await host.RunAsync();
 }
 catch (Exception ex)

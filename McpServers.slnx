@@ -12,6 +12,7 @@
     <Project Path="Libraries\RedisBrowser.Core\RedisBrowser.Core.csproj" Type="Classic C#" />
     <Project Path="Libraries\RegistryTools\RegistryTools.csproj" Type="Classic C#" />
     <Project Path="Libraries\SeleniumChrome.Core\SeleniumChrome.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\SerilogFileWriter\SerilogFileWriter.csproj" Type="Classic C#" />
     <Project Path="Libraries\SqlServer.Core\SqlServer.Core.csproj" Type="Classic C#" />
   </Folder>
   <Folder Name="/SolutionFolder/">

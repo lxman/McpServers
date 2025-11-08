@@ -4,18 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using Serilog.Events;
+using SerilogFileWriter;
 
 // Configure Serilog to write to a file
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Debug()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
-    .Enrich.FromLogContext()
-    .WriteTo.File(
-        path: "logs/debugmcp-.log",
-        rollingInterval: RollingInterval.Day,
-        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
-    .CreateLogger();
+Log.Logger = McpLoggingExtensions.SetupMcpLogging("logs/debug-mcp-.log");
 
 try
 {
@@ -23,11 +15,8 @@ try
 
     HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
-    // Configure logging to use Serilog
     builder.Logging.ClearProviders();
-    Console.SetOut(TextWriter.Null);
-    Console.SetError(TextWriter.Null);
-    builder.Logging.AddSerilog(Log.Logger);
+    builder.Logging.AddSerilog(Log.Logger, dispose: false);
 
     // Register debugging services
     // Note: MiClient is IDisposable and will be disposed by the DI container on shutdown

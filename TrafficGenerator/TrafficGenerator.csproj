@@ -17,6 +17,7 @@
         
         <!-- HTTP/HTTPS Traffic Generation -->
         <PackageReference Include="Flurl.Http" Version="4.0.2" />
+        <PackageReference Include="System.Memory" Version="4.6.3" />
         
         <!-- JSON & Serialization -->
         <PackageReference Include="System.Net.NetworkInformation" Version="4.3.0" />

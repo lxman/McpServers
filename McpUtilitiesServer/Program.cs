@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Serilog;
+using SerilogFileWriter;
 
 namespace McpUtilitiesServer;
 
@@ -8,27 +10,36 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        await Console.Error.WriteLineAsync("McpUtilitiesServer - Starting MCP server...");
+        Log.Logger = McpLoggingExtensions.SetupMcpLogging("logs/mcp-utilities-.log");
 
-        // Create application builder with proper logging setup
-        HostApplicationBuilder builder = Host.CreateApplicationBuilder();
-
-        // Configure all logs to go to stderr instead of stdout
-        // This is important for stdio transport since stdout is reserved for MCP communication
-        builder.Logging.AddConsole(consoleLogOptions =>
+        try
         {
-            consoleLogOptions.LogToStandardErrorThreshold = LogLevel.Trace;
-        });
+            Log.Information("Starting Utilities server.");
 
-        // Configure the MCP server with proper tool registration
-        builder.Services
-            .AddMcpServer()
-            .WithStdioServerTransport()
-            .WithTools<TimeUtilities>();
+            // Create application builder with proper logging setup
+            HostApplicationBuilder builder = Host.CreateApplicationBuilder();
 
-        IHost host = builder.Build();
+            builder.Logging.ClearProviders();
+            builder.Logging.AddSerilog(Log.Logger, dispose: false);
 
-        await Console.Error.WriteLineAsync("MCP time utilities server ready to handle requests");
-        await host.RunAsync();
+            // Configure the MCP server with proper tool registration
+            builder.Services
+                .AddMcpServer()
+                .WithStdioServerTransport()
+                .WithTools<TimeUtilities>();
+
+            IHost host = builder.Build();
+
+            await Console.Error.WriteLineAsync("MCP time utilities server ready to handle requests");
+            await host.RunAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Utilities server terminated unexpectedly");
+        }
+        finally
+        {
+            await Log.CloseAndFlushAsync();
+        }
     }
 }
