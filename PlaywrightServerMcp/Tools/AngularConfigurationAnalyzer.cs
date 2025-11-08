@@ -37,7 +37,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
         try
         {
             // Validate session exists
-            PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
+            var session = _sessionManager.GetSession(sessionId);
             if (session == null)
             {
                 return JsonSerializer.Serialize(new ConfigurationAnalysisResult
@@ -48,11 +48,11 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
                 }, JsonOptions);
             }
 
-            string targetDirectory = string.IsNullOrWhiteSpace(workingDirectory) 
+            var targetDirectory = string.IsNullOrWhiteSpace(workingDirectory) 
                 ? Directory.GetCurrentDirectory() 
                 : workingDirectory;
 
-            ConfigurationAnalysisResult result = await AnalyzeWorkspaceConfiguration(
+            var result = await AnalyzeWorkspaceConfiguration(
                 targetDirectory, 
                 includeDependencyAnalysis, 
                 includeSecurityScan, 
@@ -90,9 +90,9 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
         try
         {
             // Check if required files exist
-            string angularJsonPath = Path.Combine(directory, "angular.json");
-            string packageJsonPath = Path.Combine(directory, "package.json");
-            string tsConfigPath = Path.Combine(directory, "tsconfig.json");
+            var angularJsonPath = Path.Combine(directory, "angular.json");
+            var packageJsonPath = Path.Combine(directory, "package.json");
+            var tsConfigPath = Path.Combine(directory, "tsconfig.json");
 
             result.AngularJsonExists = File.Exists(angularJsonPath);
             result.PackageJsonExists = File.Exists(packageJsonPath);
@@ -106,7 +106,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
             }
 
             // Parse angular.json
-            string angularJsonContent = await File.ReadAllTextAsync(angularJsonPath);
+            var angularJsonContent = await File.ReadAllTextAsync(angularJsonPath);
             var angularConfig = JsonSerializer.Deserialize<JsonElement>(angularJsonContent);
 
             // Analyze workspace configuration
@@ -157,19 +157,19 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
             var workspace = new WorkspaceConfiguration();
 
             // Extract version
-            if (angularConfig.TryGetProperty("version", out JsonElement version))
+            if (angularConfig.TryGetProperty("version", out var version))
             {
                 workspace.Version = version.GetInt32();
             }
 
             // Extract default project
-            if (angularConfig.TryGetProperty("defaultProject", out JsonElement defaultProject))
+            if (angularConfig.TryGetProperty("defaultProject", out var defaultProject))
             {
                 workspace.DefaultProject = defaultProject.GetString() ?? string.Empty;
             }
 
             // Extract projects
-            if (angularConfig.TryGetProperty("projects", out JsonElement projects))
+            if (angularConfig.TryGetProperty("projects", out var projects))
             {
                 workspace.ProjectCount = projects.EnumerateObject().Count();
                 workspace.ProjectNames = projects.EnumerateObject()
@@ -178,7 +178,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
             }
 
             // Extract schema information
-            if (angularConfig.TryGetProperty("$schema", out JsonElement schema))
+            if (angularConfig.TryGetProperty("$schema", out var schema))
             {
                 workspace.Schema = new SchemaInformation
                 {
@@ -188,13 +188,13 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
             }
 
             // Extract CLI configuration
-            if (angularConfig.TryGetProperty("cli", out JsonElement cli))
+            if (angularConfig.TryGetProperty("cli", out var cli))
             {
                 workspace.Cli = ExtractCliConfiguration(cli);
             }
 
             // Extract schematics
-            if (angularConfig.TryGetProperty("schematics", out JsonElement schematics))
+            if (angularConfig.TryGetProperty("schematics", out var schematics))
             {
                 workspace.GlobalSettings.Schematics = JsonElementToDictionary(schematics);
             }
@@ -212,42 +212,42 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
         {
             var projects = new List<ProjectConfiguration>();
 
-            if (angularConfig.TryGetProperty("projects", out JsonElement projectsElement))
+            if (angularConfig.TryGetProperty("projects", out var projectsElement))
             {
-                foreach (JsonProperty project in projectsElement.EnumerateObject())
+                foreach (var project in projectsElement.EnumerateObject())
                 {
                     var projectConfig = new ProjectConfiguration
                     {
                         Name = project.Name
                     };
 
-                    JsonElement projectValue = project.Value;
+                    var projectValue = project.Value;
 
                     // Extract project type
-                    if (projectValue.TryGetProperty("projectType", out JsonElement projectType))
+                    if (projectValue.TryGetProperty("projectType", out var projectType))
                     {
                         projectConfig.ProjectType = projectType.GetString() ?? string.Empty;
                     }
 
                     // Extract root and source root
-                    if (projectValue.TryGetProperty("root", out JsonElement root))
+                    if (projectValue.TryGetProperty("root", out var root))
                     {
                         projectConfig.Root = root.GetString() ?? string.Empty;
                     }
 
-                    if (projectValue.TryGetProperty("sourceRoot", out JsonElement sourceRoot))
+                    if (projectValue.TryGetProperty("sourceRoot", out var sourceRoot))
                     {
                         projectConfig.SourceRoot = sourceRoot.GetString() ?? string.Empty;
                     }
 
                     // Extract prefix
-                    if (projectValue.TryGetProperty("prefix", out JsonElement prefix))
+                    if (projectValue.TryGetProperty("prefix", out var prefix))
                     {
                         projectConfig.Prefix = prefix.GetString() ?? string.Empty;
                     }
 
                     // Extract architect configuration
-                    if (projectValue.TryGetProperty("architect", out JsonElement architect))
+                    if (projectValue.TryGetProperty("architect", out var architect))
                     {
                         projectConfig.Architect = ExtractArchitectConfiguration(architect);
                     }
@@ -270,15 +270,15 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
             var buildConfigs = new BuildConfigurations();
             var allConfigurations = new HashSet<string>();
 
-            if (angularConfig.TryGetProperty("projects", out JsonElement projects))
+            if (angularConfig.TryGetProperty("projects", out var projects))
             {
-                foreach (JsonProperty project in projects.EnumerateObject())
+                foreach (var project in projects.EnumerateObject())
                 {
-                    if (project.Value.TryGetProperty("architect", out JsonElement architect) &&
-                        architect.TryGetProperty("build", out JsonElement build) &&
-                        build.TryGetProperty("configurations", out JsonElement configurations))
+                    if (project.Value.TryGetProperty("architect", out var architect) &&
+                        architect.TryGetProperty("build", out var build) &&
+                        build.TryGetProperty("configurations", out var configurations))
                     {
-                        foreach (JsonProperty config in configurations.EnumerateObject())
+                        foreach (var config in configurations.EnumerateObject())
                         {
                             allConfigurations.Add(config.Name);
                         }
@@ -310,7 +310,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
 
         try
         {
-            string packageJsonContent = await File.ReadAllTextAsync(packageJsonPath);
+            var packageJsonContent = await File.ReadAllTextAsync(packageJsonPath);
             var packageJson = JsonSerializer.Deserialize<JsonElement>(packageJsonContent);
 
             // Analyze Angular dependencies
@@ -320,7 +320,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
             dependencies.ThirdParty = await AnalyzeThirdPartyDependencies(packageJson);
 
             // Extract dev dependencies
-            if (packageJson.TryGetProperty("devDependencies", out JsonElement devDeps))
+            if (packageJson.TryGetProperty("devDependencies", out var devDeps))
             {
                 dependencies.DevDependencies = devDeps.EnumerateObject()
                     .Select(d => $"{d.Name}@{d.Value.GetString()}")
@@ -328,7 +328,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
             }
 
             // Extract peer dependencies
-            if (packageJson.TryGetProperty("peerDependencies", out JsonElement peerDeps))
+            if (packageJson.TryGetProperty("peerDependencies", out var peerDeps))
             {
                 dependencies.PeerDependencies = peerDeps.EnumerateObject()
                     .Select(d => $"{d.Name}@{d.Value.GetString()}")
@@ -435,7 +435,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
     {
         // Extract version from schema URL
         var versionPattern = @"(\d+\.\d+\.\d+)";
-        Match match = Regex.Match(schemaUrl, versionPattern);
+        var match = Regex.Match(schemaUrl, versionPattern);
         return match.Success ? match.Groups[1].Value : string.Empty;
     }
 
@@ -443,17 +443,17 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
     {
         var config = new CliConfiguration();
 
-        if (cli.TryGetProperty("warnings", out JsonElement warnings))
+        if (cli.TryGetProperty("warnings", out var warnings))
         {
             config.Warnings = JsonElementToDictionary(warnings);
         }
 
-        if (cli.TryGetProperty("analytics", out JsonElement analytics))
+        if (cli.TryGetProperty("analytics", out var analytics))
         {
             config.Analytics = JsonElementToDictionary(analytics);
         }
 
-        if (cli.TryGetProperty("cache", out JsonElement cache))
+        if (cli.TryGetProperty("cache", out var cache))
         {
             config.Cache = JsonElementToDictionary(cache);
         }
@@ -465,27 +465,27 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
     {
         var config = new ArchitectConfiguration();
 
-        if (architect.TryGetProperty("build", out JsonElement build))
+        if (architect.TryGetProperty("build", out var build))
         {
             config.Build = ExtractBuildTarget(build);
         }
 
-        if (architect.TryGetProperty("serve", out JsonElement serve))
+        if (architect.TryGetProperty("serve", out var serve))
         {
             config.Serve = ExtractBuildTarget(serve);
         }
 
-        if (architect.TryGetProperty("test", out JsonElement test))
+        if (architect.TryGetProperty("test", out var test))
         {
             config.Test = ExtractBuildTarget(test);
         }
 
-        if (architect.TryGetProperty("lint", out JsonElement lint))
+        if (architect.TryGetProperty("lint", out var lint))
         {
             config.Lint = ExtractBuildTarget(lint);
         }
 
-        if (architect.TryGetProperty("extract-i18n", out JsonElement extractI18n))
+        if (architect.TryGetProperty("extract-i18n", out var extractI18n))
         {
             config.ExtractI18n = ExtractBuildTarget(extractI18n);
         }
@@ -496,8 +496,8 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
             .Select(p => new CustomTarget
             {
                 Name = p.Name,
-                Builder = p.Value.TryGetProperty("builder", out JsonElement builder) ? builder.GetString() ?? string.Empty : string.Empty,
-                Options = p.Value.TryGetProperty("options", out JsonElement options) ? JsonElementToDictionary(options) : new Dictionary<string, object>()
+                Builder = p.Value.TryGetProperty("builder", out var builder) ? builder.GetString() ?? string.Empty : string.Empty,
+                Options = p.Value.TryGetProperty("options", out var options) ? JsonElementToDictionary(options) : new Dictionary<string, object>()
             })
             .ToList();
 
@@ -508,17 +508,17 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
     {
         var buildTarget = new BuildTarget();
 
-        if (target.TryGetProperty("builder", out JsonElement builder))
+        if (target.TryGetProperty("builder", out var builder))
         {
             buildTarget.Builder = builder.GetString() ?? string.Empty;
         }
 
-        if (target.TryGetProperty("options", out JsonElement options))
+        if (target.TryGetProperty("options", out var options))
         {
             buildTarget.Options = JsonElementToDictionary(options);
         }
 
-        if (target.TryGetProperty("configurations", out JsonElement configurations))
+        if (target.TryGetProperty("configurations", out var configurations))
         {
             buildTarget.Configurations = configurations.EnumerateObject()
                 .ToDictionary(
@@ -527,7 +527,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
                 );
         }
 
-        if (target.TryGetProperty("defaultConfiguration", out JsonElement defaultConfig))
+        if (target.TryGetProperty("defaultConfiguration", out var defaultConfig))
         {
             buildTarget.DefaultConfiguration = [defaultConfig.GetString() ?? string.Empty];
         }
@@ -539,37 +539,37 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
     {
         var buildConfig = new BuildConfiguration();
 
-        if (config.TryGetProperty("outputPath", out JsonElement outputPath))
+        if (config.TryGetProperty("outputPath", out var outputPath))
         {
             buildConfig.OutputPath = outputPath.GetString() ?? string.Empty;
         }
 
-        if (config.TryGetProperty("optimization", out JsonElement optimization))
+        if (config.TryGetProperty("optimization", out var optimization))
         {
             buildConfig.Optimization = optimization.GetBoolean();
         }
 
-        if (config.TryGetProperty("sourceMap", out JsonElement sourceMap))
+        if (config.TryGetProperty("sourceMap", out var sourceMap))
         {
             buildConfig.SourceMap = sourceMap.GetBoolean();
         }
 
-        if (config.TryGetProperty("extractCss", out JsonElement extractCss))
+        if (config.TryGetProperty("extractCss", out var extractCss))
         {
             buildConfig.ExtractCss = extractCss.GetBoolean();
         }
 
-        if (config.TryGetProperty("namedChunks", out JsonElement namedChunks))
+        if (config.TryGetProperty("namedChunks", out var namedChunks))
         {
             buildConfig.NamedChunks = namedChunks.GetBoolean();
         }
 
-        if (config.TryGetProperty("aot", out JsonElement aot))
+        if (config.TryGetProperty("aot", out var aot))
         {
             buildConfig.Aot = aot.GetBoolean();
         }
 
-        if (config.TryGetProperty("budgets", out JsonElement budgets))
+        if (config.TryGetProperty("budgets", out var budgets))
         {
             buildConfig.Budgets = budgets.EnumerateArray()
                 .Select(ExtractBudgetConfig)
@@ -585,22 +585,22 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
     {
         var budgetConfig = new BudgetConfig();
 
-        if (budget.TryGetProperty("type", out JsonElement type))
+        if (budget.TryGetProperty("type", out var type))
         {
             budgetConfig.Type = type.GetString() ?? string.Empty;
         }
 
-        if (budget.TryGetProperty("baseline", out JsonElement baseline))
+        if (budget.TryGetProperty("baseline", out var baseline))
         {
             budgetConfig.Baseline = baseline.GetString() ?? string.Empty;
         }
 
-        if (budget.TryGetProperty("maximumWarning", out JsonElement maxWarning))
+        if (budget.TryGetProperty("maximumWarning", out var maxWarning))
         {
             budgetConfig.Warning = maxWarning.GetString() ?? string.Empty;
         }
 
-        if (budget.TryGetProperty("maximumError", out JsonElement maxError))
+        if (budget.TryGetProperty("maximumError", out var maxError))
         {
             budgetConfig.Error = maxError.GetString() ?? string.Empty;
         }
@@ -614,28 +614,28 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
         var opportunities = new List<string>();
 
         // Check for optimization settings across projects
-        if (angularConfig.TryGetProperty("projects", out JsonElement projects))
+        if (angularConfig.TryGetProperty("projects", out var projects))
         {
-            foreach (JsonProperty project in projects.EnumerateObject())
+            foreach (var project in projects.EnumerateObject())
             {
-                if (project.Value.TryGetProperty("architect", out JsonElement architect) &&
-                    architect.TryGetProperty("build", out JsonElement build))
+                if (project.Value.TryGetProperty("architect", out var architect) &&
+                    architect.TryGetProperty("build", out var build))
                 {
                     // Check production configuration
-                    if (build.TryGetProperty("configurations", out JsonElement configurations) &&
-                        configurations.TryGetProperty("production", out JsonElement production))
+                    if (build.TryGetProperty("configurations", out var configurations) &&
+                        configurations.TryGetProperty("production", out var production))
                     {
-                        if (production.TryGetProperty("optimization", out JsonElement opt))
+                        if (production.TryGetProperty("optimization", out var opt))
                         {
                             optimization.MinificationEnabled = opt.GetBoolean();
                         }
 
-                        if (production.TryGetProperty("aot", out JsonElement aot))
+                        if (production.TryGetProperty("aot", out var aot))
                         {
                             optimization.AotEnabled = aot.GetBoolean();
                         }
 
-                        if (production.TryGetProperty("buildOptimizer", out JsonElement buildOpt))
+                        if (production.TryGetProperty("buildOptimizer", out var buildOpt))
                         {
                             optimization.TreeShakingEnabled = buildOpt.GetBoolean();
                         }
@@ -681,12 +681,12 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
         {
             var angular = new AngularDependencies();
 
-            if (packageJson.TryGetProperty("dependencies", out JsonElement deps))
+            if (packageJson.TryGetProperty("dependencies", out var deps))
             {
-                foreach (JsonProperty dep in deps.EnumerateObject())
+                foreach (var dep in deps.EnumerateObject())
                 {
-                    string name = dep.Name;
-                    string version = dep.Value.GetString() ?? string.Empty;
+                    var name = dep.Name;
+                    var version = dep.Value.GetString() ?? string.Empty;
 
                     switch (name)
                     {
@@ -726,12 +726,12 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
         {
             var thirdParty = new List<ThirdPartyDependency>();
 
-            if (packageJson.TryGetProperty("dependencies", out JsonElement deps))
+            if (packageJson.TryGetProperty("dependencies", out var deps))
             {
-                foreach (JsonProperty dep in deps.EnumerateObject())
+                foreach (var dep in deps.EnumerateObject())
                 {
-                    string name = dep.Name;
-                    string version = dep.Value.GetString() ?? string.Empty;
+                    var name = dep.Name;
+                    var version = dep.Value.GetString() ?? string.Empty;
 
                     // Skip Angular packages
                     if (name.StartsWith("@angular/") || name == "typescript" || name == "rxjs")
@@ -805,7 +805,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
             SchemaValid = true // Basic validation - could be enhanced with actual schema validation
         };
 
-        if (angularConfig.TryGetProperty("$schema", out JsonElement schemaElement))
+        if (angularConfig.TryGetProperty("$schema", out var schemaElement))
         {
             schema.SchemaVersion = ExtractSchemaVersion(schemaElement.GetString() ?? string.Empty);
         }
@@ -821,7 +821,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
         var score = 100;
 
         // Check for testing configuration
-        bool testingConfigured = HasTestingConfiguration(angularConfig);
+        var testingConfigured = HasTestingConfiguration(angularConfig);
         bestPractices.Maintenance.TestingConfigured = testingConfigured;
         if (!testingConfigured)
         {
@@ -830,7 +830,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
         }
 
         // Check for linting configuration
-        bool lintingConfigured = HasLintingConfiguration(angularConfig);
+        var lintingConfigured = HasLintingConfiguration(angularConfig);
         bestPractices.Maintenance.LintingConfigured = lintingConfigured;
         if (!lintingConfigured)
         {
@@ -839,7 +839,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
         }
 
         // Check for strict TypeScript configuration
-        bool strictTypeScript = HasStrictTypeScript(directory);
+        var strictTypeScript = HasStrictTypeScript(directory);
         bestPractices.Maintenance.TypeCheckingStrict = strictTypeScript;
         if (!strictTypeScript)
         {
@@ -869,9 +869,9 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
         }
 
         // Check for outdated schema
-        if (angularConfig.TryGetProperty("$schema", out JsonElement schema))
+        if (angularConfig.TryGetProperty("$schema", out var schema))
         {
-            string schemaUrl = schema.GetString() ?? string.Empty;
+            var schemaUrl = schema.GetString() ?? string.Empty;
             if (!schemaUrl.Contains("angular.io"))
             {
                 warnings.Add(new ValidationWarning
@@ -889,15 +889,15 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
     {
         var structure = new ProjectStructure();
 
-        if (angularConfig.TryGetProperty("projects", out JsonElement projects))
+        if (angularConfig.TryGetProperty("projects", out var projects))
         {
-            List<JsonProperty> projectList = projects.EnumerateObject().ToList();
+            var projectList = projects.EnumerateObject().ToList();
             structure.ApplicationCount = projectList.Count(p => 
-                p.Value.TryGetProperty("projectType", out JsonElement type) && 
+                p.Value.TryGetProperty("projectType", out var type) && 
                 type.GetString() == "application");
             
             structure.LibraryCount = projectList.Count(p => 
-                p.Value.TryGetProperty("projectType", out JsonElement type) && 
+                p.Value.TryGetProperty("projectType", out var type) && 
                 type.GetString() == "library");
 
             structure.IsMonorepo = projectList.Count > 1;
@@ -928,9 +928,9 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
         var concerns = new List<string>();
 
         // Analyze project count and complexity
-        if (angularConfig.TryGetProperty("projects", out JsonElement projects))
+        if (angularConfig.TryGetProperty("projects", out var projects))
         {
-            int projectCount = projects.EnumerateObject().Count();
+            var projectCount = projects.EnumerateObject().Count();
             
             if (projectCount > 1)
             {
@@ -956,15 +956,15 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
         var techStack = new TechnologyStack();
 
         // Extract build tool information
-        if (angularConfig.TryGetProperty("projects", out JsonElement projects))
+        if (angularConfig.TryGetProperty("projects", out var projects))
         {
-            foreach (JsonProperty project in projects.EnumerateObject())
+            foreach (var project in projects.EnumerateObject())
             {
-                if (project.Value.TryGetProperty("architect", out JsonElement architect) &&
-                    architect.TryGetProperty("build", out JsonElement build) &&
-                    build.TryGetProperty("builder", out JsonElement builder))
+                if (project.Value.TryGetProperty("architect", out var architect) &&
+                    architect.TryGetProperty("build", out var build) &&
+                    build.TryGetProperty("builder", out var builder))
                 {
-                    string builderName = builder.GetString() ?? string.Empty;
+                    var builderName = builder.GetString() ?? string.Empty;
                     if (builderName.Contains("webpack"))
                     {
                         techStack.BuildTool = "Webpack";
@@ -1097,7 +1097,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
 
         if (element.ValueKind == JsonValueKind.Object)
         {
-            foreach (JsonProperty property in element.EnumerateObject())
+            foreach (var property in element.EnumerateObject())
             {
                 dictionary[property.Name] = JsonElementToObject(property.Value);
             }
@@ -1111,7 +1111,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
         return element.ValueKind switch
         {
             JsonValueKind.String => element.GetString() ?? string.Empty,
-            JsonValueKind.Number => element.TryGetInt32(out int intValue) ? intValue : element.GetDouble(),
+            JsonValueKind.Number => element.TryGetInt32(out var intValue) ? intValue : element.GetDouble(),
             JsonValueKind.True => true,
             JsonValueKind.False => false,
             JsonValueKind.Array => element.EnumerateArray().Select(JsonElementToObject).ToList(),
@@ -1194,9 +1194,9 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
     {
         var angularVersions = new List<string>();
 
-        if (packageJson.TryGetProperty("dependencies", out JsonElement deps))
+        if (packageJson.TryGetProperty("dependencies", out var deps))
         {
-            foreach (JsonProperty dep in deps.EnumerateObject())
+            foreach (var dep in deps.EnumerateObject())
             {
                 if (dep.Name.StartsWith("@angular/"))
                 {
@@ -1227,11 +1227,11 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
 
     private static bool HasTestingConfiguration(JsonElement angularConfig)
     {
-        if (angularConfig.TryGetProperty("projects", out JsonElement projects))
+        if (angularConfig.TryGetProperty("projects", out var projects))
         {
-            foreach (JsonProperty project in projects.EnumerateObject())
+            foreach (var project in projects.EnumerateObject())
             {
-                if (project.Value.TryGetProperty("architect", out JsonElement architect) &&
+                if (project.Value.TryGetProperty("architect", out var architect) &&
                     architect.TryGetProperty("test", out _))
                 {
                     return true;
@@ -1243,11 +1243,11 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
 
     private static bool HasLintingConfiguration(JsonElement angularConfig)
     {
-        if (angularConfig.TryGetProperty("projects", out JsonElement projects))
+        if (angularConfig.TryGetProperty("projects", out var projects))
         {
-            foreach (JsonProperty project in projects.EnumerateObject())
+            foreach (var project in projects.EnumerateObject())
             {
-                if (project.Value.TryGetProperty("architect", out JsonElement architect) &&
+                if (project.Value.TryGetProperty("architect", out var architect) &&
                     architect.TryGetProperty("lint", out _))
                 {
                     return true;
@@ -1261,15 +1261,15 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
     {
         try
         {
-            string tsConfigPath = Path.Combine(directory, "tsconfig.json");
+            var tsConfigPath = Path.Combine(directory, "tsconfig.json");
             if (!File.Exists(tsConfigPath))
                 return false;
 
-            string content = File.ReadAllText(tsConfigPath);
+            var content = File.ReadAllText(tsConfigPath);
             var tsConfig = JsonSerializer.Deserialize<JsonElement>(content);
 
-            if (tsConfig.TryGetProperty("compilerOptions", out JsonElement compilerOptions) &&
-                compilerOptions.TryGetProperty("strict", out JsonElement strict))
+            if (tsConfig.TryGetProperty("compilerOptions", out var compilerOptions) &&
+                compilerOptions.TryGetProperty("strict", out var strict))
             {
                 return strict.GetBoolean();
             }

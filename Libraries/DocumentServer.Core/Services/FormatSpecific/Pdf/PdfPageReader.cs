@@ -25,7 +25,7 @@ public class PdfPageReader(
 
         try
         {
-            using PdfDocument pdf = await OpenPdfAsync(filePath);
+            using var pdf = await OpenPdfAsync(filePath);
 
             if (pageNumber < 1 || pageNumber > pdf.NumberOfPages)
             {
@@ -33,8 +33,8 @@ public class PdfPageReader(
                     $"Page {pageNumber} not found (document has {pdf.NumberOfPages} pages)");
             }
 
-            Page page = pdf.GetPage(pageNumber);
-            PdfPageInfo pageInfo = ExtractPageInfo(page);
+            var page = pdf.GetPage(pageNumber);
+            var pageInfo = ExtractPageInfo(page);
 
             logger.LogInformation("Successfully read page {Page}: {Chars} characters",
                 pageNumber, pageInfo.CharacterCount);
@@ -61,7 +61,7 @@ public class PdfPageReader(
 
         try
         {
-            using PdfDocument pdf = await OpenPdfAsync(filePath);
+            using var pdf = await OpenPdfAsync(filePath);
 
             if (startPage < 1 || endPage > pdf.NumberOfPages || startPage > endPage)
             {
@@ -71,10 +71,10 @@ public class PdfPageReader(
 
             var pages = new List<PdfPageInfo>();
 
-            for (int i = startPage; i <= endPage; i++)
+            for (var i = startPage; i <= endPage; i++)
             {
-                Page page = pdf.GetPage(i);
-                PdfPageInfo pageInfo = ExtractPageInfo(page);
+                var page = pdf.GetPage(i);
+                var pageInfo = ExtractPageInfo(page);
                 pages.Add(pageInfo);
             }
 
@@ -99,13 +99,13 @@ public class PdfPageReader(
 
         try
         {
-            using PdfDocument pdf = await OpenPdfAsync(filePath);
+            using var pdf = await OpenPdfAsync(filePath);
 
             var pages = new List<PdfPageInfo>();
 
-            foreach (Page page in pdf.GetPages())
+            foreach (var page in pdf.GetPages())
             {
-                PdfPageInfo pageInfo = ExtractPageInfo(page);
+                var pageInfo = ExtractPageInfo(page);
                 pages.Add(pageInfo);
             }
 
@@ -129,9 +129,9 @@ public class PdfPageReader(
 
         try
         {
-            using PdfDocument pdf = await OpenPdfAsync(filePath);
+            using var pdf = await OpenPdfAsync(filePath);
 
-            int count = pdf.NumberOfPages;
+            var count = pdf.NumberOfPages;
 
             logger.LogInformation("Document has {Count} pages", count);
 
@@ -150,7 +150,7 @@ public class PdfPageReader(
     {
         return await Task.Run(() =>
         {
-            LoadedDocument? cached = cache.Get(filePath);
+            var cached = cache.Get(filePath);
             var pdf = cached?.DocumentObject as PdfDocument;
 
             if (pdf is not null)
@@ -158,7 +158,7 @@ public class PdfPageReader(
                 return pdf;
             }
 
-            string? password = passwordManager.GetPasswordForFile(filePath);
+            var password = passwordManager.GetPasswordForFile(filePath);
 
             if (password is not null)
             {
@@ -172,8 +172,8 @@ public class PdfPageReader(
 
     private static PdfPageInfo ExtractPageInfo(Page page)
     {
-        string text = ContentOrderTextExtractor.GetText(page);
-        int imageCount = page.GetImages().Count();
+        var text = ContentOrderTextExtractor.GetText(page);
+        var imageCount = page.GetImages().Count();
 
         return new PdfPageInfo
         {

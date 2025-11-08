@@ -83,18 +83,18 @@ public class OcrService : IDisposable
 
             var allText = new StringBuilder();
 
-            using PdfDocument pdfDocument = PdfDocument.Open(pdfPath, parsingOptions);
+            using var pdfDocument = PdfDocument.Open(pdfPath, parsingOptions);
             
-            int totalPages = pdfDocument.NumberOfPages;
+            var totalPages = pdfDocument.NumberOfPages;
             result.Metadata["TotalPages"] = totalPages.ToString();
             _logger.LogInformation("Processing {PageCount} pages from PDF", totalPages);
 
-            foreach (Page page in pdfDocument.GetPages())
+            foreach (var page in pdfDocument.GetPages())
             {
                 try
                 {
                     // First, check if there's already extractable text
-                    string existingText = page.Text;
+                    var existingText = page.Text;
                     
                     if (IsTextMeaningful(existingText))
                     {
@@ -106,7 +106,7 @@ public class OcrService : IDisposable
                         _logger.LogDebug("Page {PageNumber} appears to be scanned, using OCR", page.Number);
                         
                         // Extract images from the page and perform OCR
-                        string ocrText = await ExtractTextFromPdfPage(page);
+                        var ocrText = await ExtractTextFromPdfPage(page);
                         allText.AppendLine(ocrText);
                         result.PagesProcessed++;
                     }
@@ -164,18 +164,18 @@ public class OcrService : IDisposable
                 _logger.LogDebug("Found {ImageCount} images on page {PageNumber}", 
                     images.Count(), page.Number);
 
-                foreach (IPdfImage pdfImage in images)
+                foreach (var pdfImage in images)
                 {
                     try
                     {
                         // Convert PdfPig image to bytes
-                        byte[] imageBytes = pdfImage.RawBytes.ToArray();
+                        var imageBytes = pdfImage.RawBytes.ToArray();
                         
                         // Enhance the image using ImagePreprocessor
-                        byte[] enhancedImageBytes = _imagePreprocessor.EnhanceImageForOcr(imageBytes);
+                        var enhancedImageBytes = _imagePreprocessor.EnhanceImageForOcr(imageBytes);
                         
                         // Perform OCR on the enhanced image
-                        string ocrText = _tesseractEngine.ExtractText(enhancedImageBytes);
+                        var ocrText = _tesseractEngine.ExtractText(enhancedImageBytes);
                         
                         if (!string.IsNullOrWhiteSpace(ocrText))
                         {
@@ -219,10 +219,10 @@ public class OcrService : IDisposable
         {
             _logger.LogInformation("Starting OCR extraction from image: {ImagePath}", imagePath);
 
-            OcrResult result = await Task.Run(() =>
+            var result = await Task.Run(() =>
             {
                 // Load image
-                byte[] imageBytes = File.ReadAllBytes(imagePath);
+                var imageBytes = File.ReadAllBytes(imagePath);
                 
                 // Optionally enhance the image
                 if (enhanceImage)
@@ -231,7 +231,7 @@ public class OcrService : IDisposable
                 }
                 
                 // Perform OCR with confidence
-                (string text, float confidence) = _tesseractEngine.ExtractTextWithConfidence(imageBytes);
+                (var text, var confidence) = _tesseractEngine.ExtractTextWithConfidence(imageBytes);
                 
                 return new OcrResult
                 {
@@ -283,15 +283,15 @@ public class OcrService : IDisposable
                 parsingOptions.Passwords = [password];
             }
 
-            using PdfDocument pdfDocument = PdfDocument.Open(pdfPath, parsingOptions);
+            using var pdfDocument = PdfDocument.Open(pdfPath, parsingOptions);
             
-            int pagesToCheck = Math.Min(pdfDocument.NumberOfPages, 3); // Check the first 3 pages
-            int textlessPages = pdfDocument.GetPages()
+            var pagesToCheck = Math.Min(pdfDocument.NumberOfPages, 3); // Check the first 3 pages
+            var textlessPages = pdfDocument.GetPages()
                 .Take(pagesToCheck)
                 .Count(page => !IsTextMeaningful(page.Text));
 
             // If more than half the checked pages have no meaningful text, likely scanned
-            bool isScanned = textlessPages > pagesToCheck / 2;
+            var isScanned = textlessPages > pagesToCheck / 2;
 
             _logger.LogInformation("PDF scan analysis: {ScannedPages}/{TotalChecked} pages without text. Scanned: {IsScanned}",
                 textlessPages, pagesToCheck, isScanned);
@@ -313,13 +313,13 @@ public class OcrService : IDisposable
         if (string.IsNullOrWhiteSpace(text))
             return false;
 
-        string cleanText = text.Trim();
+        var cleanText = text.Trim();
         if (cleanText.Length < 10)
             return false;
 
         // Check if it contains mostly readable characters
-        int readableChars = cleanText.Count(c => char.IsLetterOrDigit(c) || char.IsPunctuation(c) || c == ' ');
-        double readableRatio = (double)readableChars / cleanText.Length;
+        var readableChars = cleanText.Count(c => char.IsLetterOrDigit(c) || char.IsPunctuation(c) || c == ' ');
+        var readableRatio = (double)readableChars / cleanText.Length;
 
         return readableRatio > 0.7; // At least 70% readable characters
     }

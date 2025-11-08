@@ -21,7 +21,7 @@ try
 {
     Log.Information("Starting CSharp Analyzer MCP server");
 
-    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+    var builder = Host.CreateApplicationBuilder(args);
 
     // Configure logging
     builder.Logging.ClearProviders();
@@ -36,7 +36,7 @@ try
         .WithTools<RoslynTools>()
         .WithTools<ReflectionTools>();
 
-    IHost host = builder.Build();
+    var host = builder.Build();
     await host.RunAsync();
 }
 catch (Exception ex)

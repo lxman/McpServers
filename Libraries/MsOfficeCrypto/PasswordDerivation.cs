@@ -25,7 +25,7 @@ namespace MsOfficeCrypto
                 Console.WriteLine($"Debug: Starting CORRECTED key derivation for password length {password.Length}, salt length {salt.Length}");
                 
                 // Step 1: Convert password to UTF-16LE bytes
-                byte[] passwordBytes = Encoding.Unicode.GetBytes(password);
+                var passwordBytes = Encoding.Unicode.GetBytes(password);
                 Console.WriteLine($"Debug: Password bytes length: {passwordBytes.Length}");
                 
                 // Step 2: Initial hash H_0 = SHA1(Salt + Password)
@@ -36,13 +36,13 @@ namespace MsOfficeCrypto
                 Console.WriteLine($"Debug: Combined data length: {combined.Length}");
                 
                 using var sha1 = SHA1.Create();
-                byte[] h0 = sha1.ComputeHash(combined);
+                var h0 = sha1.ComputeHash(combined);
                 
                 Console.WriteLine($"Debug: H0 (initial hash): {BitConverter.ToString(h0).Replace("-", "")}");
                 
                 // Step 3: Iterative hashing for 50,000 iterations
                 // H_n = SHA1(iterator + H_{n-1})
-                byte[] currentHash = h0;
+                var currentHash = h0;
                 
                 for (uint i = 0; i < STANDARD_ITERATION_COUNT; i++)
                 {
@@ -50,7 +50,7 @@ namespace MsOfficeCrypto
                     var iterationData = new byte[4 + currentHash.Length];
                     
                     // Add iteration counter as little-endian 4-byte integer
-                    byte[] iterBytes = BitConverter.GetBytes(i);
+                    var iterBytes = BitConverter.GetBytes(i);
                     if (!BitConverter.IsLittleEndian)
                         Array.Reverse(iterBytes);
                     Array.Copy(iterBytes, 0, iterationData, 0, 4);
@@ -69,17 +69,17 @@ namespace MsOfficeCrypto
                 var finalData = new byte[currentHash.Length + 4];
                 Array.Copy(currentHash, 0, finalData, 0, currentHash.Length);
                 
-                byte[] blockBytes = BitConverter.GetBytes(blockNumber);
+                var blockBytes = BitConverter.GetBytes(blockNumber);
                 if (!BitConverter.IsLittleEndian)
                     Array.Reverse(blockBytes);
                 Array.Copy(blockBytes, 0, finalData, currentHash.Length, 4);
                 
-                byte[] hFinal = sha1.ComputeHash(finalData);
+                var hFinal = sha1.ComputeHash(finalData);
                 Console.WriteLine($"Debug: Hfinal with block {blockNumber}: {BitConverter.ToString(hFinal).Replace("-", "")}");
                 
                 // Step 5: CRITICAL - Missing HMAC-like key derivation from spec!
                 // This is the key step missing in the original implementation
-                byte[] derivedKey = DeriveKeyFromHash(hFinal, keySize);
+                var derivedKey = DeriveKeyFromHash(hFinal, keySize);
                 
                 Console.WriteLine($"Debug: Final derived key ({keySize/8} bytes): {BitConverter.ToString(derivedKey).Replace("-", "")}");
                 
@@ -97,8 +97,8 @@ namespace MsOfficeCrypto
         /// </summary>
         private static byte[] DeriveKeyFromHash(byte[] hFinal, int keySize)
         {
-            int cbRequiredKeyLength = keySize / 8; // Convert bits to bytes
-            int cbHash = hFinal.Length; // SHA-1 produces 20 bytes
+            var cbRequiredKeyLength = keySize / 8; // Convert bits to bytes
+            var cbHash = hFinal.Length; // SHA-1 produces 20 bytes
             
             Console.WriteLine($"Debug: Starting final key derivation - required key length: {cbRequiredKeyLength}, hash length: {cbHash}");
             
@@ -112,7 +112,7 @@ namespace MsOfficeCrypto
             for (var i = 0; i < cbHash; i++)
                 buffer1[i] ^= hFinal[i];
             
-            byte[] x1 = sha1.ComputeHash(buffer1);
+            var x1 = sha1.ComputeHash(buffer1);
             Console.WriteLine($"Debug: X1: {BitConverter.ToString(x1).Replace("-", "")}");
             
             // Step 2: Form 64-byte buffer with 0x5C, XOR Hfinal into first cbHash bytes  
@@ -123,7 +123,7 @@ namespace MsOfficeCrypto
             for (var i = 0; i < cbHash; i++)
                 buffer2[i] ^= hFinal[i];
             
-            byte[] x2 = sha1.ComputeHash(buffer2);
+            var x2 = sha1.ComputeHash(buffer2);
             Console.WriteLine($"Debug: X2: {BitConverter.ToString(x2).Replace("-", "")}");
             
             // Step 3: Concatenate X1 with X2 to form X3
@@ -155,7 +155,7 @@ namespace MsOfficeCrypto
             try
             {
                 // Use the corrected key derivation
-                byte[] derivedKey = DeriveKey(password, verifier.Salt, (int)header.KeySize);
+                var derivedKey = DeriveKey(password, verifier.Salt, (int)header.KeySize);
 
                 return TryVerifyWithKey(derivedKey, verifier, "Corrected Standard");
             }
@@ -180,7 +180,7 @@ namespace MsOfficeCrypto
                 Console.WriteLine($"Debug: Testing key from {approach}: {BitConverter.ToString(derivedKey).Replace("-", "")}");
                 
                 // Decrypt the verifier (should be 16 bytes)
-                byte[] decryptedVerifier = DecryptAesEcb(verifier.EncryptedVerifier, derivedKey);
+                var decryptedVerifier = DecryptAesEcb(verifier.EncryptedVerifier, derivedKey);
                 
                 // The verifier should be exactly 16 bytes
                 if (decryptedVerifier.Length != 16)
@@ -193,15 +193,15 @@ namespace MsOfficeCrypto
                 
                 // Hash the decrypted verifier using SHA-1
                 using var sha1 = SHA1.Create();
-                byte[] verifierHash = sha1.ComputeHash(decryptedVerifier);
+                var verifierHash = sha1.ComputeHash(decryptedVerifier);
                 Console.WriteLine($"Debug: Computed verifier hash: {BitConverter.ToString(verifierHash).Replace("-", "")}");
                 
                 // Decrypt the expected hash (should yield 32 bytes, but only first 20 are the hash)
-                byte[] decryptedExpectedHash = DecryptAesEcb(verifier.EncryptedVerifierHash, derivedKey);
+                var decryptedExpectedHash = DecryptAesEcb(verifier.EncryptedVerifierHash, derivedKey);
                 Console.WriteLine($"Debug: Decrypted expected hash: {BitConverter.ToString(decryptedExpectedHash).Replace("-", "")}");
                 
                 // Compare hashes (first 20 bytes for SHA-1)
-                int compareLength = Math.Min(20, Math.Min(verifierHash.Length, decryptedExpectedHash.Length));
+                var compareLength = Math.Min(20, Math.Min(verifierHash.Length, decryptedExpectedHash.Length));
                 
                 for (var i = 0; i < compareLength; i++)
                 {
@@ -230,13 +230,13 @@ namespace MsOfficeCrypto
             aes.Padding = PaddingMode.None; // Standard encryption uses no padding
             aes.Key = EnsureKeySize(key, 128);
             
-            using ICryptoTransform decryptor = aes.CreateDecryptor();
+            using var decryptor = aes.CreateDecryptor();
             return decryptor.TransformFinalBlock(encryptedData, 0, encryptedData.Length);
         }
 
         private static byte[] EnsureKeySize(byte[] key, int keyBits)
         {
-            int requiredBytes = keyBits / 8;
+            var requiredBytes = keyBits / 8;
             
             if (key.Length == requiredBytes)
                 return key;

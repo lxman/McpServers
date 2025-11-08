@@ -25,14 +25,14 @@ public class SqlQueryTools(
     {
         try
         {
-            QueryResult result = await queryExecutor.ExecuteQueryAsync(connectionName, sql, parameters, maxRows);
+            var result = await queryExecutor.ExecuteQueryAsync(connectionName, sql, parameters, maxRows);
 
             // Check response size before returning
-            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(result, "execute_query");
+            var sizeCheck = responseSizeGuard.CheckResponseSize(result, "execute_query");
 
             if (!sizeCheck.IsWithinLimit)
             {
-                int rowCount = result.Data?.Count() ?? 0;
+                var rowCount = result.Data?.Count() ?? 0;
                 return responseSizeGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"Query returned {rowCount} rows with {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
@@ -67,7 +67,7 @@ public class SqlQueryTools(
     {
         try
         {
-            QueryResult result = await queryExecutor.ExecuteNonQueryAsync(connectionName, sql, parameters);
+            var result = await queryExecutor.ExecuteNonQueryAsync(connectionName, sql, parameters);
             return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
@@ -86,7 +86,7 @@ public class SqlQueryTools(
     {
         try
         {
-            QueryResult result = await queryExecutor.ExecuteScalarAsync(connectionName, sql, parameters);
+            var result = await queryExecutor.ExecuteScalarAsync(connectionName, sql, parameters);
             return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)

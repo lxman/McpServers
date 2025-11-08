@@ -29,13 +29,13 @@ public class MonitorService(
     public async Task<LogQueryResult> QueryLogsAsync(string workspaceId, string query, TimeSpan? timeSpan = null)
     {
         var sw = Stopwatch.StartNew();
-        DateTime queryStart = DateTime.UtcNow;
+        var queryStart = DateTime.UtcNow;
         
         try
         {
-            (LogsQueryClient logsClient, _) = await GetQueryClientsAsync();
+            (var logsClient, _) = await GetQueryClientsAsync();
             
-            QueryTimeRange timeRange = timeSpan.HasValue 
+            var timeRange = timeSpan.HasValue 
                 ? new QueryTimeRange(timeSpan.Value) 
                 : QueryTimeRange.All;
 
@@ -53,14 +53,14 @@ public class MonitorService(
             var totalRows = 0;
             var allMessages = new List<string>();
                 
-            foreach (LogsTable? table in response.Value.AllTables)
+            foreach (var table in response.Value.AllTables)
             {
                 var tableDto = new LogTable
                 {
                     Name = table.Name
                 };
 
-                foreach (LogsTableColumn? column in table.Columns)
+                foreach (var column in table.Columns)
                 {
                     tableDto.Columns.Add(new LogColumn
                     {
@@ -69,7 +69,7 @@ public class MonitorService(
                     });
                 }
 
-                foreach (LogsTableRow? row in table.Rows)
+                foreach (var row in table.Rows)
                 {
                     var rowDict = new Dictionary<string, object?>();
                     for (var i = 0; i < table.Columns.Count; i++)
@@ -126,12 +126,12 @@ public class MonitorService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            var armClient = await armClientFactory.GetArmClientAsync();
             var workspaceIds = new List<string>();
 
             if (!string.IsNullOrEmpty(subscriptionId))
             {
-                SubscriptionResource? subscription = armClient.GetSubscriptionResource(
+                var subscription = armClient.GetSubscriptionResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
                 workspaceIds.AddRange(subscription.GetOperationalInsightsWorkspaces()
@@ -140,7 +140,7 @@ public class MonitorService(
             else
             {
                 // List across all subscriptions
-                await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
+                await foreach (var subscription in armClient.GetSubscriptions())
                 {
                     workspaceIds.AddRange(subscription.GetOperationalInsightsWorkspaces()
                         .Select(workspace => workspace.Data.CustomerId.ToString() ?? string.Empty));
@@ -161,17 +161,17 @@ public class MonitorService(
         try
         {
             const string query = "search * | distinct $table | project TableName = $table";
-            LogQueryResult result = await QueryLogsAsync(workspaceId, query, TimeSpan.FromDays(1));
+            var result = await QueryLogsAsync(workspaceId, query, TimeSpan.FromDays(1));
 
             if (result.Error is not null)
                 return [];
 
             var streams = new List<string>();
-            foreach (LogTable table in result.Tables)
+            foreach (var table in result.Tables)
             {
-                foreach (Dictionary<string, object?> row in table.Rows)
+                foreach (var row in table.Rows)
                 {
-                    if (row.TryGetValue("TableName", out object? value) && value is not null)
+                    if (row.TryGetValue("TableName", out var value) && value is not null)
                     {
                         streams.Add(value.ToString() ?? "");
                     }
@@ -198,7 +198,7 @@ public class MonitorService(
                 | project TimeGenerated, Message = tostring(pack_all())
                 | order by TimeGenerated desc";
 
-            LogQueryResult result = await QueryLogsAsync(workspaceId, query, timeSpan ?? TimeSpan.FromHours(24));
+            var result = await QueryLogsAsync(workspaceId, query, timeSpan ?? TimeSpan.FromHours(24));
             
             if (result.Error is not null || result.Tables.Count == 0)
                 return [];
@@ -209,13 +209,13 @@ public class MonitorService(
             var matches = new List<LogMatch>();
             var allMessages = new List<(DateTime timestamp, string message)>();
 
-            LogTable table = result.Tables[0];
-            foreach (Dictionary<string, object?> row in table.Rows)
+            var table = result.Tables[0];
+            foreach (var row in table.Rows)
             {
-                if (!row.TryGetValue("TimeGenerated", out object? tsValue) ||
-                    !row.TryGetValue("Message", out object? msgValue) ||
+                if (!row.TryGetValue("TimeGenerated", out var tsValue) ||
+                    !row.TryGetValue("Message", out var msgValue) ||
                     tsValue is null || msgValue is null) continue;
-                DateTime timestamp = tsValue switch
+                var timestamp = tsValue switch
                 {
                     DateTimeOffset dto => dto.DateTime,
                     DateTime dt => dt,
@@ -235,12 +235,12 @@ public class MonitorService(
                     LineNumber = i + 1
                 };
 
-                for (int j = Math.Max(0, i - contextLines); j < i; j++)
+                for (var j = Math.Max(0, i - contextLines); j < i; j++)
                 {
                     match.ContextBefore.Add(allMessages[j].message);
                 }
 
-                for (int j = i + 1; j < Math.Min(allMessages.Count, i + contextLines + 1); j++)
+                for (var j = i + 1; j < Math.Min(allMessages.Count, i + contextLines + 1); j++)
                 {
                     match.ContextAfter.Add(allMessages[j].message);
                 }
@@ -262,15 +262,15 @@ public class MonitorService(
         int maxMatches = 100, int maxStreamsPerGroup = 5)
     {
         var allMatches = new List<LogMatch>();
-        int remainingMatches = maxMatches;
+        var remainingMatches = maxMatches;
 
-        foreach (string workspaceId in workspaceIds.Take(maxStreamsPerGroup))
+        foreach (var workspaceId in workspaceIds.Take(maxStreamsPerGroup))
         {
             if (remainingMatches <= 0) break;
 
             try
             {
-                List<LogMatch> matches = await SearchLogsWithRegexAsync(
+                var matches = await SearchLogsWithRegexAsync(
                     workspaceId, 
                     regexPattern, 
                     timeSpan, 
@@ -294,11 +294,11 @@ public class MonitorService(
         DateTime startTime, DateTime endTime, TimeSpan? interval = null, IEnumerable<string>? aggregations = null)
     {
         var sw = Stopwatch.StartNew();
-        DateTime queryStart = DateTime.UtcNow;
+        var queryStart = DateTime.UtcNow;
         
         try
         {
-            (_, MetricsQueryClient metricsClient) = await GetQueryClientsAsync();
+            (_, var metricsClient) = await GetQueryClientsAsync();
             
             var options = new MetricsQueryOptions
             {
@@ -312,7 +312,7 @@ public class MonitorService(
 
             if (aggregations is not null)
             {
-                foreach (string agg in aggregations)
+                foreach (var agg in aggregations)
                 {
                     options.Aggregations.Add(ParseAggregation(agg));
                 }
@@ -331,7 +331,7 @@ public class MonitorService(
             
             var totalDataPoints = 0;
 
-            foreach (MetricResult? metric in response.Value.Metrics)
+            foreach (var metric in response.Value.Metrics)
             {
                 var metricData = new MetricData
                 {
@@ -340,14 +340,14 @@ public class MonitorService(
                     Unit = metric.Unit.ToString()
                 };
 
-                foreach (MetricTimeSeriesElement? timeSeries in metric.TimeSeries)
+                foreach (var timeSeries in metric.TimeSeries)
                 {
                     var timeSeriesData = new TimeSeriesData();
 
                     // Note: MetadataValues property doesn't exist in current SDK
                     // Skip metadata collection
 
-                    foreach (Azure.Monitor.Query.Models.MetricValue? value in timeSeries.Values)
+                    foreach (var value in timeSeries.Values)
                     {
                         timeSeriesData.Data.Add(new MetricValue
                         {
@@ -420,22 +420,22 @@ public class MonitorService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            var armClient = await armClientFactory.GetArmClientAsync();
             var components = new List<ApplicationInsightsDto>();
 
             if (!string.IsNullOrEmpty(resourceGroupName) && !string.IsNullOrEmpty(subscriptionId))
             {
-                ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
+                var resourceGroup = armClient.GetResourceGroupResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}"));
                 
-                await foreach (ApplicationInsightsComponentResource? component in resourceGroup.GetApplicationInsightsComponents())
+                await foreach (var component in resourceGroup.GetApplicationInsightsComponents())
                 {
                     components.Add(MapToDto(component));
                 }
             }
             else if (!string.IsNullOrEmpty(subscriptionId))
             {
-                SubscriptionResource? subscription = armClient.GetSubscriptionResource(
+                var subscription = armClient.GetSubscriptionResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
                 components.AddRange(subscription.GetApplicationInsightsComponents().Select(MapToDto));
@@ -443,7 +443,7 @@ public class MonitorService(
             else
             {
                 // List across all subscriptions
-                await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
+                await foreach (var subscription in armClient.GetSubscriptions())
                 {
                     components.AddRange(subscription.GetApplicationInsightsComponents().Select(MapToDto));
                 }
@@ -463,12 +463,12 @@ public class MonitorService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            var armClient = await armClientFactory.GetArmClientAsync();
             
             if (string.IsNullOrEmpty(subscriptionId))
             {
                 // Try to find in any subscription
-                await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
+                await foreach (var subscription in armClient.GetSubscriptions())
                 {
                     try
                     {
@@ -487,7 +487,7 @@ public class MonitorService(
                 return null;
             }
 
-            ResourceGroupResource? targetResourceGroup = armClient.GetResourceGroupResource(
+            var targetResourceGroup = armClient.GetResourceGroupResource(
                 new ResourceIdentifier($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}"));
             
             Response<ApplicationInsightsComponentResource> response = await targetResourceGroup
@@ -512,22 +512,22 @@ public class MonitorService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            var armClient = await armClientFactory.GetArmClientAsync();
             var alerts = new List<AlertRuleDto>();
 
             if (!string.IsNullOrEmpty(resourceGroupName) && !string.IsNullOrEmpty(subscriptionId))
             {
-                ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
+                var resourceGroup = armClient.GetResourceGroupResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}"));
                 
-                await foreach (ScheduledQueryRuleResource? alert in resourceGroup.GetScheduledQueryRules())
+                await foreach (var alert in resourceGroup.GetScheduledQueryRules())
                 {
                     alerts.Add(MapAlertToDto(alert));
                 }
             }
             else if (!string.IsNullOrEmpty(subscriptionId))
             {
-                SubscriptionResource? subscription = armClient.GetSubscriptionResource(
+                var subscription = armClient.GetSubscriptionResource(
                     new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
                 alerts.AddRange(subscription.GetScheduledQueryRules().Select(MapAlertToDto));
@@ -535,7 +535,7 @@ public class MonitorService(
             else
             {
                 // List across all subscriptions
-                await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
+                await foreach (var subscription in armClient.GetSubscriptions())
                 {
                     alerts.AddRange(subscription.GetScheduledQueryRules().Select(MapAlertToDto));
                 }
@@ -592,15 +592,15 @@ public class MonitorService(
             estimatedPages = (int)Math.Ceiling((double)estimatedTotal.Value / limit);
         }
         
-        bool isExact = confidence == "Exact" || confidence?.Contains("Exact") == true;
+        var isExact = confidence == "Exact" || confidence?.Contains("Exact") == true;
         
         string summary;
-        int startItem = ((pageNumber - 1) * limit) + 1;
-        int endItem = startItem + currentPageSize - 1;
+        var startItem = ((pageNumber - 1) * limit) + 1;
+        var endItem = startItem + currentPageSize - 1;
         
         if (estimatedTotal.HasValue)
         {
-            string totalDisplay = isExact ? $"{estimatedTotal}" : $"~{estimatedTotal}";
+            var totalDisplay = isExact ? $"{estimatedTotal}" : $"~{estimatedTotal}";
             summary = $"Showing results {startItem}-{endItem} of {totalDisplay}";
         }
         else
@@ -636,21 +636,21 @@ public class MonitorService(
             if (useFastEstimate)
             {
                 // Quick sample-based estimate
-                LogQueryResult sampleResult = await QueryLogsAsync(workspaceId, query + " | take 100", timeSpan);
-                int totalRows = sampleResult.Tables.Sum(t => t.Rows.Count);
+                var sampleResult = await QueryLogsAsync(workspaceId, query + " | take 100", timeSpan);
+                var totalRows = sampleResult.Tables.Sum(t => t.Rows.Count);
                 return totalRows < 100
                     ? (totalRows, "Exact")
                     : (totalRows * 10, "Low (Quick sample)");
             }
             
             // Try accurate count using KQL
-            string countQuery = query + " | count";
-            LogQueryResult countResult = await QueryLogsAsync(workspaceId, countQuery, timeSpan);
+            var countQuery = query + " | count";
+            var countResult = await QueryLogsAsync(workspaceId, countQuery, timeSpan);
 
             if (countResult.Tables.Count <= 0 || countResult.Tables[0].Rows.Count <= 0) return (null, "Unknown");
-            Dictionary<string, object?> firstRow = countResult.Tables[0].Rows[0];
+            var firstRow = countResult.Tables[0].Rows[0];
             // The count result typically has a column named "Count"
-            if (!firstRow.TryGetValue("Count", out object? countValue)) return (null, "Unknown");
+            if (!firstRow.TryGetValue("Count", out var countValue)) return (null, "Unknown");
             var count = Convert.ToInt64(countValue);
             return (count, "High (KQL count)");
 
@@ -665,13 +665,13 @@ public class MonitorService(
     private async Task<(LogsQueryClient logs, MetricsQueryClient metrics)> GetQueryClientsAsync()
     {
         // Check if we need to recreate the query clients
-        ArmClientInfo? clientInfo = armClientFactory.GetCurrentClientInfo();
+        var clientInfo = armClientFactory.GetCurrentClientInfo();
     
         if (_logsClient is not null && _metricsClient is not null && clientInfo is not null) 
             return (_logsClient, _metricsClient);
     
         // Use the factory to get the credential
-        TokenCredential credential = await armClientFactory.GetCredentialAsync();
+        var credential = await armClientFactory.GetCredentialAsync();
     
         _logsClient = new LogsQueryClient(credential);
         _metricsClient = new MetricsQueryClient(credential);
@@ -744,11 +744,11 @@ public class MonitorService(
         var keyValuePatterns = new HashSet<string>();
 
         // Sample up to 100 messages for analysis
-        int sampleSize = Math.Min(100, messages.Count);
+        var sampleSize = Math.Min(100, messages.Count);
         
         for (var i = 0; i < sampleSize; i++)
         {
-            string msg = messages[i];
+            var msg = messages[i];
             if (string.IsNullOrWhiteSpace(msg)) continue;
 
             // Check for JSON format
@@ -768,9 +768,9 @@ public class MonitorService(
         }
 
         // Determine dominant format
-        KeyValuePair<string, int> dominantEntry = formatCounts.OrderByDescending(kvp => kvp.Value).First();
-        int totalMessages = formatCounts.Values.Sum();
-        double dominantPercentage = totalMessages > 0 
+        var dominantEntry = formatCounts.OrderByDescending(kvp => kvp.Value).First();
+        var totalMessages = formatCounts.Values.Sum();
+        var dominantPercentage = totalMessages > 0 
             ? (double)dominantEntry.Value / totalMessages * 100 
             : 0;
 
@@ -795,11 +795,11 @@ public class MonitorService(
 
         try
         {
-            using JsonDocument doc = JsonDocument.Parse(message);
+            using var doc = JsonDocument.Parse(message);
             
             // Collect sample keys from JSON objects
             if (doc.RootElement.ValueKind != JsonValueKind.Object) return true;
-            foreach (JsonProperty prop in doc.RootElement.EnumerateObject())
+            foreach (var prop in doc.RootElement.EnumerateObject())
             {
                 if (sampleKeys.Count < 20)
                 {
@@ -819,10 +819,10 @@ public class MonitorService(
     {
         // Look for common key-value patterns
         var kvRegex = new Regex(@"(\w+)\s*[:=]\s*([^\s,;]+)", RegexOptions.Compiled);
-        MatchCollection matches = kvRegex.Matches(message);
+        var matches = kvRegex.Matches(message);
 
         if (matches.Count < 2) return false; // Need at least 2 key-value pairs to consider it structured
-        foreach (Match match in matches.Cast<Match>().Take(5))
+        foreach (var match in matches.Cast<Match>().Take(5))
         {
             if (patterns.Count < 20)
             {

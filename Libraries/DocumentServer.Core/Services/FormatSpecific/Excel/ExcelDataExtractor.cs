@@ -32,12 +32,12 @@ public class ExcelDataExtractor(
 
         try
         {
-            IXLWorksheet worksheet = await GetWorksheetAsync(filePath, worksheetName);
+            var worksheet = await GetWorksheetAsync(filePath, worksheetName);
 
-            IXLRange range = worksheet.Range(rangeAddress);
+            var range = worksheet.Range(rangeAddress);
             var cells = new List<ExcelCell>();
 
-            foreach (IXLCell cell in range.Cells())
+            foreach (var cell in range.Cells())
             {
                 cells.Add(new ExcelCell
                 {
@@ -74,14 +74,14 @@ public class ExcelDataExtractor(
 
         try
         {
-            IXLWorksheet worksheet = await GetWorksheetAsync(filePath, worksheetName);
+            var worksheet = await GetWorksheetAsync(filePath, worksheetName);
 
             var formulaCells = new List<ExcelCell>();
 
-            IXLRange? usedRange = worksheet.RangeUsed();
+            var usedRange = worksheet.RangeUsed();
             if (usedRange is not null)
             {
-                foreach (IXLCell cell in usedRange.Cells())
+                foreach (var cell in usedRange.Cells())
                 {
                     if (cell.HasFormula)
                     {
@@ -123,9 +123,9 @@ public class ExcelDataExtractor(
 
         try
         {
-            IXLWorksheet worksheet = await GetWorksheetAsync(filePath, worksheetName);
+            var worksheet = await GetWorksheetAsync(filePath, worksheetName);
 
-            IXLCell cell = worksheet.Cell(cellAddress);
+            var cell = worksheet.Cell(cellAddress);
 
             var excelCell = new ExcelCell
             {
@@ -162,11 +162,11 @@ public class ExcelDataExtractor(
 
         try
         {
-            IXLWorksheet worksheet = await GetWorksheetAsync(filePath, worksheetName);
+            var worksheet = await GetWorksheetAsync(filePath, worksheetName);
 
             var tables = new List<ExcelTable>();
 
-            foreach (IXLTable table in worksheet.Tables)
+            foreach (var table in worksheet.Tables)
             {
                 tables.Add(new ExcelTable
                 {
@@ -201,12 +201,12 @@ public class ExcelDataExtractor(
 
         try
         {
-            IXLWorksheet worksheet = await GetWorksheetAsync(filePath, worksheetName);
+            var worksheet = await GetWorksheetAsync(filePath, worksheetName);
 
-            IXLRow row = worksheet.Row(rowNumber);
+            var row = worksheet.Row(rowNumber);
             var cells = new List<ExcelCell>();
 
-            foreach (IXLCell cell in row.Cells())
+            foreach (var cell in row.Cells())
             {
                 if (!cell.Value.IsBlank)
                 {
@@ -247,12 +247,12 @@ public class ExcelDataExtractor(
 
         try
         {
-            IXLWorksheet worksheet = await GetWorksheetAsync(filePath, worksheetName);
+            var worksheet = await GetWorksheetAsync(filePath, worksheetName);
 
-            IXLColumn column = worksheet.Column(columnLetter);
+            var column = worksheet.Column(columnLetter);
             var cells = new List<ExcelCell>();
 
-            foreach (IXLCell cell in column.Cells())
+            foreach (var cell in column.Cells())
             {
                 if (!cell.Value.IsBlank)
                 {
@@ -284,18 +284,18 @@ public class ExcelDataExtractor(
 
     private async Task<IXLWorksheet> GetWorksheetAsync(string filePath, string? worksheetName)
     {
-        LoadedDocument? cached = cache.Get(filePath);
+        var cached = cache.Get(filePath);
         var workbook = cached?.DocumentObject as XLWorkbook;
 
         if (workbook is null)
         {
             logger.LogDebug("Document not in cache, loading: {FilePath}", filePath);
             
-            string? password = passwordManager.GetPasswordForFile(filePath);
+            var password = passwordManager.GetPasswordForFile(filePath);
             
             // Use MsOfficeCrypto to handle decryption (or pass through if not encrypted)
-            await using FileStream fileStream = File.OpenRead(filePath);
-            await using Stream decryptedStream = await OfficeDocument.DecryptAsync(fileStream, password);
+            await using var fileStream = File.OpenRead(filePath);
+            await using var decryptedStream = await OfficeDocument.DecryptAsync(fileStream, password);
             
             // Copy to memory stream and load workbook
             var memoryStream = new MemoryStream();
@@ -310,7 +310,7 @@ public class ExcelDataExtractor(
             return workbook.Worksheets.First();
         }
 
-        IXLWorksheet? worksheet = workbook.Worksheets.FirstOrDefault(w => 
+        var worksheet = workbook.Worksheets.FirstOrDefault(w => 
             w.Name.Equals(worksheetName, StringComparison.OrdinalIgnoreCase));
 
         if (worksheet is null)

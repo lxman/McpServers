@@ -18,7 +18,7 @@ public class SqlConnectionTools(
     {
         try
         {
-            IEnumerable<string> connections = connectionManager.GetAvailableConnections();
+            var connections = connectionManager.GetAvailableConnections();
             return JsonSerializer.Serialize(new { success = true, connections }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
@@ -35,7 +35,7 @@ public class SqlConnectionTools(
     {
         try
         {
-            bool isConnected = await connectionManager.TestConnectionAsync(connectionName);
+            var isConnected = await connectionManager.TestConnectionAsync(connectionName);
             return JsonSerializer.Serialize(new { success = true, connectionName, isConnected }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)

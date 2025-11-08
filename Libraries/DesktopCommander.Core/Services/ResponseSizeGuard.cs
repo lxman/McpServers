@@ -29,11 +29,11 @@ public class ResponseSizeGuard(ILogger<ResponseSizeGuard> logger)
         try
         {
             // Serialize the response to measure its size
-            string jsonResult = JsonSerializer.Serialize(responseObject, SerializerOptions.JsonOptionsIndented);
-            int characterCount = jsonResult.Length;
-            int estimatedTokens = characterCount / CharsPerToken;
+            var jsonResult = JsonSerializer.Serialize(responseObject, SerializerOptions.JsonOptionsIndented);
+            var characterCount = jsonResult.Length;
+            var estimatedTokens = characterCount / CharsPerToken;
 
-            bool exceeds = estimatedTokens > SafeTokenLimit;
+            var exceeds = estimatedTokens > SafeTokenLimit;
 
             if (exceeds)
             {
@@ -88,9 +88,9 @@ public class ResponseSizeGuard(ILogger<ResponseSizeGuard> logger)
     /// <returns>Check result with details</returns>
     public ResponseSizeCheck CheckStringSize(string content, string toolName)
     {
-        int characterCount = content.Length;
-        int estimatedTokens = characterCount / CharsPerToken;
-        bool exceeds = estimatedTokens > SafeTokenLimit;
+        var characterCount = content.Length;
+        var estimatedTokens = characterCount / CharsPerToken;
+        var exceeds = estimatedTokens > SafeTokenLimit;
 
         if (exceeds)
         {

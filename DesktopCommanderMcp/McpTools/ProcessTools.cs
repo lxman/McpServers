@@ -25,7 +25,7 @@ public class ProcessTools(
     {
         try
         {
-            Process[] processes = Process.GetProcesses();
+            var processes = Process.GetProcesses();
             
             if (!string.IsNullOrEmpty(filter))
             {
@@ -117,7 +117,7 @@ public class ProcessTools(
         try
         {
             var process = Process.GetProcessById(processId);
-            string processName = process.ProcessName;
+            var processName = process.ProcessName;
 
             if (force)
             {
@@ -128,7 +128,7 @@ public class ProcessTools(
                 process.Kill();
             }
 
-            bool result = process.WaitForExit(5000);
+            var result = process.WaitForExit(5000);
             auditLogger.LogOperation("kill_process", $"PID:{processId} Name:{processName}", result);
 
             return Task.FromResult(JsonSerializer.Serialize(new
@@ -171,7 +171,7 @@ public class ProcessTools(
                     SerializerOptions.JsonOptionsIndented));
             }
 
-            Process[] processes = Process.GetProcessesByName(processName);
+            var processes = Process.GetProcessesByName(processName);
             
             if (processes.Length == 0)
             {
@@ -182,11 +182,11 @@ public class ProcessTools(
 
             var killedPids = new List<int>();
 
-            foreach (Process process in processes)
+            foreach (var process in processes)
             {
                 try
                 {
-                    int pid = process.Id;
+                    var pid = process.Id;
                     process.Kill(entireProcessTree: true);
                     killedPids.Add(pid);
                 }

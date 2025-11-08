@@ -35,8 +35,8 @@ public class AnalysisTools(
         {
             logger.LogDebug("Starting automated comprehensive search with {TargetJobsPerSearch} target jobs per search", targetJobsPerSearch);
 
-            List<string> searchTerms = JsonSerializer.Deserialize<List<string>>(searchTermsJson) ?? [];
-            List<string> locations = JsonSerializer.Deserialize<List<string>>(locationsJson) ?? [];
+            var searchTerms = JsonSerializer.Deserialize<List<string>>(searchTermsJson) ?? [];
+            var locations = JsonSerializer.Deserialize<List<string>>(locationsJson) ?? [];
 
             var request = new ComprehensiveSearchRequest
             {
@@ -49,7 +49,7 @@ public class AnalysisTools(
                 ScoringProfile = new NetDeveloperScoringProfile()
             };
 
-            EnhancedSearchResults result = await automatedSearch.RunComprehensiveNetSearchAsync(request);
+            var result = await automatedSearch.RunComprehensiveNetSearchAsync(request);
 
             return JsonSerializer.Serialize(new
             {
@@ -90,7 +90,7 @@ public class AnalysisTools(
                 ScoringProfile = new NetDeveloperScoringProfile()
             };
 
-            BulkProcessingResult result = await bulkProcessor.ProcessJobsBulkAsync(request);
+            var result = await bulkProcessor.ProcessJobsBulkAsync(request);
 
             return JsonSerializer.Serialize(new
             {
@@ -131,7 +131,7 @@ public class AnalysisTools(
                 ScoringProfile = new NetDeveloperScoringProfile()
             };
 
-            BulkProcessingResult result = await bulkProcessor.ProcessJobsBulkAsync(request);
+            var result = await bulkProcessor.ProcessJobsBulkAsync(request);
 
             return JsonSerializer.Serialize(new
             {
@@ -157,8 +157,8 @@ public class AnalysisTools(
         {
             logger.LogDebug("Deduplicating jobs using smart deduplication service");
 
-            List<EnhancedJobListing> jobs = JsonSerializer.Deserialize<List<EnhancedJobListing>>(jobsJson) ?? [];
-            DeduplicationResult result = await deduplicationService.DeduplicateJobsAsync(jobs);
+            var jobs = JsonSerializer.Deserialize<List<EnhancedJobListing>>(jobsJson) ?? [];
+            var result = await deduplicationService.DeduplicateJobsAsync(jobs);
 
             return JsonSerializer.Serialize(new
             {
@@ -183,7 +183,7 @@ public class AnalysisTools(
         {
             logger.LogDebug("Categorizing applications");
 
-            List<EnhancedJobListing> jobs = JsonSerializer.Deserialize<List<EnhancedJobListing>>(jobsJson) ?? [];
+            var jobs = JsonSerializer.Deserialize<List<EnhancedJobListing>>(jobsJson) ?? [];
             ApplicationPreferences? preferences = null;
 
             if (!string.IsNullOrEmpty(preferencesJson))
@@ -191,7 +191,7 @@ public class AnalysisTools(
                 preferences = JsonSerializer.Deserialize<ApplicationPreferences>(preferencesJson);
             }
 
-            ApplicationCategorizationResult result = await applicationService.CategorizeJobsAsync(jobs, preferences ?? new ApplicationPreferences());
+            var result = await applicationService.CategorizeJobsAsync(jobs, preferences ?? new ApplicationPreferences());
 
             return JsonSerializer.Serialize(new
             {
@@ -216,7 +216,7 @@ public class AnalysisTools(
         {
             logger.LogDebug("Generating market intelligence report");
 
-            List<EnhancedJobListing> jobs = JsonSerializer.Deserialize<List<EnhancedJobListing>>(jobsJson) ?? [];
+            var jobs = JsonSerializer.Deserialize<List<EnhancedJobListing>>(jobsJson) ?? [];
             MarketAnalysisRequest? request = null;
 
             if (!string.IsNullOrEmpty(requestJson))
@@ -224,7 +224,7 @@ public class AnalysisTools(
                 request = JsonSerializer.Deserialize<MarketAnalysisRequest>(requestJson);
             }
 
-            MarketIntelligenceReport result = await marketService.GenerateMarketReportAsync(
+            var result = await marketService.GenerateMarketReportAsync(
                 jobs,
                 request ?? new MarketAnalysisRequest { JobTitle = "Software Engineer", FocusArea = "comprehensive" });
 

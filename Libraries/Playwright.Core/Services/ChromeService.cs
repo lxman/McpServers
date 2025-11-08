@@ -37,7 +37,7 @@ public class ChromeService
         
         if (options != null)
         {
-            if (options.TryGetValue("viewport", out object? option))
+            if (options.TryGetValue("viewport", out var option))
             {
                 if (option is Dictionary<string, object> viewport)
                 {
@@ -49,7 +49,7 @@ public class ChromeService
                 }
             }
             
-            if (options.TryGetValue("recordVideo", out object? value) && (bool)value)
+            if (options.TryGetValue("recordVideo", out var value) && (bool)value)
             {
                 contextOptions.RecordVideoDir = "test-videos/";
             }

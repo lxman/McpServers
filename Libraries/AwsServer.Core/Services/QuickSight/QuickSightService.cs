@@ -53,7 +53,7 @@ public class QuickSightService
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            AWSCredentials? credentials = credentialsProvider.GetCredentials();
+            var credentials = credentialsProvider.GetCredentials();
             
             _quickSightClient = credentials is not null
                 ? new AmazonQuickSightClient(credentials, clientConfig)
@@ -80,7 +80,7 @@ public class QuickSightService
         {
             if (_discoveryService.AutoInitialize())
             {
-                AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
+                var accountInfo = await _discoveryService.GetAccountInfoAsync();
                 
                 var config = new AwsConfiguration
                 {

@@ -30,13 +30,13 @@ public class MonitorTools(
         {
             logger.LogDebug("Querying logs from workspace {WorkspaceId}", workspaceId);
 
-            TimeSpan timeSpan = timeRangeHours.HasValue
+            var timeSpan = timeRangeHours.HasValue
                 ? TimeSpan.FromHours(timeRangeHours.Value)
                 : TimeSpan.FromHours(24);
 
-            string limitedQuery = $"{query} | take {maxResults ?? 1000}";
+            var limitedQuery = $"{query} | take {maxResults ?? 1000}";
 
-            LogQueryResult result = await monitorService.QueryLogsAsync(workspaceId, limitedQuery, timeSpan);
+            var result = await monitorService.QueryLogsAsync(workspaceId, limitedQuery, timeSpan);
 
             if (result.Error is not null)
             {
@@ -53,7 +53,7 @@ public class MonitorTools(
                 timeSpan,
                 useQuickEstimate);
 
-            int totalRows = result.Tables.Sum(t => t.Rows.Count);
+            var totalRows = result.Tables.Sum(t => t.Rows.Count);
             result.Pagination = monitorService.CalculatePaginationMetadata(
                 totalRows,
                 maxResults ?? 1000,
@@ -88,7 +88,7 @@ public class MonitorTools(
         try
         {
             logger.LogDebug("Listing log workspaces");
-            IEnumerable<string?> workspaces = await monitorService.ListLogGroupsAsync(subscriptionId);
+            var workspaces = await monitorService.ListLogGroupsAsync(subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -116,7 +116,7 @@ public class MonitorTools(
         try
         {
             logger.LogDebug("Listing log streams for workspace {WorkspaceId}", workspaceId);
-            IEnumerable<string> streams = await monitorService.ListLogStreamsAsync(workspaceId);
+            var streams = await monitorService.ListLogStreamsAsync(workspaceId);
 
             return JsonSerializer.Serialize(new
             {
@@ -151,7 +151,7 @@ public class MonitorTools(
         {
             logger.LogDebug("Searching logs with regex in workspace {WorkspaceId}", workspaceId);
 
-            List<LogMatch> matches = await monitorService.SearchLogsWithRegexAsync(
+            var matches = await monitorService.SearchLogsWithRegexAsync(
                 workspaceId,
                 regexPattern,
                 TimeSpan.FromHours(timeRangeHours),
@@ -197,7 +197,7 @@ public class MonitorTools(
             IEnumerable<string> workspaceList = workspaceIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(w => w.Trim()).ToList();
 
-            List<LogMatch> matches = await monitorService.SearchMultipleWorkspacesWithRegexAsync(
+            var matches = await monitorService.SearchMultipleWorkspacesWithRegexAsync(
                 workspaceList,
                 regexPattern,
                 TimeSpan.FromHours(timeRangeHours),
@@ -241,20 +241,20 @@ public class MonitorTools(
         {
             logger.LogDebug("Querying metrics for resource {ResourceId}", resourceId);
 
-            DateTime start = DateTime.Parse(startTime);
-            DateTime end = DateTime.Parse(endTime);
-            IEnumerable<string> metrics = metricNames.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            var start = DateTime.Parse(startTime);
+            var end = DateTime.Parse(endTime);
+            var metrics = metricNames.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(m => m.Trim());
 
             TimeSpan? interval = intervalMinutes.HasValue
                 ? TimeSpan.FromMinutes(intervalMinutes.Value)
                 : null;
 
-            IEnumerable<string>? aggList = !string.IsNullOrEmpty(aggregations)
+            var aggList = !string.IsNullOrEmpty(aggregations)
                 ? aggregations.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(a => a.Trim())
                 : null;
 
-            MetricQueryResult result = await monitorService.QueryMetricsAsync(
+            var result = await monitorService.QueryMetricsAsync(
                 resourceId, metrics, start, end, interval, aggList);
 
             if (result.Error is not null)
@@ -292,7 +292,7 @@ public class MonitorTools(
         try
         {
             logger.LogDebug("Listing metrics for resource {ResourceId}", resourceId);
-            IEnumerable<string> metrics = await monitorService.ListMetricsAsync(resourceId, metricNamespace);
+            var metrics = await monitorService.ListMetricsAsync(resourceId, metricNamespace);
 
             return JsonSerializer.Serialize(new
             {
@@ -320,7 +320,7 @@ public class MonitorTools(
         try
         {
             logger.LogDebug("Listing Application Insights");
-            IEnumerable<ApplicationInsightsDto> components = await monitorService.ListApplicationInsightsAsync(subscriptionId, resourceGroupName);
+            var components = await monitorService.ListApplicationInsightsAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -351,7 +351,7 @@ public class MonitorTools(
         try
         {
             logger.LogDebug("Getting Application Insights {ComponentName}", componentName);
-            ApplicationInsightsDto? component = await monitorService.GetApplicationInsightsAsync(resourceGroupName, componentName, subscriptionId);
+            var component = await monitorService.GetApplicationInsightsAsync(resourceGroupName, componentName, subscriptionId);
 
             if (component is null)
             {
@@ -388,7 +388,7 @@ public class MonitorTools(
         try
         {
             logger.LogDebug("Listing alerts");
-            IEnumerable<AlertRuleDto> alerts = await monitorService.ListAlertsAsync(subscriptionId, resourceGroupName);
+            var alerts = await monitorService.ListAlertsAsync(subscriptionId, resourceGroupName);
 
             return JsonSerializer.Serialize(new
             {
@@ -426,7 +426,7 @@ public class MonitorTools(
         {
             logger.LogDebug("Creating alert {AlertName}", alertName);
 
-            AlertRuleDto? alert = await monitorService.CreateAlertAsync(
+            var alert = await monitorService.CreateAlertAsync(
                 subscriptionId,
                 resourceGroupName,
                 alertName,

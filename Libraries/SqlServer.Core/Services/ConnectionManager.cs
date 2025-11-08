@@ -28,7 +28,7 @@ public class ConnectionManager : IConnectionManager
 
     public async Task<IDbConnection> GetConnectionAsync(string connectionName)
     {
-        if (_connections.TryGetValue(connectionName, out IDbConnection? existingConnection))
+        if (_connections.TryGetValue(connectionName, out var existingConnection))
         {
             if (existingConnection.State == ConnectionState.Open)
                 return existingConnection;
@@ -37,13 +37,13 @@ public class ConnectionManager : IConnectionManager
             _connections.Remove(connectionName);
         }
 
-        if (!_config.Connections.TryGetValue(connectionName, out ConnectionConfig? connConfig))
+        if (!_config.Connections.TryGetValue(connectionName, out var connConfig))
             throw new ArgumentException($"Connection '{connectionName}' not found in configuration");
 
-        if (!_providers.TryGetValue(connConfig.Provider, out IDbProvider? provider))
+        if (!_providers.TryGetValue(connConfig.Provider, out var provider))
             throw new NotSupportedException($"Provider '{connConfig.Provider}' not supported");
 
-        IDbConnection connection = provider.CreateConnection(connConfig.ConnectionString);
+        var connection = provider.CreateConnection(connConfig.ConnectionString);
         await Task.Run(() => connection.Open());
         _connections[connectionName] = connection;
 
@@ -55,7 +55,7 @@ public class ConnectionManager : IConnectionManager
     {
         try
         {
-            IDbConnection connection = await GetConnectionAsync(connectionName);
+            var connection = await GetConnectionAsync(connectionName);
             return connection.State == ConnectionState.Open;
         }
         catch (Exception ex)
@@ -72,7 +72,7 @@ public class ConnectionManager : IConnectionManager
 
     public async Task CloseConnectionAsync(string connectionName)
     {
-        if (_connections.TryGetValue(connectionName, out IDbConnection? connection))
+        if (_connections.TryGetValue(connectionName, out var connection))
         {
             await Task.Run(() => connection.Close());
             connection.Dispose();
@@ -83,7 +83,7 @@ public class ConnectionManager : IConnectionManager
 
     public async Task CloseAllConnectionsAsync()
     {
-        foreach (KeyValuePair<string, IDbConnection> kvp in _connections.ToList())
+        foreach (var kvp in _connections.ToList())
         {
             await CloseConnectionAsync(kvp.Key);
         }

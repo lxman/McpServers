@@ -30,14 +30,14 @@ public class SecurityManager
         if (_allowedDirectories.Count == 0)
             return true; // If no restrictions, allow all
 
-        string normalizedPath = Path.GetFullPath(path);
+        var normalizedPath = Path.GetFullPath(path);
         return _allowedDirectories.Any(allowed => 
             normalizedPath.StartsWith(Path.GetFullPath(allowed), StringComparison.OrdinalIgnoreCase));
     }
     
     public void ValidateFileAccess(string filePath, FileAccessType accessType)
     {
-        string directory = Path.GetDirectoryName(filePath) ?? throw new ArgumentException("Invalid file path", nameof(filePath));
+        var directory = Path.GetDirectoryName(filePath) ?? throw new ArgumentException("Invalid file path", nameof(filePath));
     
         if (!IsDirectoryAllowed(directory))
         {
@@ -63,7 +63,7 @@ public class SecurityManager
 
     public bool IsCommandBlocked(string command)
     {
-        string cmdLower = command.ToLowerInvariant();
+        var cmdLower = command.ToLowerInvariant();
         return _blockedCommands.Any(blocked => cmdLower.Contains(blocked));
     }
 
@@ -89,11 +89,11 @@ public class SecurityManager
         {
             if (File.Exists(_configPath))
             {
-                string json = File.ReadAllText(_configPath);
+                var json = File.ReadAllText(_configPath);
                 var config = JsonSerializer.Deserialize<SecurityConfig>(json);
                 if (config is null) return;
                 _allowedDirectories.AddRange(config.AllowedDirectories ?? []);
-                foreach (string cmd in config.BlockedCommands ?? [])
+                foreach (var cmd in config.BlockedCommands ?? [])
                 {
                     _blockedCommands.Add(cmd.ToLowerInvariant());
                 }
@@ -125,7 +125,7 @@ public class SecurityManager
             "firewall", "netsh", "sfc", "bcdedit", "reg", "takeown", "cipher"
         };
         
-        foreach (string cmd in defaultBlocked)
+        foreach (var cmd in defaultBlocked)
         {
             _blockedCommands.Add(cmd.ToLowerInvariant());
         }
@@ -143,7 +143,7 @@ public class SecurityManager
                 AllowedDirectories = _allowedDirectories.ToArray(),
                 BlockedCommands = _blockedCommands.ToArray()
             };
-            string json = JsonSerializer.Serialize(config, SerializerOptions.JsonOptionsIndented);
+            var json = JsonSerializer.Serialize(config, SerializerOptions.JsonOptionsIndented);
             File.WriteAllText(_configPath, json);
         }
         catch (Exception ex)

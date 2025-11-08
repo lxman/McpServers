@@ -39,7 +39,7 @@ public class ConnectionTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Database name is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.ConnectToServerAsync(serverName, connectionString, databaseName);
+            var result = await mongoService.ConnectToServerAsync(serverName, connectionString, databaseName);
 
             return JsonSerializer.Serialize(new
             {
@@ -69,7 +69,7 @@ public class ConnectionTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
             }
 
-            string result = mongoService.DisconnectFromServer(serverName);
+            var result = mongoService.DisconnectFromServer(serverName);
 
             return JsonSerializer.Serialize(new
             {
@@ -93,7 +93,7 @@ public class ConnectionTools(
         {
             logger.LogDebug("Listing active MongoDB connections");
 
-            string result = mongoService.ListActiveConnections();
+            var result = mongoService.ListActiveConnections();
 
             return result;
         }
@@ -117,7 +117,7 @@ public class ConnectionTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
             }
 
-            string result = mongoService.SetDefaultServer(serverName);
+            var result = mongoService.SetDefaultServer(serverName);
 
             return JsonSerializer.Serialize(new
             {
@@ -146,7 +146,7 @@ public class ConnectionTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
             }
 
-            string result = mongoService.GetServerConnectionStatus(serverName);
+            var result = mongoService.GetServerConnectionStatus(serverName);
 
             return result;
         }
@@ -170,7 +170,7 @@ public class ConnectionTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.PingServerAsync(serverName);
+            var result = await mongoService.PingServerAsync(serverName);
 
             return result;
         }
@@ -189,7 +189,7 @@ public class ConnectionTools(
         {
             logger.LogDebug("Listing MongoDB connection profiles");
 
-            string result = mongoService.ListConnectionProfiles();
+            var result = mongoService.ListConnectionProfiles();
 
             return result;
         }
@@ -213,7 +213,7 @@ public class ConnectionTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Profile name is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.ConnectWithProfileAsync(profileName);
+            var result = await mongoService.ConnectWithProfileAsync(profileName);
 
             return JsonSerializer.Serialize(new
             {
@@ -237,7 +237,7 @@ public class ConnectionTools(
         {
             logger.LogDebug("Getting MongoDB auto-connect status");
 
-            string result = mongoService.GetAutoConnectStatus();
+            var result = mongoService.GetAutoConnectStatus();
 
             return result;
         }

@@ -17,7 +17,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
         {
             InitializeDriver(config.AntiDetection);
                 
-            string searchUrl = BuildSearchUrl(request, config);
+            var searchUrl = BuildSearchUrl(request, config);
             Logger.LogInformation($"Scraping BuiltIn: {searchUrl}");
             
             // Navigate to page
@@ -46,7 +46,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
             };
             
             // Try selectors in order
-            foreach (string selector in jobSelectors)
+            foreach (var selector in jobSelectors)
             {
                 try
                 {
@@ -69,11 +69,11 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
             {
                 Logger.LogInformation($"Processing {jobElements.Count} job elements");
                 
-                foreach (IWebElement element in jobElements.Take(request.MaxResults))
+                foreach (var element in jobElements.Take(request.MaxResults))
                 {
                     try
                     {
-                        EnhancedJobListing? job = ExtractJobFromElement(element);
+                        var job = ExtractJobFromElement(element);
                         if (job != null)
                         {
                             job.SourceSite = SupportedSite;
@@ -96,7 +96,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
                 
                 try
                 {
-                    string pageSource = Driver.PageSource;
+                    var pageSource = Driver.PageSource;
                     Logger.LogInformation($"Page source length: {pageSource.Length}");
                     
                     if (pageSource.Contains("Software Engineer") || 
@@ -105,10 +105,10 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
                     {
                         Logger.LogInformation("Page contains job-related content");
                         
-                        IWebElement bodyElement = Driver.FindElement(By.TagName("body"));
-                        string bodyText = bodyElement.Text;
+                        var bodyElement = Driver.FindElement(By.TagName("body"));
+                        var bodyText = bodyElement.Text;
                         
-                        List<EnhancedJobListing> textJobs = ExtractJobsFromText(bodyText, request.MaxResults);
+                        var textJobs = ExtractJobsFromText(bodyText, request.MaxResults);
                         jobs.AddRange(textJobs);
                         
                         Logger.LogInformation($"Extracted {textJobs.Count} jobs from text content");
@@ -154,7 +154,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
         try
         {
             // Smart wait: Wait for either job elements to appear OR timeout after 2 seconds
-            DateTime timeout = DateTime.Now.AddSeconds(2);
+            var timeout = DateTime.Now.AddSeconds(2);
             var contentFound = false;
             
             while (DateTime.Now < timeout && !contentFound)
@@ -162,7 +162,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
                 try
                 {
                     // Check if any job-related content is available
-                    ReadOnlyCollection<IWebElement> elements = Driver.FindElements(By.CssSelector("a[href*='/job/'], .job-card, article"));
+                    var elements = Driver.FindElements(By.CssSelector("a[href*='/job/'], .job-card, article"));
                     if (elements.Count > 0)
                     {
                         contentFound = true;
@@ -171,7 +171,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
                     }
                     
                     // Also check for specific BuiltIn content patterns in page source
-                    string pageSource = Driver.PageSource;
+                    var pageSource = Driver.PageSource;
                     if (pageSource.Contains("Software Engineer") || pageSource.Contains("Developer") || pageSource.Contains("jobs"))
                     {
                         contentFound = true;
@@ -207,7 +207,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
         
         try
         {
-            string[] lines = bodyText.Split('\n')
+            var lines = bodyText.Split('\n')
                 .Where(line => !string.IsNullOrWhiteSpace(line))
                 .Select(line => line.Trim())
                 .ToArray();
@@ -216,7 +216,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
             
             for (var i = 0; i < lines.Length && jobs.Count < maxResults; i++)
             {
-                string line = lines[i];
+                var line = lines[i];
                 
                 if (IsJobTitle(line) && line.Length is > 10 and < 150)
                 {
@@ -264,9 +264,9 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
     {
         var skills = new List<string>();
         
-        for (int i = Math.Max(0, jobTitleIndex - 3); i < Math.Min(lines.Length, jobTitleIndex + 5); i++)
+        for (var i = Math.Max(0, jobTitleIndex - 3); i < Math.Min(lines.Length, jobTitleIndex + 5); i++)
         {
-            string line = lines[i].ToLower();
+            var line = lines[i].ToLower();
             
             if (line.Contains(".net")) skills.Add(".NET");
             if (line.Contains("c#")) skills.Add("C#");
@@ -287,7 +287,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
     {
         if (string.IsNullOrEmpty(text) || text.Length < 5) return false;
         
-        string lowerText = text.ToLower();
+        var lowerText = text.ToLower();
         
         var jobKeywords = new[]
         {
@@ -307,9 +307,9 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
             "cloud", "azure", "aws", "devops", "qa", "test", "security"
         };
         
-        bool hasJobKeyword = jobKeywords.Any(keyword => lowerText.Contains(keyword));
-        bool hasDotnetKeyword = dotnetKeywords.Any(keyword => lowerText.Contains(keyword));
-        bool hasTechKeyword = techKeywords.Any(keyword => lowerText.Contains(keyword));
+        var hasJobKeyword = jobKeywords.Any(keyword => lowerText.Contains(keyword));
+        var hasDotnetKeyword = dotnetKeywords.Any(keyword => lowerText.Contains(keyword));
+        var hasTechKeyword = techKeywords.Any(keyword => lowerText.Contains(keyword));
         
         var excludePatterns = new[]
         {
@@ -318,9 +318,9 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
             "benefits", "full-time", "part-time", "contract", "remote", "hybrid", "•"
         };
         
-        bool hasExcludePattern = excludePatterns.Any(pattern => lowerText.Contains(pattern));
+        var hasExcludePattern = excludePatterns.Any(pattern => lowerText.Contains(pattern));
         
-        bool isJobTitle = hasJobKeyword && !hasExcludePattern;
+        var isJobTitle = hasJobKeyword && !hasExcludePattern;
         
         if (isJobTitle && hasDotnetKeyword)
         {
@@ -338,11 +338,11 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
 
     private string ExtractCompanyFromContext(string[] lines, int jobTitleIndex)
     {
-        for (int i = Math.Max(0, jobTitleIndex - 2); i < Math.Min(lines.Length, jobTitleIndex + 3); i++)
+        for (var i = Math.Max(0, jobTitleIndex - 2); i < Math.Min(lines.Length, jobTitleIndex + 3); i++)
         {
             if (i == jobTitleIndex) continue;
             
-            string line = lines[i].Trim();
+            var line = lines[i].Trim();
             if (line.Length is > 3 and < 50 && 
                 !IsJobTitle(line) && 
                 !line.Contains("Remote") && 
@@ -357,9 +357,9 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
 
     private static string ExtractLocationFromContext(string[] lines, int jobTitleIndex)
     {
-        for (int i = Math.Max(0, jobTitleIndex - 2); i < Math.Min(lines.Length, jobTitleIndex + 3); i++)
+        for (var i = Math.Max(0, jobTitleIndex - 2); i < Math.Min(lines.Length, jobTitleIndex + 3); i++)
         {
-            string line = lines[i].Trim();
+            var line = lines[i].Trim();
             if (line.Contains("Remote", StringComparison.OrdinalIgnoreCase) ||
                 line.Contains("NY", StringComparison.OrdinalIgnoreCase) ||
                 line.Contains("CA", StringComparison.OrdinalIgnoreCase) ||
@@ -376,9 +376,9 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
 
     private string ExtractSummaryFromContext(string[] lines, int jobTitleIndex)
     {
-        for (int i = jobTitleIndex + 1; i < Math.Min(lines.Length, jobTitleIndex + 5); i++)
+        for (var i = jobTitleIndex + 1; i < Math.Min(lines.Length, jobTitleIndex + 5); i++)
         {
-            string line = lines[i].Trim();
+            var line = lines[i].Trim();
             if (line.Length is > 30 and < 200 && 
                 !IsJobTitle(line) && 
                 line.Contains(" "))
@@ -406,7 +406,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
                 ".cookie-consent button"
             };
 
-            foreach (string buttonSelector in acceptButtons)
+            foreach (var buttonSelector in acceptButtons)
             {
                 try
                 {
@@ -445,9 +445,9 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
     {
         try
         {
-            Screenshot screenshot = ((ITakesScreenshot)Driver!).GetScreenshot();
+            var screenshot = ((ITakesScreenshot)Driver!).GetScreenshot();
             var fileName = $"debug_{context}_{DateTime.Now:yyyyMMdd_HHmmss}.png";
-            string filePath = Path.Combine("Screenshots", fileName);
+            var filePath = Path.Combine("Screenshots", fileName);
             screenshot.SaveAsFile(filePath);
             Logger.LogInformation($"Debug screenshot saved: {filePath}");
         }
@@ -459,7 +459,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
 
     private static string BuildSearchUrl(EnhancedScrapeRequest request, SiteConfiguration config)
     {
-        string baseUrl = config.BaseUrl; // https://builtin.com
+        var baseUrl = config.BaseUrl; // https://builtin.com
         
         if (!string.IsNullOrEmpty(request.SearchTerm))
         {
@@ -474,8 +474,8 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
                 return "https://builtin.com/jobs/dev-engineering";
             }
             
-            string searchTerm = Uri.EscapeDataString(request.SearchTerm);
-            string location = !string.IsNullOrEmpty(request.Location) ? 
+            var searchTerm = Uri.EscapeDataString(request.SearchTerm);
+            var location = !string.IsNullOrEmpty(request.Location) ? 
                 Uri.EscapeDataString(request.Location) : "";
             
             if (!string.IsNullOrEmpty(location))
@@ -493,10 +493,10 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
     {
         try
         {
-            string elementText = element.Text?.Trim() ?? "";
+            var elementText = element.Text?.Trim() ?? "";
             if (string.IsNullOrEmpty(elementText)) return null;
             
-            string[] lines = elementText.Split('\n').Where(line => !string.IsNullOrWhiteSpace(line)).ToArray();
+            var lines = elementText.Split('\n').Where(line => !string.IsNullOrWhiteSpace(line)).ToArray();
             if (lines.Length == 0) return null;
             
             var title = "";
@@ -506,9 +506,9 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
             var jobUrl = "";
             
             // Extract basic info from text
-            foreach (string line in lines)
+            foreach (var line in lines)
             {
-                string trimmedLine = line.Trim();
+                var trimmedLine = line.Trim();
                 if (string.IsNullOrEmpty(title) && IsJobTitle(trimmedLine))
                 {
                     title = trimmedLine;
@@ -534,7 +534,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
             // Try to extract URL from element
             try
             {
-                IWebElement linkElement = element.FindElement(By.TagName("a"));
+                var linkElement = element.FindElement(By.TagName("a"));
                 jobUrl = linkElement.GetAttribute("href") ?? "";
                 Logger.LogInformation($"Raw URL extracted: '{jobUrl}'");
             }
@@ -588,7 +588,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
 
     private static bool IsRemoteJob(string location, string title, string summary)
     {
-        string text = $"{location} {title} {summary}".ToLower();
+        var text = $"{location} {title} {summary}".ToLower();
         return text.Contains("remote") || 
                text.Contains("work from home") || 
                text.Contains("telecommute") ||

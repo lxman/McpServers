@@ -23,7 +23,7 @@ public class DocumentLoaderFactory
         
         _logger.LogInformation("DocumentLoaderFactory initialized with {Count} loaders", _loaders.Count());
         
-        foreach (IDocumentLoader loader in _loaders)
+        foreach (var loader in _loaders)
         {
             _logger.LogDebug("Registered loader: {LoaderType} for {DocumentType}",
                 loader.GetType().Name, loader.SupportedType);
@@ -43,11 +43,11 @@ public class DocumentLoaderFactory
             return null;
         }
 
-        IDocumentLoader? loader = _loaders.FirstOrDefault(l => l.CanLoad(filePath));
+        var loader = _loaders.FirstOrDefault(l => l.CanLoad(filePath));
 
         if (loader is null)
         {
-            string extension = Path.GetExtension(filePath);
+            var extension = Path.GetExtension(filePath);
             _logger.LogWarning("No loader found for file: {FilePath}, Extension: {Extension}",
                 filePath, extension);
         }
@@ -67,7 +67,7 @@ public class DocumentLoaderFactory
     /// <returns>The appropriate loader if found, otherwise null</returns>
     public IDocumentLoader? GetLoaderForType(DocumentType documentType)
     {
-        IDocumentLoader? loader = _loaders.FirstOrDefault(l => l.SupportedType == documentType);
+        var loader = _loaders.FirstOrDefault(l => l.SupportedType == documentType);
 
         if (loader is null)
         {
@@ -101,7 +101,7 @@ public class DocumentLoaderFactory
         var extensions = new List<string>();
 
         // Common extensions for each loader type
-        foreach (IDocumentLoader loader in _loaders)
+        foreach (var loader in _loaders)
         {
             switch (loader.SupportedType)
             {

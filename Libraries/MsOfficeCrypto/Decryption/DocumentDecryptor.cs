@@ -128,8 +128,8 @@ namespace MsOfficeCrypto.Decryption
             if (!OfficeCryptoDetector.IsEncryptedOfficeDocument(filePath))
                 throw new NotEncryptedException($"Document is not encrypted: {filePath}");
 
-            EncryptionInfo encryptionInfo = OfficeCryptoDetector.GetEncryptionInfo(filePath);
-            byte[] encryptedPackageData = OfficeCryptoDetector.ExtractEncryptedPackageData(filePath, encryptionInfo);
+            var encryptionInfo = OfficeCryptoDetector.GetEncryptionInfo(filePath);
+            var encryptedPackageData = OfficeCryptoDetector.ExtractEncryptedPackageData(filePath, encryptionInfo);
 
             // Create a DataSpaces handler if needed
             DataSpacesHandler? dataSpacesHandler = null;
@@ -137,7 +137,7 @@ namespace MsOfficeCrypto.Decryption
                 return new DocumentDecryptor(encryptionInfo, encryptedPackageData, dataSpacesHandler);
             try
             {
-                using RootStorage rootStorage = RootStorage.OpenRead(filePath);
+                using var rootStorage = RootStorage.OpenRead(filePath);
                 if (DataSpacesHandler.IsDataSpacesEncrypted(rootStorage))
                 {
                     dataSpacesHandler = new DataSpacesHandler(rootStorage);
@@ -164,9 +164,9 @@ namespace MsOfficeCrypto.Decryption
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                byte[] decryptionKey =
+                var decryptionKey =
                     PasswordDerivation.DeriveKey(password, _encryptionInfo.Verifier!.Salt!, (int)_encryptionInfo.Header!.KeySize);
-                string algorithm = _encryptionInfo.Header?.GetAlgorithmName() ?? "Unknown";
+                var algorithm = _encryptionInfo.Header?.GetAlgorithmName() ?? "Unknown";
 
                 return algorithm switch
                 {
@@ -191,7 +191,7 @@ namespace MsOfficeCrypto.Decryption
                     throw new CorruptedEncryptionInfoException("Agile encryption KeyData not available");
 
                 // Map hash algorithm string to HashAlgorithmName
-                HashAlgorithmName hashAlgorithm = _encryptionInfo.AgileHashAlgorithm?.ToUpper() switch
+                var hashAlgorithm = _encryptionInfo.AgileHashAlgorithm?.ToUpper() switch
                 {
                     "SHA1" => HashAlgorithmName.SHA1,
                     "SHA256" => HashAlgorithmName.SHA256,
@@ -243,7 +243,7 @@ namespace MsOfficeCrypto.Decryption
             try
             {
                 // Map hash algorithm string to HashAlgorithmName
-                HashAlgorithmName hashAlgorithm = _encryptionInfo.AgileHashAlgorithm?.ToUpper() switch
+                var hashAlgorithm = _encryptionInfo.AgileHashAlgorithm?.ToUpper() switch
                 {
                     "SHA1" => HashAlgorithmName.SHA1,
                     "SHA256" => HashAlgorithmName.SHA256,

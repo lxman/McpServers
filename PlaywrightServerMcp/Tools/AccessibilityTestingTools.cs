@@ -17,11 +17,11 @@ public class AccessibilityTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            string finalContainerSelector = !string.IsNullOrEmpty(containerSelector) 
+            var finalContainerSelector = !string.IsNullOrEmpty(containerSelector) 
                 ? DetermineSelector(containerSelector) 
                 : "body";
 
@@ -302,7 +302,7 @@ public class AccessibilityTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
@@ -591,11 +591,11 @@ public class AccessibilityTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            string finalContainerSelector = !string.IsNullOrEmpty(containerSelector) 
+            var finalContainerSelector = !string.IsNullOrEmpty(containerSelector) 
                 ? DetermineSelector(containerSelector) 
                 : "body";
 
@@ -1041,7 +1041,7 @@ public class AccessibilityTestingTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 

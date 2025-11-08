@@ -28,7 +28,7 @@ public class JobStorageTools(
         {
             logger.LogDebug("Saving jobs for user {UserId}", userId);
 
-            List<EnhancedJobListing> jobs = JsonSerializer.Deserialize<List<EnhancedJobListing>>(jobsJson) ?? [];
+            var jobs = JsonSerializer.Deserialize<List<EnhancedJobListing>>(jobsJson) ?? [];
 
             var request = new SaveJobsRequest
             {
@@ -37,7 +37,7 @@ public class JobStorageTools(
                 OverwriteExisting = overwriteExisting
             };
 
-            bool result = await scrapingService.SaveJobsAsync(request);
+            var result = await scrapingService.SaveJobsAsync(request);
 
             return JsonSerializer.Serialize(new
             {
@@ -77,12 +77,12 @@ public class JobStorageTools(
                 filters.Sites = JsonSerializer.Deserialize<List<JobSite>>(sitesJson) ?? [];
             }
 
-            if (!string.IsNullOrEmpty(fromDate) && DateTime.TryParse(fromDate, out DateTime fromDateTime))
+            if (!string.IsNullOrEmpty(fromDate) && DateTime.TryParse(fromDate, out var fromDateTime))
             {
                 filters.FromDate = fromDateTime;
             }
 
-            if (!string.IsNullOrEmpty(toDate) && DateTime.TryParse(toDate, out DateTime toDateTime))
+            if (!string.IsNullOrEmpty(toDate) && DateTime.TryParse(toDate, out var toDateTime))
             {
                 filters.ToDate = toDateTime;
             }
@@ -96,7 +96,7 @@ public class JobStorageTools(
                 filters.RequiredSkills = JsonSerializer.Deserialize<List<string>>(requiredSkillsJson) ?? [];
             }
 
-            List<EnhancedJobListing> result = await scrapingService.GetStoredJobsAsync(userId, filters);
+            var result = await scrapingService.GetStoredJobsAsync(userId, filters);
 
             return JsonSerializer.Serialize(new
             {
@@ -122,7 +122,7 @@ public class JobStorageTools(
         {
             logger.LogDebug("Taking screenshot for URL {Url}", url);
 
-            string result = await scrapingService.TakeScreenshotAsync(url);
+            var result = await scrapingService.TakeScreenshotAsync(url);
 
             return JsonSerializer.Serialize(new
             {

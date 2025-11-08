@@ -40,7 +40,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         try
         {
             // Validate session exists
-            PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
+            var session = _sessionManager.GetSession(sessionId);
             if (session == null)
             {
                 return JsonSerializer.Serialize(new BundleSizeAnalysisResult
@@ -51,11 +51,11 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 }, JsonOptions);
             }
 
-            string targetDirectory = string.IsNullOrWhiteSpace(workingDirectory) 
+            var targetDirectory = string.IsNullOrWhiteSpace(workingDirectory) 
                 ? Directory.GetCurrentDirectory() 
                 : workingDirectory;
 
-            BundleSizeAnalysisResult result = await AnalyzeBundleSize(
+            var result = await AnalyzeBundleSize(
                 targetDirectory,
                 buildConfiguration,
                 includeComponentAnalysis,
@@ -99,8 +99,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         try
         {
             // Check if this is an Angular project
-            string angularJsonPath = Path.Combine(directory, "angular.json");
-            string packageJsonPath = Path.Combine(directory, "package.json");
+            var angularJsonPath = Path.Combine(directory, "angular.json");
+            var packageJsonPath = Path.Combine(directory, "package.json");
 
             result.AngularProjectDetected = File.Exists(angularJsonPath);
 
@@ -112,7 +112,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             }
 
             // Check for webpack stats or build output
-            string buildOutputPath = await GetBuildOutputPath(angularJsonPath, buildConfiguration);
+            var buildOutputPath = await GetBuildOutputPath(angularJsonPath, buildConfiguration);
             result.WebpackStatsAvailable = await CheckWebpackStatsAvailability(buildOutputPath);
 
             // Generate webpack-bundle-analyzer stats if not available
@@ -172,27 +172,27 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            string angularJsonContent = await File.ReadAllTextAsync(angularJsonPath);
+            var angularJsonContent = await File.ReadAllTextAsync(angularJsonPath);
             var angularConfig = JsonSerializer.Deserialize<JsonElement>(angularJsonContent);
 
-            if (angularConfig.TryGetProperty("projects", out JsonElement projects))
+            if (angularConfig.TryGetProperty("projects", out var projects))
             {
-                foreach (JsonProperty project in projects.EnumerateObject())
+                foreach (var project in projects.EnumerateObject())
                 {
-                    if (project.Value.TryGetProperty("architect", out JsonElement architect) &&
-                        architect.TryGetProperty("build", out JsonElement build))
+                    if (project.Value.TryGetProperty("architect", out var architect) &&
+                        architect.TryGetProperty("build", out var build))
                     {
                         var outputPath = "dist";
 
                         // Check build configuration
-                        if (build.TryGetProperty("configurations", out JsonElement configurations) &&
-                            configurations.TryGetProperty(buildConfiguration, out JsonElement config) &&
-                            config.TryGetProperty("outputPath", out JsonElement configOutputPath))
+                        if (build.TryGetProperty("configurations", out var configurations) &&
+                            configurations.TryGetProperty(buildConfiguration, out var config) &&
+                            config.TryGetProperty("outputPath", out var configOutputPath))
                         {
                             outputPath = configOutputPath.GetString() ?? "dist";
                         }
-                        else if (build.TryGetProperty("options", out JsonElement options) &&
-                                 options.TryGetProperty("outputPath", out JsonElement defaultOutputPath))
+                        else if (build.TryGetProperty("options", out var options) &&
+                                 options.TryGetProperty("outputPath", out var defaultOutputPath))
                         {
                             outputPath = defaultOutputPath.GetString() ?? "dist";
                         }
@@ -217,8 +217,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         return await Task.Run(() =>
         {
-            string statsJsonPath = Path.Combine(buildOutputPath, "stats.json");
-            string bundleAnalyzerPath = Path.Combine(buildOutputPath, "bundle-analyzer.json");
+            var statsJsonPath = Path.Combine(buildOutputPath, "stats.json");
+            var bundleAnalyzerPath = Path.Combine(buildOutputPath, "bundle-analyzer.json");
             
             return File.Exists(statsJsonPath) || File.Exists(bundleAnalyzerPath) || Directory.Exists(buildOutputPath);
         });
@@ -258,10 +258,10 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             {
                 if (Directory.Exists(buildOutputPath))
                 {
-                    string[] files = Directory.GetFiles(buildOutputPath, "*.*", SearchOption.AllDirectories);
-                    List<string> jsFiles = files.Where(f => f.EndsWith(".js")).ToList();
-                    List<string> cssFiles = files.Where(f => f.EndsWith(".css")).ToList();
-                    List<string> assetFiles = files.Where(f => !f.EndsWith(".js") && !f.EndsWith(".css") && !f.EndsWith(".map")).ToList();
+                    var files = Directory.GetFiles(buildOutputPath, "*.*", SearchOption.AllDirectories);
+                    var jsFiles = files.Where(f => f.EndsWith(".js")).ToList();
+                    var cssFiles = files.Where(f => f.EndsWith(".css")).ToList();
+                    var assetFiles = files.Where(f => !f.EndsWith(".js") && !f.EndsWith(".css") && !f.EndsWith(".map")).ToList();
 
                     // Calculate total sizes
                     overview.TotalSize = files.Sum(f => new FileInfo(f).Length);
@@ -310,12 +310,12 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             try
             {
                 // Find all component files
-                List<string> componentFiles = FindComponentFiles(directory);
-                long bundleSize = GetTotalBundleSize(buildOutputPath);
+                var componentFiles = FindComponentFiles(directory);
+                var bundleSize = GetTotalBundleSize(buildOutputPath);
 
-                foreach (string componentFile in componentFiles.Take(maxComponents))
+                foreach (var componentFile in componentFiles.Take(maxComponents))
                 {
-                    ComponentBundleImpact impact = AnalyzeComponentImpact(componentFile, bundleSize, directory);
+                    var impact = AnalyzeComponentImpact(componentFile, bundleSize, directory);
                     componentImpacts.Add(impact);
                 }
 
@@ -350,12 +350,12 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             try
             {
                 // Find all module files
-                List<string> moduleFiles = FindModuleFiles(directory);
-                long bundleSize = GetTotalBundleSize(buildOutputPath);
+                var moduleFiles = FindModuleFiles(directory);
+                var bundleSize = GetTotalBundleSize(buildOutputPath);
 
-                foreach (string moduleFile in moduleFiles)
+                foreach (var moduleFile in moduleFiles)
                 {
-                    ModuleBundleImpact impact = AnalyzeModuleImpact(moduleFile, bundleSize, directory);
+                    var impact = AnalyzeModuleImpact(moduleFile, bundleSize, directory);
                     moduleImpacts.Add(impact);
                 }
 
@@ -390,10 +390,10 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             {
                 if (Directory.Exists(buildOutputPath))
                 {
-                    string[] files = Directory.GetFiles(buildOutputPath, "*.*", SearchOption.AllDirectories);
-                    long totalSize = files.Sum(f => new FileInfo(f).Length);
+                    var files = Directory.GetFiles(buildOutputPath, "*.*", SearchOption.AllDirectories);
+                    var totalSize = files.Sum(f => new FileInfo(f).Length);
 
-                    foreach (string file in files)
+                    foreach (var file in files)
                     {
                         var fileInfo = new FileInfo(file);
                         var asset = new AssetAnalysis
@@ -443,10 +443,10 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             {
                 if (Directory.Exists(buildOutputPath))
                 {
-                    string[] jsFiles = Directory.GetFiles(buildOutputPath, "*.js", SearchOption.TopDirectoryOnly);
-                    long totalSize = jsFiles.Sum(f => new FileInfo(f).Length);
+                    var jsFiles = Directory.GetFiles(buildOutputPath, "*.js", SearchOption.TopDirectoryOnly);
+                    var totalSize = jsFiles.Sum(f => new FileInfo(f).Length);
 
-                    foreach (string jsFile in jsFiles)
+                    foreach (var jsFile in jsFiles)
                     {
                         var fileInfo = new FileInfo(jsFile);
                         var chunk = new ChunkInfo
@@ -491,15 +491,15 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             {
                 if (File.Exists(packageJsonPath))
                 {
-                    string packageJsonContent = File.ReadAllText(packageJsonPath);
+                    var packageJsonContent = File.ReadAllText(packageJsonPath);
                     var packageJson = JsonSerializer.Deserialize<JsonElement>(packageJsonContent);
 
                     // Analyze third-party dependencies
-                    if (packageJson.TryGetProperty("dependencies", out JsonElement dependencies))
+                    if (packageJson.TryGetProperty("dependencies", out var dependencies))
                     {
-                        foreach (JsonProperty dep in dependencies.EnumerateObject())
+                        foreach (var dep in dependencies.EnumerateObject())
                         {
-                            DependencyImpact impact = AnalyzeDependencyImpact(dep.Name, dep.Value.GetString() ?? "", buildOutputPath);
+                            var impact = AnalyzeDependencyImpact(dep.Name, dep.Value.GetString() ?? "", buildOutputPath);
                             dependencyAnalysis.ThirdPartyDependencies.Add(impact);
                         }
                     }
@@ -533,8 +533,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
             try
             {
-                double bundleSizeKB = overview.TotalSize / 1024.0;
-                double gzippedSizeKB = overview.GzippedSize / 1024.0;
+                var bundleSizeKB = overview.TotalSize / 1024.0;
+                var gzippedSizeKB = overview.GzippedSize / 1024.0;
 
                 // Calculate loading metrics
                 metrics.Loading = new LoadingMetrics
@@ -644,15 +644,15 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
         try
         {
-            long totalSize = jsFiles.Sum(f => new FileInfo(f).Length) +
-                             cssFiles.Sum(f => new FileInfo(f).Length) +
-                             assetFiles.Sum(f => new FileInfo(f).Length);
+            var totalSize = jsFiles.Sum(f => new FileInfo(f).Length) +
+                            cssFiles.Sum(f => new FileInfo(f).Length) +
+                            assetFiles.Sum(f => new FileInfo(f).Length);
 
             // Categorize JS files
-            foreach (string jsFile in jsFiles)
+            foreach (var jsFile in jsFiles)
             {
-                string fileName = Path.GetFileName(jsFile);
-                long fileSize = new FileInfo(jsFile).Length;
+                var fileName = Path.GetFileName(jsFile);
+                var fileSize = new FileInfo(jsFile).Length;
 
                 if (fileName.Contains("vendor") || fileName.Contains("polyfills"))
                 {
@@ -709,7 +709,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             };
 
             // Analyze initial bundle status
-            long initialSize = overview.Distribution.ApplicationSize + overview.Distribution.RuntimeSize;
+            var initialSize = overview.Distribution.ApplicationSize + overview.Distribution.RuntimeSize;
             comparison.InitialBudgetStatus = new BudgetStatus
             {
                 MaximumSize = comparison.RecommendedSizes.Initial,
@@ -790,7 +790,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
             // Initial load score (40% weight)
             var initialWeight = 40;
-            int initialScore = comparison.InitialBudgetStatus.WithinBudget ? initialWeight : 
+            var initialScore = comparison.InitialBudgetStatus.WithinBudget ? initialWeight : 
                               Math.Max(0, initialWeight - (int)(comparison.InitialBudgetStatus.UtilizationPercentage - 100));
             totalPoints += initialScore;
             maxPoints += initialWeight;
@@ -799,7 +799,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
             // Vendor optimization score (30% weight)
             var vendorWeight = 30;
-            int vendorScore = overview.Distribution.VendorSize <= comparison.RecommendedSizes.Vendor ? vendorWeight :
+            var vendorScore = overview.Distribution.VendorSize <= comparison.RecommendedSizes.Vendor ? vendorWeight :
                              Math.Max(0, vendorWeight - (int)((overview.Distribution.VendorSize - comparison.RecommendedSizes.Vendor) / 10240));
             totalPoints += vendorScore;
             maxPoints += vendorWeight;
@@ -808,7 +808,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
             // Lazy loading score (30% weight)
             var lazyWeight = 30;
-            int lazyScore = overview.ChunkCount > 3 ? lazyWeight : Math.Max(0, lazyWeight - (5 - overview.ChunkCount) * 5);
+            var lazyScore = overview.ChunkCount > 3 ? lazyWeight : Math.Max(0, lazyWeight - (5 - overview.ChunkCount) * 5);
             totalPoints += lazyScore;
             maxPoints += lazyWeight;
             score.LazyLoading = (int)((double)lazyScore / lazyWeight * 100);
@@ -844,9 +844,9 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         };
 
         // Provide estimated sizes based on typical Angular applications
-        int baseSize = 200 * 1024; // 200KB base
-        int componentMultiplier = overview.ComponentCount * 2 * 1024; // 2KB per component
-        int moduleMultiplier = overview.ModuleCount * 10 * 1024; // 10KB per module
+        var baseSize = 200 * 1024; // 200KB base
+        var componentMultiplier = overview.ComponentCount * 2 * 1024; // 2KB per component
+        var moduleMultiplier = overview.ModuleCount * 10 * 1024; // 10KB per module
 
         overview.TotalSize = baseSize + componentMultiplier + moduleMultiplier;
         overview.GzippedSize = (long)(overview.TotalSize * 0.7);
@@ -869,7 +869,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            string[] componentFiles = Directory.GetFiles(directory, "*.component.ts", SearchOption.AllDirectories);
+            var componentFiles = Directory.GetFiles(directory, "*.component.ts", SearchOption.AllDirectories);
             return componentFiles.Length;
         }
         catch
@@ -882,7 +882,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            string[] moduleFiles = Directory.GetFiles(directory, "*.module.ts", SearchOption.AllDirectories);
+            var moduleFiles = Directory.GetFiles(directory, "*.module.ts", SearchOption.AllDirectories);
             return Math.Max(1, moduleFiles.Length); // At least 1 for app module
         }
         catch
@@ -921,7 +921,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         {
             if (Directory.Exists(buildOutputPath))
             {
-                string[] files = Directory.GetFiles(buildOutputPath, "*.*", SearchOption.AllDirectories);
+                var files = Directory.GetFiles(buildOutputPath, "*.*", SearchOption.AllDirectories);
                 return files.Sum(f => new FileInfo(f).Length);
             }
         }
@@ -945,7 +945,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         try
         {
             var fileInfo = new FileInfo(componentFile);
-            long estimatedSize = EstimateComponentSize(componentFile);
+            var estimatedSize = EstimateComponentSize(componentFile);
             
             impact.SizeBytes = estimatedSize;
             impact.GzippedSizeBytes = (long)(estimatedSize * 0.7);
@@ -981,7 +981,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
         try
         {
-            long estimatedSize = EstimateModuleSize(moduleFile, directory);
+            var estimatedSize = EstimateModuleSize(moduleFile, directory);
             
             impact.SizeBytes = estimatedSize;
             impact.GzippedSizeBytes = (long)(estimatedSize * 0.7);
@@ -1010,7 +1010,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
     private string GetAssetType(string filePath)
     {
-        string extension = Path.GetExtension(filePath).ToLower();
+        var extension = Path.GetExtension(filePath).ToLower();
         return extension switch
         {
             ".js" => "javascript",
@@ -1026,7 +1026,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
     private bool IsAssetOptimized(string filePath)
     {
-        string fileName = Path.GetFileName(filePath);
+        var fileName = Path.GetFileName(filePath);
         return fileName.Contains(".min.") || fileName.Contains("-es2015") || fileName.Contains("-es5");
     }
 
@@ -1037,8 +1037,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             OptimizationTechniques = []
         };
 
-        string fileName = Path.GetFileName(filePath);
-        string extension = Path.GetExtension(filePath).ToLower();
+        var fileName = Path.GetFileName(filePath);
+        var extension = Path.GetExtension(filePath).ToLower();
 
         optimization.Minified = fileName.Contains(".min.") || fileName.Length < Path.GetFileNameWithoutExtension(filePath).Length + 10;
         optimization.Compressed = true; // Assume server compression
@@ -1055,7 +1055,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         }
 
         var fileInfo = new FileInfo(filePath);
-        long estimatedUncompressed = fileInfo.Length;
+        var estimatedUncompressed = fileInfo.Length;
         var estimatedCompressed = (long)(fileInfo.Length * 0.7);
         optimization.CompressionRatio = $"{(1.0 - (double)estimatedCompressed / estimatedUncompressed):P1}";
 
@@ -1065,8 +1065,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     private List<string> GenerateAssetOptimizationSuggestions(string filePath)
     {
         var suggestions = new List<string>();
-        string fileName = Path.GetFileName(filePath);
-        string extension = Path.GetExtension(filePath).ToLower();
+        var fileName = Path.GetFileName(filePath);
+        var extension = Path.GetExtension(filePath).ToLower();
         var fileInfo = new FileInfo(filePath);
 
         if (extension == ".js" && fileInfo.Length > 100 * 1024) // > 100KB
@@ -1103,7 +1103,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
     private string DetermineChunkType(string filePath)
     {
-        string fileName = Path.GetFileName(filePath);
+        var fileName = Path.GetFileName(filePath);
         
         if (fileName.Contains("runtime"))
             return "runtime";
@@ -1119,14 +1119,14 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
     private bool IsLazyLoadedChunk(string filePath)
     {
-        string fileName = Path.GetFileName(filePath);
+        var fileName = Path.GetFileName(filePath);
         return !fileName.Contains("main") && !fileName.Contains("runtime") && 
                !fileName.Contains("polyfills") && !fileName.Contains("vendor");
     }
 
     private string DetermineLoadPriority(string filePath)
     {
-        string fileName = Path.GetFileName(filePath);
+        var fileName = Path.GetFileName(filePath);
         
         if (fileName.Contains("main") || fileName.Contains("runtime"))
             return "high";
@@ -1173,19 +1173,19 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var opportunities = new List<string>();
 
-        List<ChunkInfo> largeChunks = chunks.Where(c => c.SizeBytes > 500 * 1024).ToList();
+        var largeChunks = chunks.Where(c => c.SizeBytes > 500 * 1024).ToList();
         if (largeChunks.Count > 0)
         {
             opportunities.Add($"Split {largeChunks.Count} large chunk(s) (>{500}KB) into smaller pieces");
         }
 
-        List<ChunkInfo> smallChunks = chunks.Where(c => c is { SizeBytes: < 10 * 1024, Type: "async" }).ToList();
+        var smallChunks = chunks.Where(c => c is { SizeBytes: < 10 * 1024, Type: "async" }).ToList();
         if (smallChunks.Count > 3)
         {
             opportunities.Add($"Consider merging {smallChunks.Count} small chunks (<10KB) to reduce HTTP overhead");
         }
 
-        List<ChunkInfo> asyncChunks = chunks.Where(c => c.Type == "async").ToList();
+        var asyncChunks = chunks.Where(c => c.Type == "async").ToList();
         if (asyncChunks.Count == 0)
         {
             opportunities.Add("Implement lazy loading to create async chunks");
@@ -1207,8 +1207,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             MergeOpportunities = []
         };
 
-        long totalSize = chunks.Sum(c => c.SizeBytes);
-        long avgSize = chunks.Count > 0 ? totalSize / chunks.Count : 0;
+        var totalSize = chunks.Sum(c => c.SizeBytes);
+        var avgSize = chunks.Count > 0 ? totalSize / chunks.Count : 0;
 
         if (avgSize > 300 * 1024) // Average chunk size > 300KB
         {
@@ -1267,13 +1267,13 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         try
         {
             // Find internal services and modules
-            string[] serviceFiles = Directory.GetFiles(directory, "*.service.ts", SearchOption.AllDirectories);
-            string[] moduleFiles = Directory.GetFiles(directory, "*.module.ts", SearchOption.AllDirectories);
+            var serviceFiles = Directory.GetFiles(directory, "*.service.ts", SearchOption.AllDirectories);
+            var moduleFiles = Directory.GetFiles(directory, "*.module.ts", SearchOption.AllDirectories);
 
-            foreach (string file in serviceFiles.Concat(moduleFiles))
+            foreach (var file in serviceFiles.Concat(moduleFiles))
             {
-                string name = Path.GetFileNameWithoutExtension(file);
-                long estimatedSize = new FileInfo(file).Length * 3; // Estimate with dependencies
+                var name = Path.GetFileNameWithoutExtension(file);
+                var estimatedSize = new FileInfo(file).Length * 3; // Estimate with dependencies
 
                 dependencies.Add(new DependencyImpact
                 {
@@ -1312,8 +1312,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         }
 
         // Identify quick wins
-        List<DependencyImpact> largeDependencies = dependencies.Where(d => d.SizeBytes > 100 * 1024).ToList();
-        foreach (DependencyImpact dep in largeDependencies)
+        var largeDependencies = dependencies.Where(d => d.SizeBytes > 100 * 1024).ToList();
+        foreach (var dep in largeDependencies)
         {
             if (dep.Alternatives.Count > 0)
             {
@@ -1332,13 +1332,13 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var opportunities = new List<string>();
 
-        List<DependencyImpact> largeDeps = analysis.ThirdPartyDependencies.Where(d => d.SizeBytes > 100 * 1024).ToList();
+        var largeDeps = analysis.ThirdPartyDependencies.Where(d => d.SizeBytes > 100 * 1024).ToList();
         if (largeDeps.Count > 0)
         {
             opportunities.Add($"Review {largeDeps.Count} large dependencies (>100KB) for optimization");
         }
 
-        List<DependencyImpact> nonTreeShakable = analysis.ThirdPartyDependencies.Where(d => !d.IsTreeShakable).ToList();
+        var nonTreeShakable = analysis.ThirdPartyDependencies.Where(d => !d.IsTreeShakable).ToList();
         if (nonTreeShakable.Count > 0)
         {
             opportunities.Add($"Enable tree shaking for {nonTreeShakable.Count} dependencies");
@@ -1426,7 +1426,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            string content = File.ReadAllText(componentFile);
+            var content = File.ReadAllText(componentFile);
             return content.Contains("standalone: true") ? "standalone" : "module-based";
         }
         catch
@@ -1440,11 +1440,11 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         try
         {
             var fileInfo = new FileInfo(componentFile);
-            long baseSize = fileInfo.Length;
+            var baseSize = fileInfo.Length;
 
             // Estimate template and style sizes
-            string templateFile = componentFile.Replace(".component.ts", ".component.html");
-            string styleFile = componentFile.Replace(".component.ts", ".component.css");
+            var templateFile = componentFile.Replace(".component.ts", ".component.html");
+            var styleFile = componentFile.Replace(".component.ts", ".component.css");
 
             if (File.Exists(templateFile))
                 baseSize += new FileInfo(templateFile).Length;
@@ -1467,17 +1467,17 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
         try
         {
-            string content = File.ReadAllText(componentFile);
-            string[] lines = content.Split('\n');
+            var content = File.ReadAllText(componentFile);
+            var lines = content.Split('\n');
 
-            foreach (string line in lines)
+            foreach (var line in lines)
             {
                 if (line.Trim().StartsWith("import ") && line.Contains("from "))
                 {
-                    int fromIndex = line.IndexOf("from ");
+                    var fromIndex = line.IndexOf("from ");
                     if (fromIndex >= 0)
                     {
-                        string dependency = line.Substring(fromIndex + 5).Trim().Trim('\'', '"', ';');
+                        var dependency = line.Substring(fromIndex + 5).Trim().Trim('\'', '"', ';');
                         dependencies.Add(dependency);
                     }
                 }
@@ -1500,7 +1500,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
         try
         {
-            string content = File.ReadAllText(componentFile);
+            var content = File.ReadAllText(componentFile);
 
             optimization.OnPushStrategy = content.Contains("ChangeDetectionStrategy.OnPush");
             optimization.UsesStandaloneAPI = content.Contains("standalone: true");
@@ -1537,8 +1537,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
         try
         {
-            string content = File.ReadAllText(componentFile);
-            string[] lines = content.Split('\n');
+            var content = File.ReadAllText(componentFile);
+            var lines = content.Split('\n');
 
             complexity.LogicSize = lines.Length;
             complexity.ImportCount = lines.Count(l => l.Trim().StartsWith("import "));
@@ -1546,8 +1546,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             complexity.LifecycleHookCount = lines.Count(l => l.Contains("ngOn") || l.Contains("ngAfter"));
 
             // Analyze template and style files
-            string templateFile = componentFile.Replace(".component.ts", ".component.html");
-            string styleFile = componentFile.Replace(".component.ts", ".component.css");
+            var templateFile = componentFile.Replace(".component.ts", ".component.html");
+            var styleFile = componentFile.Replace(".component.ts", ".component.css");
 
             if (File.Exists(templateFile))
             {
@@ -1560,7 +1560,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             }
 
             // Determine complexity level
-            int totalComplexity = complexity.LogicSize + complexity.TemplateSize + complexity.StyleSize;
+            var totalComplexity = complexity.LogicSize + complexity.TemplateSize + complexity.StyleSize;
             complexity.ComplexityLevel = totalComplexity switch
             {
                 < 50 => "simple",
@@ -1624,7 +1624,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
     private string DetermineModuleType(string moduleFile)
     {
-        string fileName = Path.GetFileName(moduleFile);
+        var fileName = Path.GetFileName(moduleFile);
         
         if (fileName.Contains("app.module"))
             return "core";
@@ -1640,12 +1640,12 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            List<string> components = FindModuleComponents(moduleFile, directory);
-            List<string> services = FindModuleServices(moduleFile, directory);
+            var components = FindModuleComponents(moduleFile, directory);
+            var services = FindModuleServices(moduleFile, directory);
             
-            long baseSize = new FileInfo(moduleFile).Length;
-            int componentSize = components.Count * 8 * 1024; // 8KB per component
-            int serviceSize = services.Count * 3 * 1024; // 3KB per service
+            var baseSize = new FileInfo(moduleFile).Length;
+            var componentSize = components.Count * 8 * 1024; // 8KB per component
+            var serviceSize = services.Count * 3 * 1024; // 3KB per service
             
             return baseSize + componentSize + serviceSize;
         }
@@ -1661,15 +1661,15 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         
         try
         {
-            string content = File.ReadAllText(moduleFile);
+            var content = File.ReadAllText(moduleFile);
             // Simple heuristic: look for component imports and declarations
-            string[] lines = content.Split('\n');
+            var lines = content.Split('\n');
             
-            foreach (string line in lines)
+            foreach (var line in lines)
             {
                 if (line.Contains("Component") && line.Contains("import"))
                 {
-                    string componentName = ExtractComponentName(line);
+                    var componentName = ExtractComponentName(line);
                     if (!string.IsNullOrEmpty(componentName))
                         components.Add(componentName);
                 }
@@ -1689,14 +1689,14 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         
         try
         {
-            string content = File.ReadAllText(moduleFile);
-            string[] lines = content.Split('\n');
+            var content = File.ReadAllText(moduleFile);
+            var lines = content.Split('\n');
             
-            foreach (string line in lines)
+            foreach (var line in lines)
             {
                 if (line.Contains("Service") && line.Contains("import"))
                 {
-                    string serviceName = ExtractServiceName(line);
+                    var serviceName = ExtractServiceName(line);
                     if (!string.IsNullOrEmpty(serviceName))
                         services.Add(serviceName);
                 }
@@ -1720,7 +1720,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
         try
         {
-            string content = File.ReadAllText(moduleFile);
+            var content = File.ReadAllText(moduleFile);
             
             optimization.IsLazyLoaded = IsModuleLazyLoaded(moduleFile, directory);
             optimization.HasSharedComponents = content.Contains("declarations") && content.Contains("exports");
@@ -1798,7 +1798,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             ["bootstrap"] = 150 * 1024
         };
 
-        if (knownSizes.TryGetValue(packageName, out long size))
+        if (knownSizes.TryGetValue(packageName, out var size))
             return size;
 
         // Estimate based on package name patterns
@@ -1842,7 +1842,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             ["bootstrap"] = ["@angular/material", "ng-bootstrap"]
         };
 
-        return alternatives.TryGetValue(packageName, out List<string>? alts) ? alts : [];
+        return alternatives.TryGetValue(packageName, out var alts) ? alts : [];
     }
 
     private DependencyOptimizationInfo AnalyzeDependencyOptimizationInfo(string name, long size)
@@ -1868,10 +1868,10 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
         if (info.HasSmallerAlternatives)
         {
-            List<string> alternatives = GetDependencyAlternatives(name);
-            foreach (string alt in alternatives)
+            var alternatives = GetDependencyAlternatives(name);
+            foreach (var alt in alternatives)
             {
-                long altSize = EstimateDependencySize(alt);
+                var altSize = EstimateDependencySize(alt);
                 if (altSize < size)
                 {
                     info.AlternativeDependencies.Add(new AlternativeDependency
@@ -1918,7 +1918,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var recommendations = new List<OptimizationRecommendation>();
 
-        List<ComponentBundleImpact> criticalComponents = components.Where(c => c.ImpactLevel == "critical").ToList();
+        var criticalComponents = components.Where(c => c.ImpactLevel == "critical").ToList();
         if (criticalComponents.Count > 0)
         {
             recommendations.Add(new OptimizationRecommendation
@@ -1943,7 +1943,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             });
         }
 
-        List<ComponentBundleImpact> nonOnPushComponents = components.Where(c => !c.Optimization.OnPushStrategy).Take(10).ToList();
+        var nonOnPushComponents = components.Where(c => !c.Optimization.OnPushStrategy).Take(10).ToList();
         if (nonOnPushComponents.Count > 0)
         {
             recommendations.Add(new OptimizationRecommendation
@@ -1974,7 +1974,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var recommendations = new List<OptimizationRecommendation>();
 
-        List<DependencyImpact> largeDependencies = dependencies.ThirdPartyDependencies
+        var largeDependencies = dependencies.ThirdPartyDependencies
             .Where(d => d.SizeBytes > 100 * 1024)
             .OrderByDescending(d => d.SizeBytes)
             .Take(5)
@@ -2034,7 +2034,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var recommendations = new List<OptimizationRecommendation>();
 
-        List<AssetAnalysis> largeImages = assets.Where(a => a is { AssetType: "image", SizeBytes: > 100 * 1024 }).ToList();
+        var largeImages = assets.Where(a => a is { AssetType: "image", SizeBytes: > 100 * 1024 }).ToList();
         if (largeImages.Count > 0)
         {
             recommendations.Add(new OptimizationRecommendation
@@ -2058,7 +2058,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
             });
         }
 
-        List<AssetAnalysis> unoptimizedAssets = assets.Where(a => !a.IsOptimized).Take(10).ToList();
+        var unoptimizedAssets = assets.Where(a => !a.IsOptimized).Take(10).ToList();
         if (unoptimizedAssets.Count > 0)
         {
             recommendations.Add(new OptimizationRecommendation
@@ -2088,7 +2088,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         var recommendations = new List<OptimizationRecommendation>();
 
-        List<ChunkInfo> largeChunks = chunks.Chunks.Where(c => c.SizeBytes > 500 * 1024).ToList();
+        var largeChunks = chunks.Chunks.Where(c => c.SizeBytes > 500 * 1024).ToList();
         if (largeChunks.Count > 0)
         {
             recommendations.Add(new OptimizationRecommendation
@@ -2231,9 +2231,9 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         };
 
         // Create implementation phases
-        List<OptimizationRecommendation> highPriority = recommendations.Where(r => r.Priority == "high").ToList();
-        List<OptimizationRecommendation> mediumPriority = recommendations.Where(r => r.Priority == "medium").ToList();
-        List<OptimizationRecommendation> lowPriority = recommendations.Where(r => r.Priority == "low").ToList();
+        var highPriority = recommendations.Where(r => r.Priority == "high").ToList();
+        var mediumPriority = recommendations.Where(r => r.Priority == "medium").ToList();
+        var lowPriority = recommendations.Where(r => r.Priority == "low").ToList();
 
         if (highPriority.Count > 0)
         {
@@ -2284,14 +2284,14 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     private string ExtractComponentName(string line)
     {
         // Simple extraction - would need more robust parsing
-        string[] parts = line.Split(' ', ',', '{', '}');
+        var parts = line.Split(' ', ',', '{', '}');
         return parts.FirstOrDefault(p => p.EndsWith("Component")) ?? "";
     }
 
     private string ExtractServiceName(string line)
     {
         // Simple extraction - would need more robust parsing
-        string[] parts = line.Split(' ', ',', '{', '}');
+        var parts = line.Split(' ', ',', '{', '}');
         return parts.FirstOrDefault(p => p.EndsWith("Service")) ?? "";
     }
 
@@ -2304,7 +2304,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
     private string EstimateImplementationTime(List<OptimizationRecommendation> recommendations)
     {
-        int totalWeeks = recommendations.Sum(r => ParseTimeEstimate(r.EstimatedTime));
+        var totalWeeks = recommendations.Sum(r => ParseTimeEstimate(r.EstimatedTime));
         return totalWeeks <= 4 ? "1-4 weeks" :
                totalWeeks <= 8 ? "1-2 months" :
                totalWeeks <= 16 ? "2-4 months" : "4+ months";
@@ -2315,7 +2315,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
         // Parse time estimates like "1-2 weeks", "3-4 weeks", etc.
         if (timeEstimate.Contains("week"))
         {
-            MatchCollection numbers = Regex.Matches(timeEstimate, @"\d+");
+            var numbers = Regex.Matches(timeEstimate, @"\d+");
             if (numbers.Count > 0)
             {
                 return int.Parse(numbers[0].Value);
@@ -2326,8 +2326,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 
     private string DetermineExpectedImpact(List<OptimizationRecommendation> recommendations)
     {
-        long totalSavings = recommendations.Sum(r => r.PotentialSavings);
-        int highPriorityCount = recommendations.Count(r => r.Priority == "high");
+        var totalSavings = recommendations.Sum(r => r.PotentialSavings);
+        var highPriorityCount = recommendations.Count(r => r.Priority == "high");
 
         if (totalSavings > 500 * 1024 || highPriorityCount > 3)
             return "Significant improvement in loading performance and user experience";
@@ -2339,9 +2339,9 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     private List<string> GetPrimaryFocusAreas(List<OptimizationRecommendation> recommendations)
     {
         var focusAreas = new List<string>();
-        List<IGrouping<string, OptimizationRecommendation>> categories = recommendations.GroupBy(r => r.Category).ToList();
+        var categories = recommendations.GroupBy(r => r.Category).ToList();
 
-        foreach (IGrouping<string, OptimizationRecommendation> category in categories.OrderByDescending(g => g.Count()))
+        foreach (var category in categories.OrderByDescending(g => g.Count()))
         {
             focusAreas.Add($"{category.Key} optimization ({category.Count()} recommendations)");
         }

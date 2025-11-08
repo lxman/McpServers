@@ -24,7 +24,7 @@ public class CostManagementTools(
         try
         {
             logger.LogDebug("Getting current month costs");
-            CostQueryResult result = await costService.GetCurrentMonthCostsAsync(subscriptionId);
+            var result = await costService.GetCurrentMonthCostsAsync(subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -56,9 +56,9 @@ public class CostManagementTools(
         {
             logger.LogDebug("Getting costs for period {StartDate} to {EndDate}", startDate, endDate);
 
-            DateTime start = DateTime.Parse(startDate);
-            DateTime end = DateTime.Parse(endDate);
-            CostQueryResult result = await costService.GetCostsForPeriodAsync(start, end, subscriptionId);
+            var start = DateTime.Parse(startDate);
+            var end = DateTime.Parse(endDate);
+            var result = await costService.GetCostsForPeriodAsync(start, end, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -90,9 +90,9 @@ public class CostManagementTools(
         {
             logger.LogDebug("Getting costs by service");
 
-            DateTime start = DateTime.Parse(startDate);
-            DateTime end = DateTime.Parse(endDate);
-            CostQueryResult result = await costService.GetCostsByServiceAsync(start, end, subscriptionId);
+            var start = DateTime.Parse(startDate);
+            var end = DateTime.Parse(endDate);
+            var result = await costService.GetCostsByServiceAsync(start, end, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -124,9 +124,9 @@ public class CostManagementTools(
         {
             logger.LogDebug("Getting costs by resource group");
 
-            DateTime start = DateTime.Parse(startDate);
-            DateTime end = DateTime.Parse(endDate);
-            CostQueryResult result = await costService.GetCostsByResourceGroupAsync(start, end, subscriptionId);
+            var start = DateTime.Parse(startDate);
+            var end = DateTime.Parse(endDate);
+            var result = await costService.GetCostsByResourceGroupAsync(start, end, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -158,9 +158,9 @@ public class CostManagementTools(
         {
             logger.LogDebug("Getting daily costs");
 
-            DateTime start = DateTime.Parse(startDate);
-            DateTime end = DateTime.Parse(endDate);
-            CostQueryResult result = await costService.GetDailyCostsAsync(start, end, subscriptionId);
+            var start = DateTime.Parse(startDate);
+            var end = DateTime.Parse(endDate);
+            var result = await costService.GetDailyCostsAsync(start, end, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -188,7 +188,7 @@ public class CostManagementTools(
         try
         {
             logger.LogDebug("Getting cost forecast");
-            CostQueryResult result = await costService.GetCostForecastAsync(daysAhead, subscriptionId);
+            var result = await costService.GetCostForecastAsync(daysAhead, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -216,7 +216,7 @@ public class CostManagementTools(
         try
         {
             logger.LogDebug("Getting budgets");
-            IEnumerable<BudgetDto> budgets = await costService.GetBudgetsAsync(subscriptionId);
+            var budgets = await costService.GetBudgetsAsync(subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -244,7 +244,7 @@ public class CostManagementTools(
         try
         {
             logger.LogDebug("Getting budget {BudgetName}", budgetName);
-            BudgetDto? budget = await costService.GetBudgetAsync(budgetName, subscriptionId);
+            var budget = await costService.GetBudgetAsync(budgetName, subscriptionId);
 
             if (budget is null)
             {

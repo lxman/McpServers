@@ -23,9 +23,9 @@ namespace DesktopCommander.Core.Services
             }
 
             using var sha256 = SHA256.Create();
-            using FileStream stream = File.OpenRead(filePath);
-            byte[] hashBytes = sha256.ComputeHash(stream);
-            string hashString = Convert.ToHexStringLower(hashBytes);
+            using var stream = File.OpenRead(filePath);
+            var hashBytes = sha256.ComputeHash(stream);
+            var hashString = Convert.ToHexStringLower(hashBytes);
             return $"sha256:{hashString}";
         }
 
@@ -36,9 +36,9 @@ namespace DesktopCommander.Core.Services
         /// <returns>Version token in format "sha256:hexstring"</returns>
         public static string ComputeVersionTokenFromContent(string content)
         {
-            byte[] contentBytes = Encoding.UTF8.GetBytes(content);
-            byte[] hashBytes = SHA256.HashData(contentBytes);
-            string hashString = Convert.ToHexStringLower(hashBytes);
+            var contentBytes = Encoding.UTF8.GetBytes(content);
+            var hashBytes = SHA256.HashData(contentBytes);
+            var hashString = Convert.ToHexStringLower(hashBytes);
             return $"sha256:{hashString}";
         }
 
@@ -60,7 +60,7 @@ namespace DesktopCommander.Core.Services
                 throw new FileNotFoundException($"File not found: {filePath}");
             }
 
-            string currentToken = ComputeVersionToken(filePath);
+            var currentToken = ComputeVersionToken(filePath);
             return string.Equals(currentToken, expectedToken, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -84,7 +84,7 @@ namespace DesktopCommander.Core.Services
                 throw new FileNotFoundException($"File not found: {filePath}");
             }
 
-            string currentToken = ComputeVersionToken(filePath);
+            var currentToken = ComputeVersionToken(filePath);
             
             if (!string.Equals(currentToken, expectedToken, StringComparison.OrdinalIgnoreCase))
             {

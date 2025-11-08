@@ -32,8 +32,8 @@ public class AdvancedFileReadingTools(
                     SerializerOptions.JsonOptionsIndented);
             }
 
-            string[] allLines = await File.ReadAllLinesAsync(filePath);
-            int totalLines = allLines.Length;
+            var allLines = await File.ReadAllLinesAsync(filePath);
+            var totalLines = allLines.Length;
 
             if (startLine < 1 || startLine > totalLines)
             {
@@ -47,9 +47,9 @@ public class AdvancedFileReadingTools(
                     SerializerOptions.JsonOptionsIndented);
             }
 
-            string[] linesToReturn = allLines.Skip(startLine - 1).Take(endLine - startLine + 1).ToArray();
-            string content = string.Join(Environment.NewLine, linesToReturn);
-            string versionToken = FileVersionService.ComputeVersionToken(filePath);
+            var linesToReturn = allLines.Skip(startLine - 1).Take(endLine - startLine + 1).ToArray();
+            var content = string.Join(Environment.NewLine, linesToReturn);
+            var versionToken = FileVersionService.ComputeVersionToken(filePath);
 
             return JsonSerializer.Serialize(new
             {
@@ -89,8 +89,8 @@ public class AdvancedFileReadingTools(
                     SerializerOptions.JsonOptionsIndented);
             }
 
-            string[] allLines = await File.ReadAllLinesAsync(filePath);
-            int totalLines = allLines.Length;
+            var allLines = await File.ReadAllLinesAsync(filePath);
+            var totalLines = allLines.Length;
 
             if (lineNumber < 1 || lineNumber > totalLines)
             {
@@ -98,12 +98,12 @@ public class AdvancedFileReadingTools(
                     SerializerOptions.JsonOptionsIndented);
             }
 
-            int startLine = Math.Max(1, lineNumber - contextLines);
-            int endLine = Math.Min(totalLines, lineNumber + contextLines);
+            var startLine = Math.Max(1, lineNumber - contextLines);
+            var endLine = Math.Min(totalLines, lineNumber + contextLines);
 
-            string[] linesToReturn = allLines.Skip(startLine - 1).Take(endLine - startLine + 1).ToArray();
-            string content = string.Join(Environment.NewLine, linesToReturn);
-            string versionToken = FileVersionService.ComputeVersionToken(filePath);
+            var linesToReturn = allLines.Skip(startLine - 1).Take(endLine - startLine + 1).ToArray();
+            var content = string.Join(Environment.NewLine, linesToReturn);
+            var versionToken = FileVersionService.ComputeVersionToken(filePath);
 
             return JsonSerializer.Serialize(new
             {
@@ -145,8 +145,8 @@ public class AdvancedFileReadingTools(
                     SerializerOptions.JsonOptionsIndented);
             }
 
-            string[] allLines = await File.ReadAllLinesAsync(filePath);
-            int totalLines = allLines.Length;
+            var allLines = await File.ReadAllLinesAsync(filePath);
+            var totalLines = allLines.Length;
 
             if (startLine < 1 || startLine > totalLines)
             {
@@ -154,12 +154,12 @@ public class AdvancedFileReadingTools(
                     SerializerOptions.JsonOptionsIndented);
             }
 
-            int endLine = Math.Min(totalLines, startLine + maxLines - 1);
-            string[] linesToReturn = allLines.Skip(startLine - 1).Take(endLine - startLine + 1).ToArray();
-            string content = string.Join(Environment.NewLine, linesToReturn);
-            string versionToken = FileVersionService.ComputeVersionToken(filePath);
+            var endLine = Math.Min(totalLines, startLine + maxLines - 1);
+            var linesToReturn = allLines.Skip(startLine - 1).Take(endLine - startLine + 1).ToArray();
+            var content = string.Join(Environment.NewLine, linesToReturn);
+            var versionToken = FileVersionService.ComputeVersionToken(filePath);
 
-            bool hasMore = endLine < totalLines;
+            var hasMore = endLine < totalLines;
             int? nextStartLine = hasMore ? endLine + 1 : null;
 
             return JsonSerializer.Serialize(new

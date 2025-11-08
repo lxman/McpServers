@@ -73,7 +73,7 @@ public class OcrTools(
                 return JsonSerializer.Serialize(new { success = false, error = "File must be a PDF" }, _jsonOptions);
             }
 
-            bool isScanned = ocrService.IsPdfScanned(filePath, null);
+            var isScanned = ocrService.IsPdfScanned(filePath, null);
 
             return JsonSerializer.Serialize(new
             {
@@ -120,7 +120,7 @@ public class OcrTools(
                 return JsonSerializer.Serialize(new { success = false, error = "File must be a PDF" }, _jsonOptions);
             }
 
-            OcrResult result = await ocrService.ExtractTextFromScannedPdf(filePath, null);
+            var result = await ocrService.ExtractTextFromScannedPdf(filePath, null);
 
             if (!result.Success)
             {
@@ -168,7 +168,7 @@ public class OcrTools(
             }
 
             string[] supportedFormats = [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".tif"];
-            string extension = Path.GetExtension(filePath).ToLower();
+            var extension = Path.GetExtension(filePath).ToLower();
             if (!supportedFormats.Contains(extension))
             {
                 return JsonSerializer.Serialize(new
@@ -178,7 +178,7 @@ public class OcrTools(
                 }, _jsonOptions);
             }
 
-            OcrResult result = await ocrService.ExtractTextFromImage(filePath, enhanceImage);
+            var result = await ocrService.ExtractTextFromImage(filePath, enhanceImage);
 
             if (!result.Success)
             {

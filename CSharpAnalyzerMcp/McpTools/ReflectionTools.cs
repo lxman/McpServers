@@ -22,7 +22,7 @@ public class ReflectionTools(AssemblyAnalysisService analysisService, ILogger<Re
         try
         {
             logger.LogDebug("Getting assembly info for: {AssemblyPath}", assemblyPath);
-            AssemblyInfoResponse result = analysisService.GetAssemblyInfo(assemblyPath);
+            var result = analysisService.GetAssemblyInfo(assemblyPath);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -54,7 +54,7 @@ public class ReflectionTools(AssemblyAnalysisService analysisService, ILogger<Re
                 TypeKindFilter = typeKindFilter
             };
 
-            ListTypesResponse result = analysisService.ListTypes(request);
+            var result = analysisService.ListTypes(request);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)

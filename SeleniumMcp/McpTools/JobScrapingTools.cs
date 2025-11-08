@@ -33,7 +33,7 @@ public class JobScrapingTools(
         {
             logger.LogDebug("Scraping multiple sites for {SearchTerm} in {Location}", searchTerm, location);
 
-            List<JobSite> sites = JsonSerializer.Deserialize<List<JobSite>>(sitesJson) ?? [];
+            var sites = JsonSerializer.Deserialize<List<JobSite>>(sitesJson) ?? [];
 
             var request = new EnhancedScrapeRequest
             {
@@ -45,7 +45,7 @@ public class JobScrapingTools(
                 UserId = userId
             };
 
-            List<EnhancedJobListing> result = await scrapingService.ScrapeMultipleSitesAsync(request);
+            var result = await scrapingService.ScrapeMultipleSitesAsync(request);
 
             return JsonSerializer.Serialize(new
             {
@@ -77,7 +77,7 @@ public class JobScrapingTools(
         {
             logger.LogDebug("Scraping site {Site} for {SearchTerm} in {Location}", site, searchTerm, location);
 
-            if (!Enum.TryParse<JobSite>(site, ignoreCase: true, out JobSite jobSite))
+            if (!Enum.TryParse<JobSite>(site, ignoreCase: true, out var jobSite))
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Invalid site: {site}" }, _jsonOptions);
             }
@@ -91,7 +91,7 @@ public class JobScrapingTools(
                 UserId = userId
             };
 
-            List<EnhancedJobListing> result = await scrapingService.ScrapeSpecificSiteAsync(jobSite, request);
+            var result = await scrapingService.ScrapeSpecificSiteAsync(jobSite, request);
 
             return JsonSerializer.Serialize(new
             {
@@ -131,7 +131,7 @@ public class JobScrapingTools(
                 UserId = userId
             };
 
-            List<EnhancedJobListing> result = await googleService.DiscoverAndFetchJobsAsync(request);
+            var result = await googleService.DiscoverAndFetchJobsAsync(request);
 
             return JsonSerializer.Serialize(new
             {

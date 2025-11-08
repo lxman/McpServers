@@ -22,7 +22,7 @@ public class RoslynTools(ILogger<RoslynTools> logger)
         try
         {
             logger.LogDebug("Analyzing code with length: {Length}", code.Length);
-            AnalyzeCodeResponse result = RoslynAnalysisService.AnalyzeCodeAsync(code, filePath);
+            var result = RoslynAnalysisService.AnalyzeCodeAsync(code, filePath);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -39,7 +39,7 @@ public class RoslynTools(ILogger<RoslynTools> logger)
         try
         {
             logger.LogDebug("Getting symbols with filter: {Filter}", filter ?? "none");
-            GetSymbolsResponse result = await RoslynAnalysisService.GetSymbolsAsync(code, filePath, filter);
+            var result = await RoslynAnalysisService.GetSymbolsAsync(code, filePath, filter);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -62,7 +62,7 @@ public class RoslynTools(ILogger<RoslynTools> logger)
         try
         {
             logger.LogDebug("Formatting code with length: {Length}", code.Length);
-            FormatCodeResponse result = await RoslynAnalysisService.FormatCodeAsync(code, filePath);
+            var result = await RoslynAnalysisService.FormatCodeAsync(code, filePath);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -84,7 +84,7 @@ public class RoslynTools(ILogger<RoslynTools> logger)
         try
         {
             logger.LogDebug("Getting type info at line {Line}, column {Column}", line, column);
-            GetTypeInfoResponse result = await RoslynAnalysisService.GetTypeInfoAsync(code, line, column, filePath);
+            var result = await RoslynAnalysisService.GetTypeInfoAsync(code, line, column, filePath);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -101,7 +101,7 @@ public class RoslynTools(ILogger<RoslynTools> logger)
         try
         {
             logger.LogDebug("Calculating metrics for code with length: {Length}", code.Length);
-            CalculateMetricsResponse result = await RoslynAnalysisService.CalculateMetricsAsync(code, filePath);
+            var result = await RoslynAnalysisService.CalculateMetricsAsync(code, filePath);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -118,7 +118,7 @@ public class RoslynTools(ILogger<RoslynTools> logger)
         try
         {
             logger.LogDebug("Removing unused usings from code with length: {Length}", code.Length);
-            RemoveUnusedUsingsResponse result = await RoslynAnalysisService.RemoveUnusedUsingsAsync(code, filePath);
+            var result = await RoslynAnalysisService.RemoveUnusedUsingsAsync(code, filePath);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -140,7 +140,7 @@ public class RoslynTools(ILogger<RoslynTools> logger)
         try
         {
             logger.LogDebug("Finding dead code in code with length: {Length}", code.Length);
-            FindDeadCodeResponse result = await RoslynAnalysisService.FindDeadCodeAsync(code, filePath);
+            var result = await RoslynAnalysisService.FindDeadCodeAsync(code, filePath);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)
@@ -157,7 +157,7 @@ public class RoslynTools(ILogger<RoslynTools> logger)
         try
         {
             logger.LogDebug("Getting code fixes for code with length: {Length}", code.Length);
-            GetCodeFixesResponse result = await RoslynAnalysisService.GetCodeFixesAsync(code, filePath);
+            var result = await RoslynAnalysisService.GetCodeFixesAsync(code, filePath);
             return JsonSerializer.Serialize(result, _jsonOptions);
         }
         catch (Exception ex)

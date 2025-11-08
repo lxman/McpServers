@@ -29,7 +29,7 @@ namespace MsOfficeCrypto
 
             try
             {
-                using RootStorage root = RootStorage.OpenRead(filePath);
+                using var root = RootStorage.OpenRead(filePath);
                 return IsEncryptedOleDocument(root);
             }
             catch (Exception)
@@ -49,7 +49,7 @@ namespace MsOfficeCrypto
             if (!stream.CanRead)
                 return false;
 
-            long originalPosition = stream.Position;
+            var originalPosition = stream.Position;
             var memoryStream = new MemoryStream();
             try
             {
@@ -57,7 +57,7 @@ namespace MsOfficeCrypto
                 stream.CopyTo(memoryStream);
                 memoryStream.Position = 0;
         
-                using RootStorage root = RootStorage.Open(memoryStream);
+                using var root = RootStorage.Open(memoryStream);
                 return IsEncryptedOleDocument(root);
             }
             catch (Exception)
@@ -89,7 +89,7 @@ namespace MsOfficeCrypto
 
             try
             {
-                using RootStorage root = RootStorage.OpenRead(filePath);
+                using var root = RootStorage.OpenRead(filePath);
                 return ExtractEncryptionInfo(root, filePath);
             }
             catch (Exception ex)
@@ -110,14 +110,14 @@ namespace MsOfficeCrypto
 
             // Copy to MemoryStream to avoid RootStorage disposing the original stream
             var memoryStream = new MemoryStream();
-            long originalPosition = stream.Position;
+            var originalPosition = stream.Position;
             try
             {
                 stream.Position = 0;
                 stream.CopyTo(memoryStream);
                 memoryStream.Position = 0;
         
-                using RootStorage root = RootStorage.Open(memoryStream);
+                using var root = RootStorage.Open(memoryStream);
                 return ExtractEncryptionInfo(root, "<stream>");
             }
             catch (Exception ex)
@@ -154,7 +154,7 @@ namespace MsOfficeCrypto
 
             try
             {
-                using RootStorage root = RootStorage.OpenRead(filePath);
+                using var root = RootStorage.OpenRead(filePath);
                 return ExtractEncryptedPackageData(root, encryptionInfo);
             }
             catch (Exception ex)
@@ -181,14 +181,14 @@ namespace MsOfficeCrypto
 
             // Copy to MemoryStream to avoid RootStorage disposing the original stream
             var memoryStream = new MemoryStream();
-            long originalPosition = stream.Position;
+            var originalPosition = stream.Position;
             try
             {
                 stream.Position = 0;
                 stream.CopyTo(memoryStream);
                 memoryStream.Position = 0;
         
-                using RootStorage root = RootStorage.Open(memoryStream);
+                using var root = RootStorage.Open(memoryStream);
                 return ExtractEncryptedPackageData(root, encryptionInfo);
             }
             catch (Exception ex)
@@ -218,7 +218,7 @@ namespace MsOfficeCrypto
                 throw new OfficeCryptoException("EncryptedPackage stream not found");
             }
 
-            using CfbStream encryptedPackageStream = root.OpenStream("EncryptedPackage");
+            using var encryptedPackageStream = root.OpenStream("EncryptedPackage");
 
             if (encryptedPackageStream.Length < 8)
             {
@@ -231,7 +231,7 @@ namespace MsOfficeCrypto
 
             var encryptedDataLength = (int)(encryptedPackageStream.Length - 8);
             var encryptedData = new byte[encryptedDataLength];
-            int bytesRead = encryptedPackageStream.Read(encryptedData, 0, encryptedDataLength);
+            var bytesRead = encryptedPackageStream.Read(encryptedData, 0, encryptedDataLength);
 
             return bytesRead != encryptedDataLength
                 ? throw new OfficeCryptoException($"Failed to read complete EncryptedPackage data. Expected {encryptedDataLength} bytes, read {bytesRead} bytes")
@@ -275,7 +275,7 @@ namespace MsOfficeCrypto
             // Check for EncryptedPackage
             if (TryOpenStream(root, "EncryptedPackage"))
             {
-                using CfbStream encPackageStream = root.OpenStream("EncryptedPackage");
+                using var encPackageStream = root.OpenStream("EncryptedPackage");
                 encInfo.EncryptedPackageSize = (int)encPackageStream.Length;
             }
 
@@ -299,7 +299,7 @@ namespace MsOfficeCrypto
         {
             try
             {
-                using CfbStream stream = root.OpenStream(streamName);
+                using var stream = root.OpenStream(streamName);
                 return true;
             }
             catch (Exception)
@@ -315,7 +315,7 @@ namespace MsOfficeCrypto
         {
             try
             {
-                Storage storage = root.OpenStorage(storageName);
+                var storage = root.OpenStorage(storageName);
                 return true;
             }
             catch (Exception)
@@ -351,26 +351,26 @@ namespace MsOfficeCrypto
         {
             try
             {
-                Storage dataSpaces = root.OpenStorage("DataSpaces");
+                var dataSpaces = root.OpenStorage("DataSpaces");
 
                 // Look for common DataSpaces streams using try/catch
                 try
                 {
-                    using CfbStream dataSpaceMapStream = dataSpaces.OpenStream("DataSpaceMap");
+                    using var dataSpaceMapStream = dataSpaces.OpenStream("DataSpaceMap");
                     encInfo.HasDataSpaceMap = true;
                 }
                 catch { encInfo.HasDataSpaceMap = false; }
 
                 try
                 {
-                    using CfbStream dataSpaceInfoStream = dataSpaces.OpenStream("DataSpaceInfo");
+                    using var dataSpaceInfoStream = dataSpaces.OpenStream("DataSpaceInfo");
                     encInfo.HasDataSpaceInfo = true;
                 }
                 catch { encInfo.HasDataSpaceInfo = false; }
 
                 try
                 {
-                    Storage transformInfoStorage = dataSpaces.OpenStorage("TransformInfo");
+                    var transformInfoStorage = dataSpaces.OpenStorage("TransformInfo");
                     encInfo.HasTransformInfo = true;
                 }
                 catch { encInfo.HasTransformInfo = false; }
@@ -389,7 +389,7 @@ namespace MsOfficeCrypto
         /// </summary>
         private static void ExtractModernEncryptionInfo(RootStorage root, EncryptionInfo encInfo)
         {
-            using CfbStream encStream = root.OpenStream("EncryptionInfo");
+            using var encStream = root.OpenStream("EncryptionInfo");
             encInfo.EncryptionInfoSize = (int)encStream.Length;
             encInfo.EncryptionInfoData = new byte[encStream.Length];
             _ = encStream.Read(encInfo.EncryptionInfoData, 0, encInfo.EncryptionInfoData.Length);
@@ -424,14 +424,14 @@ namespace MsOfficeCrypto
                 var xmlData = new byte[encInfo.EncryptionInfoData.Length - 8];
                 Array.Copy(encInfo.EncryptionInfoData, 8, xmlData, 0, xmlData.Length);
                 
-                string xmlString = Encoding.UTF8.GetString(xmlData);
-                XDocument doc = XDocument.Parse(xmlString);
+                var xmlString = Encoding.UTF8.GetString(xmlData);
+                var doc = XDocument.Parse(xmlString);
                 
                 XNamespace encNs = "http://schemas.microsoft.com/office/2006/encryption";
                 XNamespace keyEncNs = "http://schemas.microsoft.com/office/2006/keyEncryptor/password";
                 
                 // Extract keyData
-                XElement? keyDataElem = doc.Root?.Element(encNs + "keyData");
+                var keyDataElem = doc.Root?.Element(encNs + "keyData");
                 if (keyDataElem != null)
                 {
                     encInfo.AgileHashAlgorithm = keyDataElem.Attribute("hashAlgorithm")?.Value;
@@ -439,7 +439,7 @@ namespace MsOfficeCrypto
                     encInfo.AgileCipherChaining = keyDataElem.Attribute("cipherChaining")?.Value;
                     encInfo.AgileBlockSize = int.Parse(keyDataElem.Attribute("blockSize")?.Value ?? "16");
                     
-                    string saltValue = keyDataElem.Attribute("saltValue")?.Value ?? string.Empty;
+                    var saltValue = keyDataElem.Attribute("saltValue")?.Value ?? string.Empty;
                     if (!string.IsNullOrEmpty(saltValue))
                     {
                         encInfo.AgileKeyData = Convert.FromBase64String(saltValue);
@@ -447,7 +447,7 @@ namespace MsOfficeCrypto
                 }
                 
                 // Extract encryptedKey
-                XElement? encryptedKeyElem = doc.Root?
+                var encryptedKeyElem = doc.Root?
                     .Element(encNs + "keyEncryptors")?
                     .Elements(encNs + "keyEncryptor")
                     .FirstOrDefault(e => e.Attribute("uri")?.Value?.Contains("password") == true)?
@@ -456,25 +456,25 @@ namespace MsOfficeCrypto
                 if (encryptedKeyElem == null) return;
                 encInfo.AgileSpinCount = int.Parse(encryptedKeyElem.Attribute("spinCount")?.Value ?? "100000");
                 
-                string passwordSaltValue = encryptedKeyElem.Attribute("saltValue")?.Value ?? string.Empty;
+                var passwordSaltValue = encryptedKeyElem.Attribute("saltValue")?.Value ?? string.Empty;
                 if (!string.IsNullOrEmpty(passwordSaltValue))
                 {
                     encInfo.AgilePasswordSalt = Convert.FromBase64String(passwordSaltValue);
                 }
                     
-                string verifierHashInput = encryptedKeyElem.Attribute("encryptedVerifierHashInput")?.Value ?? string.Empty;
+                var verifierHashInput = encryptedKeyElem.Attribute("encryptedVerifierHashInput")?.Value ?? string.Empty;
                 if (!string.IsNullOrEmpty(verifierHashInput))
                 {
                     encInfo.AgileVerifierHashInput = Convert.FromBase64String(verifierHashInput);
                 }
                     
-                string verifierHashValue = encryptedKeyElem.Attribute("encryptedVerifierHashValue")?.Value ?? string.Empty;
+                var verifierHashValue = encryptedKeyElem.Attribute("encryptedVerifierHashValue")?.Value ?? string.Empty;
                 if (!string.IsNullOrEmpty(verifierHashValue))
                 {
                     encInfo.AgileVerifierHashValue = Convert.FromBase64String(verifierHashValue);
                 }
                     
-                string encryptedKeyValue = encryptedKeyElem.Attribute("encryptedKeyValue")?.Value ?? string.Empty;
+                var encryptedKeyValue = encryptedKeyElem.Attribute("encryptedKeyValue")?.Value ?? string.Empty;
                 if (!string.IsNullOrEmpty(encryptedKeyValue))
                 {
                     encInfo.AgileEncryptedKeyValue = Convert.FromBase64String(encryptedKeyValue);

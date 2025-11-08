@@ -39,7 +39,7 @@ public class CollectionTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Document JSON is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.InsertOneAsync(serverName, collectionName, documentJson);
+            var result = await mongoService.InsertOneAsync(serverName, collectionName, documentJson);
 
             return result;
         }
@@ -73,7 +73,7 @@ public class CollectionTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Documents JSON array is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.InsertManyAsync(serverName, collectionName, documentsJson);
+            var result = await mongoService.InsertManyAsync(serverName, collectionName, documentsJson);
 
             return result;
         }
@@ -103,7 +103,7 @@ public class CollectionTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.QueryAsync(serverName, collectionName, filterJson ?? "{}", limit, skip);
+            var result = await mongoService.QueryAsync(serverName, collectionName, filterJson ?? "{}", limit, skip);
 
             return result;
         }
@@ -142,7 +142,7 @@ public class CollectionTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Update JSON is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.UpdateOneAsync(serverName, collectionName, filterJson, updateJson);
+            var result = await mongoService.UpdateOneAsync(serverName, collectionName, filterJson, updateJson);
 
             return result;
         }
@@ -181,7 +181,7 @@ public class CollectionTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Update JSON is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.UpdateManyAsync(serverName, collectionName, filterJson, updateJson);
+            var result = await mongoService.UpdateManyAsync(serverName, collectionName, filterJson, updateJson);
 
             return result;
         }
@@ -215,7 +215,7 @@ public class CollectionTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Filter JSON is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.DeleteOneAsync(serverName, collectionName, filterJson);
+            var result = await mongoService.DeleteOneAsync(serverName, collectionName, filterJson);
 
             return result;
         }
@@ -249,7 +249,7 @@ public class CollectionTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Filter JSON is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.DeleteManyAsync(serverName, collectionName, filterJson);
+            var result = await mongoService.DeleteManyAsync(serverName, collectionName, filterJson);
 
             return result;
         }

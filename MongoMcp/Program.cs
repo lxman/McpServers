@@ -7,7 +7,7 @@ using MongoServer.Core.Services;
 using Serilog;
 
 // Configure Serilog to write to a file (stdout is reserved for MCP protocol)
-string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "mongomcp.log");
+var logPath = Path.Combine(AppContext.BaseDirectory, "logs", "mongomcp.log");
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
@@ -15,7 +15,7 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+    var builder = Host.CreateApplicationBuilder(args);
 
     // Add Serilog
     builder.Services.AddSerilog();
@@ -43,7 +43,7 @@ try
         .WithTools<AdvancedTools>()
         .WithTools<CrossServerTools>();
 
-    IHost host = builder.Build();
+    var host = builder.Build();
 
     Log.Information("MongoMcp starting...");
     await host.RunAsync();

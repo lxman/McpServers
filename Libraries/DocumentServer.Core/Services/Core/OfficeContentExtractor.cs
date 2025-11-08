@@ -109,18 +109,18 @@ public class OfficeContentExtractor : IContentExtractor
 
         var textBuilder = new StringBuilder();
 
-        foreach (IXLWorksheet worksheet in workbook.Worksheets)
+        foreach (var worksheet in workbook.Worksheets)
         {
             textBuilder.AppendLine($"=== Worksheet: {worksheet.Name} ===");
             textBuilder.AppendLine();
 
-            IXLRange? usedRange = worksheet.RangeUsed();
+            var usedRange = worksheet.RangeUsed();
             if (usedRange is not null)
             {
                 foreach (IXLRow row in usedRange.Rows())
                 {
                     List<string> values = [];
-                    foreach (IXLCell cell in row.CellsUsed())
+                    foreach (var cell in row.CellsUsed())
                     {
                         values.Add(cell.Value.ToString() ?? string.Empty);
                     }
@@ -159,10 +159,10 @@ public class OfficeContentExtractor : IContentExtractor
         var totalRows = 0;
         var worksheetNames = new List<string>();
 
-        foreach (IXLWorksheet worksheet in workbook.Worksheets)
+        foreach (var worksheet in workbook.Worksheets)
         {
             worksheetNames.Add(worksheet.Name);
-            IXLRange? usedRange = worksheet.RangeUsed();
+            var usedRange = worksheet.RangeUsed();
             if (usedRange is not null)
             {
                 totalCells += usedRange.CellsUsed().Count();
@@ -186,9 +186,9 @@ public class OfficeContentExtractor : IContentExtractor
 
         var worksheets = new List<Dictionary<string, object>>();
 
-        foreach (IXLWorksheet worksheet in workbook.Worksheets)
+        foreach (var worksheet in workbook.Worksheets)
         {
-            IXLRange? usedRange = worksheet.RangeUsed();
+            var usedRange = worksheet.RangeUsed();
             
             var worksheetData = new Dictionary<string, object>
             {
@@ -207,7 +207,7 @@ public class OfficeContentExtractor : IContentExtractor
                 
                 foreach (IXLRow row in usedRange.Rows().Take(10))
                 {
-                    List<string> rowData = row.CellsUsed().Select(c => c.Value.ToString() ?? string.Empty).ToList();
+                    var rowData = row.CellsUsed().Select(c => c.Value.ToString() ?? string.Empty).ToList();
                     sampleData.Add(rowData);
                     rowsExtracted++;
                 }
@@ -244,14 +244,14 @@ public class OfficeContentExtractor : IContentExtractor
 
         var textBuilder = new StringBuilder();
 
-        Body? body = wordDoc.MainDocumentPart?.Document?.Body;
+        var body = wordDoc.MainDocumentPart?.Document?.Body;
         if (body is not null)
         {
-            foreach (OpenXmlElement element in body.Elements())
+            foreach (var element in body.Elements())
             {
                 if (element is Paragraph paragraph)
                 {
-                    string paragraphText = paragraph.InnerText;
+                    var paragraphText = paragraph.InnerText;
                     if (!string.IsNullOrWhiteSpace(paragraphText))
                     {
                         textBuilder.AppendLine(paragraphText);
@@ -260,7 +260,7 @@ public class OfficeContentExtractor : IContentExtractor
                 else if (element is Table table)
                 {
                     textBuilder.AppendLine("[TABLE]");
-                    foreach (TableRow row in table.Elements<TableRow>())
+                    foreach (var row in table.Elements<TableRow>())
                     {
                         List<string> cellTexts = [];
                         cellTexts.AddRange(row.Elements<TableCell>().Select(cell => cell.InnerText.Trim()));
@@ -284,7 +284,7 @@ public class OfficeContentExtractor : IContentExtractor
         }
 
         var metadata = new Dictionary<string, string>();
-        IPackageProperties coreProps = wordDoc.PackageProperties;
+        var coreProps = wordDoc.PackageProperties;
 
         metadata["Title"] = coreProps.Title ?? string.Empty;
         metadata["Author"] = coreProps.Creator ?? string.Empty;
@@ -303,7 +303,7 @@ public class OfficeContentExtractor : IContentExtractor
         }
 
         // Count elements
-        Body? body = wordDoc.MainDocumentPart?.Document?.Body;
+        var body = wordDoc.MainDocumentPart?.Document?.Body;
         if (body is null)
             return await Task.FromResult(ServiceResult<Dictionary<string, string>>.CreateSuccess(metadata));
         metadata["ParagraphCount"] = body.Elements<Paragraph>().Count().ToString();
@@ -322,11 +322,11 @@ public class OfficeContentExtractor : IContentExtractor
         var paragraphs = new List<Dictionary<string, object>>();
         var tables = new List<Dictionary<string, object>>();
 
-        Body? body = wordDoc.MainDocumentPart?.Document?.Body;
+        var body = wordDoc.MainDocumentPart?.Document?.Body;
         if (body is not null)
         {
             var paragraphIndex = 0;
-            foreach (Paragraph paragraph in body.Elements<Paragraph>())
+            foreach (var paragraph in body.Elements<Paragraph>())
             {
                 var paragraphData = new Dictionary<string, object>
                 {
@@ -336,7 +336,7 @@ public class OfficeContentExtractor : IContentExtractor
                 };
                 
                 // Check if it's a heading
-                string? styleId = paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value;
+                var styleId = paragraph.ParagraphProperties?.ParagraphStyleId?.Val?.Value;
                 if (styleId is not null && styleId.StartsWith("Heading"))
                 {
                     paragraphData["IsHeading"] = true;
@@ -377,16 +377,16 @@ public class OfficeContentExtractor : IContentExtractor
 
         var textBuilder = new StringBuilder();
 
-        foreach (ISlide slide in presentation.Slides)
+        foreach (var slide in presentation.Slides)
         {
             textBuilder.AppendLine($"=== Slide {slide.Number} ===");
             textBuilder.AppendLine();
 
-            foreach (IShape shape in slide.Shapes)
+            foreach (var shape in slide.Shapes)
             {
                 if (shape.TextBox is not null)
                 {
-                    string text = shape.TextBox.Text;
+                    var text = shape.TextBox.Text;
                     if (!string.IsNullOrWhiteSpace(text))
                     {
                         textBuilder.AppendLine(text);
@@ -420,7 +420,7 @@ public class OfficeContentExtractor : IContentExtractor
         var totalShapes = 0;
         var totalTextShapes = 0;
 
-        foreach (ISlide slide in presentation.Slides)
+        foreach (var slide in presentation.Slides)
         {
             totalShapes += slide.Shapes.Count;
             totalTextShapes += slide.Shapes.Count(s => s.TextBox is not null);
@@ -442,7 +442,7 @@ public class OfficeContentExtractor : IContentExtractor
 
         var slides = new List<Dictionary<string, object>>();
 
-        foreach (ISlide slide in presentation.Slides)
+        foreach (var slide in presentation.Slides)
         {
             var slideData = new Dictionary<string, object>
             {
@@ -451,7 +451,7 @@ public class OfficeContentExtractor : IContentExtractor
             };
 
             var shapes = new List<Dictionary<string, object>>();
-            foreach (IShape shape in slide.Shapes)
+            foreach (var shape in slide.Shapes)
             {
                 var shapeData = new Dictionary<string, object>
                 {

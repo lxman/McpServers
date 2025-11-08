@@ -17,17 +17,17 @@ public class PublicIpAddressService(ArmClientFactory armClientFactory, ILogger<P
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            var armClient = await armClientFactory.GetArmClientAsync();
             var publicIps = new List<PublicIPAddressDto>();
 
             switch (string.IsNullOrEmpty(subscriptionId))
             {
                 case false when !string.IsNullOrEmpty(resourceGroupName):
                 {
-                    ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
+                    var resourceGroup = armClient.GetResourceGroupResource(
                         ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
                 
-                    await foreach (PublicIPAddressResource? pip in resourceGroup.GetPublicIPAddresses())
+                    await foreach (var pip in resourceGroup.GetPublicIPAddresses())
                     {
                         publicIps.Add(MappingService.MapToPublicIpAddressDto(pip.Data));
                     }
@@ -36,10 +36,10 @@ public class PublicIpAddressService(ArmClientFactory armClientFactory, ILogger<P
                 }
                 case false:
                 {
-                    SubscriptionResource? subscription = armClient.GetSubscriptionResource(
+                    var subscription = armClient.GetSubscriptionResource(
                         new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
-                    await foreach (PublicIPAddressResource? pip in subscription.GetPublicIPAddressesAsync())
+                    await foreach (var pip in subscription.GetPublicIPAddressesAsync())
                     {
                         publicIps.Add(MappingService.MapToPublicIpAddressDto(pip.Data));
                     }
@@ -48,9 +48,9 @@ public class PublicIpAddressService(ArmClientFactory armClientFactory, ILogger<P
                 }
                 default:
                 {
-                    await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
+                    await foreach (var subscription in armClient.GetSubscriptions())
                     {
-                        await foreach (PublicIPAddressResource? pip in subscription.GetPublicIPAddressesAsync())
+                        await foreach (var pip in subscription.GetPublicIPAddressesAsync())
                         {
                             publicIps.Add(MappingService.MapToPublicIpAddressDto(pip.Data));
                         }
@@ -73,8 +73,8 @@ public class PublicIpAddressService(ArmClientFactory armClientFactory, ILogger<P
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceIdentifier? resourceId = PublicIPAddressResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, publicIpName);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceId = PublicIPAddressResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, publicIpName);
             Response<PublicIPAddressResource>? response = await armClient.GetPublicIPAddressResource(resourceId).GetAsync();
             
             return response.HasValue ? MappingService.MapToPublicIpAddressDto(response.Value.Data) : null;
@@ -94,8 +94,8 @@ public class PublicIpAddressService(ArmClientFactory armClientFactory, ILogger<P
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceGroup = armClient.GetResourceGroupResource(
                 ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
 
             var pipData = new PublicIPAddressData
@@ -127,7 +127,7 @@ public class PublicIpAddressService(ArmClientFactory armClientFactory, ILogger<P
 
             if (request.Tags is not null)
             {
-                foreach (KeyValuePair<string, string> tag in request.Tags)
+                foreach (var tag in request.Tags)
                     pipData.Tags.Add(tag.Key, tag.Value);
             }
 
@@ -147,9 +147,9 @@ public class PublicIpAddressService(ArmClientFactory armClientFactory, ILogger<P
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceIdentifier? resourceId = PublicIPAddressResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, publicIpName);
-            PublicIPAddressResource? pip = armClient.GetPublicIPAddressResource(resourceId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceId = PublicIPAddressResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, publicIpName);
+            var pip = armClient.GetPublicIPAddressResource(resourceId);
             
             await pip.DeleteAsync(WaitUntil.Completed);
             return true;

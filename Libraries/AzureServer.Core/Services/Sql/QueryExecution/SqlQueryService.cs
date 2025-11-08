@@ -23,15 +23,15 @@ public class SqlQueryService(
 
         try
         {
-            await using DbConnection connection = await CreateConnectionAsync(connectionInfo);
+            await using var connection = await CreateConnectionAsync(connectionInfo);
             await connection.OpenAsync();
 
-            await using DbCommand command = connection.CreateCommand();
+            await using var command = connection.CreateCommand();
             command.CommandText = query;
             command.CommandTimeout = timeoutSeconds;
             command.CommandType = CommandType.Text;
 
-            await using DbDataReader reader = await command.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
             // Get column names
             for (var i = 0; i < reader.FieldCount; i++)
@@ -46,7 +46,7 @@ public class SqlQueryService(
                 var row = new Dictionary<string, object?>();
                 for (var i = 0; i < reader.FieldCount; i++)
                 {
-                    object? value = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                    var value = reader.IsDBNull(i) ? null : reader.GetValue(i);
                     row[reader.GetName(i)] = value;
                 }
                 result.Rows.Add(row);
@@ -85,15 +85,15 @@ public class SqlQueryService(
 
         try
         {
-            await using DbConnection connection = await CreateConnectionAsync(connectionInfo);
+            await using var connection = await CreateConnectionAsync(connectionInfo);
             await connection.OpenAsync();
 
-            await using DbCommand dbCommand = connection.CreateCommand();
+            await using var dbCommand = connection.CreateCommand();
             dbCommand.CommandText = command;
             dbCommand.CommandTimeout = timeoutSeconds;
             dbCommand.CommandType = CommandType.Text;
 
-            int rowsAffected = await dbCommand.ExecuteNonQueryAsync();
+            var rowsAffected = await dbCommand.ExecuteNonQueryAsync();
 
             stopwatch.Stop();
             result.Success = true;
@@ -124,15 +124,15 @@ public class SqlQueryService(
     {
         try
         {
-            await using DbConnection connection = await CreateConnectionAsync(connectionInfo);
+            await using var connection = await CreateConnectionAsync(connectionInfo);
             await connection.OpenAsync();
 
-            await using DbCommand command = connection.CreateCommand();
+            await using var command = connection.CreateCommand();
             command.CommandText = query;
             command.CommandTimeout = timeoutSeconds;
             command.CommandType = CommandType.Text;
 
-            object? result = await command.ExecuteScalarAsync();
+            var result = await command.ExecuteScalarAsync();
 
             logger.LogInformation("Executed scalar query on {DatabaseType} database {Database}",
                 connectionInfo.DatabaseType, connectionInfo.DatabaseName);
@@ -151,7 +151,7 @@ public class SqlQueryService(
     {
         try
         {
-            await using DbConnection connection = await CreateConnectionAsync(connectionInfo);
+            await using var connection = await CreateConnectionAsync(connectionInfo);
             await connection.OpenAsync();
             
             logger.LogInformation("Successfully tested connection to {DatabaseType} database {Database}",
@@ -169,7 +169,7 @@ public class SqlQueryService(
 
     public async Task<QueryResultDto> GetSchemaInfoAsync(ConnectionInfoDto connectionInfo, string? tableName = null)
     {
-        string query = connectionInfo.DatabaseType.ToLowerInvariant() switch
+        var query = connectionInfo.DatabaseType.ToLowerInvariant() switch
         {
             "azuresql" or "sql" or "sqlserver" => string.IsNullOrEmpty(tableName)
                 ? "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE FROM INFORMATION_SCHEMA.TABLES ORDER BY TABLE_SCHEMA, TABLE_NAME"
@@ -195,26 +195,26 @@ public class SqlQueryService(
         
         try
         {
-            await using DbConnection connection = await CreateConnectionAsync(connectionInfo);
+            await using var connection = await CreateConnectionAsync(connectionInfo);
             await connection.OpenAsync();
 
-            await using DbTransaction transaction = await connection.BeginTransactionAsync();
+            await using var transaction = await connection.BeginTransactionAsync();
 
-            foreach (string commandText in commands)
+            foreach (var commandText in commands)
             {
                 var stopwatch = Stopwatch.StartNew();
                 var result = new QueryResultDto { Success = false };
 
                 try
                 {
-                    await using DbCommand command = connection.CreateCommand();
+                    await using var command = connection.CreateCommand();
                     command.Transaction = transaction;
                     command.CommandText = commandText;
                     command.CommandTimeout = timeoutSeconds;
                     command.CommandType = CommandType.Text;
 
                     // Try to execute as a non-query (most common for transactions)
-                    int rowsAffected = await command.ExecuteNonQueryAsync();
+                    var rowsAffected = await command.ExecuteNonQueryAsync();
 
                     stopwatch.Stop();
                     result.Success = true;
@@ -256,7 +256,7 @@ public class SqlQueryService(
 
     private async Task<DbConnection> CreateConnectionAsync(ConnectionInfoDto connectionInfo)
     {
-        string connectionString = await BuildConnectionStringAsync(connectionInfo);
+        var connectionString = await BuildConnectionStringAsync(connectionInfo);
 
         DbConnection connection = connectionInfo.DatabaseType.ToLowerInvariant() switch
         {
@@ -284,10 +284,10 @@ public class SqlQueryService(
                 if (connectionInfo.UseAzureAD)
                 {
                     // Use Azure AD authentication
-                    TokenCredential credential = await armClientFactory.GetCredentialAsync();
+                    var credential = await armClientFactory.GetCredentialAsync();
 
                     // Get an access token for Azure SQL
-                    AccessToken token = await credential.GetTokenAsync(
+                    var token = await credential.GetTokenAsync(
                         new TokenRequestContext(["https://database.windows.net/.default"]), 
                         CancellationToken.None);
                     
@@ -353,7 +353,7 @@ public class SqlQueryService(
 
         // Add any additional parameters
         if (connectionInfo.AdditionalParameters is null) return builder.ToString();
-        foreach (KeyValuePair<string, string> param in connectionInfo.AdditionalParameters)
+        foreach (var param in connectionInfo.AdditionalParameters)
         {
             builder.Append($"{param.Key}={param.Value};");
         }

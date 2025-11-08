@@ -21,15 +21,15 @@ public class IndentationManager
             return new IndentationInfo(IndentationType.Spaces, 4); // Default
             
         // Determine the most common indentation type
-        IGrouping<IndentationType, IndentationInfo>[] typeGroups = indentationSamples.GroupBy(i => i.Type).ToArray();
-        IndentationType dominantType = typeGroups.OrderByDescending(g => g.Count()).First().Key;
+        var typeGroups = indentationSamples.GroupBy(i => i.Type).ToArray();
+        var dominantType = typeGroups.OrderByDescending(g => g.Count()).First().Key;
         
         // For spaces, determine the most common size
         if (dominantType == IndentationType.Spaces)
         {
-            IndentationInfo[] spaceSamples = indentationSamples.Where(i => i.Type == IndentationType.Spaces).ToArray();
-            IGrouping<int, IndentationInfo>[] sizeGroups = spaceSamples.GroupBy(i => i.Size).ToArray();
-            int dominantSize = sizeGroups.OrderByDescending(g => g.Count()).First().Key;
+            var spaceSamples = indentationSamples.Where(i => i.Type == IndentationType.Spaces).ToArray();
+            var sizeGroups = spaceSamples.GroupBy(i => i.Size).ToArray();
+            var dominantSize = sizeGroups.OrderByDescending(g => g.Count()).First().Key;
             
             return new IndentationInfo(IndentationType.Spaces, dominantSize);
         }
@@ -45,8 +45,8 @@ public class IndentationManager
         if (lineNumber < 1 || lineNumber > lines.Length)
             return 0;
             
-        string line = lines[lineNumber - 1];
-        IndentationInfo info = IndentationInfo.DetectFromLine(line);
+        var line = lines[lineNumber - 1];
+        var info = IndentationInfo.DetectFromLine(line);
         return info.Level;
     }
     
@@ -58,7 +58,7 @@ public class IndentationManager
         if (string.IsNullOrEmpty(content))
             return content;
             
-        string[] lines = content.Split(['\n', '\r'], StringSplitOptions.None)
+        var lines = content.Split(['\n', '\r'], StringSplitOptions.None)
                           .Where(line => !line.Equals("\r"))
                           .ToArray();
                           
@@ -77,11 +77,11 @@ public class IndentationManager
         
         // Find the minimum indentation level in the content (to preserve relative indentation)
         var minIndentLevel = int.MaxValue;
-        foreach (string line in lines)
+        foreach (var line in lines)
         {
             if (!string.IsNullOrWhiteSpace(line))
             {
-                IndentationInfo info = IndentationInfo.DetectFromLine(line);
+                var info = IndentationInfo.DetectFromLine(line);
                 minIndentLevel = Math.Min(minIndentLevel, info.Level);
             }
         }
@@ -89,7 +89,7 @@ public class IndentationManager
         if (minIndentLevel == int.MaxValue)
             minIndentLevel = 0;
             
-        foreach (string line in lines)
+        foreach (var line in lines)
         {
             if (string.IsNullOrWhiteSpace(line))
             {
@@ -97,12 +97,12 @@ public class IndentationManager
             }
             else
             {
-                IndentationInfo currentInfo = IndentationInfo.DetectFromLine(line);
-                int relativeLevel = currentInfo.Level - minIndentLevel;
-                int newLevel = targetLevel + relativeLevel;
+                var currentInfo = IndentationInfo.DetectFromLine(line);
+                var relativeLevel = currentInfo.Level - minIndentLevel;
+                var newLevel = targetLevel + relativeLevel;
                 
-                string newIndent = targetStyle.AtLevel(newLevel).GetIndentString();
-                string contentPart = line.TrimStart();
+                var newIndent = targetStyle.AtLevel(newLevel).GetIndentString();
+                var contentPart = line.TrimStart();
                 
                 result.Add(newIndent + contentPart);
             }
@@ -126,13 +126,13 @@ public class IndentationManager
         }
         
         // Check the next few lines
-        for (int i = insertAfterLine + 1; i <= Math.Min(insertAfterLine + 3, lines.Length); i++)
+        for (var i = insertAfterLine + 1; i <= Math.Min(insertAfterLine + 3, lines.Length); i++)
         {
             contextLines.Add(i);
         }
         
         // Find the most appropriate indentation level
-        int[] indentLevels = contextLines
+        var indentLevels = contextLines
             .Where(lineNum => lineNum >= 1 && lineNum <= lines.Length)
             .Select(lineNum => lines[lineNum - 1])
             .Where(line => !string.IsNullOrWhiteSpace(line))
@@ -154,7 +154,7 @@ public class IndentationManager
     /// </summary>
     public static (bool isConsistent, string? issues) ValidateIndentation(string content, IndentationInfo expectedStyle)
     {
-        string[] lines = content.Split(['\n', '\r'], StringSplitOptions.None)
+        var lines = content.Split(['\n', '\r'], StringSplitOptions.None)
                           .Where(line => !line.Equals("\r") && !string.IsNullOrWhiteSpace(line))
                           .ToArray();
                           
@@ -162,8 +162,8 @@ public class IndentationManager
         
         for (var i = 0; i < lines.Length; i++)
         {
-            string line = lines[i];
-            IndentationInfo info = IndentationInfo.DetectFromLine(line);
+            var line = lines[i];
+            var info = IndentationInfo.DetectFromLine(line);
             
             // Check for mixed indentation
             if (expectedStyle.Type == IndentationType.Spaces && info.Type != IndentationType.Spaces)

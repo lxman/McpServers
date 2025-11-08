@@ -24,7 +24,7 @@ public class ResourceManagementTools(
         try
         {
             logger.LogDebug("Listing subscriptions");
-            IEnumerable<SubscriptionDto> subscriptions = await resourceService.GetSubscriptionsAsync();
+            var subscriptions = await resourceService.GetSubscriptionsAsync();
 
             return JsonSerializer.Serialize(new
             {
@@ -52,7 +52,7 @@ public class ResourceManagementTools(
         try
         {
             logger.LogDebug("Getting subscription {SubscriptionId}", subscriptionId);
-            SubscriptionDto? subscription = await resourceService.GetSubscriptionAsync(subscriptionId);
+            var subscription = await resourceService.GetSubscriptionAsync(subscriptionId);
 
             if (subscription is null)
             {
@@ -89,7 +89,7 @@ public class ResourceManagementTools(
         try
         {
             logger.LogDebug("Listing resource groups");
-            IEnumerable<ResourceGroupDto> resourceGroups = await resourceService.GetResourceGroupsAsync(subscriptionId);
+            var resourceGroups = await resourceService.GetResourceGroupsAsync(subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -117,7 +117,7 @@ public class ResourceManagementTools(
         try
         {
             logger.LogDebug("Getting resource group {ResourceGroupName}", resourceGroupName);
-            ResourceGroupDto? resourceGroup = await resourceService.GetResourceGroupAsync(subscriptionId, resourceGroupName);
+            var resourceGroup = await resourceService.GetResourceGroupAsync(subscriptionId, resourceGroupName);
 
             if (resourceGroup is null)
             {
@@ -154,7 +154,7 @@ public class ResourceManagementTools(
         try
         {
             logger.LogDebug("Listing resources");
-            List<GenericResourceDto> resources = (await resourceService.GetResourcesAsync(subscriptionId, resourceGroupName)).ToList();
+            var resources = (await resourceService.GetResourcesAsync(subscriptionId, resourceGroupName)).ToList();
 
             return JsonSerializer.Serialize(new
             {
@@ -183,7 +183,7 @@ public class ResourceManagementTools(
         try
         {
             logger.LogDebug("Listing resources by type {ResourceType}", resourceType);
-            List<GenericResourceDto> resources = (await resourceService.GetResourcesByTypeAsync(resourceType, subscriptionId)).ToList();
+            var resources = (await resourceService.GetResourcesByTypeAsync(resourceType, subscriptionId)).ToList();
 
             return JsonSerializer.Serialize(new
             {
@@ -213,7 +213,7 @@ public class ResourceManagementTools(
         try
         {
             logger.LogDebug("Getting resource {ResourceId}", resourceId);
-            GenericResourceDto? resource = await resourceService.GetResourceAsync(resourceId);
+            var resource = await resourceService.GetResourceAsync(resourceId);
 
             if (resource is null)
             {
@@ -250,7 +250,7 @@ public class ResourceManagementTools(
         try
         {
             logger.LogDebug("Getting resource count by type");
-            Dictionary<string, int> countByType = await resourceService.GetResourceCountByTypeAsync(subscriptionId);
+            var countByType = await resourceService.GetResourceCountByTypeAsync(subscriptionId);
 
             var sortedCounts = countByType
                 .OrderByDescending(kvp => kvp.Value)

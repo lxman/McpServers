@@ -40,7 +40,7 @@ public class DebuggerSessionManager
     /// </summary>
     public DebugSession? GetSession(string sessionId)
     {
-        _sessions.TryGetValue(sessionId, out DebugSession? session);
+        _sessions.TryGetValue(sessionId, out var session);
         return session;
     }
 
@@ -57,7 +57,7 @@ public class DebuggerSessionManager
     /// </summary>
     public bool RemoveSession(string sessionId)
     {
-        if (!_sessions.TryRemove(sessionId, out DebugSession? session)) 
+        if (!_sessions.TryRemove(sessionId, out var session)) 
             return false;
 
         _logger.LogInformation("Removed debug session {SessionId}", sessionId);
@@ -69,7 +69,7 @@ public class DebuggerSessionManager
     /// </summary>
     private void OnAsyncEventReceived(object? sender, MiAsyncEventArgs e)
     {
-        if (!_sessions.TryGetValue(e.SessionId, out DebugSession? session))
+        if (!_sessions.TryGetValue(e.SessionId, out var session))
             return;
 
         switch (e.EventType)
@@ -79,10 +79,10 @@ public class DebuggerSessionManager
                 session.State = DebugSessionState.Stopped;
                 
                 // Update breakpoint hit count if stopped at breakpoint
-                if (e.ParsedData.TryGetValue("bkptno", out string? bkptNo) &&
-                    int.TryParse(bkptNo, out int breakpointId))
+                if (e.ParsedData.TryGetValue("bkptno", out var bkptNo) &&
+                    int.TryParse(bkptNo, out var breakpointId))
                 {
-                    Breakpoint? breakpoint = session.Breakpoints.FirstOrDefault(b => b.Id == breakpointId);
+                    var breakpoint = session.Breakpoints.FirstOrDefault(b => b.Id == breakpointId);
                     if (breakpoint != null)
                     {
                         breakpoint.HitCount++;
@@ -92,7 +92,7 @@ public class DebuggerSessionManager
                 }
 
                 // Check stop reason
-                if (e.ParsedData.TryGetValue("reason", out string? reason))
+                if (e.ParsedData.TryGetValue("reason", out var reason))
                 {
                     _logger.LogInformation("Session {SessionId} stopped: {Reason}", 
                         e.SessionId, reason);
@@ -122,10 +122,10 @@ public class DebuggerSessionManager
 
             case "breakpoint-modified":
                 // Breakpoint was resolved or modified
-                if (e.ParsedData.TryGetValue("number", out string? bpNum) &&
-                    int.TryParse(bpNum, out int bpId))
+                if (e.ParsedData.TryGetValue("number", out var bpNum) &&
+                    int.TryParse(bpNum, out var bpId))
                 {
-                    Breakpoint? breakpoint = session.Breakpoints.FirstOrDefault(b => b.Id == bpId);
+                    var breakpoint = session.Breakpoints.FirstOrDefault(b => b.Id == bpId);
                     if (breakpoint != null)
                     {
                         breakpoint.Verified = true;
@@ -141,7 +141,7 @@ public class DebuggerSessionManager
     /// </summary>
     private void OnSessionDisconnected(object? sender, SessionDisconnectedEventArgs e)
     {
-        if (!_sessions.TryGetValue(e.SessionId, out DebugSession? session))
+        if (!_sessions.TryGetValue(e.SessionId, out var session))
             return;
 
         session.State = e.IsExpected 

@@ -50,11 +50,11 @@ public class DevOpsCredentialManager
     public static async Task<DevOpsCredentialManager?> CreateFromDiscoveryAsync(
         ILogger<DevOpsCredentialManager> logger)
     {
-        ILogger<AzureEnvironmentDiscovery> discoveryLogger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<AzureEnvironmentDiscovery>();
+        var discoveryLogger = LoggerFactory.Create(b => b.AddDebug()).CreateLogger<AzureEnvironmentDiscovery>();
         var discovery = new AzureEnvironmentDiscovery(discoveryLogger);
-        AzureDiscoveryResult result = await discovery.DiscoverAzureEnvironmentsAsync();
+        var result = await discovery.DiscoverAzureEnvironmentsAsync();
         
-        DevOpsEnvironmentInfo? primaryEnvironment = result.DevOpsEnvironments.FirstOrDefault();
+        var primaryEnvironment = result.DevOpsEnvironments.FirstOrDefault();
         if (primaryEnvironment is not null) return new DevOpsCredentialManager(primaryEnvironment, logger);
         logger.LogWarning("No Azure DevOps environments discovered");
         return null;
@@ -69,7 +69,7 @@ public class DevOpsCredentialManager
         ILogger<DevOpsCredentialManager> logger,
         string? credentialTarget = null)
     {
-        string pat = DiscoverPersonalAccessToken(credentialTarget, organizationUrl, logger);
+        var pat = DiscoverPersonalAccessToken(credentialTarget, organizationUrl, logger);
         
         var environmentInfo = new DevOpsEnvironmentInfo
         {
@@ -86,8 +86,8 @@ public class DevOpsCredentialManager
     private static string DiscoverPersonalAccessToken(string? credentialTarget, string organizationUrl, ILogger logger)
     {
         // Try credential manager first
-        string target = credentialTarget ?? "AzureDevOps";
-        string? pat = TryGetFromCredentialManager(target);
+        var target = credentialTarget ?? "AzureDevOps";
+        var pat = TryGetFromCredentialManager(target);
         if (!string.IsNullOrEmpty(pat))
         {
             logger.LogDebug("Retrieved PAT from Windows Credential Manager");
@@ -113,7 +113,7 @@ public class DevOpsCredentialManager
     {
         try
         {
-            Credential? cred = CredentialManager.ReadCredential(target);
+            var cred = CredentialManager.ReadCredential(target);
             return cred?.Password;
         }
         catch

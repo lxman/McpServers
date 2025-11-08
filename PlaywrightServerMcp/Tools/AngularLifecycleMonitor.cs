@@ -32,11 +32,11 @@ public class AngularLifecycleMonitor(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
-            string hooksToMonitor = string.IsNullOrEmpty(specificHooks) 
+            var hooksToMonitor = string.IsNullOrEmpty(specificHooks) 
                 ? "ngOnInit,ngOnDestroy,ngOnChanges,ngAfterViewInit,ngAfterViewChecked,ngAfterContentInit,ngAfterContentChecked,ngDoCheck"
                 : specificHooks;
 
@@ -499,7 +499,7 @@ public class AngularLifecycleMonitor(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
@@ -614,7 +614,7 @@ public class AngularLifecycleMonitor(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 

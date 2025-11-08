@@ -21,7 +21,7 @@ try
 {
     Log.Information("Starting Azure MCP server");
 
-    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+    var builder = Host.CreateApplicationBuilder(args);
 
     // Configure logging
     builder.Logging.ClearProviders();
@@ -50,7 +50,7 @@ try
         .WithTools<DevOpsTools>()
         .WithTools<CredentialManagementTools>();
 
-    IHost host = builder.Build();
+    var host = builder.Build();
     await host.RunAsync();
 }
 catch (Exception ex)

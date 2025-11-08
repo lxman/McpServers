@@ -23,8 +23,8 @@ public class CostManagementService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
             var dataset = new QueryDataset { Granularity = GranularityType.Daily };
             dataset.Aggregation.Add("totalCost", new QueryAggregation("Cost", FunctionType.Sum));
@@ -45,8 +45,8 @@ public class CostManagementService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
             var dataset = new QueryDataset { Granularity = GranularityType.Daily };
             dataset.Aggregation.Add("totalCost", new QueryAggregation("Cost", FunctionType.Sum));
@@ -70,8 +70,8 @@ public class CostManagementService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
             var dataset = new QueryDataset { Granularity = null };  // No granularity for grouping
             dataset.Aggregation.Add("totalCost", new QueryAggregation("Cost", FunctionType.Sum));
@@ -96,8 +96,8 @@ public class CostManagementService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
             var dataset = new QueryDataset { Granularity = null };  // No granularity for grouping
             dataset.Aggregation.Add("totalCost", new QueryAggregation("Cost", FunctionType.Sum));
@@ -122,8 +122,8 @@ public class CostManagementService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
             var dataset = new QueryDataset { Granularity = GranularityType.Daily };
             dataset.Aggregation.Add("totalCost", new QueryAggregation("Cost", FunctionType.Sum));
@@ -147,11 +147,11 @@ public class CostManagementService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
-            DateTime startDate = DateTime.UtcNow.Date;
-            DateTime endDate = startDate.AddDays(daysAhead);
+            var startDate = DateTime.UtcNow.Date;
+            var endDate = startDate.AddDays(daysAhead);
             
             var aggregations = new Dictionary<string, ForecastAggregation>
             {
@@ -183,13 +183,13 @@ public class CostManagementService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
-            ConsumptionBudgetCollection? budgets = armClient.GetConsumptionBudgets(subscription.Id);
+            var budgets = armClient.GetConsumptionBudgets(subscription.Id);
             var result = new List<BudgetDto>();
             
-            await foreach (ConsumptionBudgetResource? budget in budgets)
+            await foreach (var budget in budgets)
             {
                 result.Add(MapToBudgetDto(budget.Data));
             }
@@ -208,10 +208,10 @@ public class CostManagementService(
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            SubscriptionResource subscription = await GetSubscriptionAsync(armClient, subscriptionId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var subscription = await GetSubscriptionAsync(armClient, subscriptionId);
             
-            ConsumptionBudgetCollection? budgets = armClient.GetConsumptionBudgets(subscription.Id);
+            var budgets = armClient.GetConsumptionBudgets(subscription.Id);
             
             try
             {
@@ -246,7 +246,7 @@ public class CostManagementService(
 
         for (var i = 0; i < result.Columns.Count; i++)
         {
-            string name = result.Columns[i].Name?.ToLowerInvariant() ?? "";
+            var name = result.Columns[i].Name?.ToLowerInvariant() ?? "";
             if (name.Contains("cost") || name == "pretaxcost") costIdx = i;
             else if (name.Contains("date")) dateIdx = i;
             else if (name.Contains("service")) serviceIdx = i;
@@ -280,7 +280,7 @@ public class CostManagementService(
                 var dateStr = row[dateIdx].ToString();
                 DateTime date;
                 
-                if (int.TryParse(dateStr, out int dateInt) && dateStr?.Length == 8)
+                if (int.TryParse(dateStr, out var dateInt) && dateStr?.Length == 8)
                     date = ParseDateInt(dateInt);
                 else if (!DateTime.TryParse(dateStr, out date))
                     date = DateTime.UtcNow;
@@ -339,7 +339,7 @@ public class CostManagementService(
 
         for (var i = 0; i < result.Columns.Count; i++)
         {
-            string name = result.Columns[i].Name?.ToLowerInvariant() ?? "";
+            var name = result.Columns[i].Name?.ToLowerInvariant() ?? "";
             if (name.Contains("cost") || name == "pretaxcost") costIdx = i;
             else if (name.Contains("date")) dateIdx = i;
             else if (name.Contains("currency")) currIdx = i;
@@ -368,7 +368,7 @@ public class CostManagementService(
             var dateStr = row[dateIdx].ToString();
             DateTime date;
                 
-            if (int.TryParse(dateStr, out int dateInt) && dateStr?.Length == 8)
+            if (int.TryParse(dateStr, out var dateInt) && dateStr?.Length == 8)
                 date = ParseDateInt(dateInt);
             else if (!DateTime.TryParse(dateStr, out date))
                 date = DateTime.UtcNow;
@@ -386,7 +386,7 @@ public class CostManagementService(
         if (!string.IsNullOrEmpty(subscriptionId))
             return armClient.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
 
-        await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
+        await foreach (var subscription in armClient.GetSubscriptions())
             return subscription;
 
         throw new InvalidOperationException("No subscriptions available");

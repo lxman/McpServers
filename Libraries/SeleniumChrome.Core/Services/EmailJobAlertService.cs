@@ -33,7 +33,7 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
             await client.Inbox.OpenAsync(FolderAccess.ReadOnly);
             
             // Search for recent job alert emails
-            BinarySearchQuery? searchQuery = SearchQuery.And(
+            var searchQuery = SearchQuery.And(
                 SearchQuery.DeliveredAfter(DateTime.Now.AddDays(-daysBack)),
                 SearchQuery.Or(
                     SearchQuery.Or(
@@ -59,7 +59,7 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
                 )
             );
             
-            IList<UniqueId>? messageIds = await client.Inbox.SearchAsync(searchQuery);
+            var messageIds = await client.Inbox.SearchAsync(searchQuery);
             logger.LogInformation($"Found {messageIds.Count} job alert emails in last {daysBack} days");
             
             // Add debug logging to see what emails we're finding
@@ -68,15 +68,15 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
                 logger.LogWarning($"No emails found matching job alert criteria in last {daysBack} days");
                 
                 // Try a broader search to see if there are any emails at all
-                IList<UniqueId>? recentEmails = await client.Inbox.SearchAsync(SearchQuery.DeliveredAfter(DateTime.Now.AddDays(-daysBack)));
+                var recentEmails = await client.Inbox.SearchAsync(SearchQuery.DeliveredAfter(DateTime.Now.AddDays(-daysBack)));
                 logger.LogInformation($"Total emails in last {daysBack} days: {recentEmails.Count}");
                 
                 // Sample a few recent emails to see their senders
-                foreach (UniqueId id in recentEmails.Take(5))
+                foreach (var id in recentEmails.Take(5))
                 {
                     try
                     {
-                        MimeMessage? msg = await client.Inbox.GetMessageAsync(id);
+                        var msg = await client.Inbox.GetMessageAsync(id);
                         logger.LogInformation($"Recent email from: {msg.From.FirstOrDefault()}, Subject: {msg.Subject}");
                     }
                     catch (Exception ex)
@@ -86,12 +86,12 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
                 }
             }
             
-            foreach (UniqueId messageId in messageIds.Take(50)) // Limit to recent 50 emails
+            foreach (var messageId in messageIds.Take(50)) // Limit to recent 50 emails
             {
                 try
                 {
-                    MimeMessage? message = await client.Inbox.GetMessageAsync(messageId);
-                    List<EnhancedJobListing> parsedJobs = await ParseJobAlertEmail(message);
+                    var message = await client.Inbox.GetMessageAsync(messageId);
+                    var parsedJobs = await ParseJobAlertEmail(message);
                     jobs.AddRange(parsedJobs);
                 }
                 catch (Exception ex)
@@ -118,9 +118,9 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
         
         try
         {
-            string sender = message.From.FirstOrDefault()?.ToString().ToLower() ?? "";
-            string subject = message.Subject ?? "";
-            string body = message.TextBody ?? message.HtmlBody ?? "";
+            var sender = message.From.FirstOrDefault()?.ToString().ToLower() ?? "";
+            var subject = message.Subject ?? "";
+            var body = message.TextBody ?? message.HtmlBody ?? "";
             
             logger.LogDebug($"Processing email from: {sender}, Subject: {subject}");
             
@@ -161,7 +161,7 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
             // Example: "5 new jobs for Senior .NET Developer"
             // Body contains job listings with titles, companies, locations
             
-            MatchCollection jobMatches = Regex.Matches(body, 
+            var jobMatches = Regex.Matches(body, 
                 @"<a[^>]*href=""([^""]*linkedin\.com/jobs/view/[^""]*)"">([^<]+)</a>.*?<td[^>]*>([^<]+)</td>.*?<td[^>]*>([^<]+)</td>",
                 RegexOptions.IgnoreCase | RegexOptions.Singleline);
             
@@ -221,11 +221,11 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
                 @"href=""([^""]*glassdoor\.com[^""]*)"">([^<]+)</a>"
             };
             
-            foreach (string pattern in patterns)
+            foreach (var pattern in patterns)
             {
                 logger.LogDebug($"Trying pattern: {pattern}");
                 
-                MatchCollection jobMatches = Regex.Matches(body,
+                var jobMatches = Regex.Matches(body,
                     pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
                 
                 logger.LogInformation($"Pattern found {jobMatches.Count} matches");
@@ -247,7 +247,7 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
                         };
                         
                         // Extract salary if present in email
-                        Match salaryMatch = Regex.Match(body, 
+                        var salaryMatch = Regex.Match(body, 
                             @"\$[\d,]+(?:\s*-\s*\$[\d,]+)?", RegexOptions.IgnoreCase);
                         if (salaryMatch.Success)
                         {
@@ -290,12 +290,12 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
                 logger.LogDebug($"Email subject: {subject}");
                 
                 // Log first 500 characters of body for debugging (be careful with sensitive info)
-                string bodyPreview = body.Length > 500 ? body.Substring(0, 500) + "..." : body;
+                var bodyPreview = body.Length > 500 ? body.Substring(0, 500) + "..." : body;
                 logger.LogDebug($"Email body preview: {bodyPreview}");
                 
                 // Check if email contains any job-related keywords
                 var jobKeywords = new[] { "job", "position", "opportunity", "hiring", "career", "apply" };
-                List<string> foundKeywords = jobKeywords.Where(keyword => body.ToLower().Contains(keyword)).ToList();
+                var foundKeywords = jobKeywords.Where(keyword => body.ToLower().Contains(keyword)).ToList();
                 logger.LogInformation($"Job-related keywords found: {string.Join(", ", foundKeywords)}");
             }
             
@@ -316,7 +316,7 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
         try
         {
             // Dice job alert patterns - tech focused
-            MatchCollection jobMatches = Regex.Matches(body,
+            var jobMatches = Regex.Matches(body,
                 @"<a[^>]*href=""([^""]*dice\.com[^""]*)"">([^<]+)</a>.*?<span[^>]*>([^<]+)</span>.*?<span[^>]*>([^<]+)</span>",
                 RegexOptions.IgnoreCase | RegexOptions.Singleline);
             
@@ -355,7 +355,7 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
         
         try
         {
-            MatchCollection jobMatches = Regex.Matches(body,
+            var jobMatches = Regex.Matches(body,
                 @"<a[^>]*href=""([^""]*indeed\.com[^""]*)"">([^<]+)</a>.*?<span[^>]*>([^<]+)</span>.*?<span[^>]*>([^<]+)</span>",
                 RegexOptions.IgnoreCase | RegexOptions.Singleline);
             
@@ -412,18 +412,18 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
             "work remotely", "remote position", "remote opportunity"
         };
         
-        string combinedText = $"{location} {title}".ToLower();
+        var combinedText = $"{location} {title}".ToLower();
         return remoteKeywords.Any(keyword => combinedText.Contains(keyword));
     }
 
     private double CalculateEmailJobMatchScore(EnhancedJobListing job)
     {
         double score = 0;
-        string jobText = $"{job.Title} {job.Company} {job.Location}".ToLower();
+        var jobText = $"{job.Title} {job.Company} {job.Location}".ToLower();
         
         // .NET stack preferences (high weight for email alerts)
         var dotnetKeywords = new[] { ".net", "c#", "csharp", "dotnet", "asp.net" };
-        foreach (string keyword in dotnetKeywords)
+        foreach (var keyword in dotnetKeywords)
         {
             if (jobText.Contains(keyword))
                 score += 15; // Higher weight for email alerts
@@ -431,7 +431,7 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
         
         // Database experience
         var dbKeywords = new[] { "sql server", "mongodb", "database", "entity framework" };
-        foreach (string keyword in dbKeywords)
+        foreach (var keyword in dbKeywords)
         {
             if (jobText.Contains(keyword))
                 score += 10;
@@ -461,13 +461,13 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
     {
         var enhancedJobs = new List<EnhancedJobListing>();
         
-        foreach (EnhancedJobListing job in jobs)
+        foreach (var job in jobs)
         {
             try
             {
                 if (job.SourceSite == JobSite.Glassdoor && !string.IsNullOrEmpty(job.Url))
                 {
-                    EnhancedJobListing enhancedJob = await ScrapeGlassdoorJobDetails(job);
+                    var enhancedJob = await ScrapeGlassdoorJobDetails(job);
                     enhancedJobs.Add(enhancedJob);
                 }
                 else
@@ -495,14 +495,14 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
             logger.LogInformation($"Scraping details for job: {job.Title} from {job.Url}");
             
             // Extract job listing ID from the URL to construct a direct URL
-            Match jobIdMatch = Regex.Match(job.Url, @"jobListingId=(\d+)");
+            var jobIdMatch = Regex.Match(job.Url, @"jobListingId=(\d+)");
             if (!jobIdMatch.Success)
             {
                 logger.LogWarning($"Could not extract job ID from URL: {job.Url}");
                 return job;
             }
             
-            string jobId = jobIdMatch.Groups[1].Value;
+            var jobId = jobIdMatch.Groups[1].Value;
             
             // Try multiple URL formats that might work
             var urlsToTry = new[]
@@ -525,7 +525,7 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
             string workingUrl = null;
             
             // Try each URL format
-            foreach (string url in urlsToTry)
+            foreach (var url in urlsToTry)
             {
                 try
                 {
@@ -574,9 +574,9 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
                 @"class=""css-[^""]*""[^>]*>([^<]+)</span>.*?company"
             };
             
-            foreach (string pattern in companyPatterns)
+            foreach (var pattern in companyPatterns)
             {
-                Match match = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
+                var match = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
                 if (match.Success)
                 {
                     job.Company = CleanText(match.Groups[1].Value);
@@ -594,9 +594,9 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
                 @"<div[^>]*location[^>]*>([^<]+)</div>"
             };
             
-            foreach (string pattern in locationPatterns)
+            foreach (var pattern in locationPatterns)
             {
-                Match match = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
+                var match = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
                 if (match.Success)
                 {
                     job.Location = CleanText(match.Groups[1].Value);
@@ -614,12 +614,12 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
                 @"<div[^>]*job-description[^>]*>(.*?)</div>"
             };
             
-            foreach (string pattern in descriptionPatterns)
+            foreach (var pattern in descriptionPatterns)
             {
-                Match match = Regex.Match(html, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+                var match = Regex.Match(html, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
                 if (match.Success)
                 {
-                    string rawDescription = match.Groups[1].Value;
+                    var rawDescription = match.Groups[1].Value;
                     job.Description = CleanText(Regex.Replace(rawDescription, @"<[^>]+>", " "));
                     job.FullDescription = rawDescription;
                     logger.LogDebug($"Extracted description: {job.Description?.Substring(0, Math.Min(100, job.Description.Length))}...");
@@ -635,9 +635,9 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
                 @"salary[^>]*>([^<]*\$[^<]+)</[^>]*>"
             };
             
-            foreach (string pattern in salaryPatterns)
+            foreach (var pattern in salaryPatterns)
             {
-                Match match = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
+                var match = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
                 if (match.Success)
                 {
                     job.Salary = CleanText(match.Groups[1].Value ?? match.Value);
@@ -647,14 +647,14 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
             }
             
             // Look for .NET/C# related skills and technologies
-            MatchCollection techMatches = Regex.Matches(html,
+            var techMatches = Regex.Matches(html,
                 @"\b(\.NET|C#|ASP\.NET|Azure|SQL Server|Entity Framework|MVC|Web API|Blazor|MAUI|WPF|WinForms|Visual Studio|Microsoft|Angular|React|JavaScript|TypeScript)\b",
                 RegexOptions.IgnoreCase);
             
             var technologies = new List<string>();
             foreach (Match match in techMatches)
             {
-                string tech = match.Value;
+                var tech = match.Value;
                 if (!technologies.Contains(tech, StringComparer.OrdinalIgnoreCase))
                 {
                     technologies.Add(tech);
@@ -689,7 +689,7 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
     private int CalculateBasicMatchScore(string title)
     {
         var score = 0;
-        string lowerTitle = title.ToLower();
+        var lowerTitle = title.ToLower();
         
         if (lowerTitle.Contains(".net")) score += 30;
         if (lowerTitle.Contains("c#")) score += 30;
@@ -721,7 +721,7 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
         // Technology stack scoring
         if (job.Technologies?.Any() == true)
         {
-            foreach (string tech in job.Technologies)
+            foreach (var tech in job.Technologies)
             {
                 switch (tech.ToLower())
                 {
@@ -763,19 +763,19 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
 
     public async Task<List<EnhancedJobListing>> GetLinkedInJobAlertsAsync(int daysBack = 7)
     {
-        List<EnhancedJobListing> allJobs = await GetJobAlertsAsync(daysBack);
+        var allJobs = await GetJobAlertsAsync(daysBack);
         return allJobs.Where(j => j.SourceSite == JobSite.LinkedIn).ToList();
     }
 
     public async Task<List<EnhancedJobListing>> GetGlassdoorJobAlertsAsync(int daysBack = 7)
     {
-        List<EnhancedJobListing> allJobs = await GetJobAlertsAsync(daysBack);
+        var allJobs = await GetJobAlertsAsync(daysBack);
         return allJobs.Where(j => j.SourceSite == JobSite.Glassdoor).ToList();
     }
 
     public async Task<EmailJobAlertSummary> GetJobAlertSummaryAsync(int daysBack = 7)
     {
-        List<EnhancedJobListing> jobs = await GetJobAlertsAsync(daysBack);
+        var jobs = await GetJobAlertsAsync(daysBack);
         
         return new EmailJobAlertSummary
         {

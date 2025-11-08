@@ -23,7 +23,7 @@ public class AssemblyLoaderService : IDisposable
             }
 
             // If already loaded, return cached info
-            if (_loadedAssemblies.TryGetValue(assemblyPath, out (MetadataLoadContext Context, Assembly Assembly, BestEffortAssemblyResolver Resolver) cached))
+            if (_loadedAssemblies.TryGetValue(assemblyPath, out var cached))
             {
                 response.Success = true;
                 response.AssemblyName = cached.Assembly.GetName().Name ?? string.Empty;
@@ -37,7 +37,7 @@ public class AssemblyLoaderService : IDisposable
             var paths = new List<string>();
 
             // Add assembly's own directory
-            string? assemblyDir = Path.GetDirectoryName(assemblyPath);
+            var assemblyDir = Path.GetDirectoryName(assemblyPath);
             if (!string.IsNullOrEmpty(assemblyDir))
             {
                 paths.Add(assemblyDir);
@@ -46,7 +46,7 @@ public class AssemblyLoaderService : IDisposable
             // Add framework assemblies if requested
             if (includeFramework)
             {
-                string runtimeDir = Path.GetDirectoryName(typeof(object).Assembly.Location) ?? string.Empty;
+                var runtimeDir = Path.GetDirectoryName(typeof(object).Assembly.Location) ?? string.Empty;
                 if (!string.IsNullOrEmpty(runtimeDir))
                 {
                     paths.Add(runtimeDir);
@@ -64,7 +64,7 @@ public class AssemblyLoaderService : IDisposable
             var context = new MetadataLoadContext(resolver);
 
             // Load the assembly
-            Assembly assembly = context.LoadFromAssemblyPath(assemblyPath);
+            var assembly = context.LoadFromAssemblyPath(assemblyPath);
 
             // Cache it
             _loadedAssemblies[assemblyPath] = (context, assembly, resolver);
@@ -86,24 +86,24 @@ public class AssemblyLoaderService : IDisposable
 
     public Assembly? GetLoadedAssembly(string assemblyPath)
     {
-        return _loadedAssemblies.TryGetValue(assemblyPath, out (MetadataLoadContext Context, Assembly Assembly, BestEffortAssemblyResolver Resolver) entry) ? entry.Assembly : null;
+        return _loadedAssemblies.TryGetValue(assemblyPath, out var entry) ? entry.Assembly : null;
     }
 
     public MetadataLoadContext? GetContext(string assemblyPath)
     {
-        return _loadedAssemblies.TryGetValue(assemblyPath, out (MetadataLoadContext Context, Assembly Assembly, BestEffortAssemblyResolver Resolver) entry) ? entry.Context : null;
+        return _loadedAssemblies.TryGetValue(assemblyPath, out var entry) ? entry.Context : null;
     }
 
     public void UnloadAssembly(string assemblyPath)
     {
-        if (!_loadedAssemblies.TryGetValue(assemblyPath, out (MetadataLoadContext Context, Assembly Assembly, BestEffortAssemblyResolver Resolver) entry)) return;
+        if (!_loadedAssemblies.TryGetValue(assemblyPath, out var entry)) return;
         entry.Context.Dispose();
         _loadedAssemblies.Remove(assemblyPath);
     }
 
     public void Dispose()
     {
-        foreach ((MetadataLoadContext Context, Assembly Assembly, BestEffortAssemblyResolver Resolver) entry in _loadedAssemblies.Values)
+        foreach (var entry in _loadedAssemblies.Values)
         {
             entry.Context.Dispose();
         }

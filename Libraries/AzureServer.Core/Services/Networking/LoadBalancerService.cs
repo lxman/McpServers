@@ -18,17 +18,17 @@ public class LoadBalancerService(ArmClientFactory armClientFactory, ILogger<Load
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            var armClient = await armClientFactory.GetArmClientAsync();
             var loadBalancers = new List<LoadBalancerDto>();
 
             switch (string.IsNullOrEmpty(subscriptionId))
             {
                 case false when !string.IsNullOrEmpty(resourceGroupName):
                 {
-                    ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
+                    var resourceGroup = armClient.GetResourceGroupResource(
                         ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
                 
-                    await foreach (LoadBalancerResource? loadBalancer in resourceGroup.GetLoadBalancers())
+                    await foreach (var loadBalancer in resourceGroup.GetLoadBalancers())
                     {
                         loadBalancers.Add(MappingService.MapToLoadBalancerDto(loadBalancer.Data));
                     }
@@ -37,10 +37,10 @@ public class LoadBalancerService(ArmClientFactory armClientFactory, ILogger<Load
                 }
                 case false:
                 {
-                    SubscriptionResource? subscription = armClient.GetSubscriptionResource(
+                    var subscription = armClient.GetSubscriptionResource(
                         new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
-                    await foreach (LoadBalancerResource? loadBalancer in subscription.GetLoadBalancersAsync())
+                    await foreach (var loadBalancer in subscription.GetLoadBalancersAsync())
                     {
                         loadBalancers.Add(MappingService.MapToLoadBalancerDto(loadBalancer.Data));
                     }
@@ -49,9 +49,9 @@ public class LoadBalancerService(ArmClientFactory armClientFactory, ILogger<Load
                 }
                 default:
                 {
-                    await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
+                    await foreach (var subscription in armClient.GetSubscriptions())
                     {
-                        await foreach (LoadBalancerResource? loadBalancer in subscription.GetLoadBalancersAsync())
+                        await foreach (var loadBalancer in subscription.GetLoadBalancersAsync())
                         {
                             loadBalancers.Add(MappingService.MapToLoadBalancerDto(loadBalancer.Data));
                         }
@@ -74,8 +74,8 @@ public class LoadBalancerService(ArmClientFactory armClientFactory, ILogger<Load
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceIdentifier? resourceId = LoadBalancerResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, loadBalancerName);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceId = LoadBalancerResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, loadBalancerName);
             Response<LoadBalancerResource>? response = await armClient.GetLoadBalancerResource(resourceId).GetAsync();
             
             return response.HasValue ? MappingService.MapToLoadBalancerDto(response.Value.Data) : null;
@@ -95,8 +95,8 @@ public class LoadBalancerService(ArmClientFactory armClientFactory, ILogger<Load
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceGroup = armClient.GetResourceGroupResource(
                 ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
 
             var lbData = new LoadBalancerData
@@ -110,7 +110,7 @@ public class LoadBalancerService(ArmClientFactory armClientFactory, ILogger<Load
 
             if (request.Tags is not null)
             {
-                foreach (KeyValuePair<string, string> tag in request.Tags)
+                foreach (var tag in request.Tags)
                     lbData.Tags.Add(tag.Key, tag.Value);
             }
 
@@ -130,9 +130,9 @@ public class LoadBalancerService(ArmClientFactory armClientFactory, ILogger<Load
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceIdentifier? resourceId = LoadBalancerResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, loadBalancerName);
-            LoadBalancerResource? loadBalancer = armClient.GetLoadBalancerResource(resourceId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceId = LoadBalancerResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, loadBalancerName);
+            var loadBalancer = armClient.GetLoadBalancerResource(resourceId);
             
             await loadBalancer.DeleteAsync(WaitUntil.Completed);
             return true;
@@ -148,17 +148,17 @@ public class LoadBalancerService(ArmClientFactory armClientFactory, ILogger<Load
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceIdentifier? resourceId = LoadBalancerResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, loadBalancerName);
-            LoadBalancerResource? loadBalancer = armClient.GetLoadBalancerResource(resourceId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceId = LoadBalancerResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, loadBalancerName);
+            var loadBalancer = armClient.GetLoadBalancerResource(resourceId);
             
             Response<LoadBalancerResource>? response = await loadBalancer.GetAsync();
-            LoadBalancerData? lbData = response.Value.Data;
+            var lbData = response.Value.Data;
 
             if (request.Tags is not null)
             {
                 lbData.Tags.Clear();
-                foreach (KeyValuePair<string, string> tag in request.Tags)
+                foreach (var tag in request.Tags)
                     lbData.Tags.Add(tag.Key, tag.Value);
             }
 

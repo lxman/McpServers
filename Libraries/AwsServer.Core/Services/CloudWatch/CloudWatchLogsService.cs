@@ -58,7 +58,7 @@ public class CloudWatchLogsService : IDisposable
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            AWSCredentials? credentials = credentialsProvider.GetCredentials();
+            var credentials = credentialsProvider.GetCredentials();
             
             _logsClient = credentials != null
                 ? new AmazonCloudWatchLogsClient(credentials, clientConfig)
@@ -154,11 +154,11 @@ public class CloudWatchLogsService : IDisposable
         
         do
         {
-            FilterLogEventsResponse response = await FilterLogsAsync(
+            var response = await FilterLogsAsync(
                 logGroupName, filterPattern, startTime, endTime,
                 batchSize, nextToken);
             
-            foreach (FilteredLogEvent? evt in response.Events)
+            foreach (var evt in response.Events)
             {
                 if (maxEvents.HasValue && eventCount >= maxEvents.Value)
                 {
@@ -197,15 +197,15 @@ public class CloudWatchLogsService : IDisposable
     {
         EnsureInitialized();
         
-        DateTime startTimestamp = DateTime.UtcNow;
+        var startTimestamp = DateTime.UtcNow;
         IEnumerable<Task<LogGroupResult>> tasks = logGroupNames.Select(async logGroupName =>
         {
             try
             {
-                DateTime groupStartTime = DateTime.UtcNow;
-                FilterLogEventsResponse response = await FilterLogsAsync(
+                var groupStartTime = DateTime.UtcNow;
+                var response = await FilterLogsAsync(
                     logGroupName, filterPattern, startTime, endTime, limit);
-                TimeSpan duration = DateTime.UtcNow - groupStartTime;
+                var duration = DateTime.UtcNow - groupStartTime;
                 
                 return new LogGroupResult
                 {
@@ -230,8 +230,8 @@ public class CloudWatchLogsService : IDisposable
             }
         });
         
-        LogGroupResult[] results = await Task.WhenAll(tasks);
-        TimeSpan totalDuration = DateTime.UtcNow - startTimestamp;
+        var results = await Task.WhenAll(tasks);
+        var totalDuration = DateTime.UtcNow - startTimestamp;
         
         return new MultiGroupFilterResult
         {
@@ -253,7 +253,7 @@ public class CloudWatchLogsService : IDisposable
         string? filterPattern = null,
         int limit = 100)
     {
-        DateTime startTime = DateTime.UtcNow.AddMinutes(-minutes);
+        var startTime = DateTime.UtcNow.AddMinutes(-minutes);
         return await FilterLogsMultiGroupAsync(logGroupNames, filterPattern, startTime, null, limit);
     }
     
@@ -273,10 +273,10 @@ public class CloudWatchLogsService : IDisposable
     {
         // Default error pattern matches common error indicators
         // CloudWatch filter pattern: space-separated terms are OR'd together
-        string errorPattern = customErrorPattern ?? "ERROR Exception FATAL CRITICAL Failed \"level\":\"error\"";
+        var errorPattern = customErrorPattern ?? "ERROR Exception FATAL CRITICAL Failed \"level\":\"error\"";
 
         
-        DateTime startTime = DateTime.UtcNow.AddMinutes(-minutes);
+        var startTime = DateTime.UtcNow.AddMinutes(-minutes);
         return await FilterLogsAsync(logGroupName, errorPattern, startTime, null, limit);
     }
     
@@ -290,9 +290,9 @@ public class CloudWatchLogsService : IDisposable
         string? customErrorPattern = null)
     {
         // Same pattern as single group
-        string errorPattern = customErrorPattern ?? "ERROR Exception FATAL CRITICAL Failed \"level\":\"error\"";
+        var errorPattern = customErrorPattern ?? "ERROR Exception FATAL CRITICAL Failed \"level\":\"error\"";
 
-        DateTime startTime = DateTime.UtcNow.AddMinutes(-minutes);
+        var startTime = DateTime.UtcNow.AddMinutes(-minutes);
         return await FilterLogsMultiGroupAsync(logGroupNames, errorPattern, startTime, null, limit);
     }
     
@@ -306,7 +306,7 @@ public class CloudWatchLogsService : IDisposable
         int minutes = 60,
         int limit = 100)
     {
-        DateTime startTime = DateTime.UtcNow.AddMinutes(-minutes);
+        var startTime = DateTime.UtcNow.AddMinutes(-minutes);
         return await FilterLogsMultiGroupAsync(logGroupNames, searchPattern, startTime, null, limit);
     }
     
@@ -326,7 +326,7 @@ public class CloudWatchLogsService : IDisposable
     {
         EnsureInitialized();
         
-        DateTime targetTime = FromUnixMilliseconds(timestamp);
+        var targetTime = FromUnixMilliseconds(timestamp);
         
         // Get logs before the target time
         var beforeRequest = new GetLogEventsRequest
@@ -357,7 +357,7 @@ public class CloudWatchLogsService : IDisposable
         List<OutputLogEvent>? afterEvents = afterTask.Result.Events;
         
         // Find the target event
-        OutputLogEvent? targetEvent = afterEvents.FirstOrDefault(e => e.Timestamp == DateTimeOffset.FromUnixTimeMilliseconds(timestamp).UtcDateTime);
+        var targetEvent = afterEvents.FirstOrDefault(e => e.Timestamp == DateTimeOffset.FromUnixTimeMilliseconds(timestamp).UtcDateTime);
         
         // Combine events (before + target + after)
         var allEvents = new List<OutputLogEvent>();
@@ -417,13 +417,13 @@ public class CloudWatchLogsService : IDisposable
         var totalDuration = 0;
         string? nextToken = null;
         
-        DateTime startTimestamp = DateTime.UtcNow;
+        var startTimestamp = DateTime.UtcNow;
         
         do
         {
-            DateTime pageStart = DateTime.UtcNow;
+            var pageStart = DateTime.UtcNow;
             
-            FilterLogEventsResponse response = await FilterLogsAsync(
+            var response = await FilterLogsAsync(
                 logGroupName, filterPattern, startTime, endTime,
                 Math.Min(pageSize, maxResults - allEvents.Count), nextToken);
             
@@ -470,7 +470,7 @@ public class CloudWatchLogsService : IDisposable
         EnsureInitialized();
         
         // Sample first page
-        FilterLogEventsResponse sampleResponse = await FilterLogsAsync(
+        var sampleResponse = await FilterLogsAsync(
             logGroupName, filterPattern, startTime, endTime, 1000);
         
         // If less than a full page, that's our count
@@ -488,11 +488,11 @@ public class CloudWatchLogsService : IDisposable
         // Try using Insights for better estimate
         try
         {
-            string queryString = string.IsNullOrEmpty(filterPattern)
+            var queryString = string.IsNullOrEmpty(filterPattern)
                 ? "stats count() as count"
                 : $"filter @message like /{filterPattern}/ | stats count() as count";
             
-            GetQueryResultsResponse insightsResponse = await RunInsightsQueryAsync(
+            var insightsResponse = await RunInsightsQueryAsync(
                 [logGroupName],
                 queryString,
                 startTime ?? DateTime.UtcNow.AddHours(-1),
@@ -501,8 +501,8 @@ public class CloudWatchLogsService : IDisposable
             
             if (insightsResponse.Results.Count > 0 && insightsResponse.Results[0].Count > 0)
             {
-                ResultField? countField = insightsResponse.Results[0].FirstOrDefault(f => f.Field == "count");
-                if (countField != null && long.TryParse(countField.Value, out long count))
+                var countField = insightsResponse.Results[0].FirstOrDefault(f => f.Field == "count");
+                if (countField != null && long.TryParse(countField.Value, out var count))
                 {
                     return new EventCountEstimate
                     {
@@ -547,7 +547,7 @@ public class CloudWatchLogsService : IDisposable
     {
         EnsureInitialized();
         
-        FilterLogEventsResponse response = await FilterLogsAsync(
+        var response = await FilterLogsAsync(
             logGroupName, filterPattern, startTime, endTime, limit);
         
         var structuredEvents = new List<StructuredLogEvent>();
@@ -559,7 +559,7 @@ public class CloudWatchLogsService : IDisposable
             ["unknown"] = 0
         };
         
-        foreach (FilteredLogEvent? evt in response.Events)
+        foreach (var evt in response.Events)
         {
             var structured = new StructuredLogEvent
             {
@@ -575,10 +575,10 @@ public class CloudWatchLogsService : IDisposable
             {
                 try
                 {
-                    JsonDocument jsonDoc = JsonDocument.Parse(evt.Message);
+                    var jsonDoc = JsonDocument.Parse(evt.Message);
                     structured.ParsedData = new Dictionary<string, object?>();
                     
-                    foreach (JsonProperty prop in jsonDoc.RootElement.EnumerateObject())
+                    foreach (var prop in jsonDoc.RootElement.EnumerateObject())
                     {
                         structured.ParsedData[prop.Name] = prop.Value.ValueKind switch
                         {
@@ -603,7 +603,7 @@ public class CloudWatchLogsService : IDisposable
             // Try key-value parsing (e.g., "key1=value1 key2=value2")
             if (structured.Format == "unknown" && parseKeyValue && evt.Message.Contains('='))
             {
-                Dictionary<string, string> kvPairs = ParseKeyValuePairs(evt.Message);
+                var kvPairs = ParseKeyValuePairs(evt.Message);
                 if (kvPairs.Count > 0)
                 {
                     structured.ParsedData = kvPairs.ToDictionary(k => k.Key, k => (object?)k.Value);
@@ -644,15 +644,15 @@ public class CloudWatchLogsService : IDisposable
         var result = new Dictionary<string, string>();
         
         // Simple key=value parser
-        string[] parts = message.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+        var parts = message.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
         
-        foreach (string part in parts)
+        foreach (var part in parts)
         {
-            int kvIndex = part.IndexOf('=');
+            var kvIndex = part.IndexOf('=');
             if (kvIndex > 0 && kvIndex < part.Length - 1)
             {
-                string key = part.Substring(0, kvIndex);
-                string value = part.Substring(kvIndex + 1).Trim('"', '\'');
+                var key = part.Substring(0, kvIndex);
+                var value = part.Substring(kvIndex + 1).Trim('"', '\'');
                 result[key] = value;
             }
         }
@@ -689,7 +689,7 @@ public class CloudWatchLogsService : IDisposable
             EndTime = ToUnixSeconds(endTime)
         };
         
-        StartQueryResponse? response = await _logsClient!.StartQueryAsync(request);
+        var response = await _logsClient!.StartQueryAsync(request);
         
         _logger.LogInformation("Started Insights query {QueryId} for {LogGroupCount} log groups",
             response.QueryId, logGroupNames.Count);
@@ -725,14 +725,14 @@ public class CloudWatchLogsService : IDisposable
         TimeSpan? timeout = null,
         TimeSpan? pollInterval = null)
     {
-        string queryId = await StartInsightsQueryAsync(logGroupNames, queryString, startTime, endTime);
+        var queryId = await StartInsightsQueryAsync(logGroupNames, queryString, startTime, endTime);
         
-        DateTime deadline = DateTime.UtcNow.Add(timeout ?? TimeSpan.FromMinutes(5));
-        TimeSpan interval = pollInterval ?? TimeSpan.FromSeconds(1);
+        var deadline = DateTime.UtcNow.Add(timeout ?? TimeSpan.FromMinutes(5));
+        var interval = pollInterval ?? TimeSpan.FromSeconds(1);
         
         while (DateTime.UtcNow < deadline)
         {
-            GetQueryResultsResponse response = await GetInsightsQueryResultsAsync(queryId);
+            var response = await GetInsightsQueryResultsAsync(queryId);
             
             if (response.Status == QueryStatus.Complete)
             {
@@ -923,7 +923,7 @@ public class CloudWatchLogsService : IDisposable
         {
             if (_discoveryService.AutoInitialize())
             {
-                AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
+                var accountInfo = await _discoveryService.GetAccountInfoAsync();
                 
                 var config = new AwsConfiguration
                 {
@@ -980,15 +980,15 @@ public class CloudWatchLogsService : IDisposable
             estimatedPages = (int)Math.Ceiling((double)estimatedTotal.Value / limit);
         }
         
-        bool isExact = confidence == "Exact" || confidence?.Contains("Exact") == true;
+        var isExact = confidence == "Exact" || confidence?.Contains("Exact") == true;
         
         string summary;
-        int startItem = ((pageNumber - 1) * limit) + 1;
-        int endItem = startItem + currentPageSize - 1;
+        var startItem = ((pageNumber - 1) * limit) + 1;
+        var endItem = startItem + currentPageSize - 1;
         
         if (estimatedTotal.HasValue)
         {
-            string totalDisplay = isExact ? $"{estimatedTotal}" : $"~{estimatedTotal}";
+            var totalDisplay = isExact ? $"{estimatedTotal}" : $"~{estimatedTotal}";
             summary = $"Showing results {startItem}-{endItem} of {totalDisplay}";
         }
         else
@@ -1033,7 +1033,7 @@ public class CloudWatchLogsService : IDisposable
             if (useFastEstimate)
             {
                 // Quick sample-based estimate
-                FilterLogEventsResponse sampleResponse = await FilterLogsAsync(
+                var sampleResponse = await FilterLogsAsync(
                     logGroupName, filterPattern, startTime, endTime, 100);
                 
                 if (string.IsNullOrEmpty(sampleResponse.NextToken))
@@ -1049,11 +1049,11 @@ public class CloudWatchLogsService : IDisposable
             // Try using Insights for accurate count
             try
             {
-                string queryString = string.IsNullOrEmpty(filterPattern)
+                var queryString = string.IsNullOrEmpty(filterPattern)
                     ? "stats count() as count"
                     : $"filter @message like /{Regex.Escape(filterPattern)}/ | stats count() as count";
                 
-                GetQueryResultsResponse insightsResponse = await RunInsightsQueryAsync(
+                var insightsResponse = await RunInsightsQueryAsync(
                     [logGroupName],
                     queryString,
                     startTime ?? DateTime.UtcNow.AddHours(-1),
@@ -1062,8 +1062,8 @@ public class CloudWatchLogsService : IDisposable
                 
                 if (insightsResponse.Results.Count > 0 && insightsResponse.Results[0].Count > 0)
                 {
-                    ResultField? countField = insightsResponse.Results[0].FirstOrDefault(f => f.Field == "count");
-                    if (countField != null && long.TryParse(countField.Value, out long count))
+                    var countField = insightsResponse.Results[0].FirstOrDefault(f => f.Field == "count");
+                    if (countField != null && long.TryParse(countField.Value, out var count))
                     {
                         return (count, "High (Insights)");
                     }
@@ -1075,7 +1075,7 @@ public class CloudWatchLogsService : IDisposable
             }
             
             // Fallback to sample-based estimation
-            FilterLogEventsResponse fallbackResponse = await FilterLogsAsync(
+            var fallbackResponse = await FilterLogsAsync(
                 logGroupName, filterPattern, startTime, endTime, 1000);
             
             if (string.IsNullOrEmpty(fallbackResponse.NextToken))

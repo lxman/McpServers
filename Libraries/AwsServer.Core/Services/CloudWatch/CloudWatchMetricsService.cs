@@ -54,7 +54,7 @@ public class CloudWatchMetricsService
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            AWSCredentials? credentials = credentialsProvider.GetCredentials();
+            var credentials = credentialsProvider.GetCredentials();
             
             _cloudWatchClient = credentials != null
                 ? new AmazonCloudWatchClient(credentials, clientConfig)
@@ -125,12 +125,12 @@ public class CloudWatchMetricsService
         
         do
         {
-            ListMetricsResponse? response = await _cloudWatchClient!.ListMetricsAsync(new ListMetricsRequest
+            var response = await _cloudWatchClient!.ListMetricsAsync(new ListMetricsRequest
             {
                 NextToken = nextToken
             });
             
-            foreach (Metric? metric in response.Metrics)
+            foreach (var metric in response.Metrics)
             {
                 if (!string.IsNullOrEmpty(metric.Namespace))
                 {
@@ -522,7 +522,7 @@ public class CloudWatchMetricsService
         {
             if (_discoveryService.AutoInitialize())
             {
-                AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
+                var accountInfo = await _discoveryService.GetAccountInfoAsync();
                 
                 var config = new AwsConfiguration
                 {

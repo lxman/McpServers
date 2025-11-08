@@ -70,7 +70,7 @@ public partial class StackOverflowScraper(ILogger<StackOverflowScraper> logger) 
             InitializeDriver(config.AntiDetection);
             Driver!.Navigate().GoToUrl("https://stackoverflow.co/company/work-here/");
             await Task.Delay(5000);
-            bool hasContent = Driver.FindElements(By.CssSelector("main, .main-content, body")).Count > 0;
+            var hasContent = Driver.FindElements(By.CssSelector("main, .main-content, body")).Count > 0;
             return hasContent;
         }
         catch (Exception ex)

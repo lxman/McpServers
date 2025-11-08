@@ -20,7 +20,7 @@ public class SqlTransactionTools(
     {
         try
         {
-            string transactionId = await transactionManager.BeginTransactionAsync(connectionName, isolationLevel);
+            var transactionId = await transactionManager.BeginTransactionAsync(connectionName, isolationLevel);
             return JsonSerializer.Serialize(new { success = true, transactionId }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
@@ -70,7 +70,7 @@ public class SqlTransactionTools(
     {
         try
         {
-            IEnumerable<string> transactions = transactionManager.GetActiveTransactions();
+            var transactions = transactionManager.GetActiveTransactions();
             return JsonSerializer.Serialize(new { success = true, transactions }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)

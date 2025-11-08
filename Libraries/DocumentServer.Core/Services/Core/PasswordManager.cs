@@ -39,7 +39,7 @@ public class PasswordManager
             _logger.LogDebug("Registering password pattern: {Pattern}", pattern);
             
             // Convert glob pattern to regex
-            string regexPattern = GlobToRegex(pattern);
+            var regexPattern = GlobToRegex(pattern);
             var regex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
             _patternPasswords[regex] = password;
             
@@ -61,7 +61,7 @@ public class PasswordManager
     {
         try
         {
-            string normalizedPath = Path.GetFullPath(filePath).ToLowerInvariant();
+            var normalizedPath = Path.GetFullPath(filePath).ToLowerInvariant();
             _specificPasswords[normalizedPath] = password;
             
             _logger.LogInformation("Registered password for specific file: {FilePath}", filePath);
@@ -86,7 +86,7 @@ public class PasswordManager
         var successCount = 0;
         var failureCount = 0;
 
-        foreach ((string filePath, string password) in passwordMap)
+        foreach ((var filePath, var password) in passwordMap)
         {
             try
             {
@@ -123,23 +123,23 @@ public class PasswordManager
 
         try
         {
-            IEnumerable<string> passwordFiles = Directory.GetFiles(rootPath, "*password*.txt", SearchOption.AllDirectories)
+            var passwordFiles = Directory.GetFiles(rootPath, "*password*.txt", SearchOption.AllDirectories)
                 .Concat(Directory.GetFiles(rootPath, "*pword*.txt", SearchOption.AllDirectories))
                 .Concat(Directory.GetFiles(rootPath, "*.pwd", SearchOption.AllDirectories));
 
             _logger.LogDebug("Found {Count} potential password files", passwordFiles.Count());
 
-            foreach (string passwordFile in passwordFiles)
+            foreach (var passwordFile in passwordFiles)
             {
                 try
                 {
-                    string content = await File.ReadAllTextAsync(passwordFile);
-                    string password = content.Trim();
+                    var content = await File.ReadAllTextAsync(passwordFile);
+                    var password = content.Trim();
                     
                     if (IsValidPassword(password))
                     {
-                        string directory = Path.GetDirectoryName(passwordFile)!;
-                        string pattern = Path.Combine(directory, "**", "*").Replace("\\", "/");
+                        var directory = Path.GetDirectoryName(passwordFile)!;
+                        var pattern = Path.Combine(directory, "**", "*").Replace("\\", "/");
                         RegisterPasswordPattern(pattern, password);
                         detectedCount++;
                         
@@ -178,18 +178,18 @@ public class PasswordManager
     {
         _logger.LogDebug("Looking up password for file: {FilePath}", filePath);
         
-        string normalizedPath = Path.GetFullPath(filePath).ToLowerInvariant();
+        var normalizedPath = Path.GetFullPath(filePath).ToLowerInvariant();
         
         // Check specific passwords first
-        if (_specificPasswords.TryGetValue(normalizedPath, out string? specificPassword))
+        if (_specificPasswords.TryGetValue(normalizedPath, out var specificPassword))
         {
             _logger.LogDebug("Found specific password for: {FilePath}", filePath);
             return specificPassword;
         }
 
         // Check pattern-based passwords
-        string unixPath = filePath.Replace('\\', '/');
-        foreach ((Regex regex, string password) in _patternPasswords)
+        var unixPath = filePath.Replace('\\', '/');
+        foreach ((var regex, var password) in _patternPasswords)
         {
             if (regex.IsMatch(unixPath) || regex.IsMatch(filePath))
             {
@@ -217,8 +217,8 @@ public class PasswordManager
     /// </summary>
     public void ClearPasswords()
     {
-        int patternCount = _patternPasswords.Count;
-        int specificCount = _specificPasswords.Count;
+        var patternCount = _patternPasswords.Count;
+        var specificCount = _specificPasswords.Count;
         
         _patternPasswords.Clear();
         _specificPasswords.Clear();
@@ -260,10 +260,10 @@ public class PasswordManager
     /// </summary>
     private static bool IsValidPassword(string password)
     {
-        bool isValid = !string.IsNullOrWhiteSpace(password) && 
-                       password.Length is >= 3 and <= 256 &&
-                       !password.Contains('\n') &&
-                       !password.Contains('\r');
+        var isValid = !string.IsNullOrWhiteSpace(password) && 
+                      password.Length is >= 3 and <= 256 &&
+                      !password.Contains('\n') &&
+                      !password.Contains('\r');
         
         return isValid;
     }
@@ -273,11 +273,11 @@ public class PasswordManager
     /// </summary>
     private static string GlobToRegex(string glob)
     {
-        string regex = "^" + Regex.Escape(glob)
-                               .Replace("\\*\\*", ".*")  // ** matches any number of directories
-                               .Replace("\\*", "[^/\\\\]*")  // * matches anything except directory separators
-                               .Replace("\\?", ".")  // ? matches any single character
-                           + "$";
+        var regex = "^" + Regex.Escape(glob)
+                            .Replace("\\*\\*", ".*")  // ** matches any number of directories
+                            .Replace("\\*", "[^/\\\\]*")  // * matches anything except directory separators
+                            .Replace("\\?", ".")  // ? matches any single character
+                        + "$";
         
         return regex;
     }

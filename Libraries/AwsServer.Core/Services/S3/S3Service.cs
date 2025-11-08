@@ -57,7 +57,7 @@ public class S3Service
             }
             
             var credentialsProvider = new AwsCredentialsProvider(config);
-            AWSCredentials? credentials = credentialsProvider.GetCredentials();
+            var credentials = credentialsProvider.GetCredentials();
             
             if (credentials != null)
             {
@@ -87,7 +87,7 @@ public class S3Service
     public async Task<List<S3Bucket>> ListBucketsAsync()
     {
         await EnsureInitializedAsync();
-        ListBucketsResponse? response = await _s3Client!.ListBucketsAsync();
+        var response = await _s3Client!.ListBucketsAsync();
         return response.Buckets;
     }
     
@@ -129,7 +129,7 @@ public class S3Service
         }
 
         // Execute the API call (fast - single page only)
-        ListObjectsV2Response? response = await _s3Client!.ListObjectsV2Async(request);
+        var response = await _s3Client!.ListObjectsV2Async(request);
 
         // Build paginated result
         var result = new ListObjectsResult
@@ -163,7 +163,7 @@ public class S3Service
     {
         await EnsureInitializedAsync();
         
-        GetObjectResponse? response = await _s3Client!.GetObjectAsync(bucketName, key);
+        var response = await _s3Client!.GetObjectAsync(bucketName, key);
         using var reader = new StreamReader(response.ResponseStream);
         return await reader.ReadToEndAsync();
     }
@@ -320,7 +320,7 @@ public class S3Service
         {
             if (_discoveryService.AutoInitialize())
             {
-                AccountInfo accountInfo = await _discoveryService.GetAccountInfoAsync();
+                var accountInfo = await _discoveryService.GetAccountInfoAsync();
                 
                 var config = new AwsConfiguration
                 {
@@ -348,7 +348,7 @@ public class S3Service
         if (!IsInitialized && _s3Client == null)
         {
             // Wait up to 5 seconds for auto-initialization
-            DateTime timeout = DateTime.UtcNow.AddSeconds(5);
+            var timeout = DateTime.UtcNow.AddSeconds(5);
             while (!IsInitialized && DateTime.UtcNow < timeout)
             {
                 await Task.Delay(100);

@@ -21,7 +21,7 @@ public class ConnectionTools(
         {
             logger.LogDebug("Connecting to Redis server");
 
-            string result = await redisService.ConnectAsync(connectionString);
+            var result = await redisService.ConnectAsync(connectionString);
             return result;
         }
         catch (Exception ex)
@@ -39,7 +39,7 @@ public class ConnectionTools(
         {
             logger.LogDebug("Disconnecting from Redis server");
 
-            string result = redisService.Disconnect();
+            var result = redisService.Disconnect();
             return result;
         }
         catch (Exception ex)
@@ -57,7 +57,7 @@ public class ConnectionTools(
         {
             logger.LogDebug("Getting Redis connection status");
 
-            string result = redisService.GetConnectionStatus();
+            var result = redisService.GetConnectionStatus();
             return result;
         }
         catch (Exception ex)
@@ -75,7 +75,7 @@ public class ConnectionTools(
         {
             logger.LogDebug("Selecting Redis database: {DatabaseNumber}", databaseNumber);
 
-            string result = await redisService.SelectDatabaseAsync(databaseNumber);
+            var result = await redisService.SelectDatabaseAsync(databaseNumber);
             return result;
         }
         catch (Exception ex)

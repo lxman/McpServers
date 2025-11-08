@@ -21,7 +21,7 @@ public class ServerTools(
         {
             logger.LogDebug("Getting Redis server info, Section: {Section}", section ?? "all");
 
-            string result = await redisService.GetInfoAsync(section ?? "");
+            var result = await redisService.GetInfoAsync(section ?? "");
             return result;
         }
         catch (Exception ex)
@@ -39,7 +39,7 @@ public class ServerTools(
         {
             logger.LogDebug("Flushing Redis database");
 
-            string result = await redisService.FlushDatabaseAsync();
+            var result = await redisService.FlushDatabaseAsync();
             return result;
         }
         catch (Exception ex)

@@ -57,7 +57,7 @@ public class AuditLogger(ILogger<AuditLogger> logger) : IAuditLogger
 
     public Task<IEnumerable<string>> GetRecentLogsAsync(int count = 50)
     {
-        IEnumerable<string> logs = _auditLog.TakeLast(count);
+        var logs = _auditLog.TakeLast(count);
         return Task.FromResult(logs);
     }
 

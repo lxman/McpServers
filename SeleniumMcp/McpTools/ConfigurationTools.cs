@@ -32,12 +32,12 @@ public class ConfigurationTools(
         {
             logger.LogDebug("Retrieving configuration for site {Site}", site);
 
-            if (!Enum.TryParse<JobSite>(site, ignoreCase: true, out JobSite siteEnum))
+            if (!Enum.TryParse<JobSite>(site, ignoreCase: true, out var siteEnum))
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Invalid site: {site}" }, _jsonOptions);
             }
 
-            SiteConfiguration config = await scrapingService.GetSiteConfigurationAsync(siteEnum);
+            var config = await scrapingService.GetSiteConfigurationAsync(siteEnum);
 
             return JsonSerializer.Serialize(new
             {
@@ -59,8 +59,8 @@ public class ConfigurationTools(
     {
         try
         {
-            SiteConfiguration config = JsonSerializer.Deserialize<SiteConfiguration>(configJson)
-                ?? throw new ArgumentException("Invalid site configuration JSON");
+            var config = JsonSerializer.Deserialize<SiteConfiguration>(configJson)
+                         ?? throw new ArgumentException("Invalid site configuration JSON");
 
             logger.LogDebug("Updating configuration for site {Site}", config.SiteName);
 
@@ -110,12 +110,12 @@ public class ConfigurationTools(
         {
             logger.LogDebug("Testing accessibility for site {Site}", site);
 
-            if (!Enum.TryParse<JobSite>(site, ignoreCase: true, out JobSite siteEnum))
+            if (!Enum.TryParse<JobSite>(site, ignoreCase: true, out var siteEnum))
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Invalid site: {site}" }, _jsonOptions);
             }
 
-            SiteConfiguration config = await scrapingService.GetSiteConfigurationAsync(siteEnum);
+            var config = await scrapingService.GetSiteConfigurationAsync(siteEnum);
 
             return JsonSerializer.Serialize(new
             {
@@ -143,10 +143,10 @@ public class ConfigurationTools(
         {
             logger.LogDebug("Performing enhanced job analysis pipeline");
 
-            List<EnhancedJobListing> jobs = JsonSerializer.Deserialize<List<EnhancedJobListing>>(jobsJson) ?? [];
+            var jobs = JsonSerializer.Deserialize<List<EnhancedJobListing>>(jobsJson) ?? [];
 
             // Step 1: Deduplication
-            DeduplicationResult deduplicationResult = await deduplicationService.DeduplicateJobsAsync(jobs);
+            var deduplicationResult = await deduplicationService.DeduplicateJobsAsync(jobs);
 
             // Step 2: Categorization
             ApplicationPreferences? preferences = null;
@@ -154,7 +154,7 @@ public class ConfigurationTools(
             {
                 preferences = JsonSerializer.Deserialize<ApplicationPreferences>(preferencesJson);
             }
-            ApplicationCategorizationResult categorizationResult = await applicationService.CategorizeJobsAsync(
+            var categorizationResult = await applicationService.CategorizeJobsAsync(
                 deduplicationResult.UniqueJobs,
                 preferences ?? new ApplicationPreferences());
 
@@ -164,7 +164,7 @@ public class ConfigurationTools(
             {
                 marketRequest = JsonSerializer.Deserialize<MarketAnalysisRequest>(marketRequestJson);
             }
-            MarketIntelligenceReport marketResult = await marketService.GenerateMarketReportAsync(
+            var marketResult = await marketService.GenerateMarketReportAsync(
                 deduplicationResult.UniqueJobs,
                 marketRequest ?? new MarketAnalysisRequest { JobTitle = "Software Engineer", FocusArea = "comprehensive" });
 
@@ -193,8 +193,8 @@ public class ConfigurationTools(
         {
             logger.LogDebug("Fetching jobs by IDs for user {UserId}", userId);
 
-            string[] jobIds = JsonSerializer.Deserialize<string[]>(jobIdsJson) ?? [];
-            List<EnhancedJobListing> result = await simplifyApiService.FetchJobsByIdsAsync(jobIds, userId);
+            var jobIds = JsonSerializer.Deserialize<string[]>(jobIdsJson) ?? [];
+            var result = await simplifyApiService.FetchJobsByIdsAsync(jobIds, userId);
 
             return JsonSerializer.Serialize(new
             {

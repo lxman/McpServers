@@ -18,12 +18,12 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Context == null)
                 return $"Session {sessionId} not found or browser context not available.";
 
             // Create new page in existing context
-            IPage newPage = await session.Context.NewPageAsync();
+            var newPage = await session.Context.NewPageAsync();
             
             // Navigate to URL if provided
             if (!string.IsNullOrEmpty(url))
@@ -32,8 +32,8 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
             }
 
             // Get all pages in context
-            IReadOnlyList<IPage> allPages = session.Context.Pages;
-            int newPageIndex = allPages.Count - 1;
+            var allPages = session.Context.Pages;
+            var newPageIndex = allPages.Count - 1;
 
             // Update session to track the new page
             if (newPageIndex >= 0)
@@ -88,11 +88,11 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Context == null)
                 return $"Session {sessionId} not found or browser context not available.";
 
-            IReadOnlyList<IPage> allPages = session.Context.Pages;
+            var allPages = session.Context.Pages;
             
             if (index < 0 || index >= allPages.Count)
             {
@@ -105,7 +105,7 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            IPage targetPage = allPages[index];
+            var targetPage = allPages[index];
             
             // Bring the target page to front
             await targetPage.BringToFrontAsync();
@@ -114,8 +114,8 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
             session.Page = targetPage;
 
             // Get current page info
-            string currentTitle = await targetPage.TitleAsync();
-            string currentUrl = targetPage.Url;
+            var currentTitle = await targetPage.TitleAsync();
+            var currentUrl = targetPage.Url;
 
             var result = new
             {
@@ -157,7 +157,7 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
     {
         try
         {
-            PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
+            var session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
                 return $"Session {sessionId} not found or page not available.";
 
@@ -165,7 +165,7 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
             var errors = new List<string>();
 
             // Normalize type parameter
-            string normalizedType = type.ToLower().Trim();
+            var normalizedType = type.ToLower().Trim();
 
             // Clear localStorage
             if (normalizedType == "localstorage" || normalizedType == "all")
@@ -289,7 +289,7 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
             {
                 try
                 {
-                    IReadOnlyList<BrowserContextCookiesResult> cookies = await session.Context.CookiesAsync();
+                    var cookies = await session.Context.CookiesAsync();
                     await session.Context.ClearCookiesAsync();
 
                     clearResults.Add(new
@@ -385,9 +385,9 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
         {
             try
             {
-                IPage page = pages[i];
-                string title = await page.TitleAsync();
-                string url = page.Url;
+                var page = pages[i];
+                var title = await page.TitleAsync();
+                var url = page.Url;
 
                 tabList.Add(new
                 {

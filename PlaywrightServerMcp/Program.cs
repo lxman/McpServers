@@ -10,7 +10,7 @@ using System.Text.Json.Serialization;
 Console.SetOut(TextWriter.Null);
 Console.SetError(TextWriter.Null);
 
-HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+var builder = Host.CreateApplicationBuilder(args);
 
 // Configure JSON serialization options globally to handle deep object structures
 builder.Services.Configure<JsonSerializerOptions>(options =>
@@ -82,5 +82,5 @@ builder.Services
     .WithStdioServerTransport()
     .WithToolsFromAssembly();
 
-IHost host = builder.Build();
+var host = builder.Build();
 await host.RunAsync();

@@ -43,7 +43,7 @@ public class DocumentCache
     /// <returns>True if added/updated successfully, false if eviction failed</returns>
     public async Task<bool> AddAsync(string filePath, LoadedDocument document)
     {
-        string normalizedPath = NormalizePath(filePath);
+        var normalizedPath = NormalizePath(filePath);
         
         _logger.LogDebug("Adding document to cache: {FilePath}", filePath);
 
@@ -51,7 +51,7 @@ public class DocumentCache
         if (_documents.Count >= _maxDocuments || GetTotalMemoryUsage() + document.MemorySizeBytes > _maxMemoryBytes)
         {
             _logger.LogInformation("Cache limit reached, attempting eviction before adding: {FilePath}", filePath);
-            bool evicted = await EvictLeastRecentlyUsedAsync();
+            var evicted = await EvictLeastRecentlyUsedAsync();
             
             if (!evicted && _documents.Count >= _maxDocuments)
             {
@@ -80,9 +80,9 @@ public class DocumentCache
     /// <returns>The cached document if found, otherwise null</returns>
     public LoadedDocument? Get(string filePath)
     {
-        string normalizedPath = NormalizePath(filePath);
+        var normalizedPath = NormalizePath(filePath);
 
-        if (_documents.TryGetValue(normalizedPath, out LoadedDocument? document))
+        if (_documents.TryGetValue(normalizedPath, out var document))
         {
             // Update access tracking
             document.LastAccessedAt = DateTime.UtcNow;
@@ -104,7 +104,7 @@ public class DocumentCache
     /// <returns>True if the document is cached, otherwise false</returns>
     public bool Contains(string filePath)
     {
-        string normalizedPath = NormalizePath(filePath);
+        var normalizedPath = NormalizePath(filePath);
         return _documents.ContainsKey(normalizedPath);
     }
 
@@ -115,9 +115,9 @@ public class DocumentCache
     /// <returns>True if removed, false if not found</returns>
     public bool Remove(string filePath)
     {
-        string normalizedPath = NormalizePath(filePath);
+        var normalizedPath = NormalizePath(filePath);
 
-        bool removed = _documents.TryRemove(normalizedPath, out LoadedDocument? document);
+        var removed = _documents.TryRemove(normalizedPath, out var document);
         if (removed)
         {
             _accessTimes.TryRemove(normalizedPath, out _);
@@ -137,7 +137,7 @@ public class DocumentCache
     /// </summary>
     public void Clear()
     {
-        int count = _documents.Count;
+        var count = _documents.Count;
         _documents.Clear();
         _accessTimes.Clear();
         
@@ -210,10 +210,10 @@ public class DocumentCache
             }
 
             // Find the least recently used document
-            KeyValuePair<string, DateTime> lruEntry = _accessTimes.OrderBy(kvp => kvp.Value).First();
-            string pathToEvict = lruEntry.Key;
+            var lruEntry = _accessTimes.OrderBy(kvp => kvp.Value).First();
+            var pathToEvict = lruEntry.Key;
 
-            if (!_documents.TryRemove(pathToEvict, out LoadedDocument? evictedDoc)) return false;
+            if (!_documents.TryRemove(pathToEvict, out var evictedDoc)) return false;
             _accessTimes.TryRemove(pathToEvict, out _);
                 
             _logger.LogInformation("Evicted LRU document: {FilePath}, Type={Type}, LastAccessed={LastAccessed}, AccessCount={Count}",

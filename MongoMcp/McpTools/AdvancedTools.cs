@@ -39,7 +39,7 @@ public class AdvancedTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Pipeline JSON array is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.AggregateAsync(serverName, collectionName, pipelineJson);
+            var result = await mongoService.AggregateAsync(serverName, collectionName, pipelineJson);
 
             return result;
         }
@@ -68,7 +68,7 @@ public class AdvancedTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.CountDocumentsAsync(serverName, collectionName, filterJson ?? "{}");
+            var result = await mongoService.CountDocumentsAsync(serverName, collectionName, filterJson ?? "{}");
 
             return result;
         }
@@ -102,7 +102,7 @@ public class AdvancedTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Index JSON is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.CreateIndexAsync(serverName, collectionName, indexJson, indexName);
+            var result = await mongoService.CreateIndexAsync(serverName, collectionName, indexJson, indexName);
 
             return result;
         }
@@ -131,7 +131,7 @@ public class AdvancedTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.DropCollectionAsync(serverName, collectionName);
+            var result = await mongoService.DropCollectionAsync(serverName, collectionName);
 
             return result;
         }
@@ -160,7 +160,7 @@ public class AdvancedTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Command JSON is required" }, _jsonOptions);
             }
 
-            string result = await mongoService.ExecuteCommandAsync(serverName, command);
+            var result = await mongoService.ExecuteCommandAsync(serverName, command);
 
             return result;
         }

@@ -100,7 +100,7 @@ public class PasswordTools(
             var successCount = 0;
             var errors = new List<object>();
 
-            foreach (KeyValuePair<string, string> kvp in filePasswords)
+            foreach (var kvp in filePasswords)
             {
                 try
                 {
@@ -154,7 +154,7 @@ public class PasswordTools(
                 return JsonSerializer.Serialize(new { success = false, error = "Directory not found" }, _jsonOptions);
             }
 
-            int detectedCount = await passwordManager.AutoDetectPasswordFilesAsync(rootPath);
+            var detectedCount = await passwordManager.AutoDetectPasswordFilesAsync(rootPath);
 
             return JsonSerializer.Serialize(new
             {
@@ -186,7 +186,7 @@ public class PasswordTools(
                 return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
             }
 
-            bool hasPassword = passwordManager.HasPasswordForFile(filePath);
+            var hasPassword = passwordManager.HasPasswordForFile(filePath);
 
             return JsonSerializer.Serialize(new
             {
@@ -210,7 +210,7 @@ public class PasswordTools(
         {
             logger.LogDebug("Getting all password patterns");
 
-            Dictionary<string, string> patterns = passwordManager.GetRegisteredPatterns();
+            var patterns = passwordManager.GetRegisteredPatterns();
 
             return JsonSerializer.Serialize(new
             {
@@ -238,8 +238,8 @@ public class PasswordTools(
         {
             logger.LogDebug("Getting password statistics");
 
-            int specificCount = passwordManager.GetSpecificPasswordCount();
-            int patternCount = passwordManager.GetPatternCount();
+            var specificCount = passwordManager.GetSpecificPasswordCount();
+            var patternCount = passwordManager.GetPatternCount();
 
             return JsonSerializer.Serialize(new
             {
@@ -264,9 +264,9 @@ public class PasswordTools(
         {
             logger.LogDebug("Clearing all passwords");
 
-            int specificCount = passwordManager.GetSpecificPasswordCount();
-            int patternCount = passwordManager.GetPatternCount();
-            int totalCount = specificCount + patternCount;
+            var specificCount = passwordManager.GetSpecificPasswordCount();
+            var patternCount = passwordManager.GetPatternCount();
+            var totalCount = specificCount + patternCount;
 
             passwordManager.ClearPasswords();
 

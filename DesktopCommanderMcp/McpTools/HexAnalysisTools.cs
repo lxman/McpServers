@@ -34,7 +34,7 @@ public class HexAnalysisTools(
                     SerializerOptions.JsonOptionsIndented));
             }
 
-            HexDumpResult result = hexService.ReadHexBytes(filePath, offset, length, Enum.Parse<HexFormat>(format, true));
+            var result = hexService.ReadHexBytes(filePath, offset, length, Enum.Parse<HexFormat>(format, true));
             
             return Task.FromResult(JsonSerializer.Serialize(result, 
                 SerializerOptions.JsonOptionsIndented));
@@ -67,7 +67,7 @@ public class HexAnalysisTools(
                     SerializerOptions.JsonOptionsIndented));
             }
 
-            string result = hexService.GenerateHexDump(filePath, offset, length, bytesPerLine);
+            var result = hexService.GenerateHexDump(filePath, offset, length, bytesPerLine);
             
             return Task.FromResult(JsonSerializer.Serialize(new
             {
@@ -107,7 +107,7 @@ public class HexAnalysisTools(
                     SerializerOptions.JsonOptionsIndented));
             }
 
-            HexSearchResult result = hexService.SearchHexPattern(
+            var result = hexService.SearchHexPattern(
                 filePath,
                 hexPattern,
                 startOffset,
@@ -153,7 +153,7 @@ public class HexAnalysisTools(
                     SerializerOptions.JsonOptionsIndented));
             }
 
-            BinaryComparisonResult result = hexService.CompareBinaryFiles(
+            var result = hexService.CompareBinaryFiles(
                 file1Path,
                 file2Path,
                 offset,

@@ -47,16 +47,16 @@ public class OfficeDocumentLoader : IDocumentLoader
     /// <inheritdoc />
     public bool CanLoad(string filePath)
     {
-        string extension = Path.GetExtension(filePath);
+        var extension = Path.GetExtension(filePath);
         return ExtensionMap.ContainsKey(extension);
     }
 
     /// <inheritdoc />
     public async Task<ServiceResult<LoadedDocument>> LoadAsync(string filePath, string? password = null)
     {
-        string extension = Path.GetExtension(filePath).ToLowerInvariant();
+        var extension = Path.GetExtension(filePath).ToLowerInvariant();
         
-        if (!ExtensionMap.TryGetValue(extension, out DocumentType documentType))
+        if (!ExtensionMap.TryGetValue(extension, out var documentType))
         {
             return ServiceResult<LoadedDocument>.CreateFailure($"Unsupported file extension: {extension}");
         }
@@ -77,7 +77,7 @@ public class OfficeDocumentLoader : IDocumentLoader
             password ??= _passwordManager.GetPasswordForFile(filePath);
 
             // Load based on document type
-            ServiceResult<LoadedDocument> result = documentType switch
+            var result = documentType switch
             {
                 DocumentType.Excel => await LoadExcelAsync(filePath, password, fileInfo),
                 DocumentType.Word => await LoadWordAsync(filePath, password, fileInfo),
@@ -135,9 +135,9 @@ public class OfficeDocumentLoader : IDocumentLoader
             }
 
             var fileInfo = new FileInfo(filePath);
-            string extension = Path.GetExtension(filePath).ToLowerInvariant();
+            var extension = Path.GetExtension(filePath).ToLowerInvariant();
             
-            if (!ExtensionMap.TryGetValue(extension, out DocumentType documentType))
+            if (!ExtensionMap.TryGetValue(extension, out var documentType))
             {
                 return ServiceResult<DocumentInfo>.CreateFailure($"Unsupported file extension: {extension}");
             }
@@ -156,8 +156,8 @@ public class OfficeDocumentLoader : IDocumentLoader
             // Try to extract metadata
             try
             {
-                await using FileStream fileStream = File.OpenRead(filePath);
-                await using Stream decryptedStream = await DecryptStreamAsync(fileStream, password);
+                await using var fileStream = File.OpenRead(filePath);
+                await using var decryptedStream = await DecryptStreamAsync(fileStream, password);
 
                 // Extract metadata based on type
                 if (documentType == DocumentType.Excel)
@@ -167,8 +167,8 @@ public class OfficeDocumentLoader : IDocumentLoader
                 }
                 else if (documentType == DocumentType.Word)
                 {
-                    using WordprocessingDocument? wordDoc = WordprocessingDocument.Open(decryptedStream, false);
-                    IPackageProperties coreProps = wordDoc.PackageProperties;
+                    using var wordDoc = WordprocessingDocument.Open(decryptedStream, false);
+                    var coreProps = wordDoc.PackageProperties;
                     
                     docInfo.Author = coreProps.Creator;
                     docInfo.Title = coreProps.Title;
@@ -201,8 +201,8 @@ public class OfficeDocumentLoader : IDocumentLoader
     {
         try
         {
-            await using FileStream fileStream = File.OpenRead(filePath);
-            await using Stream decryptedStream = await DecryptStreamAsync(fileStream, password);
+            await using var fileStream = File.OpenRead(filePath);
+            await using var decryptedStream = await DecryptStreamAsync(fileStream, password);
 
             // Create a memory stream from decrypted content
             var memoryStream = new MemoryStream();
@@ -211,7 +211,7 @@ public class OfficeDocumentLoader : IDocumentLoader
 
             var workbook = new XLWorkbook(memoryStream);
 
-            long estimatedMemory = fileInfo.Length * 3; // Excel files expand significantly in memory
+            var estimatedMemory = fileInfo.Length * 3; // Excel files expand significantly in memory
 
             var loadedDocument = new LoadedDocument
             {
@@ -252,18 +252,18 @@ public class OfficeDocumentLoader : IDocumentLoader
 
         var textBuilder = new StringBuilder();
 
-        foreach (IXLWorksheet worksheet in workbook.Worksheets)
+        foreach (var worksheet in workbook.Worksheets)
         {
             textBuilder.AppendLine($"=== Worksheet: {worksheet.Name} ===");
             textBuilder.AppendLine();
 
-            IXLRange? usedRange = worksheet.RangeUsed();
+            var usedRange = worksheet.RangeUsed();
             if (usedRange is not null)
             {
                 foreach (IXLRow row in usedRange.Rows())
                 {
                     List<string> values = [];
-                    foreach (IXLCell cell in row.CellsUsed())
+                    foreach (var cell in row.CellsUsed())
                     {
                         values.Add(cell.Value.ToString() ?? string.Empty);
                     }
@@ -285,17 +285,17 @@ public class OfficeDocumentLoader : IDocumentLoader
     {
         try
         {
-            await using FileStream fileStream = File.OpenRead(filePath);
-            await using Stream decryptedStream = await DecryptStreamAsync(fileStream, password);
+            await using var fileStream = File.OpenRead(filePath);
+            await using var decryptedStream = await DecryptStreamAsync(fileStream, password);
 
             // Create memory stream for Word document
             var memoryStream = new MemoryStream();
             await decryptedStream.CopyToAsync(memoryStream);
             memoryStream.Position = 0;
 
-            WordprocessingDocument? wordDoc = WordprocessingDocument.Open(memoryStream, false);
+            var wordDoc = WordprocessingDocument.Open(memoryStream, false);
 
-            long estimatedMemory = fileInfo.Length * 2;
+            var estimatedMemory = fileInfo.Length * 2;
 
             var loadedDocument = new LoadedDocument
             {
@@ -335,24 +335,24 @@ public class OfficeDocumentLoader : IDocumentLoader
 
         var textBuilder = new StringBuilder();
 
-        Body? body = wordDoc.MainDocumentPart?.Document?.Body;
+        var body = wordDoc.MainDocumentPart?.Document?.Body;
         if (body is not null)
         {
-            foreach (OpenXmlElement element in body.Elements())
+            foreach (var element in body.Elements())
             {
                 if (element is Paragraph paragraph)
                 {
-                    string paragraphText = paragraph.InnerText;
+                    var paragraphText = paragraph.InnerText;
                     textBuilder.AppendLine(paragraphText);
                 }
                 else if (element is Table table)
                 {
                     textBuilder.AppendLine("[TABLE]");
                     // Simple table extraction
-                    foreach (TableRow row in table.Elements<TableRow>())
+                    foreach (var row in table.Elements<TableRow>())
                     {
                         List<string> cellTexts = [];
-                        foreach (TableCell cell in row.Elements<TableCell>())
+                        foreach (var cell in row.Elements<TableCell>())
                         {
                             cellTexts.Add(cell.InnerText);
                         }
@@ -374,8 +374,8 @@ public class OfficeDocumentLoader : IDocumentLoader
     {
         try
         {
-            await using FileStream fileStream = File.OpenRead(filePath);
-            await using Stream decryptedStream = await DecryptStreamAsync(fileStream, password);
+            await using var fileStream = File.OpenRead(filePath);
+            await using var decryptedStream = await DecryptStreamAsync(fileStream, password);
 
             // Create memory stream for PowerPoint
             var memoryStream = new MemoryStream();
@@ -384,7 +384,7 @@ public class OfficeDocumentLoader : IDocumentLoader
 
             var presentation = new Presentation(memoryStream);
 
-            long estimatedMemory = fileInfo.Length * 3;
+            var estimatedMemory = fileInfo.Length * 3;
 
             var loadedDocument = new LoadedDocument
             {
@@ -425,12 +425,12 @@ public class OfficeDocumentLoader : IDocumentLoader
 
         var textBuilder = new StringBuilder();
 
-        foreach (ISlide slide in presentation.Slides)
+        foreach (var slide in presentation.Slides)
         {
             textBuilder.AppendLine($"=== Slide {slide.Number} ===");
             textBuilder.AppendLine();
 
-            foreach (IShape shape in slide.Shapes)
+            foreach (var shape in slide.Shapes)
             {
                 if (shape.TextBox is not null)
                 {
@@ -456,7 +456,7 @@ public class OfficeDocumentLoader : IDocumentLoader
         try
         {
             // MsOfficeCrypto handles both encrypted and unencrypted documents
-            Stream decryptedStream = await OfficeDocument.DecryptAsync(inputStream, password);
+            var decryptedStream = await OfficeDocument.DecryptAsync(inputStream, password);
             return decryptedStream;
         }
         catch (InvalidPasswordException)

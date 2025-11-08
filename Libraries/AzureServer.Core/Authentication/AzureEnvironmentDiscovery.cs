@@ -36,7 +36,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
     private static async Task<string?> GetEnvironmentVariableWithRegistryFallback(string variableName)
     {
         // First, try the process environment (fast path)
-        string? value = Environment.GetEnvironmentVariable(variableName);
+        var value = Environment.GetEnvironmentVariable(variableName);
         if (!string.IsNullOrEmpty(value))
         {
             return value;
@@ -76,7 +76,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
 
             await AddLogLine($"Found {result.DevOpsEnvironments.Count} DevOps environments");
             
-            foreach (DevOpsEnvironmentInfo env in result.DevOpsEnvironments)
+            foreach (var env in result.DevOpsEnvironments)
             {
                 await AddLogLine($"\t{env.OrganizationUrl} via {env.Source} (HasCredentials: {env.HasCredentials})");
             }
@@ -162,7 +162,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
     {
         try
         {
-            (bool Success, string Output) result = await ExecuteCommandAsync("az", "account show --output json");
+            var result = await ExecuteCommandAsync("az", "account show --output json");
             if (result.Success && !string.IsNullOrEmpty(result.Output))
             {
                 var accountInfo = JsonSerializer.Deserialize<JsonElement>(result.Output);
@@ -189,7 +189,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
         
         // 0: Local config file (bypass all process context issues)
         await AddLogLine("Trying local config file...");
-        DevOpsEnvironmentInfo? fileEnv = await DiscoverFromLocalConfigFile();
+        var fileEnv = await DiscoverFromLocalConfigFile();
         if (fileEnv is not null) 
         {
             await AddLogLine($"Found config file environment: {fileEnv.OrganizationUrl}");
@@ -203,11 +203,11 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
 
         await AddLogLine("Calling DiscoverDevOpsEnvironmentsAsync...");
         // 1. Azure CLI DevOps extension
-        DevOpsEnvironmentInfo? cliEnv = await DiscoverFromAzureCliDevOpsAsync();
+        var cliEnv = await DiscoverFromAzureCliDevOpsAsync();
         await AddLogLine($"{(cliEnv is not null ? "Found" : "No")} Azure CLI DevOps environment");
         if (cliEnv is not null) environments.Add(cliEnv);
 
-        int envLength = environments.Count;
+        var envLength = environments.Count;
         await AddLogLine("Calling DiscoverFromCredentialManager...");
         // 2. Windows Credential Manager
         environments.AddRange(await DiscoverFromCredentialManager());
@@ -215,20 +215,20 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
 
         await AddLogLine("Calling DiscoverFromEnvironmentVariables...");
         // 3. Environment variables
-        DevOpsEnvironmentInfo? envEnv = await DiscoverFromEnvironmentVariables();
+        var envEnv = await DiscoverFromEnvironmentVariables();
         await AddLogLine($"{(envEnv is not null ? "Found" : "No")} environment variable DevOps environment");
         if (envEnv is not null) environments.Add(envEnv);
 
         await AddLogLine("Calling DiscoverFromAzurePipelines...");
         // 4. Azure Pipelines context (if running in pipeline)
-        DevOpsEnvironmentInfo? pipelineEnv = await DiscoverFromAzurePipelines();
+        var pipelineEnv = await DiscoverFromAzurePipelines();
 
         await AddLogLine($"{(pipelineEnv is not null ? "Found" : "No")} Azure Pipelines DevOps environment");
         if (pipelineEnv is not null) environments.Add(pipelineEnv);
 
         // Remove duplicates and validate
         var validEnvironments = new List<DevOpsEnvironmentInfo>();
-        foreach (DevOpsEnvironmentInfo env in environments.GroupBy(e => e.OrganizationUrl, StringComparer.OrdinalIgnoreCase)
+        foreach (var env in environments.GroupBy(e => e.OrganizationUrl, StringComparer.OrdinalIgnoreCase)
                      .Select(g => g.First()))
         {
             if (await ValidateDevOpsEnvironmentAsync(env))
@@ -244,20 +244,20 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
     {
         try
         {
-            string configPath = Path.Combine(AppContext.BaseDirectory, "devops-config.json");
+            var configPath = Path.Combine(AppContext.BaseDirectory, "devops-config.json");
             await AddLogLine($"Looking for config file at: {configPath}");
         
             if (File.Exists(configPath))
             {
                 await AddLogLine("Config file exists, reading...");
-                string content = await File.ReadAllTextAsync(configPath);
+                var content = await File.ReadAllTextAsync(configPath);
                 await AddLogLine($"Config file content: {content}");
             
                 var config = JsonSerializer.Deserialize<JsonElement>(content);
-                JsonElement azureDevOps = config.GetProperty("AzureDevOps");
+                var azureDevOps = config.GetProperty("AzureDevOps");
             
-                string? orgUrl = azureDevOps.GetProperty("OrganizationUrl").GetString();
-                string? pat = azureDevOps.GetProperty("PersonalAccessToken").GetString();
+                var orgUrl = azureDevOps.GetProperty("OrganizationUrl").GetString();
+                var pat = azureDevOps.GetProperty("PersonalAccessToken").GetString();
             
                 if (!string.IsNullOrEmpty(orgUrl) && !string.IsNullOrEmpty(pat))
                 {
@@ -288,19 +288,19 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
     {
         try
         {
-            (bool Success, string Output) configResult = await ExecuteCommandAsync("az", "devops configure --list");
+            var configResult = await ExecuteCommandAsync("az", "devops configure --list");
             await AddLogLine($"configResult: Success={configResult.Success}, Output={configResult.Output}");
             if (configResult.Success && configResult.Output.Contains("organization ="))
             {
-                string[] lines = configResult.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                foreach (string line in lines)
+                var lines = configResult.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var line in lines)
                 {
                     if (!line.StartsWith("organization =", StringComparison.OrdinalIgnoreCase)) continue;
-                    string url = line.Split('=', 2)[1].Trim();
+                    var url = line.Split('=', 2)[1].Trim();
                     await AddLogLine($"Found Azure CLI DevOps organization: {url}");
 
                     // Try to get a PAT for this organization
-                    string? pat = await TryGetPatForAzureCliOrgAsync(url);
+                    var pat = await TryGetPatForAzureCliOrgAsync(url);
 
                     return new DevOpsEnvironmentInfo
                     {
@@ -323,7 +323,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
     {
         // Extract org name from URL for credential lookup
         var uri = new Uri(organizationUrl);
-        string? orgName = uri.Segments.LastOrDefault()?.Trim('/');
+        var orgName = uri.Segments.LastOrDefault()?.Trim('/');
 
         // Try common credential patterns
         string[] targets =
@@ -334,11 +334,11 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
             "AZURE_DEVOPS_EXT_PAT"
         ];
 
-        foreach (string target in targets)
+        foreach (var target in targets)
         {
             await AddLogLine($"Attempting to get PAT from Credential Manager or env var: {target}");
-            string? pat = TryGetFromCredentialManager(target) ??
-                          await GetEnvironmentVariableWithRegistryFallback(target);
+            var pat = TryGetFromCredentialManager(target) ??
+                      await GetEnvironmentVariableWithRegistryFallback(target);
             if (!string.IsNullOrEmpty(pat))
             {
                 await AddLogLine($"Recovered PAT from {target} - {pat}");
@@ -364,16 +364,16 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
             "visualstudio.com"
         };
 
-        foreach (string target in credentialTargets)
+        foreach (var target in credentialTargets)
         {
             await AddLogLine($"Checking Credential Manager for target: {target}");
             try
             {
-                Credential? cred = CredentialManager.ReadCredential(target);
+                var cred = CredentialManager.ReadCredential(target);
                 if (cred != null && !string.IsNullOrEmpty(cred.Password))
                 {
                     await AddLogLine($"Found credential target: {target}, Username: {cred.UserName}, Password: Yes");
-                    string? orgUrl = ExtractOrgUrlFromCredential(cred, target);
+                    var orgUrl = ExtractOrgUrlFromCredential(cred, target);
                     await AddLogLine($"Extracted Org URL: {orgUrl}");
                     if (!string.IsNullOrEmpty(orgUrl))
                     {
@@ -404,7 +404,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
 
         string? pat = null;
         string? patSource = null;
-        foreach (string varName in patVars)
+        foreach (var varName in patVars)
         {
             await AddLogLine($"Trying to get PAT from env var: {varName}");
             pat = await GetEnvironmentVariableWithRegistryFallback(varName);
@@ -415,7 +415,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
         }
 
         string? orgUrl = null;
-        foreach (string varName in orgVars)
+        foreach (var varName in orgVars)
         {
             orgUrl = await GetEnvironmentVariableWithRegistryFallback(varName);
             if (!string.IsNullOrEmpty(orgUrl)) break;
@@ -438,8 +438,8 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
     private static async Task<DevOpsEnvironmentInfo?> DiscoverFromAzurePipelines()
     {
         // Check if running in Azure Pipelines
-        string? systemAccessToken = await GetEnvironmentVariableWithRegistryFallback("SYSTEM_ACCESSTOKEN");
-        string? collectionUri = await GetEnvironmentVariableWithRegistryFallback("SYSTEM_COLLECTIONURI");
+        var systemAccessToken = await GetEnvironmentVariableWithRegistryFallback("SYSTEM_ACCESSTOKEN");
+        var collectionUri = await GetEnvironmentVariableWithRegistryFallback("SYSTEM_COLLECTIONURI");
 
         if (!string.IsNullOrEmpty(systemAccessToken) && !string.IsNullOrEmpty(collectionUri))
         {
@@ -460,12 +460,12 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
         // Smart extraction from credential fields
         string[] possibleSources = [credential.UserName ?? string.Empty, target, credential.Comment ?? string.Empty];
 
-        foreach (string source in possibleSources)
+        foreach (var source in possibleSources)
         {
             if (string.IsNullOrEmpty(source)) continue;
 
             // Direct URL
-            if (Uri.TryCreate(source, UriKind.Absolute, out Uri? uri) &&
+            if (Uri.TryCreate(source, UriKind.Absolute, out var uri) &&
                 (uri.Host.Contains("dev.azure.com") || uri.Host.Contains("visualstudio.com")))
             {
                 return uri.ToString().TrimEnd('/');
@@ -474,8 +474,8 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
             // Organization name pattern
             if (!source.Contains('/') ||
                 (!source.Contains("dev.azure.com") && !source.Contains("visualstudio.com"))) continue;
-            string[] parts = source.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            string? orgName = parts.LastOrDefault();
+            var parts = source.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var orgName = parts.LastOrDefault();
             if (!string.IsNullOrEmpty(orgName) && !orgName.Contains(".com"))
             {
                 return $"https://dev.azure.com/{orgName}";
@@ -519,7 +519,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
     {
         try
         {
-            Credential? cred = CredentialManager.ReadCredential(target);
+            var cred = CredentialManager.ReadCredential(target);
             return cred?.Password;
         }
         catch
@@ -544,7 +544,7 @@ public class AzureEnvironmentDiscovery(ILogger<AzureEnvironmentDiscovery> logger
             };
 
             process.Start();
-            string output = await process.StandardOutput.ReadToEndAsync();
+            var output = await process.StandardOutput.ReadToEndAsync();
             await process.WaitForExitAsync();
 
             return (process.ExitCode == 0, output);

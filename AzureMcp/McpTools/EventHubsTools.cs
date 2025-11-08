@@ -24,7 +24,7 @@ public class EventHubsTools(
         try
         {
             logger.LogDebug("Listing Event Hubs namespaces");
-            IEnumerable<EventHubsNamespaceDto> namespaces = await eventHubsService.ListNamespacesAsync(resourceGroupName, subscriptionId);
+            var namespaces = await eventHubsService.ListNamespacesAsync(resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -55,7 +55,7 @@ public class EventHubsTools(
         try
         {
             logger.LogDebug("Getting namespace {NamespaceName}", namespaceName);
-            EventHubsNamespaceDto? ns = await eventHubsService.GetNamespaceAsync(resourceGroupName, namespaceName, subscriptionId);
+            var ns = await eventHubsService.GetNamespaceAsync(resourceGroupName, namespaceName, subscriptionId);
 
             if (ns is null)
             {
@@ -98,7 +98,7 @@ public class EventHubsTools(
         {
             logger.LogDebug("Creating namespace {NamespaceName}", namespaceName);
 
-            EventHubsNamespaceDto ns = await eventHubsService.CreateNamespaceAsync(
+            var ns = await eventHubsService.CreateNamespaceAsync(
                 resourceGroupName, namespaceName, location, subscriptionId, sku);
 
             return JsonSerializer.Serialize(new

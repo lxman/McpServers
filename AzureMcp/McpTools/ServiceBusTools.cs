@@ -24,7 +24,7 @@ public class ServiceBusTools(
         try
         {
             logger.LogDebug("Listing Service Bus namespaces");
-            IEnumerable<ServiceBusNamespaceDto> namespaces = await serviceBusService.ListNamespacesAsync(resourceGroupName, subscriptionId);
+            var namespaces = await serviceBusService.ListNamespacesAsync(resourceGroupName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {
@@ -55,7 +55,7 @@ public class ServiceBusTools(
         try
         {
             logger.LogDebug("Getting namespace {NamespaceName}", namespaceName);
-            ServiceBusNamespaceDto? ns = await serviceBusService.GetNamespaceAsync(resourceGroupName, namespaceName, subscriptionId);
+            var ns = await serviceBusService.GetNamespaceAsync(resourceGroupName, namespaceName, subscriptionId);
 
             if (ns is null)
             {
@@ -98,7 +98,7 @@ public class ServiceBusTools(
         {
             logger.LogDebug("Creating namespace {NamespaceName}", namespaceName);
 
-            ServiceBusNamespaceDto ns = await serviceBusService.CreateNamespaceAsync(
+            var ns = await serviceBusService.CreateNamespaceAsync(
                 resourceGroupName, namespaceName, location, subscriptionId, sku);
 
             return JsonSerializer.Serialize(new
@@ -161,7 +161,7 @@ public class ServiceBusTools(
         try
         {
             logger.LogDebug("Listing queues in namespace {NamespaceName}", namespaceName);
-            IEnumerable<ServiceBusQueueDto> queues = await serviceBusService.ListQueuesAsync(resourceGroupName, namespaceName, subscriptionId);
+            var queues = await serviceBusService.ListQueuesAsync(resourceGroupName, namespaceName, subscriptionId);
 
             return JsonSerializer.Serialize(new
             {

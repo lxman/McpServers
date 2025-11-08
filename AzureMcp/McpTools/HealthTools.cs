@@ -35,7 +35,7 @@ public class HealthTools(
 
             try
             {
-                (_, CredentialSelectionResult result) = await credentialService.GetCredentialAsync();
+                (_, var result) = await credentialService.GetCredentialAsync();
                 credentialsAvailable = result.Status == SelectionStatus.Selected ||
                                       result.Status == SelectionStatus.AutoSelected;
                 credentialStatus = result.Status.ToString();
@@ -50,7 +50,7 @@ public class HealthTools(
             var armClientAvailable = false;
             try
             {
-                ArmClient? armClient = await armClientFactory.GetArmClientAsync();
+                var armClient = await armClientFactory.GetArmClientAsync();
                 armClientAvailable = armClient is not null;
             }
             catch (Exception ex)
@@ -59,7 +59,7 @@ public class HealthTools(
             }
 
             // Determine overall status
-            string overallStatus = credentialsAvailable && armClientAvailable ? "Healthy" : "Unhealthy";
+            var overallStatus = credentialsAvailable && armClientAvailable ? "Healthy" : "Unhealthy";
 
             var serviceStatuses = new Dictionary<string, object>
             {
@@ -153,8 +153,8 @@ public class HealthTools(
                 }
             };
 
-            int availableServices = serviceStatuses.Count(s => ((dynamic)s.Value).isAvailable);
-            int totalServices = serviceStatuses.Count;
+            var availableServices = serviceStatuses.Count(s => ((dynamic)s.Value).isAvailable);
+            var totalServices = serviceStatuses.Count;
 
             return JsonSerializer.Serialize(new
             {
@@ -182,7 +182,7 @@ public class HealthTools(
         {
             logger.LogDebug("Getting account information");
 
-            (_, CredentialSelectionResult result) = await credentialService.GetCredentialAsync();
+            (_, var result) = await credentialService.GetCredentialAsync();
 
             if (result.Status == SelectionStatus.NoCredentialsFound)
             {
@@ -193,7 +193,7 @@ public class HealthTools(
                 }, _jsonOptions);
             }
 
-            CredentialInfo? credential = result.SelectedCredential;
+            var credential = result.SelectedCredential;
             if (credential == null)
             {
                 return JsonSerializer.Serialize(new
@@ -207,8 +207,8 @@ public class HealthTools(
             var subscriptions = new List<object>();
             try
             {
-                ArmClient armClient = await armClientFactory.GetArmClientAsync();
-                await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
+                var armClient = await armClientFactory.GetArmClientAsync();
+                await foreach (var subscription in armClient.GetSubscriptions())
                 {
                     subscriptions.Add(new
                     {

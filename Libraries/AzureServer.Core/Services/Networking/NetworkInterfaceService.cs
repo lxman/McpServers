@@ -17,17 +17,17 @@ public class NetworkInterfaceService(ArmClientFactory armClientFactory, ILogger<
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
+            var armClient = await armClientFactory.GetArmClientAsync();
             var nics = new List<NetworkInterfaceDto>();
 
             switch (string.IsNullOrEmpty(subscriptionId))
             {
                 case false when !string.IsNullOrEmpty(resourceGroupName):
                 {
-                    ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
+                    var resourceGroup = armClient.GetResourceGroupResource(
                         ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
                 
-                    await foreach (NetworkInterfaceResource? nic in resourceGroup.GetNetworkInterfaces())
+                    await foreach (var nic in resourceGroup.GetNetworkInterfaces())
                     {
                         nics.Add(MappingService.MapToNetworkInterfaceDto(nic.Data));
                     }
@@ -36,10 +36,10 @@ public class NetworkInterfaceService(ArmClientFactory armClientFactory, ILogger<
                 }
                 case false:
                 {
-                    SubscriptionResource? subscription = armClient.GetSubscriptionResource(
+                    var subscription = armClient.GetSubscriptionResource(
                         new ResourceIdentifier($"/subscriptions/{subscriptionId}"));
                 
-                    await foreach (NetworkInterfaceResource? nic in subscription.GetNetworkInterfacesAsync())
+                    await foreach (var nic in subscription.GetNetworkInterfacesAsync())
                     {
                         nics.Add(MappingService.MapToNetworkInterfaceDto(nic.Data));
                     }
@@ -48,9 +48,9 @@ public class NetworkInterfaceService(ArmClientFactory armClientFactory, ILogger<
                 }
                 default:
                 {
-                    await foreach (SubscriptionResource? subscription in armClient.GetSubscriptions())
+                    await foreach (var subscription in armClient.GetSubscriptions())
                     {
-                        await foreach (NetworkInterfaceResource? nic in subscription.GetNetworkInterfacesAsync())
+                        await foreach (var nic in subscription.GetNetworkInterfacesAsync())
                         {
                             nics.Add(MappingService.MapToNetworkInterfaceDto(nic.Data));
                         }
@@ -73,8 +73,8 @@ public class NetworkInterfaceService(ArmClientFactory armClientFactory, ILogger<
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceIdentifier? resourceId = NetworkInterfaceResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nicName);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceId = NetworkInterfaceResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nicName);
             Response<NetworkInterfaceResource>? response = await armClient.GetNetworkInterfaceResource(resourceId).GetAsync();
             
             return response.HasValue ? MappingService.MapToNetworkInterfaceDto(response.Value.Data) : null;
@@ -94,8 +94,8 @@ public class NetworkInterfaceService(ArmClientFactory armClientFactory, ILogger<
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceGroupResource? resourceGroup = armClient.GetResourceGroupResource(
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceGroup = armClient.GetResourceGroupResource(
                 ResourceGroupResource.CreateResourceIdentifier(subscriptionId, resourceGroupName));
 
             var nicData = new NetworkInterfaceData
@@ -132,7 +132,7 @@ public class NetworkInterfaceService(ArmClientFactory armClientFactory, ILogger<
 
             if (request.Tags is not null)
             {
-                foreach (KeyValuePair<string, string> tag in request.Tags)
+                foreach (var tag in request.Tags)
                     nicData.Tags.Add(tag.Key, tag.Value);
             }
 
@@ -152,9 +152,9 @@ public class NetworkInterfaceService(ArmClientFactory armClientFactory, ILogger<
     {
         try
         {
-            ArmClient armClient = await armClientFactory.GetArmClientAsync();
-            ResourceIdentifier? resourceId = NetworkInterfaceResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nicName);
-            NetworkInterfaceResource? nic = armClient.GetNetworkInterfaceResource(resourceId);
+            var armClient = await armClientFactory.GetArmClientAsync();
+            var resourceId = NetworkInterfaceResource.CreateResourceIdentifier(subscriptionId, resourceGroupName, nicName);
+            var nic = armClient.GetNetworkInterfaceResource(resourceId);
             
             await nic.DeleteAsync(WaitUntil.Completed);
             return true;
