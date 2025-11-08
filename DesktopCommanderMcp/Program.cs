@@ -14,11 +14,6 @@ builder.Logging.ClearProviders();
 // Add Memory Cache for ServerRegistry and other services
 builder.Services.AddMemoryCache();
 
-
-
-// Server Registry (must be registered early as other services depend on it)
-builder.Services.AddSingleton<ServerRegistry>();
-
 // Register DesktopCommander services
 builder.Services.AddSingleton<SecurityManager>();
 builder.Services.AddSingleton<AuditLogger>();
@@ -59,9 +54,6 @@ builder.Services.AddHttpClient("directory-client", client =>
 
 builder.Services.AddMcpServer()
     .WithStdioServerTransport()
-    // Directory and Service Management
-    .WithTools<DirectoryTools>()
-    .WithTools<ServiceManagementTools>()
     .WithTools<HttpTools>()
     // File System Operations
     .WithTools<FileSystemTools>()

@@ -27,7 +27,6 @@
   <Project Path="MongoMcp\MongoMcp.csproj" Type="Classic C#" />
   <Project Path="PlaywrightServerMcp\PlaywrightServerMcp.csproj" Type="Classic C#" />
   <Project Path="RedisMcp\RedisMcp.csproj" Type="Classic C#" />
-  <Project Path="SeleniumChromeTool\SeleniumChromeTool.csproj" Type="Classic C#" />
   <Project Path="SeleniumMcp\SeleniumMcp.csproj" Type="Classic C#" />
   <Project Path="SqlMcp\SqlMcp.csproj" Type="Classic C#" />
   <Project Path="TrafficGenerator\TrafficGenerator.csproj" Type="Classic C#" />
