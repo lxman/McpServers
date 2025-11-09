@@ -9,7 +9,7 @@ public abstract class BaseJobScraper(ILogger logger) : IJobSiteScraper, IDisposa
 {
     protected IWebDriver? Driver;
     protected readonly ILogger Logger = logger;
-    protected readonly Random Random = new();
+    private readonly Random _random = new();
     private bool _disposed;
     
     public abstract JobSite SupportedSite { get; }
@@ -22,7 +22,7 @@ public abstract class BaseJobScraper(ILogger logger) : IJobSiteScraper, IDisposa
         try
         {
             InitializeDriver(config.AntiDetection);
-            Driver!.Navigate().GoToUrl(config.BaseUrl);
+            await Driver!.Navigate().GoToUrlAsync(config.BaseUrl);
             await Task.Delay(2000);
             return Driver.Title.Length > 0;
         }
@@ -35,7 +35,7 @@ public abstract class BaseJobScraper(ILogger logger) : IJobSiteScraper, IDisposa
 
     protected void InitializeDriver(AntiDetectionConfig antiDetection)
     {
-        if (Driver != null) return;
+        if (Driver is not null) return;
 
         var options = new ChromeOptions();
         
@@ -84,7 +84,7 @@ public abstract class BaseJobScraper(ILogger logger) : IJobSiteScraper, IDisposa
         // Enhanced user agent rotation for LinkedIn
         if (antiDetection.UserAgents.Count != 0)
         {
-            string userAgent = antiDetection.UserAgents[Random.Next(antiDetection.UserAgents.Count)];
+            string userAgent = antiDetection.UserAgents[_random.Next(antiDetection.UserAgents.Count)];
             options.AddArgument($"--user-agent={userAgent}");
             Logger.LogInformation("Using User-Agent: {UserAgent}", userAgent.Substring(0, Math.Min(50, userAgent.Length)) + "...");
         }
@@ -157,7 +157,7 @@ public abstract class BaseJobScraper(ILogger logger) : IJobSiteScraper, IDisposa
 
     protected async Task RespectRateLimit(RateLimitConfig rateLimit)
     {
-        int delay = Random.Next(rateLimit.DelayBetweenRequests, rateLimit.DelayBetweenRequests + 2000);
+        int delay = _random.Next(rateLimit.DelayBetweenRequests, rateLimit.DelayBetweenRequests + 2000);
         await Task.Delay(delay);
     }
 
@@ -191,7 +191,7 @@ public abstract class BaseJobScraper(ILogger logger) : IJobSiteScraper, IDisposa
         {
             try
             {
-                if (Driver != null)
+                if (Driver is not null)
                 {
                     Logger.LogInformation("Shutting down Chrome driver gracefully...");
                     

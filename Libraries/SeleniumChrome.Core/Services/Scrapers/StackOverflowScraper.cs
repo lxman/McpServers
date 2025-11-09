@@ -48,7 +48,7 @@ public partial class StackOverflowScraper(ILogger<StackOverflowScraper> logger) 
         var careersUrl = "https://stackoverflow.co/company/work-here/";
         
         Logger.LogInformation("Navigating to Stack Overflow careers: {Url}", careersUrl);
-        driver.Navigate().GoToUrl(careersUrl);
+        await driver.Navigate().GoToUrlAsync(careersUrl);
 
         // Wait for the page to load
         var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));        
@@ -68,7 +68,7 @@ public partial class StackOverflowScraper(ILogger<StackOverflowScraper> logger) 
         try
         {
             InitializeDriver(config.AntiDetection);
-            Driver!.Navigate().GoToUrl("https://stackoverflow.co/company/work-here/");
+            await Driver!.Navigate().GoToUrlAsync("https://stackoverflow.co/company/work-here/");
             await Task.Delay(5000);
             bool hasContent = Driver.FindElements(By.CssSelector("main, .main-content, body")).Count > 0;
             return hasContent;

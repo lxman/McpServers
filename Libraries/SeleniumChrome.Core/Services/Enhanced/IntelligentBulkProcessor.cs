@@ -5,17 +5,24 @@ using SeleniumChrome.Core.Services.Scrapers;
 namespace SeleniumChrome.Core.Services.Enhanced;
 
 /// <summary>
-/// Phase 1 Enhancement: Bulk Processing for 10-20 jobs per session instead of current 2
+/// Bulk Processing for 10-20 jobs per session instead of current 2
 /// </summary>
 public class IntelligentBulkProcessor(
     ILogger<IntelligentBulkProcessor> logger,
     SimplifyJobsScraper scraper,
-    NetDeveloperJobScorer scorer)
+    NetDeveloperJobScorer scorer,
+    EnhancedJobScrapingService scrapingService)
 {
     /// <summary>
     /// Process jobs in bulk with intelligent pagination and stopping criteria
+    /// ENHANCED: Now supports cancellation tokens and progress callbacks
+    /// Progress callback uses lightweight summary to avoid token explosion
+    /// AUTO-SAVES: Each batch is automatically saved to temporary collection for recovery
     /// </summary>
-    public async Task<BulkProcessingResult> ProcessJobsBulkAsync(BulkProcessingRequest request)
+    public async Task<BulkProcessingResult> ProcessJobsBulkAsync(BulkProcessingRequest request,
+        Action<int, int, string, BulkProcessingSummary>? progressCallback = null,
+        CancellationToken cancellationToken = default,
+        string? sessionId = null)
     {
         var result = new BulkProcessingResult
         {
@@ -25,20 +32,27 @@ public class IntelligentBulkProcessor(
             Errors = []
         };
 
+        // Generate sessionId if not provided for temporary storage
+        string effectiveSessionId = sessionId ?? Guid.NewGuid().ToString();
+
         try
         {
-            logger.LogInformation($"Starting bulk processing: target {request.TargetJobCount} jobs");
+            logger.LogInformation($"Starting bulk processing: target {request.TargetJobCount} jobs (session: {effectiveSessionId})");
 
             SiteConfiguration config = scraper.GetDefaultConfiguration();
-            
+
             // Adaptive batch sizing based on target
             int batchSize = CalculateOptimalBatchSize(request.TargetJobCount);
             var currentPage = 1;
             var consecutiveLowScoreCount = 0;
-            var maxConsecutiveLowScore = 3;
+            const int maxConsecutiveLowScore = 3;
+            var estimatedTotalBatches = (int)Math.Ceiling(request.TargetJobCount / (double)batchSize);
 
             while (result.ProcessedJobs.Count < request.TargetJobCount)
             {
+                // CHECK CANCELLATION BEFORE EACH BATCH
+                cancellationToken.ThrowIfCancellationRequested();
+
                 logger.LogInformation($"Processing page {currentPage}, batch size {batchSize}");
 
                 try
@@ -69,6 +83,9 @@ public class IntelligentBulkProcessor(
 
                     foreach (EnhancedJobListing job in jobs)
                     {
+                        // CHECK CANCELLATION DURING BATCH PROCESSING
+                        cancellationToken.ThrowIfCancellationRequested();
+
                         if (result.ProcessedJobs.Count >= request.TargetJobCount)
                             break;
 
@@ -105,6 +122,40 @@ public class IntelligentBulkProcessor(
                         }
                     }
 
+                    // AUTO-SAVE BATCH TO TEMPORARY COLLECTION for recovery
+                    // Get jobs processed in this batch (last N jobs added)
+                    var batchJobs = result.ProcessedJobs.Skip(Math.Max(0, result.ProcessedJobs.Count - jobs.Count)).ToList();
+                    await scrapingService.SaveToTemporaryCollectionAsync(
+                        batchJobs,
+                        effectiveSessionId,
+                        currentPage,
+                        "bulk",
+                        request.SearchTerm,
+                        request.Location);
+
+                    // REPORT PROGRESS AFTER EACH BATCH (lightweight summary only)
+                    if (progressCallback != null)
+                    {
+                        // Create lightweight summary instead of copying all jobs
+                        result.PagesProcessed = currentPage;
+                        var summary = BulkProcessingSummary.FromResult(result, result.StartTime);
+
+                        // Update estimated total batches based on progress
+                        if (result.ProcessedJobs.Count > 0)
+                        {
+                            double jobsPerBatch = result.ProcessedJobs.Count / (double)currentPage;
+                            estimatedTotalBatches = Math.Max(estimatedTotalBatches,
+                                (int)Math.Ceiling(request.TargetJobCount / jobsPerBatch));
+                        }
+
+                        progressCallback(
+                            currentPage,
+                            estimatedTotalBatches,
+                            $"Batch {currentPage}/{estimatedTotalBatches}: {result.ProcessedJobs.Count}/{request.TargetJobCount} jobs, avg score: {summary.AverageScore:F1}",
+                            summary
+                        );
+                    }
+
                     // Intelligent stopping criteria
                     if (batchHighScoreCount == 0)
                     {
@@ -125,9 +176,15 @@ public class IntelligentBulkProcessor(
 
                     // Adaptive rate limiting
                     int delayMs = CalculateAdaptiveDelay(currentPage, jobs.Count);
-                    await Task.Delay(delayMs);
+                    await Task.Delay(delayMs, cancellationToken);
 
                     currentPage++;
+                }
+                catch (OperationCanceledException)
+                {
+                    // Re-throw cancellation to be handled by JobQueueManager
+                    logger.LogInformation($"Bulk processing cancelled at page {currentPage}");
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -139,7 +196,7 @@ public class IntelligentBulkProcessor(
                     if (ex is not TimeoutException)
                     {
                         currentPage++;
-                        await Task.Delay(2000); // Extra delay after error
+                        await Task.Delay(2000, cancellationToken); // Extra delay after error
                     }
                     else
                     {
@@ -170,6 +227,18 @@ public class IntelligentBulkProcessor(
 
             return result;
         }
+        catch (OperationCanceledException)
+        {
+            // Handle cancellation gracefully
+            result.EndTime = DateTime.UtcNow;
+            result.TotalDuration = result.EndTime - result.StartTime;
+            result.PagesProcessed = Math.Max(0, result.ProcessedJobs.Count / CalculateOptimalBatchSize(request.TargetJobCount));
+
+            logger.LogInformation($"Bulk processing cancelled: {result.ProcessedJobs.Count} jobs processed before cancellation");
+            
+            // Re-throw so JobQueueManager can handle it
+            throw;
+        }
         catch (Exception ex)
         {
             result.EndTime = DateTime.UtcNow;
@@ -183,19 +252,19 @@ public class IntelligentBulkProcessor(
         }
     }
 
-    private int CalculateOptimalBatchSize(int targetJobCount)
+    private static int CalculateOptimalBatchSize(int targetJobCount)
     {
-        // Dynamic batch sizing based on target
-        if (targetJobCount <= 10)
-            return 5;
-        if (targetJobCount <= 20)
-            return 8;
-        if (targetJobCount <= 50)
-            return 10;
-        return 15;
+        return targetJobCount switch
+        {
+            // Dynamic batch sizing based on target
+            <= 10 => 5,
+            <= 20 => 8,
+            <= 50 => 10,
+            _ => 15
+        };
     }
 
-    private int CalculateAdaptiveDelay(int pageNumber, int jobsInBatch)
+    private static int CalculateAdaptiveDelay(int pageNumber, int jobsInBatch)
     {
         // Base delay
         var baseDelay = 1000;
@@ -268,4 +337,40 @@ public class BulkProcessingResult
     public double AverageScore => ProcessedJobs.Count > 0 ? ProcessedJobs.Average(j => j.MatchScore) : 0;
     public double JobsPerMinute => TotalDuration.TotalMinutes > 0 ? ProcessedJobs.Count / TotalDuration.TotalMinutes : 0;
     public bool IsSuccessful => Errors.Count == 0 && ProcessedJobs.Count > 0;
+}
+
+/// <summary>
+/// Lightweight summary for progress tracking (avoids token explosion)
+/// Contains only statistics, no job objects
+/// </summary>
+public class BulkProcessingSummary
+{
+    public int JobsProcessed { get; set; }
+    public double AverageScore { get; set; }
+    public int HighPriorityCount { get; set; }  // 90-100
+    public int GreatCount { get; set; }         // 75-89
+    public int GoodCount { get; set; }          // 60-74
+    public int FairCount { get; set; }          // <60
+    public int ErrorCount { get; set; }
+    public int PagesProcessed { get; set; }
+    public double ElapsedSeconds { get; set; }
+
+    /// <summary>
+    /// Create summary from full result
+    /// </summary>
+    public static BulkProcessingSummary FromResult(BulkProcessingResult result, DateTime startTime)
+    {
+        return new BulkProcessingSummary
+        {
+            JobsProcessed = result.ProcessedJobs.Count,
+            AverageScore = result.ProcessedJobs.Count > 0 ? result.ProcessedJobs.Average(j => j.MatchScore) : 0,
+            HighPriorityCount = result.ProcessedJobs.Count(j => j.MatchScore >= 90),
+            GreatCount = result.ProcessedJobs.Count(j => j.MatchScore >= 75 && j.MatchScore < 90),
+            GoodCount = result.ProcessedJobs.Count(j => j.MatchScore >= 60 && j.MatchScore < 75),
+            FairCount = result.ProcessedJobs.Count(j => j.MatchScore < 60),
+            ErrorCount = result.Errors.Count,
+            PagesProcessed = result.PagesProcessed,
+            ElapsedSeconds = (DateTime.UtcNow - startTime).TotalSeconds
+        };
+    }
 }

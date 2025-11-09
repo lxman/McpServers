@@ -14,14 +14,20 @@ public class EnhancedJobScrapingService(
     : IEnhancedJobScrapingService
 {
     private readonly IMongoCollection<EnhancedJobListing> _jobListings = database.GetCollection<EnhancedJobListing>("search_results");
+    private readonly IMongoCollection<TemporaryJobListing> _tempJobListings = database.GetCollection<TemporaryJobListing>("search_results_temp");
     private readonly IMongoCollection<SiteConfiguration> _siteConfigurations = database.GetCollection<SiteConfiguration>("site_configurations");
     private IWebDriver? _screenshotDriver;
-    
+
     // Service-level semaphore to prevent concurrent scraping operations
     private static readonly SemaphoreSlim ScrapingSemaphore = new(1, 1);
 
-    public async Task<List<EnhancedJobListing>> ScrapeMultipleSitesAsync(EnhancedScrapeRequest request)
+    public async Task<List<EnhancedJobListing>> ScrapeMultipleSitesAsync(EnhancedScrapeRequest request, string? sessionId = null)
     {
+        // Generate sessionId if not provided for temporary storage
+        string effectiveSessionId = sessionId ?? Guid.NewGuid().ToString();
+
+        logger.LogInformation($"Starting multi-site scrape for {request.Sites.Count} sites (session: {effectiveSessionId})");
+
         var allJobs = new List<EnhancedJobListing>();
         var tasks = new List<Task<List<EnhancedJobListing>>>();
 
@@ -36,7 +42,8 @@ public class EnhancedJobScrapingService(
                     continue;
                 }
 
-                tasks.Add(ScrapeSpecificSiteAsync(site, request));
+                // Pass sessionId to group all results from this multi-site operation
+                tasks.Add(ScrapeSpecificSiteAsync(site, request, effectiveSessionId));
             }
             catch (Exception ex)
             {
@@ -45,7 +52,7 @@ public class EnhancedJobScrapingService(
         }
 
         List<EnhancedJobListing>[] results = await Task.WhenAll(tasks);
-        
+
         foreach (List<EnhancedJobListing> siteJobs in results)
         {
             allJobs.AddRange(siteJobs);
@@ -54,16 +61,29 @@ public class EnhancedJobScrapingService(
         // Calculate match scores
         await CalculateMatchScores(allJobs, request.UserId);
 
-        // Note: Jobs are not automatically saved - use SaveJobsAsync after filtering
-        
+        // AUTO-SAVE COMBINED RESULTS TO TEMPORARY COLLECTION after scoring
+        // This creates a final batch with all scored results for easy recovery
+        await SaveToTemporaryCollectionAsync(
+            allJobs,
+            effectiveSessionId,
+            99, // High batch number to appear after individual site saves
+            "multi_site_combined",
+            request.SearchTerm,
+            request.Location);
+
+        // Note: Jobs are not automatically saved to final collection - use SaveJobsAsync after filtering
+
         logger.LogInformation($"Successfully scraped {allJobs.Count} total jobs from {request.Sites.Count} sites");
         return allJobs.OrderByDescending(j => j.MatchScore).ToList();
     }
 
-    public async Task<List<EnhancedJobListing>> ScrapeSpecificSiteAsync(JobSite site, EnhancedScrapeRequest request)
+    public async Task<List<EnhancedJobListing>> ScrapeSpecificSiteAsync(JobSite site, EnhancedScrapeRequest request, string? sessionId = null)
     {
-        logger.LogInformation($"Requesting scraping lock for {site}...");
-        
+        // Generate sessionId if not provided for temporary storage
+        string effectiveSessionId = sessionId ?? Guid.NewGuid().ToString();
+
+        logger.LogInformation($"Requesting scraping lock for {site} (session: {effectiveSessionId})...");
+
         // Prevent concurrent scraping operations
         TimeSpan timeout = TimeSpan.FromMinutes(3);
         if (!await ScrapingSemaphore.WaitAsync(timeout))
@@ -71,19 +91,29 @@ public class EnhancedJobScrapingService(
             logger.LogError($"Failed to acquire scraping lock for {site} within timeout");
             throw new TimeoutException($"Scraping lock timeout for {site}");
         }
-        
+
         try
         {
             logger.LogInformation($"Acquired scraping lock for {site}");
-            
+
             IJobSiteScraper scraper = scraperFactory.CreateScraper(site);
             SiteConfiguration config = await GetSiteConfigurationAsync(site);
-            
+
             logger.LogInformation($"Starting scrape of {site} with config last updated: {config.LastUpdated}");
-            
+
             List<EnhancedJobListing> jobs = await scraper.ScrapeJobsAsync(request, config);
-            
+
             logger.LogInformation($"Successfully scraped {jobs.Count} jobs from {site}");
+
+            // AUTO-SAVE TO TEMPORARY COLLECTION for recovery
+            await SaveToTemporaryCollectionAsync(
+                jobs,
+                effectiveSessionId,
+                1, // Single batch for single-site scraping
+                "single_site",
+                request.SearchTerm,
+                request.Location);
+
             return jobs;
         }
         catch (Exception ex)
@@ -103,7 +133,7 @@ public class EnhancedJobScrapingService(
         FilterDefinition<SiteConfiguration>? filter = Builders<SiteConfiguration>.Filter.Eq(s => s.SiteName, site.ToString());
         SiteConfiguration? config = await _siteConfigurations.Find(filter).FirstOrDefaultAsync();
         
-        if (config == null)
+        if (config is null)
         {
             // Create default configuration using the scraper
             IJobSiteScraper scraper = scraperFactory.CreateScraper(site);
@@ -181,7 +211,7 @@ public class EnhancedJobScrapingService(
         try
         {
             InitializeScreenshotDriver();
-            _screenshotDriver!.Navigate().GoToUrl(url);
+            await _screenshotDriver!.Navigate().GoToUrlAsync(url);
             await Task.Delay(2000);
 
             Screenshot screenshot = ((ITakesScreenshot)_screenshotDriver).GetScreenshot();
@@ -202,7 +232,7 @@ public class EnhancedJobScrapingService(
 
     private void InitializeScreenshotDriver()
     {
-        if (_screenshotDriver != null) return;
+        if (_screenshotDriver is not null) return;
 
         var options = new ChromeOptions();
         options.AddArgument("--headless=new");
@@ -244,7 +274,7 @@ public class EnhancedJobScrapingService(
             FilterDefinition<BsonDocument>? profileFilter = Builders<BsonDocument>.Filter.Eq("userId", userId);
             BsonDocument? userProfile = await profileCollection.Find(profileFilter).FirstOrDefaultAsync();
             
-            if (userProfile == null) return;
+            if (userProfile is null) return;
 
             List<string> userSkills = userProfile["experience"]["primaryTechnologies"]
                 .AsBsonArray.Select(x => x.AsString.ToLower()).ToList();
@@ -318,7 +348,7 @@ public class EnhancedJobScrapingService(
                     .Find(j => j.Url == job.Url)
                     .FirstOrDefaultAsync();
                 
-                if (existingJob == null)
+                if (existingJob is null)
                 {
                     uniqueJobs.Add(job);
                 }
@@ -370,6 +400,172 @@ public class EnhancedJobScrapingService(
         {
             logger.LogError($"Error saving jobs for user {request.UserId}: {ex.Message}");
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Save jobs to temporary collection for recovery if operation is interrupted
+    /// </summary>
+    public async Task SaveToTemporaryCollectionAsync(
+        List<EnhancedJobListing> jobs,
+        string sessionId,
+        int batchNumber,
+        string operationType,
+        string searchTerm,
+        string location)
+    {
+        try
+        {
+            if (!jobs.Any())
+            {
+                logger.LogDebug($"No jobs to save to temporary collection for session {sessionId}");
+                return;
+            }
+
+            var tempListings = jobs.Select(job => new TemporaryJobListing
+            {
+                SessionId = sessionId,
+                BatchNumber = batchNumber,
+                SavedAt = DateTime.UtcNow,
+                Consolidated = false,
+                JobListing = job,
+                OperationType = operationType,
+                SearchTerm = searchTerm,
+                Location = location
+            }).ToList();
+
+            await _tempJobListings.InsertManyAsync(tempListings);
+            logger.LogInformation($"Saved {jobs.Count} jobs to temporary collection for session {sessionId}, batch {batchNumber}");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, $"Error saving jobs to temporary collection for session {sessionId}: {ex.Message}");
+            // Don't throw - temp saving should not break the main flow
+        }
+    }
+
+    /// <summary>
+    /// Consolidate temporary results to final collection
+    /// </summary>
+    public async Task<ConsolidationResult> ConsolidateTemporaryResultsAsync(string sessionId, string userId)
+    {
+        try
+        {
+            // Find all unconsolidated temp results for this session
+            var tempResults = await _tempJobListings
+                .Find(t => t.SessionId == sessionId && !t.Consolidated)
+                .SortBy(t => t.BatchNumber)
+                .ToListAsync();
+
+            if (!tempResults.Any())
+            {
+                logger.LogInformation($"No temporary results found for session {sessionId}");
+                return new ConsolidationResult
+                {
+                    Success = true,
+                    SessionId = sessionId,
+                    JobsConsolidated = 0,
+                    Message = "No temporary results to consolidate"
+                };
+            }
+
+            // Extract job listings and set userId
+            var jobs = tempResults.Select(t =>
+            {
+                t.JobListing.UserId = userId;
+                return t.JobListing;
+            }).ToList();
+
+            // Save to final collection (with deduplication)
+            await SaveJobsToDatabase(jobs);
+
+            // Mark temp results as consolidated
+            var filter = Builders<TemporaryJobListing>.Filter.Eq(t => t.SessionId, sessionId);
+            var update = Builders<TemporaryJobListing>.Update.Set(t => t.Consolidated, true);
+            await _tempJobListings.UpdateManyAsync(filter, update);
+
+            logger.LogInformation($"Consolidated {jobs.Count} jobs from session {sessionId} to final collection");
+
+            return new ConsolidationResult
+            {
+                Success = true,
+                SessionId = sessionId,
+                JobsConsolidated = jobs.Count,
+                JobsSaved = jobs.Count,
+                Message = $"Successfully consolidated {jobs.Count} jobs from temporary storage"
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, $"Error consolidating temporary results for session {sessionId}");
+            return new ConsolidationResult
+            {
+                Success = false,
+                SessionId = sessionId,
+                Message = $"Error: {ex.Message}"
+            };
+        }
+    }
+
+    /// <summary>
+    /// Get temporary results for inspection/recovery
+    /// </summary>
+    public async Task<List<TemporaryJobListing>> GetTemporaryResultsAsync(string? sessionId = null, bool includeConsolidated = false)
+    {
+        try
+        {
+            FilterDefinition<TemporaryJobListing> filter;
+
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                filter = includeConsolidated
+                    ? Builders<TemporaryJobListing>.Filter.Eq(t => t.SessionId, sessionId)
+                    : Builders<TemporaryJobListing>.Filter.And(
+                        Builders<TemporaryJobListing>.Filter.Eq(t => t.SessionId, sessionId),
+                        Builders<TemporaryJobListing>.Filter.Eq(t => t.Consolidated, false)
+                    );
+            }
+            else
+            {
+                filter = includeConsolidated
+                    ? Builders<TemporaryJobListing>.Filter.Empty
+                    : Builders<TemporaryJobListing>.Filter.Eq(t => t.Consolidated, false);
+            }
+
+            return await _tempJobListings
+                .Find(filter)
+                .SortByDescending(t => t.SavedAt)
+                .Limit(100)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error retrieving temporary results");
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Clean up old temporary results (consolidated or older than 24 hours)
+    /// </summary>
+    public async Task<int> CleanupOldTemporaryResultsAsync()
+    {
+        try
+        {
+            var cutoffTime = DateTime.UtcNow.AddHours(-24);
+            var filter = Builders<TemporaryJobListing>.Filter.Or(
+                Builders<TemporaryJobListing>.Filter.Eq(t => t.Consolidated, true),
+                Builders<TemporaryJobListing>.Filter.Lt(t => t.SavedAt, cutoffTime)
+            );
+
+            var result = await _tempJobListings.DeleteManyAsync(filter);
+            logger.LogInformation($"Cleaned up {result.DeletedCount} old temporary results");
+            return (int)result.DeletedCount;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error cleaning up temporary results");
+            return 0;
         }
     }
 

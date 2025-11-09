@@ -231,7 +231,7 @@ public class SmartDeduplicationService(ILogger<SmartDeduplicationService> logger
 
     private bool IsTrackingParameter(string param)
     {
-        var trackingParams = new[] { "utm_", "ref=", "source=", "campaign=", "medium=", "gclid=", "fbclid=" };
+        string[] trackingParams = ["utm_", "ref=", "source=", "campaign=", "medium=", "gclid=", "fbclid="];
         return trackingParams.Any(tp => param.StartsWith(tp, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -260,15 +260,15 @@ public class SmartDeduplicationService(ILogger<SmartDeduplicationService> logger
         if (string.IsNullOrEmpty(url)) return string.Empty;
 
         // Common job ID patterns
-        var patterns = new[]
-        {
+        string[] patterns =
+        [
             @"/jobs/(\d+)",           // /jobs/123456
             @"/job/(\d+)",            // /job/123456
             @"jobId[=:]([^&\s]+)",    // jobId=abc123
             @"id[=:]([^&\s]+)",       // id=abc123
             @"/([a-f0-9-]{36})",      // UUID pattern
             @"/([a-f0-9]{24})"        // MongoDB ObjectId pattern
-        };
+        ];
 
         foreach (string pattern in patterns)
         {
@@ -306,7 +306,7 @@ public class SmartDeduplicationService(ILogger<SmartDeduplicationService> logger
         string normalized = companyName.ToLower().Trim();
 
         // Remove common corporate suffixes
-        var suffixes = new[] { ", inc.", ", inc", ", llc", ", ltd", ", corp", ", corporation", " inc", " llc", " ltd" };
+        string[] suffixes = [", inc.", ", inc", ", llc", ", ltd", ", corp", ", corporation", " inc", " llc", " ltd"];
         foreach (string suffix in suffixes)
         {
             if (normalized.EndsWith(suffix))

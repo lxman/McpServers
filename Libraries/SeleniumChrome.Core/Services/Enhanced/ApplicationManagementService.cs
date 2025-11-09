@@ -19,7 +19,7 @@ public class ApplicationManagementService
     {
         _logger = logger;
         
-        if (database != null)
+        if (database is not null)
         {
             _applicationCollection = database.GetCollection<ApplicationRecord>("job_applications");
         }
@@ -35,7 +35,7 @@ public class ApplicationManagementService
         _logger.LogInformation($"Categorizing {jobs.Count} jobs for application readiness");
 
         // Provide default preferences if none provided
-        if (preferences == null)
+        if (preferences is null)
         {
             preferences = new ApplicationPreferences
             {
@@ -242,7 +242,7 @@ public class ApplicationManagementService
     /// </summary>
     public async Task<bool> TrackApplicationAsync(ApplicationRecord application)
     {
-        if (_applicationCollection == null) return false;
+        if (_applicationCollection is null) return false;
 
         try
         {
@@ -266,7 +266,7 @@ public class ApplicationManagementService
     /// </summary>
     public async Task<bool> UpdateApplicationStatusAsync(string applicationId, ApplicationStatus status, string? notes = null)
     {
-        if (_applicationCollection == null) return false;
+        if (_applicationCollection is null) return false;
 
         try
         {
@@ -289,128 +289,4 @@ public class ApplicationManagementService
             return false;
         }
     }
-}
-
-// Supporting Models and Enums
-
-public class ApplicationCategorizationResult
-{
-    public DateTime ProcessedAt { get; set; }
-    public int TotalJobs { get; set; }
-    public List<CategorizedJob> ImmediateApplications { get; set; } = [];
-    public List<CategorizedJob> HighPriorityApplications { get; set; } = [];
-    public List<CategorizedJob> MediumPriorityApplications { get; set; } = [];
-    public List<CategorizedJob> LowPriorityApplications { get; set; } = [];
-    public List<CategorizedJob> NotRecommended { get; set; } = [];
-    public List<CategorizedJob> AlreadyApplied { get; set; } = [];
-    public ApplicationInsights Insights { get; set; } = new();
-}
-
-public class CategorizedJob
-{
-    public EnhancedJobListing Job { get; set; } = null!;
-    public ApplicationPriority Priority { get; set; }
-    public int ApplicationReadinessScore { get; set; }
-    public List<string> ReasonCodes { get; set; } = [];
-    public List<string> ActionItems { get; set; } = [];
-    public TimeSpan EstimatedApplicationTime { get; set; }
-    public UrgencyLevel DeadlineUrgency { get; set; }
-    public CompetitivenessLevel CompetitivenessRating { get; set; }
-    public DateTime AnalyzedAt { get; set; }
-}
-
-public class ApplicationPreferences
-{
-    public string UserId { get; set; } = string.Empty;
-    public decimal MinSalary { get; set; }
-    public decimal PreferredSalary { get; set; }
-    public bool PreferRemote { get; set; }
-    public List<string> PreferredLocations { get; set; } = [];
-    public List<string> TargetCompanies { get; set; } = [];
-    public List<string> RequiredTechnologies { get; set; } = [];
-    public ExperienceLevel TargetExperienceLevel { get; set; }
-    public int DailyApplicationTarget { get; set; } = 3;
-    public int WeeklyApplicationTarget { get; set; } = 15;
-}
-
-public class ApplicationInsights
-{
-    public DateTime GeneratedAt { get; set; }
-    public List<CategorizedJob> DailyApplicationPlan { get; set; } = [];
-    public List<CategorizedJob> WeeklyApplicationPlan { get; set; } = [];
-    public TimeSpan EstimatedDailyTime { get; set; }
-    public TimeSpan EstimatedWeeklyTime { get; set; }
-    public List<string> Recommendations { get; set; } = [];
-}
-
-public class ApplicationRecord
-{
-    public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string UserId { get; set; } = string.Empty;
-    public string JobUrl { get; set; } = string.Empty;
-    public string Company { get; set; } = string.Empty;
-    public string Title { get; set; } = string.Empty;
-    public string Location { get; set; } = string.Empty;
-    public string Salary { get; set; } = string.Empty;
-    public ApplicationStatus Status { get; set; }
-    public DateTime AppliedAt { get; set; }
-    public DateTime LastUpdated { get; set; }
-    public string Notes { get; set; } = string.Empty;
-    public List<string> FollowUpDates { get; set; } = [];
-}
-
-public enum ApplicationPriority
-{
-    Immediate,
-    High,
-    Medium,
-    Low,
-    NotRecommended,
-    AlreadyApplied
-}
-
-public enum ApplicationStatus
-{
-    Planned,
-    Applied,
-    UnderReview,
-    Interview,
-    Rejected,
-    Offered,
-    Accepted,
-    Withdrawn
-}
-
-public enum ExperienceLevel
-{
-    Junior,
-    Mid,
-    Senior,
-    Lead,
-    Principal,
-    NotSpecified
-}
-
-public enum UrgencyLevel
-{
-    Normal,
-    Medium,
-    High,
-    Critical
-}
-
-public enum CompetitivenessLevel
-{
-    Low,
-    Medium,
-    High,
-    VeryHigh
-}
-
-public enum HiringVelocity
-{
-    Low,
-    Medium,
-    High,
-    VeryHigh
 }

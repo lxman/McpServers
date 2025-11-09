@@ -2,6 +2,11 @@
 
 Process jobs in bulk with intelligent scoring based on a 50-year .NET developer profile and preferences.
 
+**⚠️ SYNCHRONOUS OPERATION**: This tool blocks until all jobs are processed (2-6 minutes). For better token efficiency and non-blocking operation, use the async workflow instead:
+1. `start_bulk_job` - Start background processing
+2. `check_job_status` - Monitor progress (lightweight)
+3. `get_bulk_job_results` - Retrieve final results when complete
+
 ## Parameters
 
 - **searchTerm** (string): Job title or keyword to search for

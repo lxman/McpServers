@@ -26,7 +26,7 @@ public class SerilogTextWriter : TextWriter
     private readonly ILogger _logger;
     private readonly LogEventLevel _logLevel;
     private readonly StringBuilder _lineBuffer = new();
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     /// <summary>
     /// Creates a new SerilogTextWriter that forwards writes to Serilog.
@@ -66,7 +66,8 @@ public class SerilogTextWriter : TextWriter
     /// </summary>
     public override void WriteLine(string? value)
     {
-        if (!string.IsNullOrEmpty(value))
+        if (string.IsNullOrEmpty(value)) return;
+        lock (_lock)
         {
             _logger.Write(_logLevel, "[Console] {Message}", value);
         }
@@ -88,11 +89,9 @@ public class SerilogTextWriter : TextWriter
     /// </summary>
     private void FlushInternal()
     {
-        if (_lineBuffer.Length > 0)
-        {
-            _logger.Write(_logLevel, "[Console] {Message}", _lineBuffer.ToString());
-            _lineBuffer.Clear();
-        }
+        if (_lineBuffer.Length <= 0) return;
+        _logger.Write(_logLevel, "[Console] {Message}", _lineBuffer.ToString());
+        _lineBuffer.Clear();
     }
 
     /// <inheritdoc />

@@ -53,7 +53,7 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
     {
         int? salary = ExtractSalaryFromJob(job);
         
-        if (salary == null)
+        if (salary is null)
             return 50; // Neutral score if no salary info
 
         if (salary >= prefs.TargetSalary)
@@ -155,7 +155,7 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
         }
 
         // Look for growth/funding indicators
-        var growthKeywords = new[] { "funding", "series", "growth", "expanding", "scale", "venture" };
+        string[] growthKeywords = ["funding", "series", "growth", "expanding", "scale", "venture"];
         if (growthKeywords.Any(keyword => companyInfo.Contains(keyword) || description.Contains(keyword)))
         {
             score += 10;
@@ -188,7 +188,7 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
         }
 
         // Check for hybrid/flexible work options
-        var flexKeywords = new[] { "hybrid", "flexible", "work from home", "wfh" };
+        string[] flexKeywords = ["hybrid", "flexible", "work from home", "wfh"];
         if (flexKeywords.Any(keyword => description.Contains(keyword)))
         {
             return 60;
@@ -248,14 +248,14 @@ public class NetDeveloperJobScorer(ILogger<NetDeveloperJobScorer> logger)
         string textToSearch = GetJobTextForAnalysis(job);
         
         // Common salary patterns
-        var patterns = new[]
-        {
+        string[] patterns =
+        [
             @"\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*-\s*\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)", // $120,000 - $150,000
             @"\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*to\s*\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)", // $120,000 to $150,000
             @"\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)", // $120,000
             @"(\d{1,3})k\s*-\s*(\d{1,3})k", // 120k - 150k
-            @"(\d{1,3})k", // 120k
-        };
+            @"(\d{1,3})k" // 120k
+        ];
 
         foreach (string pattern in patterns)
         {

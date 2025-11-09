@@ -47,7 +47,7 @@ public class SimplifyJobsApiService(ILogger<SimplifyJobsApiService> logger) : Ba
                     if (jobData.HasValue)
                     {
                         EnhancedJobListing? enhancedJob = ConvertToEnhancedJobListing(jobData.Value, userId);
-                        if (enhancedJob != null)
+                        if (enhancedJob is not null)
                         {
                             enhancedJob.SourceSite = SupportedSite;
                             jobs.Add(enhancedJob);
@@ -101,10 +101,10 @@ public class SimplifyJobsApiService(ILogger<SimplifyJobsApiService> logger) : Ba
     {
         try
         {
-            Driver!.Navigate().GoToUrl("https://simplify.jobs");
+            await Driver!.Navigate().GoToUrlAsync("https://simplify.jobs");
             await Task.Delay(2000);
             
-            Driver.Navigate().GoToUrl("https://simplify.jobs/jobs");
+            await Driver.Navigate().GoToUrlAsync("https://simplify.jobs/jobs");
             await Task.Delay(1000);
             
             string currentUrl = Driver.Url.ToLower();

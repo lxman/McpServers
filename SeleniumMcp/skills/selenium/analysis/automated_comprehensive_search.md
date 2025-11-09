@@ -2,6 +2,8 @@
 
 Run an automated search across multiple job search terms and locations simultaneously across all supported job sites.
 
+**⚠️ LONG-RUNNING SYNCHRONOUS OPERATION**: This tool blocks for 5-15 minutes depending on search combinations. The operation is synchronous and cannot be cancelled. For individual searches, consider using `start_bulk_job` instead which runs asynchronously.
+
 ## Parameters
 
 - **searchTermsJson** (string): JSON array of job titles or keywords to search for

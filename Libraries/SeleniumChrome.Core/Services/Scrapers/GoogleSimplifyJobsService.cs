@@ -14,7 +14,7 @@ namespace SeleniumChrome.Core.Services.Scrapers
     /// 
     /// UPDATED: Now uses Google Custom Search API instead of web scraping
     /// </summary>
-    public class GoogleSimplifyJobsService(
+    public partial class GoogleSimplifyJobsService(
         ILogger<GoogleSimplifyJobsService> logger,
         SimplifyJobsApiService apiService,
         HttpClient httpClient)
@@ -30,7 +30,9 @@ namespace SeleniumChrome.Core.Services.Scrapers
         
         // Regex pattern to extract job IDs from SimplifyJobs URLs
         // Pattern: https://simplify.jobs/p/{JOB_ID}/{JOB_TITLE}
-        private static readonly Regex JobIdRegex = new(@"/p/([a-f0-9-]{36})/", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        [GeneratedRegex(@"/p/([a-f0-9-]{36})/", RegexOptions.IgnoreCase | RegexOptions.Compiled, "en-US")]
+        private static partial Regex MyRegex();
+        private static readonly Regex JobIdRegex = MyRegex();
 
         /// <summary>
         /// Required by BaseJobScraper - routes to Google Custom Search API discovery

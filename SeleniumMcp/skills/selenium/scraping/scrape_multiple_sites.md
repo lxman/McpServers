@@ -2,6 +2,8 @@
 
 Scrape jobs from multiple job sites simultaneously to gather comprehensive job listings across all supported platforms.
 
+**⚠️ Auto-Save**: All scraped jobs are automatically saved to a temporary collection as each site completes. Use `consolidate_temporary_results` to save them permanently if needed.
+
 ## Parameters
 
 - **sitesJson** (string): JSON array of site names to scrape. Supported values: 'Dice', 'BuiltIn', 'AngelList', 'StackOverflow', 'HubSpot', 'SimplifyJobs'

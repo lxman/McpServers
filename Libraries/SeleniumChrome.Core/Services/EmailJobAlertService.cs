@@ -206,8 +206,8 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
             logger.LogDebug($"Email body length: {body.Length} characters");
             
             // Multiple patterns to try for Glassdoor emails
-            var patterns = new[]
-            {
+            string[] patterns =
+            [
                 // Pattern 1: Standard job alert with links
                 @"<a[^>]*href=""([^""]*glassdoor\.com[^""]*job[^""]*)"">([^<]+)</a>.*?<div[^>]*>([^<]+)</div>.*?<div[^>]*>([^<]+)</div>",
                 
@@ -219,7 +219,7 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
                 
                 // Pattern 4: Alternative link format
                 @"href=""([^""]*glassdoor\.com[^""]*)"">([^<]+)</a>"
-            };
+            ];
             
             foreach (string pattern in patterns)
             {
@@ -294,7 +294,7 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
                 logger.LogDebug($"Email body preview: {bodyPreview}");
                 
                 // Check if email contains any job-related keywords
-                var jobKeywords = new[] { "job", "position", "opportunity", "hiring", "career", "apply" };
+                string[] jobKeywords = ["job", "position", "opportunity", "hiring", "career", "apply"];
                 List<string> foundKeywords = jobKeywords.Where(keyword => body.ToLower().Contains(keyword)).ToList();
                 logger.LogInformation($"Job-related keywords found: {string.Join(", ", foundKeywords)}");
             }
@@ -406,11 +406,12 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
 
     private bool DetermineRemoteStatus(string location, string title)
     {
-        var remoteKeywords = new[] { 
+        string[] remoteKeywords =
+        [
             "remote", "work from home", "wfh", "telecommute", "distributed", 
             "home office", "anywhere", "virtual", "telework", "remote work",
             "work remotely", "remote position", "remote opportunity"
-        };
+        ];
         
         string combinedText = $"{location} {title}".ToLower();
         return remoteKeywords.Any(keyword => combinedText.Contains(keyword));
@@ -422,7 +423,7 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
         string jobText = $"{job.Title} {job.Company} {job.Location}".ToLower();
         
         // .NET stack preferences (high weight for email alerts)
-        var dotnetKeywords = new[] { ".net", "c#", "csharp", "dotnet", "asp.net" };
+        string[] dotnetKeywords = [".net", "c#", "csharp", "dotnet", "asp.net"];
         foreach (string keyword in dotnetKeywords)
         {
             if (jobText.Contains(keyword))
@@ -430,7 +431,7 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
         }
         
         // Database experience
-        var dbKeywords = new[] { "sql server", "mongodb", "database", "entity framework" };
+        string[] dbKeywords = ["sql server", "mongodb", "database", "entity framework"];
         foreach (string keyword in dbKeywords)
         {
             if (jobText.Contains(keyword))
@@ -442,12 +443,12 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
             score += 20;
         
         // Senior level positions
-        var seniorKeywords = new[] { "senior", "lead", "principal", "architect" };
+        string[] seniorKeywords = ["senior", "lead", "principal", "architect"];
         if (seniorKeywords.Any(keyword => jobText.Contains(keyword)))
             score += 15;
         
         // Startup indicators
-        var startupKeywords = new[] { "startup", "series a", "series b", "growth company" };
+        string[] startupKeywords = ["startup", "series a", "series b", "growth company"];
         if (startupKeywords.Any(keyword => jobText.Contains(keyword)))
             score += 10;
         
@@ -505,12 +506,12 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
             string jobId = jobIdMatch.Groups[1].Value;
             
             // Try multiple URL formats that might work
-            var urlsToTry = new[]
-            {
+            string[] urlsToTry =
+            [
                 $"https://www.glassdoor.com/job-listing/{jobId}",
                 $"https://www.glassdoor.com/Jobs/job/{jobId}",
                 $"https://www.glassdoor.com/job-listing/job-{jobId}.htm"
-            };
+            ];
             
             using var httpClient = new HttpClient();
             
@@ -565,14 +566,14 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
             }
             
             // Extract company name using multiple patterns
-            var companyPatterns = new[]
-            {
+            string[] companyPatterns =
+            [
                 @"<span[^>]*class=""[^""]*employer[^""]*""[^>]*>([^<]+)</span>",
                 @"""employer""[^>]*>([^<]+)<",
                 @"<div[^>]*data-test=""employer-name""[^>]*>([^<]+)</div>",
                 @"<a[^>]*href=""[^""]*company[^""]*""[^>]*>([^<]+)</a>",
                 @"class=""css-[^""]*""[^>]*>([^<]+)</span>.*?company"
-            };
+            ];
             
             foreach (string pattern in companyPatterns)
             {
@@ -586,13 +587,13 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
             }
             
             // Extract location using multiple patterns
-            var locationPatterns = new[]
-            {
+            string[] locationPatterns =
+            [
                 @"<div[^>]*data-test=""job-location""[^>]*>([^<]+)</div>",
                 @"<span[^>]*class=""[^""]*location[^""]*""[^>]*>([^<]+)</span>",
                 @"""location""[^>]*>([^<]+)<",
                 @"<div[^>]*location[^>]*>([^<]+)</div>"
-            };
+            ];
             
             foreach (string pattern in locationPatterns)
             {
@@ -607,12 +608,12 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
             }
             
             // Extract job description
-            var descriptionPatterns = new[]
-            {
+            string[] descriptionPatterns =
+            [
                 @"<div[^>]*class=""[^""]*jobDescriptionContent[^""]*""[^>]*>(.*?)</div>",
                 @"<section[^>]*data-test=""jobDescription""[^>]*>(.*?)</section>",
                 @"<div[^>]*job-description[^>]*>(.*?)</div>"
-            };
+            ];
             
             foreach (string pattern in descriptionPatterns)
             {
@@ -628,12 +629,12 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
             }
             
             // Extract salary information
-            var salaryPatterns = new[]
-            {
+            string[] salaryPatterns =
+            [
                 @"<span[^>]*class=""[^""]*salary[^""]*""[^>]*>([^<]+)</span>",
                 @"\$[\d,]+(?:\s*-\s*\$[\d,]+)?(?:\s*(?:per|/)\s*(?:year|hour|yr|hr))?",
                 @"salary[^>]*>([^<]*\$[^<]+)</[^>]*>"
-            };
+            ];
             
             foreach (string pattern in salaryPatterns)
             {
@@ -790,17 +791,4 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
             LastUpdated = DateTime.UtcNow
         };
     }
-}
-
-public class EmailJobAlertSummary
-{
-    public int TotalJobs { get; set; }
-    public int LinkedInJobs { get; set; }
-    public int GlassdoorJobs { get; set; }
-    public int DiceJobs { get; set; }
-    public int IndeedJobs { get; set; }
-    public int RemoteJobs { get; set; }
-    public int HighMatchJobs { get; set; }
-    public int DaysAnalyzed { get; set; }
-    public DateTime LastUpdated { get; set; }
 }

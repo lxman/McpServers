@@ -21,7 +21,7 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
             Logger.LogInformation($"Scraping AngelList: {searchUrl}");
             
             // Navigate to page with reduced delay
-            Driver!.Navigate().GoToUrl(searchUrl);
+            await Driver!.Navigate().GoToUrlAsync(searchUrl);
             await Task.Delay(1000);
             
             Logger.LogInformation($"Page title: {Driver.Title}");
@@ -36,8 +36,8 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
             // Find job elements using multiple strategies
             var jobElements = new ReadOnlyCollection<IWebElement>(new List<IWebElement>());
             
-            var jobSelectors = new[]
-            {
+            string[] jobSelectors =
+            [
                 ".job-listings .job-listing",          // Main job listing container
                 "[data-test='job-result']",            // Job result cards
                 ".styles_component__UCLp8",            // Wellfound specific class patterns
@@ -46,7 +46,7 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
                 "[data-cy='job-card']",                // Job card elements
                 ".job-card-wrapper",                   // Job card wrappers
                 "a[href*='/jobs/'][title]"             // Job links with titles
-            };
+            ];
             
             // Try selectors in order of likelihood
             foreach (string selector in jobSelectors)
@@ -77,7 +77,7 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
                     try
                     {
                         EnhancedJobListing? job = ExtractJobFromElement(element);
-                        if (job != null)
+                        if (job is not null)
                         {
                             job.SourceSite = SupportedSite;
                             // Add startup-specific tags
@@ -188,15 +188,15 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
             await Task.Delay(500);
             
             // Common popup dismissal patterns for AngelList
-            var dismissSelectors = new[]
-            {
+            string[] dismissSelectors =
+            [
                 "[data-test='dismiss']",
                 "[aria-label='Close']",
                 ".modal-close",
                 ".popup-close",
                 "button[class*='close']",
                 "[data-dismiss='modal']"
-            };
+            ];
 
             foreach (string selector in dismissSelectors)
             {
@@ -273,14 +273,14 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
             try
             {
                 // Common AngelList title patterns
-                var titleSelectors = new[]
-                {
+                string[] titleSelectors =
+                [
                     "[data-test='job-title']",
                     "h3",
                     "h2", 
                     ".job-title",
                     "a[href*='/jobs/']"
-                };
+                ];
                 
                 foreach (string selector in titleSelectors)
                 {
@@ -301,13 +301,13 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
             // Try to extract company name
             try
             {
-                var companySelectors = new[]
-                {
+                string[] companySelectors =
+                [
                     "[data-test='company-name']",
                     ".company-name",
                     "[class*='company']",
                     "a[href*='/company/']"
-                };
+                ];
                 
                 foreach (string selector in companySelectors)
                 {
@@ -335,11 +335,11 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
                 if (!string.IsNullOrEmpty(jobUrl))
                 {
                     string lowerUrl = jobUrl.ToLower();
-                    var invalidUrlPatterns = new[]
-                    {
+                    string[] invalidUrlPatterns =
+                    [
                         "/login", "/signup", "/browse", "/search", "/companies",
                         "over-130k", "trending-startups", "find-what", "hiring-now"
-                    };
+                    ];
                     
                     if (invalidUrlPatterns.Any(pattern => lowerUrl.Contains(pattern)))
                     {
@@ -357,11 +357,11 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
                     if (!string.IsNullOrEmpty(jobUrl))
                     {
                         string lowerUrl = jobUrl.ToLower();
-                        var invalidUrlPatterns = new[]
-                        {
+                        string[] invalidUrlPatterns =
+                        [
                             "/login", "/signup", "/browse", "/search", "/companies",
                             "over-130k", "trending-startups", "find-what", "hiring-now"
-                        };
+                        ];
                         
                         if (invalidUrlPatterns.Any(pattern => lowerUrl.Contains(pattern)))
                         {
@@ -402,11 +402,11 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
             if (!string.IsNullOrEmpty(title))
             {
                 string lowerTitle = title.ToLower();
-                var invalidTitlePatterns = new[]
-                {
+                string[] invalidTitlePatterns =
+                [
                     "over 130k", "trending startups", "find what's next", "log in", "sign up",
                     "browse", "search jobs", "startup jobs", "remote jobs", "hiring now"
-                };
+                ];
                 
                 if (invalidTitlePatterns.Any(pattern => lowerTitle.Contains(pattern)))
                 {
@@ -509,11 +509,11 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
 
     private static bool IsLocationText(string text)
     {
-        var locationKeywords = new[]
-        {
+        string[] locationKeywords =
+        [
             "remote", "hybrid", "on-site", "san francisco", "new york", "austin", "seattle", 
             "boston", "chicago", "los angeles", "atlanta", "denver", "portland"
-        };
+        ];
         
         string lowerText = text.ToLower();
         return locationKeywords.Any(keyword => lowerText.Contains(keyword)) && text.Length < 50;
@@ -526,34 +526,34 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
         string lowerText = text.ToLower();
         
         // Exclude common navigation/marketing text
-        var excludePatterns = new[]
-        {
+        string[] excludePatterns =
+        [
             "over 130k", "trending", "find what's next", "log in", "sign up", "get started",
             "browse", "search", "filter", "sort", "view all", "see more", "show more",
             "startup jobs", "remote jobs", "local jobs", "hiring now"
-        };
+        ];
         
         if (excludePatterns.Any(pattern => lowerText.Contains(pattern)))
         {
             return false;
         }
         
-        var jobKeywords = new[]
-        {
+        string[] jobKeywords =
+        [
             "engineer", "developer", "programmer", "architect", "manager", "lead", "senior", "principal",
             "director", "specialist", "coordinator", "consultant", "founder", "cto", "ceo"
-        };
+        ];
         
-        var startupKeywords = new[]
-        {
+        string[] startupKeywords =
+        [
             "founding", "early", "startup", "series", "equity"
-        };
+        ];
         
-        var techKeywords = new[]
-        {
+        string[] techKeywords =
+        [
             "software", "full stack", "backend", "frontend", "web", "api", "mobile",
             ".net", "c#", "javascript", "python", "react", "angular"
-        };
+        ];
         
         bool hasJobKeyword = jobKeywords.Any(keyword => lowerText.Contains(keyword));
         bool hasStartupKeyword = startupKeywords.Any(keyword => lowerText.Contains(keyword));

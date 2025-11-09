@@ -25,6 +25,19 @@ public class JobSiteScraperFactory(IServiceProvider serviceProvider, ILogger<Job
 
     public List<JobSite> GetSupportedSites()
     {
-        return [JobSite.Indeed, JobSite.Dice, JobSite.LinkedIn, JobSite.Glassdoor, JobSite.BuiltIn, JobSite.AngelList, JobSite.RemoteOK, JobSite.StackOverflow, JobSite.HubSpot, JobSite.Zendesk, JobSite.Okta, JobSite.SimplifyJobs];
+        return [
+            JobSite.Indeed,
+            JobSite.Dice,
+            JobSite.LinkedIn,
+            JobSite.Glassdoor,
+            JobSite.BuiltIn,
+            JobSite.AngelList,
+            JobSite.RemoteOK,
+            JobSite.StackOverflow,
+            JobSite.HubSpot,
+            JobSite.Zendesk,
+            JobSite.Okta,
+            JobSite.SimplifyJobs
+        ];
     }
 }

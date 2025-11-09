@@ -1,4 +1,5 @@
 using Serilog;
+using Serilog.Core;
 using Serilog.Events;
 
 namespace SerilogFileWriter;
@@ -75,6 +76,7 @@ public static class McpLoggingExtensions
             .Enrich.FromLogContext()
             .WriteTo.File(
                 logFilePath,
+                shared: true,
                 rollingInterval: rollingInterval,
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}",
                 flushToDiskInterval: TimeSpan.FromSeconds(1));
@@ -102,7 +104,7 @@ public static class McpLoggingExtensions
         LogEventLevel minimumLevel = LogEventLevel.Debug,
         RollingInterval rollingInterval = RollingInterval.Day)
     {
-        var logger = CreateMcpLoggerConfiguration(logFilePath, minimumLevel, rollingInterval)
+        Logger logger = CreateMcpLoggerConfiguration(logFilePath, minimumLevel, rollingInterval)
             .CreateLogger();
 
         logger.RedirectConsoleToSerilog();

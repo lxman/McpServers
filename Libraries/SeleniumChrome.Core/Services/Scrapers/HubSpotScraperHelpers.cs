@@ -11,8 +11,8 @@ public partial class HubSpotScraper
         try
         {
             // HubSpot-specific selectors (they use modern React components)
-            var titleSelectors = new[] 
-            { 
+            string[] titleSelectors =
+            [
                 ".job-title", 
                 "h3 a", 
                 "h2 a",
@@ -21,10 +21,10 @@ public partial class HubSpotScraper
                 "a[href*='job']",
                 ".card-title",
                 ".listing-title"
-            };
+            ];
             
-            var locationSelectors = new[] 
-            { 
+            string[] locationSelectors =
+            [
                 ".job-location", 
                 ".location", 
                 "[data-testid='location']", 
@@ -32,27 +32,27 @@ public partial class HubSpotScraper
                 ".workplace-type",
                 ".job-location-text",
                 ".remote-location"
-            };
+            ];
             
-            var departmentSelectors = new[] 
-            { 
+            string[] departmentSelectors =
+            [
                 ".department", 
                 ".team", 
                 "[data-testid='department']", 
                 ".job-category",
                 ".functional-area",
                 ".business-unit"
-            };
+            ];
             
-            var descriptionSelectors = new[] 
-            { 
+            string[] descriptionSelectors =
+            [
                 ".job-description", 
                 ".description", 
                 ".summary", 
                 ".job-summary",
                 ".job-excerpt",
                 ".position-summary"
-            };
+            ];
 
             string? title = ExtractTextUsingSelectorArray(jobElement, titleSelectors);
             string? location = ExtractTextUsingSelectorArray(jobElement, locationSelectors);
@@ -63,8 +63,8 @@ public partial class HubSpotScraper
             var jobUrl = "";
             try
             {
-                var linkSelectors = new[]
-                {
+                string[] linkSelectors =
+                [
                     "a[href*='job']",
                     "a[href*='career']", 
                     "a[href*='position']",
@@ -73,7 +73,7 @@ public partial class HubSpotScraper
                     "h2 a",
                     ".apply-link",
                     "a[data-testid='job-link']"
-                };
+                ];
 
                 foreach (string selector in linkSelectors)
                 {
@@ -161,14 +161,14 @@ public partial class HubSpotScraper
 
     private string ExtractJobType(IWebElement jobElement)
     {
-        var jobTypeSelectors = new[] 
-        { 
+        string[] jobTypeSelectors =
+        [
             ".job-type", 
             ".employment-type", 
             "[data-testid='job-type']",
             ".contract-type",
             ".position-type"
-        };
+        ];
 
         string? jobTypeText = ExtractTextUsingSelectorArray(jobElement, jobTypeSelectors);
         
@@ -206,11 +206,11 @@ public partial class HubSpotScraper
     private static bool IsRelevantJob(EnhancedJobListing job, EnhancedScrapeRequest request)
     {
         // Check if job contains .NET-related keywords
-        var dotNetKeywords = new[] 
-        { 
+        string[] dotNetKeywords =
+        [
             ".net", "c#", "csharp", "asp.net", "dotnet", "backend", "full stack", 
-            "software engineer", "api", "microservices", "azure", "sql server" 
-        };
+            "software engineer", "api", "microservices", "azure", "sql server"
+        ];
         
         string searchText = (job.Title + " " + job.Description + " " + job.Department).ToLowerInvariant();
         
@@ -230,8 +230,8 @@ public partial class HubSpotScraper
     private static List<string> ExtractTechnologies(string text)
     {
         var technologies = new List<string>();
-        var techKeywords = new[]
-        {
+        string[] techKeywords =
+        [
             // .NET ecosystem
             ".NET", "C#", "ASP.NET", ".NET Core", ".NET Framework", "Entity Framework",
             
@@ -249,7 +249,7 @@ public partial class HubSpotScraper
             
             // HubSpot specific technologies
             "HubL", "HubDB", "HubSpot CMS"
-        };
+        ];
 
         string lowerText = text.ToLowerInvariant();
         
@@ -331,11 +331,11 @@ public partial class HubSpotScraper
     {
         string text = (location + " " + description).ToLowerInvariant();
         
-        var remoteKeywords = new[] 
-        { 
+        string[] remoteKeywords =
+        [
             "remote", "work from home", "wfh", "distributed", "anywhere", 
-            "telecommute", "home-based", "virtual", "fully remote", "remote-first" 
-        };
+            "telecommute", "home-based", "virtual", "fully remote", "remote-first"
+        ];
 
         return remoteKeywords.Any(keyword => text.Contains(keyword));
     }

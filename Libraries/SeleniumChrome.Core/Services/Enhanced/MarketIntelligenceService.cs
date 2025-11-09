@@ -19,7 +19,7 @@ public class MarketIntelligenceService(ILogger<MarketIntelligenceService> logger
         logger.LogInformation($"Generating market intelligence report for {recentJobs.Count} jobs");
 
         // Provide default request if none provided
-        if (request == null)
+        if (request is null)
         {
             request = new MarketAnalysisRequest
             {

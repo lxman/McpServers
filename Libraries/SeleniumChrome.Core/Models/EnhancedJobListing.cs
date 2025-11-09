@@ -247,3 +247,38 @@ public class LocationMarketInfo
     public double RemotePercentage { get; set; }
     public List<string> TopCompaniesInLocation { get; set; } = [];
 }
+
+/// <summary>
+/// Temporary job listing for incremental saving during scraping operations
+/// Allows recovery if job is aborted, AI times out, or errors occur
+/// </summary>
+public class TemporaryJobListing
+{
+    [BsonId]
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
+
+    [BsonElement("sessionId")]
+    public string SessionId { get; set; } = string.Empty; // Groups related results (jobId from async queue or generated)
+
+    [BsonElement("batchNumber")]
+    public int BatchNumber { get; set; } // Track batch order
+
+    [BsonElement("savedAt")]
+    public DateTime SavedAt { get; set; } = DateTime.UtcNow;
+
+    [BsonElement("consolidated")]
+    public bool Consolidated { get; set; } = false; // Marks if moved to final collection
+
+    [BsonElement("jobListing")]
+    public EnhancedJobListing JobListing { get; set; } = new(); // The actual job data
+
+    [BsonElement("operationType")]
+    public string OperationType { get; set; } = string.Empty; // "bulk", "single_site", "multi_site"
+
+    [BsonElement("searchTerm")]
+    public string SearchTerm { get; set; } = string.Empty; // For context
+
+    [BsonElement("location")]
+    public string Location { get; set; } = string.Empty; // For context
+}

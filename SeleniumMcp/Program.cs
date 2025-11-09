@@ -74,6 +74,7 @@ try
     builder.Services.AddScoped<SmartDeduplicationService>();
     builder.Services.AddScoped<ApplicationManagementService>();
     builder.Services.AddScoped<MarketIntelligenceService>();
+    builder.Services.AddSingleton<JobQueueManager>();
 
     // Configure MCP Server with all tool classes
     builder.Services.AddMcpServer()

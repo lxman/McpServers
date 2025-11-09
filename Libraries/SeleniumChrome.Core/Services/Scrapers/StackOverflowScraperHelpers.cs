@@ -12,8 +12,8 @@ public partial class StackOverflowScraper
         try
         {
             // Stack Overflow common modal/popup selectors
-            var modalSelectors = new[]
-            {
+            string[] modalSelectors =
+            [
                 // Cookie consent
                 ".js-consent-banner button",
                 ".consent-banner button",
@@ -31,7 +31,7 @@ public partial class StackOverflowScraper
                 ".js-modal-close",
                 ".s-modal--close",
                 ".js-dismissable"
-            };
+            ];
 
             foreach (string selector in modalSelectors)
             {
@@ -67,8 +67,8 @@ public partial class StackOverflowScraper
         try
         {
             // Stack Overflow job container selectors
-            var jobContainerSelectors = new[]
-            {
+            string[] jobContainerSelectors =
+            [
                 ".job-listing",
                 ".job-item",
                 ".listResults .result",
@@ -76,7 +76,7 @@ public partial class StackOverflowScraper
                 ".job-card",
                 "[data-jobid]",
                 ".job"
-            };
+            ];
 
             IList<IWebElement> jobElements = new List<IWebElement>();
 
@@ -106,7 +106,7 @@ public partial class StackOverflowScraper
                 {
                     EnhancedJobListing? job = ExtractJobDetails(jobElement, driver).Result;
                     
-                    if (job != null && IsRelevantJob(job, request))
+                    if (job is not null && IsRelevantJob(job, request))
                     {
                         jobs.Add(job);
                         processedJobs++;
@@ -134,39 +134,39 @@ public partial class StackOverflowScraper
         try
         {
             // Stack Overflow-specific selectors
-            var titleSelectors = new[] 
-            { 
+            string[] titleSelectors =
+            [
                 ".job-title a", 
                 ".title a",
                 "h2 a",
                 ".job-link",
                 "a[data-jobid]",
                 ".job-summary .title"
-            };
+            ];
             
-            var locationSelectors = new[] 
-            { 
+            string[] locationSelectors =
+            [
                 ".job-location", 
                 ".location", 
                 ".job-info .location",
                 ".remote-info"
-            };
+            ];
             
-            var companySelectors = new[] 
-            { 
+            string[] companySelectors =
+            [
                 ".company", 
                 ".employer",
                 ".job-company",
                 ".company-name"
-            };
+            ];
             
-            var descriptionSelectors = new[] 
-            { 
+            string[] descriptionSelectors =
+            [
                 ".job-description", 
                 ".description", 
                 ".job-summary",
                 ".excerpt"
-            };
+            ];
 
             string? title = ExtractTextUsingSelectorArray(jobElement, titleSelectors);
             string? location = ExtractTextUsingSelectorArray(jobElement, locationSelectors);
@@ -177,14 +177,14 @@ public partial class StackOverflowScraper
             var jobUrl = "";
             try
             {
-                var linkSelectors = new[]
-                {
+                string[] linkSelectors =
+                [
                     ".job-title a",
                     ".title a",
                     "h2 a",
                     "a[data-jobid]",
                     ".job-link"
-                };
+                ];
 
                 foreach (string selector in linkSelectors)
                 {
@@ -285,11 +285,11 @@ public partial class StackOverflowScraper
     private static bool IsRelevantJob(EnhancedJobListing job, EnhancedScrapeRequest request)
     {
         // Check if job contains .NET-related keywords
-        var dotNetKeywords = new[] 
-        { 
+        string[] dotNetKeywords =
+        [
             ".net", "c#", "csharp", "asp.net", "dotnet", "backend", "full stack", 
-            "software engineer", "api", "developer", "engineering" 
-        };
+            "software engineer", "api", "developer", "engineering"
+        ];
         
         string searchText = (job.Title + " " + job.Description + " " + job.Company).ToLowerInvariant();
         
@@ -306,8 +306,8 @@ public partial class StackOverflowScraper
     private static List<string> ExtractTechnologies(string text)
     {
         var technologies = new List<string>();
-        var techKeywords = new[]
-        {
+        string[] techKeywords =
+        [
             // .NET ecosystem
             ".NET", "C#", "ASP.NET", ".NET Core", ".NET Framework", "Entity Framework",
             
@@ -322,7 +322,7 @@ public partial class StackOverflowScraper
             
             // Stack Overflow technologies
             "Stack Overflow", "Q&A Platform", "Community Platform"
-        };
+        ];
 
         string lowerText = text.ToLowerInvariant();
         
@@ -398,11 +398,11 @@ public partial class StackOverflowScraper
     {
         string text = (location + " " + description).ToLowerInvariant();
         
-        var remoteKeywords = new[] 
-        { 
+        string[] remoteKeywords =
+        [
             "remote", "work from home", "wfh", "distributed", "anywhere", 
-            "telecommute", "home-based", "virtual", "fully remote", "remote-first" 
-        };
+            "telecommute", "home-based", "virtual", "fully remote", "remote-first"
+        ];
 
         return remoteKeywords.Any(keyword => text.Contains(keyword));
     }

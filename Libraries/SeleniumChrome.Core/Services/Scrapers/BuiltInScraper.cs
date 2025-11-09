@@ -21,7 +21,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
             Logger.LogInformation($"Scraping BuiltIn: {searchUrl}");
             
             // Navigate to page
-            Driver!.Navigate().GoToUrl(searchUrl);
+            await Driver!.Navigate().GoToUrlAsync(searchUrl);
             await Task.Delay(500); // Reduced from 2000ms
             
             Logger.LogInformation($"Page title: {Driver.Title}");
@@ -36,14 +36,14 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
             // Find job elements with simple, reliable selectors
             var jobElements = new ReadOnlyCollection<IWebElement>(new List<IWebElement>());
             
-            var jobSelectors = new[]
-            {
+            string[] jobSelectors =
+            [
                 "a[href*='/job/']",              // Most reliable - direct job links
                 ".job-card",                     // Common job card class
                 "[data-cy='job-card']",          // BuiltIn specific
                 "article",                       // Article elements
                 "[class*='job']"                 // Any element with 'job' in class
-            };
+            ];
             
             // Try selectors in order
             foreach (string selector in jobSelectors)
@@ -74,7 +74,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
                     try
                     {
                         EnhancedJobListing? job = ExtractJobFromElement(element);
-                        if (job != null)
+                        if (job is not null)
                         {
                             job.SourceSite = SupportedSite;
                             jobs.Add(job);
@@ -289,34 +289,34 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
         
         string lowerText = text.ToLower();
         
-        var jobKeywords = new[]
-        {
+        string[] jobKeywords =
+        [
             "engineer", "developer", "programmer", "architect", "manager", "lead", "senior", "principal",
             "director", "specialist", "coordinator", "consultant", "administrator", "technician",
             "analyst", "designer", "scientist", "officer"
-        };
+        ];
         
-        var dotnetKeywords = new[]
-        {
+        string[] dotnetKeywords =
+        [
             ".net", "c#", "asp.net", "blazor", "entity framework", "mvc", "core", "framework"
-        };
+        ];
         
-        var techKeywords = new[]
-        {
+        string[] techKeywords =
+        [
             "software", "full stack", "backend", "frontend", "web", "api", "database", 
             "cloud", "azure", "aws", "devops", "qa", "test", "security"
-        };
+        ];
         
         bool hasJobKeyword = jobKeywords.Any(keyword => lowerText.Contains(keyword));
         bool hasDotnetKeyword = dotnetKeywords.Any(keyword => lowerText.Contains(keyword));
         bool hasTechKeyword = techKeywords.Any(keyword => lowerText.Contains(keyword));
         
-        var excludePatterns = new[]
-        {
+        string[] excludePatterns =
+        [
             "ago", "posted", "apply", "save", "share", "view", "more", "less", "show", "hide",
             "filter", "sort", "search", "results", "jobs", "companies", "location", "salary",
             "benefits", "full-time", "part-time", "contract", "remote", "hybrid", "•"
-        };
+        ];
         
         bool hasExcludePattern = excludePatterns.Any(pattern => lowerText.Contains(pattern));
         
@@ -395,8 +395,8 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
         {
             await Task.Delay(500); // Reduced from 1000ms
             
-            var acceptButtons = new[]
-            {
+            string[] acceptButtons =
+            [
                 "Accept all",
                 "Accept All", 
                 "Accept",
@@ -404,7 +404,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
                 "button[id*='accept']",
                 "[data-cy='accept-all-button']",
                 ".cookie-consent button"
-            };
+            ];
 
             foreach (string buttonSelector in acceptButtons)
             {

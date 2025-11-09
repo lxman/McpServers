@@ -59,7 +59,7 @@ public partial class HubSpotScraper(ILogger<HubSpotScraper> logger) : BaseJobScr
         }
         
         Logger.LogInformation("Navigating to HubSpot careers: {Url}", careersUrl);
-        driver.Navigate().GoToUrl(careersUrl);
+        await driver.Navigate().GoToUrlAsync(careersUrl);
 
         // Wait for the page to load - HubSpot uses React heavily
         var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
@@ -80,8 +80,8 @@ public partial class HubSpotScraper(ILogger<HubSpotScraper> logger) : BaseJobScr
         try
         {
             // HubSpot common modal/popup selectors
-            var modalSelectors = new[]
-            {
+            string[] modalSelectors =
+            [
                 // Cookie consent
                 "[data-testid='cookie-banner'] button",
                 ".cookie-consent button",
@@ -98,7 +98,7 @@ public partial class HubSpotScraper(ILogger<HubSpotScraper> logger) : BaseJobScr
                 ".hs-popup-close",
                 ".popup-close-simple",
                 "[data-module-id*='popup'] .close"
-            };
+            ];
 
             foreach (string selector in modalSelectors)
             {
@@ -155,8 +155,8 @@ public partial class HubSpotScraper(ILogger<HubSpotScraper> logger) : BaseJobScr
         try
         {
             // HubSpot job container selectors (they change frequently due to React)
-            var jobContainerSelectors = new[]
-            {
+            string[] jobContainerSelectors =
+            [
                 ".job-posting",
                 ".career-opportunity",
                 ".job-listing",
@@ -167,7 +167,7 @@ public partial class HubSpotScraper(ILogger<HubSpotScraper> logger) : BaseJobScr
                 "article[data-job-id]",
                 ".job-search-result",
                 "div[role='article']"
-            };
+            ];
 
             IList<IWebElement> jobElements = new List<IWebElement>();
 
@@ -185,7 +185,7 @@ public partial class HubSpotScraper(ILogger<HubSpotScraper> logger) : BaseJobScr
                 Logger.LogWarning("No job listings found on HubSpot careers page");
                 
                 // Check if there's a "no results" message
-                var noResultsSelectors = new[] { ".no-results", ".empty-state", ".no-jobs", ".zero-results" };
+                string[] noResultsSelectors = [".no-results", ".empty-state", ".no-jobs", ".zero-results"];
                 if (noResultsSelectors.Select(selector => driver.FindElements(By.CssSelector(selector)).FirstOrDefault()).Any(noResultsElement => noResultsElement?.Displayed == true))
                 {
                     Logger.LogInformation("Found 'no results' message on HubSpot careers page");
@@ -205,7 +205,7 @@ public partial class HubSpotScraper(ILogger<HubSpotScraper> logger) : BaseJobScr
                 {
                     EnhancedJobListing? job = ExtractJobDetails(jobElement, driver).Result;
                     
-                    if (job != null && IsRelevantJob(job, request))
+                    if (job is not null && IsRelevantJob(job, request))
                     {
                         jobs.Add(job);
                         processedJobs++;
@@ -232,7 +232,7 @@ public partial class HubSpotScraper(ILogger<HubSpotScraper> logger) : BaseJobScr
         try
         {
             InitializeDriver(config.AntiDetection);
-            Driver!.Navigate().GoToUrl("https://www.hubspot.com/careers/jobs");
+            await Driver!.Navigate().GoToUrlAsync("https://www.hubspot.com/careers/jobs");
             
             // Wait for the page to load
             await Task.Delay(8000);

@@ -22,7 +22,7 @@
         <!-- PDF Processing -->
         <PackageReference Include="itext" Version="9.3.0" />
         <PackageReference Include="itext.bouncy-castle-adapter" Version="9.3.0" />
-        <PackageReference Include="PdfPig" Version="0.1.12-alpha-20251104-181fa" />
+        <PackageReference Include="PdfPig" Version="0.1.12-alpha-20251107-9d3cd" />
         <PackageReference Include="PDFsharp" Version="6.2.2" />
 
         <!-- Search & Analysis -->

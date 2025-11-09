@@ -2,6 +2,8 @@
 
 Scrape jobs from a specific job site with optional Google Custom Search discovery for enhanced results.
 
+**⚠️ Auto-Save**: All scraped jobs are automatically saved to a temporary collection for recovery. Use `consolidate_temporary_results` to save them permanently if needed.
+
 ## Parameters
 
 - **site** (string): The job site to scrape. Supported values: 'Dice', 'BuiltIn', 'AngelList', 'StackOverflow', 'HubSpot', 'SimplifyJobs'
