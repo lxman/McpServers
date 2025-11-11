@@ -46,7 +46,6 @@ try
         .AddSingleton<AdvancedTestingTools>()
         .AddSingleton<NetworkTestingTools>()
         .AddSingleton<PerformanceTestingTools>()
-        .AddSingleton<DatabaseTestingTools>()
         .AddSingleton<TaderatcsTestingTools>();
 
     // Register Angular-specific tool classes

@@ -18,4 +18,8 @@
         <PackageReference Include="System.Reflection.MetadataLoadContext" Version="10.0.0-rc.2.25502.107" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Mcp.Common.Core\Mcp.Common.Core.csproj" />
+    </ItemGroup>
+
 </Project>

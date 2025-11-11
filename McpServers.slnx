@@ -6,6 +6,9 @@
     <Project Path="Libraries\DebugServer.Core\DebugServer.Core.csproj" Type="Classic C#" />
     <Project Path="Libraries\DesktopCommander.Core\DesktopCommander.Core.csproj" Type="Classic C#" />
     <Project Path="Libraries\DocumentServer.Core\DocumentServer.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\Mcp.Common.Core\Mcp.Common.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\Mcp.Database.Core\Mcp.Database.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\Mcp.DependencyInjection.Core\Mcp.DependencyInjection.Core.csproj" Type="Classic C#" />
     <Project Path="Libraries\MongoServer.Core\MongoServer.Core.csproj" Type="Classic C#" />
     <Project Path="Libraries\MsOfficeCrypto\MsOfficeCrypto.csproj" Type="Classic C#" />
     <Project Path="Libraries\Playwright.Core\Playwright.Core.csproj" Type="Classic C#" />

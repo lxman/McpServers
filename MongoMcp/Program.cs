@@ -25,11 +25,6 @@ try
 
     // Register MongoServer.Core services
     builder.Services.AddSingleton<MongoDbService>();
-    builder.Services.AddSingleton<ConnectionManager>(sp =>
-    {
-        var logger = sp.GetRequiredService<ILogger<ConnectionManager>>();
-        return new ConnectionManager(logger);
-    });
     builder.Services.AddSingleton<CrossServerOperations>(sp =>
     {
         var mongoService = sp.GetRequiredService<MongoDbService>();

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Mcp.Database.Core.MongoDB;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using OpenQA.Selenium;
@@ -9,13 +10,18 @@ namespace SeleniumChrome.Core.Services;
 
 public class EnhancedJobScrapingService(
     IJobSiteScraperFactory scraperFactory,
-    IMongoDatabase database,
+    MongoConnectionManager connectionManager,
     ILogger<EnhancedJobScrapingService> logger)
     : IEnhancedJobScrapingService
 {
-    private readonly IMongoCollection<EnhancedJobListing> _jobListings = database.GetCollection<EnhancedJobListing>("search_results");
-    private readonly IMongoCollection<TemporaryJobListing> _tempJobListings = database.GetCollection<TemporaryJobListing>("search_results_temp");
-    private readonly IMongoCollection<SiteConfiguration> _siteConfigurations = database.GetCollection<SiteConfiguration>("site_configurations");
+    private const string DEFAULT_CONNECTION_NAME = "default";
+
+    private IMongoDatabase GetDatabase() => connectionManager.GetDatabase(DEFAULT_CONNECTION_NAME)
+        ?? throw new InvalidOperationException("MongoDB connection not found. Please ensure MongoDB is configured.");
+
+    private IMongoCollection<EnhancedJobListing> JobListings => GetDatabase().GetCollection<EnhancedJobListing>("search_results");
+    private IMongoCollection<TemporaryJobListing> TempJobListings => GetDatabase().GetCollection<TemporaryJobListing>("search_results_temp");
+    private IMongoCollection<SiteConfiguration> SiteConfigurations => GetDatabase().GetCollection<SiteConfiguration>("site_configurations");
     private IWebDriver? _screenshotDriver;
 
     // Service-level semaphore to prevent concurrent scraping operations
@@ -131,17 +137,17 @@ public class EnhancedJobScrapingService(
     public async Task<SiteConfiguration> GetSiteConfigurationAsync(JobSite site)
     {
         FilterDefinition<SiteConfiguration>? filter = Builders<SiteConfiguration>.Filter.Eq(s => s.SiteName, site.ToString());
-        SiteConfiguration? config = await _siteConfigurations.Find(filter).FirstOrDefaultAsync();
-        
+        SiteConfiguration? config = await SiteConfigurations.Find(filter).FirstOrDefaultAsync();
+
         if (config is null)
         {
             // Create default configuration using the scraper
             IJobSiteScraper scraper = scraperFactory.CreateScraper(site);
             config = scraper.GetDefaultConfiguration();
-            await _siteConfigurations.InsertOneAsync(config);
+            await SiteConfigurations.InsertOneAsync(config);
             logger.LogInformation($"Created default configuration for {site}");
         }
-        
+
         return config;
     }
 
@@ -149,7 +155,7 @@ public class EnhancedJobScrapingService(
     {
         config.LastUpdated = DateTime.UtcNow;
         FilterDefinition<SiteConfiguration>? filter = Builders<SiteConfiguration>.Filter.Eq(s => s.SiteName, config.SiteName);
-        await _siteConfigurations.ReplaceOneAsync(filter, config, new ReplaceOptions { IsUpsert = true });
+        await SiteConfigurations.ReplaceOneAsync(filter, config, new ReplaceOptions { IsUpsert = true });
         logger.LogInformation($"Updated configuration for {config.SiteName}");
     }
 
@@ -199,7 +205,7 @@ public class EnhancedJobScrapingService(
             mongoFilter &= filterBuilder.AnyIn(j => j.RequiredSkills, filters.RequiredSkills);
         }
 
-        return await _jobListings
+        return await JobListings
             .Find(mongoFilter)
             .SortByDescending(j => j.MatchScore)
             .ThenByDescending(j => j.ScrapedAt)
@@ -270,7 +276,7 @@ public class EnhancedJobScrapingService(
         try
         {
             // Get user profile from MongoDB
-            IMongoCollection<BsonDocument>? profileCollection = _jobListings.Database.GetCollection<BsonDocument>("career_profile");
+            IMongoCollection<BsonDocument>? profileCollection = JobListings.Database.GetCollection<BsonDocument>("career_profile");
             FilterDefinition<BsonDocument>? profileFilter = Builders<BsonDocument>.Filter.Eq("userId", userId);
             BsonDocument? userProfile = await profileCollection.Find(profileFilter).FirstOrDefaultAsync();
             
@@ -344,7 +350,7 @@ public class EnhancedJobScrapingService(
             foreach (EnhancedJobListing job in jobs)
             {
                 // Check if the job already exists (by URL)
-                EnhancedJobListing? existingJob = await _jobListings
+                EnhancedJobListing? existingJob = await JobListings
                     .Find(j => j.Url == job.Url)
                     .FirstOrDefaultAsync();
                 
@@ -359,13 +365,13 @@ public class EnhancedJobScrapingService(
                     existingJob.MatchScore = job.MatchScore;
                     
                     FilterDefinition<EnhancedJobListing>? filter = Builders<EnhancedJobListing>.Filter.Eq(j => j.Id, existingJob.Id);
-                    await _jobListings.ReplaceOneAsync(filter, existingJob);
+                    await JobListings.ReplaceOneAsync(filter, existingJob);
                 }
             }
 
             if (uniqueJobs.Count != 0)
             {
-                await _jobListings.InsertManyAsync(uniqueJobs);
+                await JobListings.InsertManyAsync(uniqueJobs);
                 logger.LogInformation($"Saved {uniqueJobs.Count} new jobs to database");
             }
         }
@@ -434,7 +440,7 @@ public class EnhancedJobScrapingService(
                 Location = location
             }).ToList();
 
-            await _tempJobListings.InsertManyAsync(tempListings);
+            await TempJobListings.InsertManyAsync(tempListings);
             logger.LogInformation($"Saved {jobs.Count} jobs to temporary collection for session {sessionId}, batch {batchNumber}");
         }
         catch (Exception ex)
@@ -452,7 +458,7 @@ public class EnhancedJobScrapingService(
         try
         {
             // Find all unconsolidated temp results for this session
-            var tempResults = await _tempJobListings
+            var tempResults = await TempJobListings
                 .Find(t => t.SessionId == sessionId && !t.Consolidated)
                 .SortBy(t => t.BatchNumber)
                 .ToListAsync();
@@ -482,7 +488,7 @@ public class EnhancedJobScrapingService(
             // Mark temp results as consolidated
             var filter = Builders<TemporaryJobListing>.Filter.Eq(t => t.SessionId, sessionId);
             var update = Builders<TemporaryJobListing>.Update.Set(t => t.Consolidated, true);
-            await _tempJobListings.UpdateManyAsync(filter, update);
+            await TempJobListings.UpdateManyAsync(filter, update);
 
             logger.LogInformation($"Consolidated {jobs.Count} jobs from session {sessionId} to final collection");
 
@@ -532,7 +538,7 @@ public class EnhancedJobScrapingService(
                     : Builders<TemporaryJobListing>.Filter.Eq(t => t.Consolidated, false);
             }
 
-            return await _tempJobListings
+            return await TempJobListings
                 .Find(filter)
                 .SortByDescending(t => t.SavedAt)
                 .Limit(100)
@@ -558,7 +564,7 @@ public class EnhancedJobScrapingService(
                 Builders<TemporaryJobListing>.Filter.Lt(t => t.SavedAt, cutoffTime)
             );
 
-            var result = await _tempJobListings.DeleteManyAsync(filter);
+            var result = await TempJobListings.DeleteManyAsync(filter);
             logger.LogInformation($"Cleaned up {result.DeletedCount} old temporary results");
             return (int)result.DeletedCount;
         }

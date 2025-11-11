@@ -1,4 +1,5 @@
 using System.Data;
+using Mcp.Database.Core.Sql;
 using Microsoft.Extensions.Logging;
 using SqlServer.Core.Models;
 using SqlServer.Core.Services.Interfaces;
@@ -6,7 +7,7 @@ using SqlServer.Core.Services.Interfaces;
 namespace SqlServer.Core.Services;
 
 public class TransactionManager(
-    IConnectionManager connectionManager,
+    SqlConnectionManager connectionManager,
     IAuditLogger auditLogger,
     ILogger<TransactionManager> logger)
     : ITransactionManager
@@ -17,7 +18,8 @@ public class TransactionManager(
     {
         try
         {
-            IDbConnection connection = await connectionManager.GetConnectionAsync(connectionName);
+            IDbConnection connection = connectionManager.GetConnection(connectionName)
+                ?? throw new InvalidOperationException($"Connection '{connectionName}' not found. Please connect first.");
             IDbTransaction transaction = isolationLevel switch
             {
                 "ReadUncommitted" => connection.BeginTransaction(IsolationLevel.ReadUncommitted),

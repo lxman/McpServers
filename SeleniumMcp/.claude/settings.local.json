@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(powershell:*)",
+      "Bash(dir \"C:\\Users\\jorda\\RiderProjects\\McpServers\" /s /ad)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "mcp__desktop-commander__write_file"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

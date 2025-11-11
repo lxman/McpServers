@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Mcp.Database.Core.Sql;
 using Serilog;
 using SerilogFileWriter;
 using SqlMcp.Tools;
@@ -53,8 +54,10 @@ try
     builder.Services.Configure<SqlConfiguration>(
         builder.Configuration.GetSection("SqlConfiguration"));
 
+    // Register SQL connection manager
+    builder.Services.AddSqlConnectionManager();
+
     // Register services
-    builder.Services.AddSingleton<IConnectionManager, ConnectionManager>();
     builder.Services.AddSingleton<IQueryExecutor, QueryExecutor>();
     builder.Services.AddSingleton<ISchemaInspector, SchemaInspector>();
     builder.Services.AddSingleton<ITransactionManager, TransactionManager>();
@@ -72,8 +75,8 @@ try
     IHost host = builder.Build();
 
     // Log startup information
-    var connectionManager = host.Services.GetRequiredService<IConnectionManager>();
-    List<string> availableConnections = connectionManager.GetAvailableConnections().ToList();
+    var connectionManager = host.Services.GetRequiredService<SqlConnectionManager>();
+    List<string> availableConnections = connectionManager.GetConnectionNames();
     Log.Information("SqlMcp starting with {ConnectionCount} configured connections: {Connections}",
         availableConnections.Count,
         string.Join(", ", availableConnections));

@@ -1,5 +1,6 @@
 using System.Text.Json;
-using DesktopCommander.Core.Common;
+using Mcp.Common;
+using Mcp.Common.Core;
 using Microsoft.Extensions.Logging;
 
 namespace DesktopCommander.Core.Services;

@@ -3,12 +3,14 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoServer.Core.Common;
-using ConnectionInfo = MongoServer.Core.Configuration.ConnectionInfo;
+using Mcp.Common;
+using Mcp.Common.Core;
+using Mcp.Database.Core.MongoDB;
+using Mcp.Database.Core.Common;
 
 namespace MongoServer.Core.Services;
 
-public class CrossServerOperations(ConnectionManager connectionManager, ILogger<CrossServerOperations> logger)
+public class CrossServerOperations(MongoConnectionManager connectionManager, ILogger<CrossServerOperations> logger)
 {
     public async Task<string> CompareCollectionsAsync(string server1, string server2, string collectionName, string filterJson = "{}")
     {
@@ -358,7 +360,7 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
     {
         try
         {
-            List<string> serverNames = connectionManager.GetServerNames();
+            List<string> serverNames = connectionManager.GetConnectionNames();
             var results = new List<object>();
             BsonDocument? commandDoc = BsonDocument.Parse(command);
             
@@ -433,9 +435,9 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
     {
         try
         {
-            List<string> serverNames = connectionManager.GetServerNames();
+            List<string> serverNames = connectionManager.GetConnectionNames();
             var healthResults = new List<object>();
-            
+
             foreach (string serverName in serverNames)
             {
                 try
@@ -485,7 +487,7 @@ public class CrossServerOperations(ConnectionManager connectionManager, ILogger<
                     healthyServers,
                     unhealthyServers = totalServers - healthyServers,
                     overallHealth = totalServers > 0 ? Math.Round((double)healthyServers / totalServers * 100, 1) : 0.0,
-                    defaultServer = connectionManager.GetDefaultServer()
+                    defaultServer = connectionManager.GetDefaultConnection()
                 },
                 servers = healthResults
             }, SerializerOptions.JsonOptionsIndented);

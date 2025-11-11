@@ -27,4 +27,8 @@
         <PackageReference Include="System.Memory" Version="4.6.3" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\Mcp.Database.Core\Mcp.Database.Core.csproj" />
+    </ItemGroup>
+
 </Project>

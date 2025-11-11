@@ -1,5 +1,6 @@
 using System.Text.Json;
-using SqlServer.Core.Common;
+using Mcp.Common;
+using Mcp.Common.Core;
 
 namespace SqlServer.Core.Services;
 

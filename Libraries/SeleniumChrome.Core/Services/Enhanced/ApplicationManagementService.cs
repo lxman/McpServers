@@ -1,3 +1,4 @@
+using Mcp.Database.Core.MongoDB;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using SeleniumChrome.Core.Models;
@@ -10,19 +11,26 @@ namespace SeleniumChrome.Core.Services.Enhanced;
 /// </summary>
 public class ApplicationManagementService
 {
+    private const string DEFAULT_CONNECTION_NAME = "default";
+
     private readonly ILogger<ApplicationManagementService> _logger;
-    private readonly IMongoCollection<ApplicationRecord>? _applicationCollection;
+    private readonly MongoConnectionManager _connectionManager;
+
+    private IMongoCollection<ApplicationRecord>? ApplicationCollection
+    {
+        get
+        {
+            IMongoDatabase? database = _connectionManager.GetDatabase(DEFAULT_CONNECTION_NAME);
+            return database?.GetCollection<ApplicationRecord>("job_applications");
+        }
+    }
 
     public ApplicationManagementService(
         ILogger<ApplicationManagementService> logger,
-        IMongoDatabase? database = null)
+        MongoConnectionManager connectionManager)
     {
         _logger = logger;
-        
-        if (database is not null)
-        {
-            _applicationCollection = database.GetCollection<ApplicationRecord>("job_applications");
-        }
+        _connectionManager = connectionManager;
     }
 
     /// <summary>
@@ -242,14 +250,14 @@ public class ApplicationManagementService
     /// </summary>
     public async Task<bool> TrackApplicationAsync(ApplicationRecord application)
     {
-        if (_applicationCollection is null) return false;
+        if (ApplicationCollection is null) return false;
 
         try
         {
             application.AppliedAt = DateTime.UtcNow;
             application.Status = ApplicationStatus.Applied;
             
-            await _applicationCollection.InsertOneAsync(application);
+            await ApplicationCollection.InsertOneAsync(application);
             
             _logger.LogInformation($"Tracked application: {application.Company} - {application.Title}");
             return true;
@@ -266,7 +274,7 @@ public class ApplicationManagementService
     /// </summary>
     public async Task<bool> UpdateApplicationStatusAsync(string applicationId, ApplicationStatus status, string? notes = null)
     {
-        if (_applicationCollection is null) return false;
+        if (ApplicationCollection is null) return false;
 
         try
         {
@@ -280,7 +288,7 @@ public class ApplicationManagementService
                 update = update.Set(a => a.Notes, notes);
             }
 
-            UpdateResult? result = await _applicationCollection.UpdateOneAsync(filter, update);
+            UpdateResult? result = await ApplicationCollection.UpdateOneAsync(filter, update);
             return result.ModifiedCount > 0;
         }
         catch (Exception ex)

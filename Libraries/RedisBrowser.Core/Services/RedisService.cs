@@ -1,5 +1,8 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Mcp.Common.Core.Environment;
+using Mcp.Database.Core.Common;
+using Mcp.Database.Core.Redis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
@@ -8,19 +11,18 @@ namespace RedisBrowser.Core.Services;
 
 public class RedisService
 {
-    private ConnectionMultiplexer? _connection;
-    private IDatabase? _database;
-    private string? _connectionString;
-    private int _currentDatabase;
+    private const string DEFAULT_CONNECTION_NAME = "default";
+    private readonly RedisConnectionManager _connectionManager;
     private readonly IConfiguration _configuration;
     private readonly ILogger<RedisService> _logger;
     private readonly JsonSerializerOptions _options = new() { WriteIndented = true };
 
-    public RedisService(IConfiguration configuration, ILogger<RedisService> logger)
+    public RedisService(RedisConnectionManager connectionManager, IConfiguration configuration, ILogger<RedisService> logger)
     {
+        _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));
         _configuration = configuration;
         _logger = logger;
-        
+
         // Try to auto-connect if configured
         _ = Task.Run(TryAutoConnectAsync);
     }
@@ -30,9 +32,9 @@ public class RedisService
         try
         {
             // Try environment variables first (with registry fallback)
-            string? envConnectionString = RegistryEnvironmentReader.GetEnvironmentVariableWithFallback("REDIS_CONNECTION_STRING");
+            string? envConnectionString = EnvironmentReader.GetEnvironmentVariableWithFallback("REDIS_CONNECTION_STRING");
 
-            
+
             if (!string.IsNullOrEmpty(envConnectionString))
             {
                 _logger.LogInformation("Attempting auto-connect using environment variables");
@@ -61,25 +63,21 @@ public class RedisService
     {
         try
         {
-            _connectionString = connectionString;
-            _connection = await ConnectionMultiplexer.ConnectAsync(connectionString);
-            _database = _connection.GetDatabase(_currentDatabase);
-            
-            // Test the connection
-            await _database.PingAsync();
-            
-            return JsonSerializer.Serialize(new 
-            { 
+            string result = await _connectionManager.AddConnectionAsync(DEFAULT_CONNECTION_NAME, connectionString, 0);
+            int? currentDb = _connectionManager.GetCurrentDatabase(DEFAULT_CONNECTION_NAME);
+
+            return JsonSerializer.Serialize(new
+            {
                 success = true,
                 message = "Successfully connected to Redis",
-                database = _currentDatabase,
+                database = currentDb ?? 0,
                 connectionString = MaskConnectionString(connectionString)
             }, _options);
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new 
-            { 
+            return JsonSerializer.Serialize(new
+            {
                 success = false,
                 error = $"Connection failed: {ex.Message}"
             }, _options);
@@ -90,22 +88,18 @@ public class RedisService
     {
         try
         {
-            _connection?.Dispose();
-            _connection = null;
-            _database = null;
-            _connectionString = null;
-            _currentDatabase = 0;
-            
-            return JsonSerializer.Serialize(new 
-            { 
-                success = true,
-                message = "Disconnected from Redis"
+            bool removed = _connectionManager.RemoveConnection(DEFAULT_CONNECTION_NAME);
+
+            return JsonSerializer.Serialize(new
+            {
+                success = removed,
+                message = removed ? "Disconnected from Redis" : "No active connection found"
             }, _options);
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new 
-            { 
+            return JsonSerializer.Serialize(new
+            {
                 success = false,
                 error = ex.Message
             }, _options);
@@ -114,44 +108,41 @@ public class RedisService
 
     public string GetConnectionStatus()
     {
-        if (_database == null || _connection == null)
+        if (!_connectionManager.IsConnected(DEFAULT_CONNECTION_NAME))
         {
-            return JsonSerializer.Serialize(new 
-            { 
+            return JsonSerializer.Serialize(new
+            {
                 connected = false,
                 message = "Not connected to Redis"
             }, _options);
         }
-        
-        return JsonSerializer.Serialize(new 
-        { 
+
+        ConnectionInfo? info = _connectionManager.GetConnectionInfo(DEFAULT_CONNECTION_NAME);
+        int? currentDb = _connectionManager.GetCurrentDatabase(DEFAULT_CONNECTION_NAME);
+
+        return JsonSerializer.Serialize(new
+        {
             connected = true,
-            database = _currentDatabase,
-            connectionString = MaskConnectionString(_connectionString),
-            isConnected = _connection.IsConnected
+            database = currentDb ?? 0,
+            connectionString = info?.ConnectionString != null ? MaskConnectionString(info.ConnectionString) : "unknown",
+            isConnected = info?.IsHealthy ?? false
         }, _options);
     }
 
     private IDatabase EnsureConnected()
     {
-        return _database ?? throw new InvalidOperationException("Not connected to Redis. Use redis-browser.connect command first.");
+        return _connectionManager.GetDatabase(DEFAULT_CONNECTION_NAME)
+            ?? throw new InvalidOperationException("Not connected to Redis. Use redis-browser.connect command first.");
     }
 
     public async Task<string> SelectDatabaseAsync(int databaseNumber)
     {
         try
         {
-            if (_connection == null)
-                throw new InvalidOperationException("Not connected to Redis");
+            string result = await _connectionManager.SelectDatabaseAsync(DEFAULT_CONNECTION_NAME, databaseNumber);
 
-            _currentDatabase = databaseNumber;
-            _database = _connection.GetDatabase(databaseNumber);
-            
-            // Test the database selection
-            await _database.PingAsync();
-            
-            return JsonSerializer.Serialize(new 
-            { 
+            return JsonSerializer.Serialize(new
+            {
                 success = true,
                 message = $"Selected database {databaseNumber}",
                 database = databaseNumber
@@ -159,8 +150,8 @@ public class RedisService
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new 
-            { 
+            return JsonSerializer.Serialize(new
+            {
                 success = false,
                 error = ex.Message
             }, _options);
@@ -268,25 +259,31 @@ public class RedisService
         try
         {
             IDatabase db = EnsureConnected();
-            IServer server = _connection!.GetServer(_connection.GetEndPoints().First());
-            
-            List<string> keys = server.Keys(database: _currentDatabase, pattern: pattern, pageSize: count)
+            ConnectionMultiplexer? connection = _connectionManager.GetConnection(DEFAULT_CONNECTION_NAME);
+            int? currentDb = _connectionManager.GetCurrentDatabase(DEFAULT_CONNECTION_NAME);
+
+            if (connection == null)
+                throw new InvalidOperationException("Not connected to Redis");
+
+            IServer server = connection.GetServer(connection.GetEndPoints().First());
+
+            List<string> keys = server.Keys(database: currentDb ?? 0, pattern: pattern, pageSize: count)
                              .Take(count)
                              .Select(key => (string)key!)
                              .ToList();
-            
-            return JsonSerializer.Serialize(new 
+
+            return JsonSerializer.Serialize(new
             {
                 pattern,
-                database = _currentDatabase,
+                database = currentDb ?? 0,
                 count = keys.Count,
                 keys
             }, _options);
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new 
-            { 
+            return JsonSerializer.Serialize(new
+            {
                 success = false,
                 error = ex.Message
             }, _options);
@@ -371,9 +368,14 @@ public class RedisService
     {
         try
         {
-            IServer server = _connection!.GetServer(_connection.GetEndPoints().First());
+            ConnectionMultiplexer? connection = _connectionManager.GetConnection(DEFAULT_CONNECTION_NAME);
+
+            if (connection == null)
+                throw new InvalidOperationException("Not connected to Redis");
+
+            IServer server = connection.GetServer(connection.GetEndPoints().First());
             IGrouping<string, KeyValuePair<string, string>>[] info = await server.InfoAsync(section);
-            
+
             var infoDict = new Dictionary<string, object>();
             foreach (IGrouping<string, KeyValuePair<string, string>> group in info)
             {
@@ -384,17 +386,17 @@ public class RedisService
                 }
                 infoDict[group.Key] = groupDict;
             }
-            
-            return JsonSerializer.Serialize(new 
-            { 
+
+            return JsonSerializer.Serialize(new
+            {
                 section = string.IsNullOrEmpty(section) ? "all" : section,
                 info = infoDict
             }, _options);
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new 
-            { 
+            return JsonSerializer.Serialize(new
+            {
                 success = false,
                 error = ex.Message
             }, _options);
@@ -405,19 +407,25 @@ public class RedisService
     {
         try
         {
-            IServer server = _connection!.GetServer(_connection.GetEndPoints().First());
-            await server.FlushDatabaseAsync(_currentDatabase);
-            
-            return JsonSerializer.Serialize(new 
-            { 
+            ConnectionMultiplexer? connection = _connectionManager.GetConnection(DEFAULT_CONNECTION_NAME);
+            int? currentDb = _connectionManager.GetCurrentDatabase(DEFAULT_CONNECTION_NAME);
+
+            if (connection == null)
+                throw new InvalidOperationException("Not connected to Redis");
+
+            IServer server = connection.GetServer(connection.GetEndPoints().First());
+            await server.FlushDatabaseAsync(currentDb ?? 0);
+
+            return JsonSerializer.Serialize(new
+            {
                 success = true,
-                message = $"Database {_currentDatabase} flushed successfully"
+                message = $"Database {currentDb ?? 0} flushed successfully"
             }, _options);
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new 
-            { 
+            return JsonSerializer.Serialize(new
+            {
                 success = false,
                 error = ex.Message
             }, _options);

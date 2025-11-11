@@ -15,4 +15,8 @@
       <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.3-dev-02320" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Mcp.Common.Core\Mcp.Common.Core.csproj" />
+    </ItemGroup>
+
 </Project>

@@ -1,8 +1,8 @@
+using Mcp.Database.Core.MongoDB;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using MongoDB.Driver;
 using SeleniumChrome.Core.Models;
 using SeleniumChrome.Core.Services;
 using SeleniumChrome.Core.Services.Enhanced;
@@ -41,9 +41,8 @@ try
     if (string.IsNullOrEmpty(mongoSettings.ConnectionString))
         throw new InvalidOperationException("MongoDB ConnectionString is required in configuration");
 
-    builder.Services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings.ConnectionString));
-    builder.Services.AddScoped<IMongoDatabase>(provider =>
-        provider.GetRequiredService<IMongoClient>().GetDatabase(mongoSettings.DatabaseName));
+    // Register MongoDB connection manager
+    builder.Services.AddMongoConnectionManager();
 
     // HttpClient for web requests
     builder.Services.AddHttpClient();
@@ -87,6 +86,13 @@ try
         .WithTools<ConfigurationTools>();
 
     IHost host = builder.Build();
+
+    // Initialize MongoDB connection
+    var connectionManager = host.Services.GetRequiredService<MongoConnectionManager>();
+    await connectionManager.AddConnectionAsync("default", mongoSettings.ConnectionString, mongoSettings.DatabaseName);
+    connectionManager.SetDefaultConnection("default");
+
+    Log.Information("SeleniumMcp starting with MongoDB connection to database: {DatabaseName}", mongoSettings.DatabaseName);
 
     await host.RunAsync();
 }

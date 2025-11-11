@@ -42,6 +42,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Mcp.Common.Core\Mcp.Common.Core.csproj" />
       <ProjectReference Include="..\MsOfficeCrypto\MsOfficeCrypto.csproj" />
     </ItemGroup>
 

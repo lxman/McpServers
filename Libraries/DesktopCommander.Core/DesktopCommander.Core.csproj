@@ -37,4 +37,8 @@
         <PackageReference Include="TesseractOCR" Version="5.5.1" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Mcp.Common.Core\Mcp.Common.Core.csproj" />
+    </ItemGroup>
+
 </Project>

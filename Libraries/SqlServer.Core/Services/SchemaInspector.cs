@@ -1,5 +1,7 @@
 using System.Data;
 using Dapper;
+using Mcp.Database.Core.Sql;
+using Mcp.Database.Core.Sql.Providers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SqlServer.Core.Models;
@@ -9,13 +11,13 @@ namespace SqlServer.Core.Services;
 
 public class SchemaInspector : ISchemaInspector
 {
-    private readonly IConnectionManager _connectionManager;
+    private readonly SqlConnectionManager _connectionManager;
     private readonly SqlConfiguration _config;
     private readonly ILogger<SchemaInspector> _logger;
     private readonly Dictionary<string, IDbProvider> _providers = new();
 
     public SchemaInspector(
-        IConnectionManager connectionManager,
+        SqlConnectionManager connectionManager,
         IOptions<SqlConfiguration> config,
         ILogger<SchemaInspector> logger)
     {
@@ -31,11 +33,22 @@ public class SchemaInspector : ISchemaInspector
         _providers["Sqlite"] = new SqliteProvider();
     }
 
+    private IDbProvider GetProvider(string connectionName)
+    {
+        ISqlProvider? sharedProvider = _connectionManager.GetProvider(connectionName)
+            ?? throw new InvalidOperationException($"Provider for connection '{connectionName}' not found.");
+
+        return _providers.TryGetValue(sharedProvider.ProviderName, out IDbProvider? provider)
+            ? provider
+            : throw new InvalidOperationException($"Schema provider '{sharedProvider.ProviderName}' not supported.");
+    }
+
     public async Task<IEnumerable<TableInfo>> GetTablesAsync(string connectionName)
     {
         try
         {
-            IDbConnection connection = await _connectionManager.GetConnectionAsync(connectionName);
+            IDbConnection connection = _connectionManager.GetConnection(connectionName)
+                ?? throw new InvalidOperationException($"Connection '{connectionName}' not found. Please connect first.");
             IDbProvider provider = GetProvider(connectionName);
             string query = provider.GetTablesQuery();
             IEnumerable<TableInfo> tables = await connection.QueryAsync<TableInfo>(query);
@@ -52,7 +65,8 @@ public class SchemaInspector : ISchemaInspector
     {
         try
         {
-            IDbConnection connection = await _connectionManager.GetConnectionAsync(connectionName);
+            IDbConnection connection = _connectionManager.GetConnection(connectionName)
+                ?? throw new InvalidOperationException($"Connection '{connectionName}' not found. Please connect first.");
             IDbProvider provider = GetProvider(connectionName);
             string query = provider.GetColumnsQuery(tableName);
             IEnumerable<ColumnInfo> columns = await connection.QueryAsync<ColumnInfo>(query, new { tableName });
@@ -74,7 +88,8 @@ public class SchemaInspector : ISchemaInspector
     {
         try
         {
-            IDbConnection connection = await _connectionManager.GetConnectionAsync(connectionName);
+            IDbConnection connection = _connectionManager.GetConnection(connectionName)
+                ?? throw new InvalidOperationException($"Connection '{connectionName}' not found. Please connect first.");
             IDbProvider provider = GetProvider(connectionName);
             string query = provider.GetIndexesQuery(tableName);
 
@@ -118,7 +133,8 @@ public class SchemaInspector : ISchemaInspector
     {
         try
         {
-            IDbConnection connection = await _connectionManager.GetConnectionAsync(connectionName);
+            IDbConnection connection = _connectionManager.GetConnection(connectionName)
+                ?? throw new InvalidOperationException($"Connection '{connectionName}' not found. Please connect first.");
             IDbProvider provider = GetProvider(connectionName);
             string query = provider.GetForeignKeysQuery(tableName);
             IEnumerable<ForeignKeyInfo> foreignKeys = await connection.QueryAsync<ForeignKeyInfo>(query, new { tableName });
@@ -129,16 +145,5 @@ public class SchemaInspector : ISchemaInspector
             _logger.LogError(ex, "Failed to get foreign keys for table: {TableName}", tableName);
             throw;
         }
-    }
-
-    private IDbProvider GetProvider(string connectionName)
-    {
-        if (!_config.Connections.TryGetValue(connectionName, out ConnectionConfig? connConfig))
-            throw new ArgumentException($"Connection '{connectionName}' not found");
-
-        if (!_providers.TryGetValue(connConfig.Provider, out IDbProvider? provider))
-            throw new NotSupportedException($"Provider '{connConfig.Provider}' not supported");
-
-        return provider;
     }
 }
