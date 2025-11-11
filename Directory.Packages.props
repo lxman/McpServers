@@ -82,6 +82,7 @@
     <!-- Document Processing -->
     <PackageVersion Include="ClosedXML" Version="0.105.0" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.3.0" />
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.3.9" />
     <PackageVersion Include="NPOI" Version="2.7.5" />
     <PackageVersion Include="OpenMcdf" Version="3.0.3" />
     <PackageVersion Include="PdfPig" Version="0.1.12-alpha-20251107-9d3cd" />
@@ -104,7 +105,6 @@
     <PackageVersion Include="Flurl.Http" Version="4.0.2" />
     <PackageVersion Include="PacketDotNet" Version="1.4.9-pre50" />
     <PackageVersion Include="SharpPcap" Version="6.3.1" />
-    <PackageVersion Include="System.Net.NetworkInformation" Version="4.3.0" />
     <!-- Image Processing -->
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
     <!-- Indexing & Search -->
@@ -149,9 +149,8 @@
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.ResponseCompression" Version="2.3.0" />
     <PackageVersion Include="Microsoft.Playwright" Version="1.56.0" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.9.0" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.10.3" />
     <PackageVersion Include="Selenium.WebDriver" Version="4.38.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.0.0" />
     <!-- Windows & Credential Management -->
     <PackageVersion Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.10" />
     <PackageVersion Include="Microsoft.Win32.Registry" Version="5.0.0" />
@@ -161,7 +160,6 @@
     <PackageVersion Include="Microsoft.VisualStudio.Services.Client" Version="20.262.0-preview" />
     <PackageVersion Include="Microsoft.VisualStudio.Services.Release.Client" Version="20.262.0-preview" />
     <!-- System Libraries -->
-    <PackageVersion Include="System.Memory" Version="4.6.3" />
     <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.0" />
     <PackageVersion Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
     <PackageVersion Include="System.Security.Permissions" Version="10.0.0" />

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
@@ -88,7 +88,6 @@
         <PackageReference Include="Serilog.Extensions.Logging"  />
         <PackageReference Include="Serilog.Extensions.Logging.File"  />
         <PackageReference Include="Serilog.Sinks.File"  />
-        <PackageReference Include="System.Memory"  />
         <PackageReference Include="System.Security.Cryptography.Algorithms"  />
         <PackageReference Include="System.Security.Permissions"  />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"  />

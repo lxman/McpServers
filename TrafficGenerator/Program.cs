@@ -1,5 +1,4 @@
-using System.Reflection;
-using Microsoft.OpenApi;
+using Scalar.AspNetCore;
 using TrafficGenerator.Services;
 
 namespace TrafficGenerator;
@@ -17,24 +16,9 @@ public class Program
         // Register our traffic generation service
         builder.Services.AddScoped<ITrafficGenerationService, TrafficGenerationService>();
 
-        // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+        // Add OpenAPI document generation
         builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddSwaggerGen(c =>
-        {
-            c.SwaggerDoc("v1", new OpenApiInfo { 
-                Title = "Traffic Generator API", 
-                Version = "v1",
-                Description = "REST API for generating network traffic for penetration testing scenarios"
-            });
-            
-            // Include XML comments if available
-            var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-            string xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-            if (File.Exists(xmlPath))
-            {
-                c.IncludeXmlComments(xmlPath);
-            }
-        });
+        builder.Services.AddOpenApi();
 
         // Add CORS for development
         builder.Services.AddCors(options =>
@@ -52,11 +36,12 @@ public class Program
         // Configure the HTTP request pipeline
         if (app.Environment.IsDevelopment())
         {
-            app.UseSwagger();
-            app.UseSwaggerUI(c =>
+            app.MapOpenApi();
+            app.MapScalarApiReference(options =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Traffic Generator API v1");
-                c.RoutePrefix = "swagger"; // Explicit route prefix
+                options.WithTitle("Traffic Generator API")
+                       .WithTheme(ScalarTheme.Purple)
+                       .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
             });
             app.UseCors("AllowAll");
         }
@@ -76,8 +61,8 @@ public class Program
           .WithDescription("Returns the health status of the Traffic Generator API");;
 
         Console.WriteLine("Traffic Generator API starting...");
-        Console.WriteLine("Swagger UI available at: http://localhost:5000/swagger");
         Console.WriteLine("Health check available at: http://localhost:5000/health");
+        Console.WriteLine("API Documentation (Scalar) available at: http://localhost:5000/scalar/v1");
 
         app.Run();
     }

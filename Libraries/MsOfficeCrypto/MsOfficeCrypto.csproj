@@ -37,7 +37,6 @@
         <PackageReference Include="OpenMcdf"  />
         <PackageReference Include="System.Security.Cryptography.Algorithms"  />
         <PackageReference Include="System.Threading.Tasks.Extensions"  />
-        <PackageReference Include="System.Memory"  />
     </ItemGroup>
 
     <!-- Include README and documentation -->
