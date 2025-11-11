@@ -20,10 +20,7 @@
         <PackageReference Include="NPOI" Version="2.7.5" />
 
         <!-- PDF Processing -->
-        <PackageReference Include="itext" Version="9.3.0" />
-        <PackageReference Include="itext.bouncy-castle-adapter" Version="9.3.0" />
         <PackageReference Include="PdfPig" Version="0.1.12-alpha-20251107-9d3cd" />
-        <PackageReference Include="PDFsharp" Version="6.2.2" />
 
         <!-- Search & Analysis -->
         <PackageReference Include="Lucene.Net" Version="4.8.0-beta00017" />
@@ -31,6 +28,7 @@
         <PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00017" />
         <PackageReference Include="FuzzySharp" Version="2.0.2" />
         <PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
+        <PackageReference Include="System.Text.Json" Version="10.0.0-rc.2.25502.107" />
         <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
 
         <!-- OCR -->

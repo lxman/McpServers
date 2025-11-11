@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Text.Json;
 using DesktopCommander.Core.Services;
-using Mcp.Common;
 using Mcp.Common.Core;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;

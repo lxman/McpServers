@@ -20,6 +20,7 @@
       <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
       <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.3-dev-02320" />
       <PackageReference Include="Serilog.Sinks.File" Version="7.0.1-dev-02315" />
+      <PackageReference Include="System.Text.Json" Version="10.0.0-rc.2.25502.107" />
     </ItemGroup>
 
 </Project>
