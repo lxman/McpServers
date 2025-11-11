@@ -8,35 +8,34 @@
 
     <ItemGroup>
         <!-- Office Processing -->
-        <PackageReference Include="ClosedXML" Version="0.105.0" />
-        <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
-        <PackageReference Include="ShapeCrawler" Version="0.75.2" />
-        <PackageReference Include="NPOI" Version="2.7.5" />
+        <PackageReference Include="ClosedXML"  />
+        <PackageReference Include="DocumentFormat.OpenXml"  />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions"  />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection"  />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"  />
+        <PackageReference Include="Microsoft.Extensions.Logging"  />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"  />
+        <PackageReference Include="ShapeCrawler"  />
+        <PackageReference Include="NPOI"  />
 
         <!-- PDF Processing -->
-        <PackageReference Include="PdfPig" Version="0.1.12-alpha-20251107-9d3cd" />
+        <PackageReference Include="PdfPig"  />
 
         <!-- Search & Analysis -->
-        <PackageReference Include="Lucene.Net" Version="4.8.0-beta00017" />
-        <PackageReference Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00017" />
-        <PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00017" />
-        <PackageReference Include="FuzzySharp" Version="2.0.2" />
-        <PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
-        <PackageReference Include="System.Text.Json" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
+        <PackageReference Include="Lucene.Net"  />
+        <PackageReference Include="Lucene.Net.Analysis.Common"  />
+        <PackageReference Include="Lucene.Net.QueryParser"  />
+        <PackageReference Include="FuzzySharp"  />
+        <PackageReference Include="System.Security.Cryptography.Algorithms"  />
+        <PackageReference Include="System.Text.Json"  />
+        <PackageReference Include="System.Threading.Tasks.Extensions"  />
 
         <!-- OCR -->
-        <PackageReference Include="TesseractOCR" Version="5.5.1" />
-        <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+        <PackageReference Include="TesseractOCR"  />
+        <PackageReference Include="SixLabors.ImageSharp"  />
 
         <!-- API -->
-        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0-rc.2.25502.107" />
+        <PackageReference Include="Microsoft.Extensions.Caching.Memory"  />
     </ItemGroup>
 
     <ItemGroup>

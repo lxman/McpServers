@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Mcp.Database.Core.Sql;
+using Mcp.ResponseGuard.Configuration;
+using Mcp.ResponseGuard.Services;
 using Serilog;
 using SerilogFileWriter;
 using SqlMcp.Tools;
@@ -62,7 +64,11 @@ try
     builder.Services.AddSingleton<ISchemaInspector, SchemaInspector>();
     builder.Services.AddSingleton<ITransactionManager, TransactionManager>();
     builder.Services.AddSingleton<IAuditLogger, AuditLogger>();
-    builder.Services.AddSingleton<ResponseSizeGuard>();
+
+    // Register OutputGuard with custom 15k token limit for SQL query operations
+    builder.Services.AddSingleton(sp => new OutputGuard(
+        sp.GetRequiredService<ILogger<OutputGuard>>(),
+        new OutputGuardOptions { SafeTokenLimit = 15_000 }));
 
     // Configure MCP server
     builder.Services.AddMcpServer()

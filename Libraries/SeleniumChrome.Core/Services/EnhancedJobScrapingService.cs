@@ -428,7 +428,7 @@ public class EnhancedJobScrapingService(
                 return;
             }
 
-            var tempListings = jobs.Select(job => new TemporaryJobListing
+            List<TemporaryJobListing> tempListings = jobs.Select(job => new TemporaryJobListing
             {
                 SessionId = sessionId,
                 BatchNumber = batchNumber,
@@ -458,7 +458,7 @@ public class EnhancedJobScrapingService(
         try
         {
             // Find all unconsolidated temp results for this session
-            var tempResults = await TempJobListings
+            List<TemporaryJobListing>? tempResults = await TempJobListings
                 .Find(t => t.SessionId == sessionId && !t.Consolidated)
                 .SortBy(t => t.BatchNumber)
                 .ToListAsync();
@@ -476,7 +476,7 @@ public class EnhancedJobScrapingService(
             }
 
             // Extract job listings and set userId
-            var jobs = tempResults.Select(t =>
+            List<EnhancedJobListing> jobs = tempResults.Select(t =>
             {
                 t.JobListing.UserId = userId;
                 return t.JobListing;
@@ -486,8 +486,8 @@ public class EnhancedJobScrapingService(
             await SaveJobsToDatabase(jobs);
 
             // Mark temp results as consolidated
-            var filter = Builders<TemporaryJobListing>.Filter.Eq(t => t.SessionId, sessionId);
-            var update = Builders<TemporaryJobListing>.Update.Set(t => t.Consolidated, true);
+            FilterDefinition<TemporaryJobListing>? filter = Builders<TemporaryJobListing>.Filter.Eq(t => t.SessionId, sessionId);
+            UpdateDefinition<TemporaryJobListing>? update = Builders<TemporaryJobListing>.Update.Set(t => t.Consolidated, true);
             await TempJobListings.UpdateManyAsync(filter, update);
 
             logger.LogInformation($"Consolidated {jobs.Count} jobs from session {sessionId} to final collection");
@@ -558,13 +558,13 @@ public class EnhancedJobScrapingService(
     {
         try
         {
-            var cutoffTime = DateTime.UtcNow.AddHours(-24);
-            var filter = Builders<TemporaryJobListing>.Filter.Or(
+            DateTime cutoffTime = DateTime.UtcNow.AddHours(-24);
+            FilterDefinition<TemporaryJobListing>? filter = Builders<TemporaryJobListing>.Filter.Or(
                 Builders<TemporaryJobListing>.Filter.Eq(t => t.Consolidated, true),
                 Builders<TemporaryJobListing>.Filter.Lt(t => t.SavedAt, cutoffTime)
             );
 
-            var result = await TempJobListings.DeleteManyAsync(filter);
+            DeleteResult? result = await TempJobListings.DeleteManyAsync(filter);
             logger.LogInformation($"Cleaned up {result.DeletedCount} old temporary results");
             return (int)result.DeletedCount;
         }

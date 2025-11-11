@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using DebugServer.Core.Models;
 using DebugServer.Core.Services;
-using Mcp.Common;
 using Mcp.Common.Core;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;

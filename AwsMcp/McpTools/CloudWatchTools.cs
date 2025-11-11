@@ -4,6 +4,8 @@ using Amazon.CloudWatch.Model;
 using Amazon.CloudWatchLogs;
 using Amazon.CloudWatchLogs.Model;
 using AwsServer.Core.Services.CloudWatch;
+using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -16,7 +18,8 @@ namespace AwsMcp.McpTools;
 public class CloudWatchTools(
     CloudWatchLogsService logsService,
     CloudWatchMetricsService metricsService,
-    ILogger<CloudWatchTools> logger)
+    ILogger<CloudWatchTools> logger,
+    OutputGuard outputGuard)
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
@@ -50,7 +53,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing CloudWatch log groups");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -74,7 +77,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error creating CloudWatch log group {LogGroupName}", logGroupName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -98,7 +101,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error deleting CloudWatch log group {LogGroupName}", logGroupName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -124,7 +127,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error setting retention policy for {LogGroupName}", logGroupName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -171,7 +174,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing log streams for group {LogGroupName}", logGroupName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -213,7 +216,7 @@ public class CloudWatchTools(
 
             GetLogEventsResponse response = await logsService.GetLogEventsAsync(logGroupName, logStreamName, start, end, limit);
 
-            return JsonSerializer.Serialize(new
+            string result = JsonSerializer.Serialize(new
             {
                 success = true,
                 eventCount = response.Events.Count,
@@ -224,12 +227,36 @@ public class CloudWatchTools(
                     ingestionTime = e.IngestionTime
                 })
             }, _jsonOptions);
+
+            // Check response size - log events can contain large message content
+            var sizeCheck = outputGuard.CheckStringSize(result, "get_log_events");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return outputGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Log events query returned {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
+                    "Try these workarounds:\n" +
+                    "  1. Reduce limit parameter (currently {limit}, try 50 or 25)\n" +
+                    "  2. Narrow the time range using startTime/endTime\n" +
+                    "  3. Use filter_logs with a specific pattern to reduce results\n" +
+                    "  4. Query logs in smaller time windows",
+                    new {
+                        currentLimit = limit,
+                        suggestedLimit = Math.Max(10, limit / 4),
+                        logGroupName,
+                        logStreamName,
+                        eventCount = response.Events.Count
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting log events from {LogGroupName}/{LogStreamName}",
                 logGroupName, logStreamName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "GET_LOG_EVENTS_FAILED");
         }
     }
 
@@ -251,7 +278,7 @@ public class CloudWatchTools(
 
             FilterLogEventsResponse response = await logsService.FilterLogsAsync(logGroupName, filterPattern, start, end, limit);
 
-            return JsonSerializer.Serialize(new
+            string result = JsonSerializer.Serialize(new
             {
                 success = true,
                 eventCount = response.Events.Count,
@@ -264,11 +291,35 @@ public class CloudWatchTools(
                 }),
                 nextToken = response.NextToken
             }, _jsonOptions);
+
+            // Check response size - filtered logs can return many matching events
+            var sizeCheck = outputGuard.CheckStringSize(result, "filter_logs");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return outputGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Filtered log query returned {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
+                    "Try these workarounds:\n" +
+                    "  1. Reduce limit parameter (currently {limit}, try 50 or 25)\n" +
+                    "  2. Use a more specific filter pattern\n" +
+                    "  3. Narrow the time range with startTime/endTime\n" +
+                    "  4. Query logs in smaller time windows",
+                    new {
+                        currentLimit = limit,
+                        suggestedLimit = Math.Max(10, limit / 4),
+                        logGroupName,
+                        filterPattern,
+                        eventCount = response.Events.Count
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error filtering logs in {LogGroupName}", logGroupName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "FILTER_LOGS_FAILED");
         }
     }
 
@@ -289,7 +340,7 @@ public class CloudWatchTools(
 
             FilterLogEventsResponse response = await logsService.FilterLogsAsync(logGroupName, filterPattern, start, end, limit);
 
-            return JsonSerializer.Serialize(new
+            string result = JsonSerializer.Serialize(new
             {
                 success = true,
                 timeRange = new { start, end, minutes },
@@ -301,11 +352,36 @@ public class CloudWatchTools(
                     logStreamName = e.LogStreamName
                 })
             }, _jsonOptions);
+
+            // Check response size - recent logs can return many events
+            var sizeCheck = outputGuard.CheckStringSize(result, "get_recent_logs");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return outputGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Recent logs query returned {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
+                    "Try these workarounds:\n" +
+                    "  1. Reduce limit parameter (currently {limit}, try 50 or 25)\n" +
+                    "  2. Reduce time window (currently {minutes} minutes)\n" +
+                    "  3. Add a filter pattern to reduce results\n" +
+                    "  4. Use filter_logs with specific time range",
+                    new {
+                        currentLimit = limit,
+                        suggestedLimit = Math.Max(10, limit / 4),
+                        currentMinutes = minutes,
+                        suggestedMinutes = Math.Max(5, minutes / 2),
+                        logGroupName,
+                        eventCount = response.Events.Count
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting recent logs from {LogGroupName}", logGroupName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "GET_RECENT_LOGS_FAILED");
         }
     }
 
@@ -352,18 +428,50 @@ public class CloudWatchTools(
                 }
             }
 
-            return JsonSerializer.Serialize(new
+            string result = JsonSerializer.Serialize(new
             {
                 success = true,
                 groupCount = groups.Count,
                 timeRange = new { start, end, minutes },
                 results
             }, _jsonOptions);
+
+            // Check response size - multi-group queries multiply results across log groups
+            var sizeCheck = outputGuard.CheckStringSize(result, "filter_logs_multi");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                int totalEvents = results.Sum(r =>
+                {
+                    var obj = r as dynamic;
+                    return obj?.eventCount ?? 0;
+                });
+
+                return outputGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Multi-group log query across {groups.Count} groups returned {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
+                    "Try these workarounds:\n" +
+                    "  1. Query fewer log groups at once\n" +
+                    "  2. Reduce limit parameter (currently {limit}, try 50 or 25)\n" +
+                    "  3. Reduce time window (currently {minutes} minutes)\n" +
+                    "  4. Add a more specific filter pattern\n" +
+                    "  5. Query log groups individually instead of multi-group",
+                    new {
+                        groupCount = groups.Count,
+                        currentLimit = limit,
+                        suggestedLimit = Math.Max(10, limit / 4),
+                        currentMinutes = minutes,
+                        suggestedMinutes = Math.Max(5, minutes / 2),
+                        totalEvents
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error filtering logs across multiple groups");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "FILTER_LOGS_MULTI_FAILED");
         }
     }
 
@@ -414,7 +522,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting error logs from {LogGroupName}", logGroupName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -480,7 +588,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting log context");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -529,7 +637,7 @@ public class CloudWatchTools(
                 GetQueryResultsResponse results = await logsService.GetInsightsQueryResultsAsync(queryId);
                 if (results.Status == QueryStatus.Complete)
                 {
-                    return JsonSerializer.Serialize(new
+                    string result = JsonSerializer.Serialize(new
                     {
                         success = true,
                         queryId,
@@ -537,6 +645,30 @@ public class CloudWatchTools(
                         statistics = results.Statistics,
                         results = results.Results
                     }, _jsonOptions);
+
+                    // Check response size - Insights queries can return very large result sets
+                    var sizeCheck = outputGuard.CheckStringSize(result, "run_insights_query");
+
+                    if (!sizeCheck.IsWithinLimit)
+                    {
+                        return outputGuard.CreateOversizedErrorResponse(
+                            sizeCheck,
+                            $"CloudWatch Insights query returned {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
+                            "Try these workarounds:\n" +
+                            "  1. Add LIMIT clause to query (e.g., | limit 100)\n" +
+                            "  2. Use more selective filters in the query\n" +
+                            "  3. Narrow the time range (startTime/endTime)\n" +
+                            "  4. Use aggregation functions (stats, count) instead of raw results\n" +
+                            "  5. Query fewer log groups at once",
+                            new {
+                                queryId,
+                                groupCount = groups.Count,
+                                resultCount = results.Results?.Count ?? 0,
+                                suggestedLimit = 100
+                            });
+                    }
+
+                    return sizeCheck.SerializedJson!;
                 }
                 else if (results.Status == QueryStatus.Failed || results.Status == QueryStatus.Cancelled)
                 {
@@ -560,7 +692,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error running Insights query");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "RUN_INSIGHTS_QUERY_FAILED");
         }
     }
 
@@ -603,7 +735,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error starting Insights query");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -630,7 +762,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting Insights results for {QueryId}", queryId);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -654,7 +786,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error stopping Insights query {QueryId}", queryId);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -710,7 +842,7 @@ public class CloudWatchTools(
         {
             logger.LogError(ex, "Error putting metric {MetricName} to namespace {Namespace}",
                 metricName, namespaceName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -772,7 +904,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error filtering logs from multiple groups");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -832,7 +964,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting recent logs from multiple groups");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -894,7 +1026,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting error logs from multiple groups");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -936,7 +1068,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error searching for pattern in {LogGroupName}", logGroupName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -965,7 +1097,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing metric namespaces");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -988,7 +1120,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error deleting metric alarms");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -1011,7 +1143,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error enabling metric alarms");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -1034,7 +1166,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error disabling metric alarms");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -1076,7 +1208,7 @@ public class CloudWatchTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting alarm history");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -1089,10 +1221,9 @@ public class CloudWatchTools(
         if (string.IsNullOrEmpty(dateTimeString))
             return null;
 
-        if (long.TryParse(dateTimeString, out long unixTime))
-            return DateTimeOffset.FromUnixTimeMilliseconds(unixTime).UtcDateTime;
-
-        return DateTime.Parse(dateTimeString, null, System.Globalization.DateTimeStyles.RoundtripKind);
+        return long.TryParse(dateTimeString, out long unixTime)
+            ? DateTimeOffset.FromUnixTimeMilliseconds(unixTime).UtcDateTime
+            : DateTime.Parse(dateTimeString, null, System.Globalization.DateTimeStyles.RoundtripKind);
     }
 
     #endregion

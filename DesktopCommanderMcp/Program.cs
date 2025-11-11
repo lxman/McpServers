@@ -2,6 +2,7 @@ using System.Net.Security;
 using DesktopCommander.Core.Services;
 using DesktopCommander.Core.Services.AdvancedFileEditing;
 using DesktopCommanderMcp.McpTools;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -28,7 +29,7 @@ try
     builder.Services.AddSingleton<FileVersionService>();
     builder.Services.AddSingleton<ProcessManager>();
     builder.Services.AddSingleton<HexAnalysisService>();
-    builder.Services.AddSingleton<ResponseSizeGuard>();
+    builder.Services.AddSingleton<OutputGuard>();
 
     // File editing services
     builder.Services.AddSingleton<EditApprovalService>();

@@ -2,7 +2,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using AzureServer.Core.Authentication;
-using Mcp.Common;
 using AzureServer.Core.Services.DevOps.Models;
 using Mcp.Common.Core;
 using Microsoft.TeamFoundation.Build.WebApi;

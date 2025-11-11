@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Mcp.DependencyInjection;
 using AzureServer.Core.Services.Core;
 using AzureServer.Core.Services.Networking;
 using AzureServer.Core.Services.Networking.Interfaces;

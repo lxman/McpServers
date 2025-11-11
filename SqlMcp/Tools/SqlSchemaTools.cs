@@ -2,10 +2,12 @@ using System.ComponentModel;
 using System.Text.Json;
 using Mcp.Common;
 using Mcp.Common.Core;
+using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Models;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using SqlServer.Core.Models;
-using SqlServer.Core.Services;
 using SqlServer.Core.Services.Interfaces;
 
 namespace SqlMcp.Tools;
@@ -13,7 +15,7 @@ namespace SqlMcp.Tools;
 [McpServerToolType]
 public class SqlSchemaTools(
     ISchemaInspector schemaInspector,
-    ResponseSizeGuard responseSizeGuard,
+    OutputGuard outputGuard,
     ILogger<SqlSchemaTools> logger)
 {
     [McpServerTool, DisplayName("list_tables")]
@@ -27,12 +29,12 @@ public class SqlSchemaTools(
             var responseObject = new { success = true, tables };
 
             // Check response size before returning
-            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "list_tables");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckResponseSize(responseObject, "list_tables");
 
             if (!sizeCheck.IsWithinLimit)
             {
                 int tableCount = tables.Count();
-                return responseSizeGuard.CreateOversizedErrorResponse(
+                return outputGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"Database contains {tableCount} tables, resulting in {sizeCheck.EstimatedTokens:N0} estimated tokens.",
                     "Try these workarounds:\n" +
@@ -50,7 +52,7 @@ public class SqlSchemaTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to list tables");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
+            return ex.ToErrorResponse(outputGuard, errorCode: "LIST_TABLES_FAILED");
         }
     }
 
@@ -68,7 +70,7 @@ public class SqlSchemaTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get table schema");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
+            return ex.ToErrorResponse(outputGuard, errorCode: "GET_TABLE_SCHEMA_FAILED");
         }
     }
 
@@ -86,7 +88,7 @@ public class SqlSchemaTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get table indexes");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
+            return ex.ToErrorResponse(outputGuard, errorCode: "GET_TABLE_INDEXES_FAILED");
         }
     }
 
@@ -104,7 +106,7 @@ public class SqlSchemaTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to get foreign keys");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
+            return ex.ToErrorResponse(outputGuard, errorCode: "GET_FOREIGN_KEYS_FAILED");
         }
     }
 }

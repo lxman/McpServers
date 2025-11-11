@@ -9,6 +9,7 @@
     <Project Path="Libraries\Mcp.Common.Core\Mcp.Common.Core.csproj" Type="Classic C#" />
     <Project Path="Libraries\Mcp.Database.Core\Mcp.Database.Core.csproj" Type="Classic C#" />
     <Project Path="Libraries\Mcp.DependencyInjection.Core\Mcp.DependencyInjection.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries\Mcp.ResponseGuard\Mcp.ResponseGuard.csproj" Type="Classic C#" />
     <Project Path="Libraries\MongoServer.Core\MongoServer.Core.csproj" Type="Classic C#" />
     <Project Path="Libraries\MsOfficeCrypto\MsOfficeCrypto.csproj" Type="Classic C#" />
     <Project Path="Libraries\Playwright.Core\Playwright.Core.csproj" Type="Classic C#" />
@@ -20,6 +21,7 @@
   </Folder>
   <Folder Name="/SolutionFolder/">
     <File Path="README.md" />
+    <File Path="Directory.Packages.props" />
   </Folder>
   <Project Path="AwsMcp\AwsMcp.csproj" Type="Classic C#" />
   <Project Path="AzureMcp\AzureMcp.csproj" Type="Classic C#" />

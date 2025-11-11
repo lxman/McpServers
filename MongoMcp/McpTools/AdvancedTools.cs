@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using MongoServer.Core;
@@ -12,7 +14,8 @@ namespace MongoMcp.McpTools;
 [McpServerToolType]
 public class AdvancedTools(
     ILogger<AdvancedTools> logger,
-    MongoDbService mongoService)
+    MongoDbService mongoService,
+    OutputGuard outputGuard)
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
@@ -26,27 +29,47 @@ public class AdvancedTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return outputGuard.CreateErrorResponse("Server name is required", errorCode: "INVALID_PARAMETER");
             }
 
             if (string.IsNullOrWhiteSpace(collectionName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
+                return outputGuard.CreateErrorResponse("Collection name is required", errorCode: "INVALID_PARAMETER");
             }
 
             if (string.IsNullOrWhiteSpace(pipelineJson))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Pipeline JSON array is required" }, _jsonOptions);
+                return outputGuard.CreateErrorResponse("Pipeline JSON array is required", errorCode: "INVALID_PARAMETER");
             }
 
             string result = await mongoService.AggregateAsync(serverName, collectionName, pipelineJson);
 
-            return result;
+            // Check response size before returning - aggregation can produce large result sets
+            var sizeCheck = outputGuard.CheckStringSize(result, "aggregate");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return outputGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Aggregation pipeline returned results totaling {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
+                    "Try these workarounds:\n" +
+                    "  1. Add $limit stage to pipeline to restrict result count\n" +
+                    "  2. Add $project stage to select fewer fields\n" +
+                    "  3. Use more selective $match stages earlier in pipeline\n" +
+                    "  4. Break complex aggregations into multiple simpler queries",
+                    new {
+                        serverName,
+                        collectionName,
+                        suggestion = "Add { $limit: 50 } to the end of your pipeline"
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error executing aggregation on collection {CollectionName} on server {ServerName}", collectionName, serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "AGGREGATE_FAILED");
         }
     }
 
@@ -75,7 +98,7 @@ public class AdvancedTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error counting documents in collection {CollectionName} on server {ServerName}", collectionName, serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "COUNT_DOCUMENTS_FAILED");
         }
     }
 
@@ -109,7 +132,7 @@ public class AdvancedTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error creating index on collection {CollectionName} on server {ServerName}", collectionName, serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "CREATE_INDEX_FAILED");
         }
     }
 
@@ -138,7 +161,7 @@ public class AdvancedTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error dropping collection {CollectionName} on server {ServerName}", collectionName, serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "DROP_COLLECTION_FAILED");
         }
     }
 
@@ -152,22 +175,41 @@ public class AdvancedTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return outputGuard.CreateErrorResponse("Server name is required", errorCode: "INVALID_PARAMETER");
             }
 
             if (string.IsNullOrWhiteSpace(command))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Command JSON is required" }, _jsonOptions);
+                return outputGuard.CreateErrorResponse("Command JSON is required", errorCode: "INVALID_PARAMETER");
             }
 
             string result = await mongoService.ExecuteCommandAsync(serverName, command);
 
-            return result;
+            // Check response size - commands can return large results
+            var sizeCheck = outputGuard.CheckStringSize(result, "execute_command");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return outputGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Command returned results totaling {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
+                    "Try these workarounds:\n" +
+                    "  1. If using 'find' command, add a limit parameter\n" +
+                    "  2. If using 'listCollections', filter by specific names\n" +
+                    "  3. Use more specific commands that return less data\n" +
+                    "  4. Consider using specialized tools instead of raw commands",
+                    new {
+                        serverName,
+                        suggestion = "Use query, aggregate, or count_documents tools instead"
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error executing command on server {ServerName}", serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "EXECUTE_COMMAND_FAILED");
         }
     }
 }

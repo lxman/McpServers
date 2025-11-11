@@ -2,8 +2,10 @@
 using System.Text.Json;
 using DesktopCommander.Core.Services;
 using Mcp.Common.Core;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
+using ResponseSizeCheck = Mcp.ResponseGuard.Models.ResponseSizeCheck;
 
 namespace DesktopCommanderMcp.McpTools;
 
@@ -15,7 +17,7 @@ public class FileSystemTools(
     FileVersionService versionService,
     SecurityManager securityManager,
     AuditLogger auditLogger,
-    ResponseSizeGuard responseSizeGuard,
+    OutputGuard outputGuard,
     ILogger<FileSystemTools> logger)
 {
     [McpServerTool, DisplayName("get_skills_location")]
@@ -463,7 +465,7 @@ public class FileSystemTools(
                         : "Call again without summaryOnly to get full results"
                 };
 
-                ResponseSizeCheck summaryCheck = responseSizeGuard.CheckResponseSize(summary, "search_files");
+                ResponseSizeCheck summaryCheck = outputGuard.CheckResponseSize(summary, "search_files");
                 return Task.FromResult(summaryCheck.IsWithinLimit
                     ? summaryCheck.SerializedJson!
                     : JsonSerializer.Serialize(summary, SerializerOptions.JsonOptionsIndented));
@@ -493,12 +495,12 @@ public class FileSystemTools(
             };
 
             // Check response size before returning
-            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "search_files");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckResponseSize(responseObject, "search_files");
 
             if (!sizeCheck.IsWithinLimit)
             {
                 // Even with pagination, response is too large - suggest smaller maxResults or summary
-                return Task.FromResult(ResponseSizeGuard.CreateOversizedErrorResponse(
+                return Task.FromResult(outputGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"Found {totalCount} files, but even {maxResults} results is too large to return.",
                     "Try using summaryOnly=true first to see an overview, or reduce maxResults to 100 or less.",

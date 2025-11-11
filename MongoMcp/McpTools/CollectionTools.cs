@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using MongoServer.Core;
@@ -12,7 +14,8 @@ namespace MongoMcp.McpTools;
 [McpServerToolType]
 public class CollectionTools(
     ILogger<CollectionTools> logger,
-    MongoDbService mongoService)
+    MongoDbService mongoService,
+    OutputGuard outputGuard)
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
@@ -46,7 +49,7 @@ public class CollectionTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error inserting document into collection {CollectionName} on server {ServerName}", collectionName, serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "INSERT_ONE_FAILED");
         }
     }
 
@@ -80,7 +83,7 @@ public class CollectionTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error inserting documents into collection {CollectionName} on server {ServerName}", collectionName, serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "INSERT_MANY_FAILED");
         }
     }
 
@@ -95,22 +98,43 @@ public class CollectionTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return outputGuard.CreateErrorResponse("Server name is required", errorCode: "INVALID_PARAMETER");
             }
 
             if (string.IsNullOrWhiteSpace(collectionName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
+                return outputGuard.CreateErrorResponse("Collection name is required", errorCode: "INVALID_PARAMETER");
             }
 
             string result = await mongoService.QueryAsync(serverName, collectionName, filterJson ?? "{}", limit, skip);
 
-            return result;
+            // Check response size before returning
+            var sizeCheck = outputGuard.CheckStringSize(result, "query");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return outputGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Query returned documents totaling {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
+                    "Try these workarounds:\n" +
+                    "  1. Reduce limit parameter (currently {limit}, try 50 or 25)\n" +
+                    "  2. Add more specific filter criteria\n" +
+                    "  3. Use count_documents first to check result size\n" +
+                    "  4. Select fewer fields using MongoDB projection",
+                    new {
+                        currentLimit = limit,
+                        suggestedLimit = Math.Max(10, limit / 4),
+                        serverName,
+                        collectionName
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error querying collection {CollectionName} on server {ServerName}", collectionName, serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "QUERY_FAILED");
         }
     }
 
@@ -149,7 +173,7 @@ public class CollectionTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error updating document in collection {CollectionName} on server {ServerName}", collectionName, serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "UPDATE_ONE_FAILED");
         }
     }
 
@@ -188,7 +212,7 @@ public class CollectionTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error updating documents in collection {CollectionName} on server {ServerName}", collectionName, serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "UPDATE_MANY_FAILED");
         }
     }
 
@@ -222,7 +246,7 @@ public class CollectionTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error deleting document from collection {CollectionName} on server {ServerName}", collectionName, serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "DELETE_ONE_FAILED");
         }
     }
 
@@ -256,7 +280,7 @@ public class CollectionTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error deleting documents from collection {CollectionName} on server {ServerName}", collectionName, serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "DELETE_MANY_FAILED");
         }
     }
 }

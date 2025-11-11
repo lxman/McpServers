@@ -4,6 +4,8 @@ using DocumentServer.Core.Services.Core;
 using DocumentServer.Core.Services.DocumentSearch;
 using DocumentServer.Core.Services.Lucene;
 using DocumentServer.Core.Services.Ocr;
+using Mcp.ResponseGuard.Configuration;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -37,6 +39,11 @@ try
     builder.Services.AddSingleton<LuceneIndexer>();
     builder.Services.AddSingleton<LuceneSearcher>();
     builder.Services.AddSingleton<IndexManager>();
+
+    // Register OutputGuard with custom 15k token limit for document extraction operations
+    builder.Services.AddSingleton(sp => new OutputGuard(
+        sp.GetRequiredService<ILogger<OutputGuard>>(),
+        new OutputGuardOptions { SafeTokenLimit = 15_000 }));
 
     // Configure MCP server with STDIO transport
     builder.Services.AddMcpServer()

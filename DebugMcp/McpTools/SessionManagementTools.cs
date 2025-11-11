@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.Text.Json;
 using DebugServer.Core.Models;
 using DebugServer.Core.Services;
-using Mcp.Common;
 using Mcp.Common.Core;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;

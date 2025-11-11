@@ -124,7 +124,7 @@ public class IntelligentBulkProcessor(
 
                     // AUTO-SAVE BATCH TO TEMPORARY COLLECTION for recovery
                     // Get jobs processed in this batch (last N jobs added)
-                    var batchJobs = result.ProcessedJobs.Skip(Math.Max(0, result.ProcessedJobs.Count - jobs.Count)).ToList();
+                    List<EnhancedJobListing> batchJobs = result.ProcessedJobs.Skip(Math.Max(0, result.ProcessedJobs.Count - jobs.Count)).ToList();
                     await scrapingService.SaveToTemporaryCollectionAsync(
                         batchJobs,
                         effectiveSessionId,
@@ -138,7 +138,7 @@ public class IntelligentBulkProcessor(
                     {
                         // Create lightweight summary instead of copying all jobs
                         result.PagesProcessed = currentPage;
-                        var summary = BulkProcessingSummary.FromResult(result, result.StartTime);
+                        BulkProcessingSummary summary = BulkProcessingSummary.FromResult(result, result.StartTime);
 
                         // Update estimated total batches based on progress
                         if (result.ProcessedJobs.Count > 0)

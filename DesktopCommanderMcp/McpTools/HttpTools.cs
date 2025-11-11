@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
-using DesktopCommander.Core.Services;
 using Mcp.Common.Core;
+using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Models;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -14,7 +16,7 @@ namespace DesktopCommanderMcp.McpTools;
 [McpServerToolType]
 public class HttpTools(
     IHttpClientFactory httpClientFactory,
-    ResponseSizeGuard responseSizeGuard,
+    OutputGuard outputGuard,
     ILogger<HttpTools> logger)
 {
     private HttpClient CreateClient()
@@ -37,21 +39,23 @@ public class HttpTools(
 
             if (!response.IsSuccessStatusCode)
             {
-                return JsonSerializer.Serialize(new
-                {
-                    success = false,
-                    statusCode = (int)response.StatusCode,
-                    statusText = response.ReasonPhrase,
-                    error = content
-                }, SerializerOptions.JsonOptionsIndented);
+                return outputGuard.CreateErrorResponse(
+                    $"HTTP request failed with status {(int)response.StatusCode}",
+                    details: new
+                    {
+                        statusCode = (int)response.StatusCode,
+                        statusText = response.ReasonPhrase,
+                        content
+                    },
+                    errorCode: "HTTP_ERROR");
             }
 
             // Check response size before processing
-            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(content, "http_get");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(content, "http_get");
 
             if (!sizeCheck.IsWithinLimit)
             {
-                return ResponseSizeGuard.CreateOversizedErrorResponse(
+                return outputGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"HTTP response from '{url}' is too large.",
                     "Try fetching a more specific endpoint, use query parameters to filter results, or implement pagination.",
@@ -73,12 +77,7 @@ public class HttpTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error making GET request to {Url}", url);
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                type = ex.GetType().Name
-            }, SerializerOptions.JsonOptionsIndented);
+            return ex.ToErrorResponse(outputGuard, errorCode: "HTTP_REQUEST_FAILED");
         }
     }
 
@@ -99,21 +98,23 @@ public class HttpTools(
 
             if (!response.IsSuccessStatusCode)
             {
-                return JsonSerializer.Serialize(new
-                {
-                    success = false,
-                    statusCode = (int)response.StatusCode,
-                    statusText = response.ReasonPhrase,
-                    error = responseContent
-                }, SerializerOptions.JsonOptionsIndented);
+                return outputGuard.CreateErrorResponse(
+                    $"HTTP request failed with status {(int)response.StatusCode}",
+                    details: new
+                    {
+                        statusCode = (int)response.StatusCode,
+                        statusText = response.ReasonPhrase,
+                        content = responseContent
+                    },
+                    errorCode: "HTTP_ERROR");
             }
 
             // Check response size before processing
-            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(responseContent, "http_post");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(responseContent, "http_post");
 
             if (!sizeCheck.IsWithinLimit)
             {
-                return ResponseSizeGuard.CreateOversizedErrorResponse(
+                return outputGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"HTTP POST response from '{url}' is too large.",
                     "Try posting to a more specific endpoint, request fewer results, or use pagination in the API.",
@@ -135,12 +136,7 @@ public class HttpTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error making POST request to {Url}", url);
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                type = ex.GetType().Name
-            }, SerializerOptions.JsonOptionsIndented);
+            return ex.ToErrorResponse(outputGuard, errorCode: "HTTP_REQUEST_FAILED");
         }
     }
 
@@ -161,21 +157,23 @@ public class HttpTools(
 
             if (!response.IsSuccessStatusCode)
             {
-                return JsonSerializer.Serialize(new
-                {
-                    success = false,
-                    statusCode = (int)response.StatusCode,
-                    statusText = response.ReasonPhrase,
-                    error = responseContent
-                }, SerializerOptions.JsonOptionsIndented);
+                return outputGuard.CreateErrorResponse(
+                    $"HTTP request failed with status {(int)response.StatusCode}",
+                    details: new
+                    {
+                        statusCode = (int)response.StatusCode,
+                        statusText = response.ReasonPhrase,
+                        content = responseContent
+                    },
+                    errorCode: "HTTP_ERROR");
             }
 
             // Check response size before processing
-            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(responseContent, "http_put");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(responseContent, "http_put");
 
             if (!sizeCheck.IsWithinLimit)
             {
-                return ResponseSizeGuard.CreateOversizedErrorResponse(
+                return outputGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"HTTP PUT response from '{url}' is too large.",
                     "The API response is too large to return. Consider requesting a summary or specific fields.",
@@ -195,12 +193,7 @@ public class HttpTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error making PUT request to {Url}", url);
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                type = ex.GetType().Name
-            }, SerializerOptions.JsonOptionsIndented);
+            return ex.ToErrorResponse(outputGuard, errorCode: "HTTP_REQUEST_FAILED");
         }
     }
 
@@ -219,21 +212,23 @@ public class HttpTools(
 
             if (!response.IsSuccessStatusCode)
             {
-                return JsonSerializer.Serialize(new
-                {
-                    success = false,
-                    statusCode = (int)response.StatusCode,
-                    statusText = response.ReasonPhrase,
-                    error = content
-                }, SerializerOptions.JsonOptionsIndented);
+                return outputGuard.CreateErrorResponse(
+                    $"HTTP request failed with status {(int)response.StatusCode}",
+                    details: new
+                    {
+                        statusCode = (int)response.StatusCode,
+                        statusText = response.ReasonPhrase,
+                        content
+                    },
+                    errorCode: "HTTP_ERROR");
             }
 
             // Check response size before processing
-            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(content, "http_delete");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(content, "http_delete");
 
             if (!sizeCheck.IsWithinLimit)
             {
-                return ResponseSizeGuard.CreateOversizedErrorResponse(
+                return outputGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"HTTP DELETE response from '{url}' is too large.",
                     "The API response is too large to return. Consider requesting confirmation or summary data only.",
@@ -253,12 +248,7 @@ public class HttpTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error making DELETE request to {Url}", url);
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                type = ex.GetType().Name
-            }, SerializerOptions.JsonOptionsIndented);
+            return ex.ToErrorResponse(outputGuard, errorCode: "HTTP_REQUEST_FAILED");
         }
     }
 
@@ -308,21 +298,23 @@ public class HttpTools(
 
             if (!response.IsSuccessStatusCode)
             {
-                return JsonSerializer.Serialize(new
-                {
-                    success = false,
-                    statusCode = (int)response.StatusCode,
-                    statusText = response.ReasonPhrase,
-                    error = content
-                }, SerializerOptions.JsonOptionsIndented);
+                return outputGuard.CreateErrorResponse(
+                    $"HTTP request failed with status {(int)response.StatusCode}",
+                    details: new
+                    {
+                        statusCode = (int)response.StatusCode,
+                        statusText = response.ReasonPhrase,
+                        content
+                    },
+                    errorCode: "HTTP_ERROR");
             }
 
             // Check response size before processing
-            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckStringSize(content, "http_request");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(content, "http_request");
 
             if (!sizeCheck.IsWithinLimit)
             {
-                return ResponseSizeGuard.CreateOversizedErrorResponse(
+                return outputGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"HTTP {method.ToUpper()} response from '{url}' is too large.",
                     "The API response is too large to return. Try requesting specific fields, applying filters, or using pagination.",
@@ -342,12 +334,7 @@ public class HttpTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error making {Method} request to {Url}", method, url);
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                type = ex.GetType().Name
-            }, SerializerOptions.JsonOptionsIndented);
+            return ex.ToErrorResponse(outputGuard, errorCode: "HTTP_REQUEST_FAILED");
         }
     }
 }

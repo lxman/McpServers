@@ -1,5 +1,7 @@
 using AwsMcp.McpTools;
 using AwsServer.Core.Configuration;
+using Mcp.ResponseGuard.Configuration;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -20,6 +22,11 @@ try
 
     // Register AWS Core services
     builder.Services.AddAwsServices();
+
+    // Register OutputGuard with custom 15k token limit for AWS CloudWatch log operations
+    builder.Services.AddSingleton(sp => new OutputGuard(
+        sp.GetRequiredService<ILogger<OutputGuard>>(),
+        new OutputGuardOptions { SafeTokenLimit = 15_000 }));
 
     // Configure MCP server with STDIO transport
     builder.Services.AddMcpServer()

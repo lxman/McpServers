@@ -2,8 +2,10 @@
 using System.Text.Json;
 using DesktopCommander.Core.Services;
 using Mcp.Common.Core;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
+using ResponseSizeCheck = Mcp.ResponseGuard.Models.ResponseSizeCheck;
 
 namespace DesktopCommanderMcp.McpTools;
 
@@ -15,7 +17,7 @@ public class TerminalTools(
     ProcessManager processManager,
     SecurityManager securityManager,
     AuditLogger auditLogger,
-    ResponseSizeGuard responseSizeGuard,
+    OutputGuard outputGuard,
     ILogger<TerminalTools> logger)
 {
     [McpServerTool, DisplayName("execute_command")]
@@ -52,11 +54,11 @@ public class TerminalTools(
             };
 
             // Check response size before returning
-            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "execute_command");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckResponseSize(responseObject, "execute_command");
 
             if (!sizeCheck.IsWithinLimit)
             {
-                return ResponseSizeGuard.CreateOversizedErrorResponse(
+                return outputGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"Command '{command}' produced output that is too large.",
                     "Try redirecting output to a file, using filters like 'head' or 'tail', or reading the output incrementally using get_session_output.",
@@ -142,11 +144,11 @@ public class TerminalTools(
             };
 
             // Check response size before returning
-            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "get_session_output");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckResponseSize(responseObject, "get_session_output");
 
             if (!sizeCheck.IsWithinLimit)
             {
-                return Task.FromResult(ResponseSizeGuard.CreateOversizedErrorResponse(
+                return Task.FromResult(outputGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"Session '{sessionId}' has accumulated output that is too large.",
                     "Close the current session and create a new one, or redirect command output to files for large operations.",

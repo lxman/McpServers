@@ -3,7 +3,6 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Mcp.Common;
 using Mcp.Common.Core;
 using Mcp.Database.Core.MongoDB;
 using Mcp.Database.Core.Common;

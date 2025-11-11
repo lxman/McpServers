@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using MongoServer.Core.Services;
@@ -12,7 +14,8 @@ namespace MongoMcp.McpTools;
 [McpServerToolType]
 public class CrossServerTools(
     ILogger<CrossServerTools> logger,
-    CrossServerOperations crossServerOps)
+    CrossServerOperations crossServerOps,
+    OutputGuard outputGuard)
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
@@ -26,27 +29,47 @@ public class CrossServerTools(
 
             if (string.IsNullOrWhiteSpace(server1))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server 1 name is required" }, _jsonOptions);
+                return outputGuard.CreateErrorResponse("Server 1 name is required", errorCode: "INVALID_PARAMETER");
             }
 
             if (string.IsNullOrWhiteSpace(server2))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server 2 name is required" }, _jsonOptions);
+                return outputGuard.CreateErrorResponse("Server 2 name is required", errorCode: "INVALID_PARAMETER");
             }
 
             if (string.IsNullOrWhiteSpace(collectionName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
+                return outputGuard.CreateErrorResponse("Collection name is required", errorCode: "INVALID_PARAMETER");
             }
 
             string result = await crossServerOps.CompareCollectionsAsync(server1, server2, collectionName, filterJson ?? "{}");
 
-            return result;
+            // Check response size - comparisons can return large difference reports
+            var sizeCheck = outputGuard.CheckStringSize(result, "compare_collections");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return outputGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Collection comparison returned results totaling {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
+                    "Try these workarounds:\n" +
+                    "  1. Add more specific filter criteria to reduce documents compared\n" +
+                    "  2. Use count_documents first to check collection sizes\n" +
+                    "  3. Compare smaller subsets of data\n" +
+                    "  4. Use sync_data with dryRun=true for a summary instead",
+                    new {
+                        server1,
+                        server2,
+                        collectionName
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error comparing collections between {Server1} and {Server2}", server1, server2);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "COMPARE_COLLECTIONS_FAILED");
         }
     }
 
@@ -81,7 +104,7 @@ public class CrossServerTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error syncing data from {SourceServer} to {TargetServer}", sourceServer, targetServer);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "SYNC_DATA_FAILED");
         }
     }
 
@@ -96,22 +119,45 @@ public class CrossServerTools(
 
             if (serverNames == null || serverNames.Length == 0)
             {
-                return JsonSerializer.Serialize(new { success = false, error = "At least one server name is required" }, _jsonOptions);
+                return outputGuard.CreateErrorResponse("At least one server name is required", errorCode: "INVALID_PARAMETER");
             }
 
             if (string.IsNullOrWhiteSpace(collectionName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
+                return outputGuard.CreateErrorResponse("Collection name is required", errorCode: "INVALID_PARAMETER");
             }
 
             string result = await crossServerOps.CrossServerQueryAsync(serverNames, collectionName, filterJson ?? "{}", limitPerServer);
 
-            return result;
+            // Check response size - cross-server queries multiply results across servers
+            var sizeCheck = outputGuard.CheckStringSize(result, "cross_server_query");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                int totalLimit = limitPerServer * serverNames.Length;
+                return outputGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Cross-server query across {serverNames.Length} servers returned results totaling {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
+                    "Try these workarounds:\n" +
+                    "  1. Reduce limitPerServer parameter (currently {limitPerServer}, try 25 or 10)\n" +
+                    "  2. Query fewer servers at once\n" +
+                    "  3. Add more specific filter criteria\n" +
+                    "  4. Use count_documents first to check total result size\n" +
+                    "  5. Query servers individually instead of cross-server",
+                    new {
+                        serverCount = serverNames.Length,
+                        currentLimitPerServer = limitPerServer,
+                        suggestedLimitPerServer = Math.Max(5, limitPerServer / 4),
+                        totalResults = totalLimit
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error executing cross-server query");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "CROSS_SERVER_QUERY_FAILED");
         }
     }
 
@@ -146,7 +192,7 @@ public class CrossServerTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error during bulk transfer from {SourceServer} to {TargetServer}", sourceServer, targetServer);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "BULK_TRANSFER_FAILED");
         }
     }
 
@@ -160,17 +206,35 @@ public class CrossServerTools(
 
             if (string.IsNullOrWhiteSpace(command))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Command JSON is required" }, _jsonOptions);
+                return outputGuard.CreateErrorResponse("Command JSON is required", errorCode: "INVALID_PARAMETER");
             }
 
             string result = await crossServerOps.ExecuteOnAllServersAsync(command);
 
-            return result;
+            // Check response size - commands executed on all servers multiply results
+            var sizeCheck = outputGuard.CheckStringSize(result, "execute_on_all_servers");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return outputGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Command execution across all servers returned results totaling {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
+                    "Try these workarounds:\n" +
+                    "  1. Execute the command on fewer servers individually\n" +
+                    "  2. Use more specific commands that return less data\n" +
+                    "  3. Use get_health_dashboard for server status overview\n" +
+                    "  4. Target specific servers instead of all servers",
+                    new {
+                        suggestion = "Execute command on servers individually instead"
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error executing command on all servers");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "EXECUTE_ON_ALL_SERVERS_FAILED");
         }
     }
 
@@ -189,7 +253,7 @@ public class CrossServerTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting health dashboard");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "GET_HEALTH_DASHBOARD_FAILED");
         }
     }
 }

@@ -7,12 +7,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0-rc.2.25502.107" />
-      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0-rc.2.25502.107" />
-      <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0-rc.2.25502.107" />
-      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0-rc.2.25502.107" />
-      <PackageReference Include="Serilog" Version="4.3.1-dev-02390" />
-      <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.3-dev-02320" />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection"  />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"  />
+      <PackageReference Include="Microsoft.Extensions.Logging"  />
+      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"  />
+      <PackageReference Include="Serilog"  />
+      <PackageReference Include="Serilog.Extensions.Logging"  />
     </ItemGroup>
 
     <ItemGroup>

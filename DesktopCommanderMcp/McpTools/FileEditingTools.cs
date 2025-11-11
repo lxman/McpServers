@@ -5,8 +5,11 @@ using DesktopCommander.Core.Services;
 using DesktopCommander.Core.Services.AdvancedFileEditing;
 using DesktopCommander.Core.Services.AdvancedFileEditing.Models;
 using Mcp.Common.Core;
+using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
+using ResponseSizeCheck = Mcp.ResponseGuard.Models.ResponseSizeCheck;
 
 namespace DesktopCommanderMcp.McpTools;
 
@@ -18,7 +21,7 @@ public class FileEditingTools(
     FileEditor fileEditor,
     EditApprovalService approvalService,
     FileVersionService versionService,
-    ResponseSizeGuard responseSizeGuard,
+    OutputGuard outputGuard,
     ILogger<FileEditingTools> logger)
 {
     [McpServerTool, DisplayName("prepare_replace_lines")]
@@ -402,12 +405,12 @@ public class FileEditingTools(
             };
 
             // Check response size before returning
-            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(responseObject, "find_in_file");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckResponseSize(responseObject, "find_in_file");
 
             if (!sizeCheck.IsWithinLimit)
             {
                 // Even with pagination, response is too large - suggest alternatives
-                return ResponseSizeGuard.CreateOversizedErrorResponse(
+                return outputGuard.CreateOversizedErrorResponse(
                     sizeCheck,
                     $"Found {totalMatches} matches for pattern '{pattern}', but even {maxMatches} results is too large to return.",
                     "Try using countOnly=true first to see match statistics, or reduce maxMatches to 100 or less.",
@@ -445,8 +448,7 @@ public class FileEditingTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error searching in file: {Path}", filePath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, 
-                SerializerOptions.JsonOptionsIndented);
+            return ex.ToErrorResponse(outputGuard, errorCode: "FILE_SEARCH_FAILED");
         }
     }
 

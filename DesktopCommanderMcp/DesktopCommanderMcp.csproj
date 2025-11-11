@@ -8,31 +8,19 @@
     </PropertyGroup>
     
     <ItemGroup>
-        <PackageReference Include="ClosedXML" Version="0.105.0" />
-        <PackageReference Include="DiffPlex" Version="1.9.0" />
-        <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
-        <PackageReference Include="itext" Version="9.3.0" />
-        <PackageReference Include="itext.bouncy-castle-adapter" Version="9.3.0" />
-        <PackageReference Include="Lucene.Net" Version="4.8.0-beta00017" />
-        <PackageReference Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00017" />
-        <PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00017" />
-        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
-        <PackageReference Include="ModelContextProtocol" Version="0.4.0-preview.3" />
-        <PackageReference Include="NPOI" Version="2.7.5" />
-        <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
-        <PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
-        <PackageReference Include="System.Text.Json" Version="10.0.0-rc.2.25502.107" />
-        <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
-        <PackageReference Include="TesseractOCR" Version="5.5.1" />
+        <PackageReference Include="Microsoft.Extensions.Caching.Memory"  />
+        <PackageReference Include="Microsoft.Extensions.Configuration"  />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions"  />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection"  />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"  />
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions"  />
+        <PackageReference Include="Microsoft.Extensions.Http"  />
+        <PackageReference Include="Microsoft.Extensions.Logging"  />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"  />
+        <PackageReference Include="ModelContextProtocol"  />
+        <PackageReference Include="System.Security.Cryptography.Algorithms"  />
+        <PackageReference Include="System.Text.Json"  />
+        <PackageReference Include="System.Threading.Tasks.Extensions"  />
     </ItemGroup>
     
     <ItemGroup>

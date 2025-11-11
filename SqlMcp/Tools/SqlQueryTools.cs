@@ -1,11 +1,12 @@
 using System.ComponentModel;
 using System.Text.Json;
-using Mcp.Common;
 using Mcp.Common.Core;
+using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Models;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using SqlServer.Core.Models;
-using SqlServer.Core.Services;
 using SqlServer.Core.Services.Interfaces;
 
 namespace SqlMcp.Tools;
@@ -13,7 +14,7 @@ namespace SqlMcp.Tools;
 [McpServerToolType]
 public class SqlQueryTools(
     IQueryExecutor queryExecutor,
-    ResponseSizeGuard responseSizeGuard,
+    OutputGuard outputGuard,
     ILogger<SqlQueryTools> logger)
 {
     [McpServerTool, DisplayName("execute_query")]
@@ -29,33 +30,30 @@ public class SqlQueryTools(
             QueryResult result = await queryExecutor.ExecuteQueryAsync(connectionName, sql, parameters, maxRows);
 
             // Check response size before returning
-            ResponseSizeCheck sizeCheck = responseSizeGuard.CheckResponseSize(result, "execute_query");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckResponseSize(result, "execute_query");
 
-            if (!sizeCheck.IsWithinLimit)
-            {
-                int rowCount = result.Data?.Count() ?? 0;
-                return responseSizeGuard.CreateOversizedErrorResponse(
-                    sizeCheck,
-                    $"Query returned {rowCount} rows with {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
-                    "Try these workarounds:\n" +
-                    "  1. Reduce maxRows parameter (try 100, 50, or 10)\n" +
-                    "  2. Add WHERE clause to filter results\n" +
-                    "  3. Use COUNT(*) first to check result size\n" +
-                    "  4. Select fewer columns (only what you need)\n" +
-                    "  5. Add TOP/LIMIT clause in SQL itself",
-                    new {
-                        rowsReturned = rowCount,
-                        currentMaxRows = maxRows,
-                        suggestedMaxRows = Math.Max(10, maxRows / 10)
-                    });
-            }
+            if (sizeCheck.IsWithinLimit) return sizeCheck.SerializedJson!;
+            int rowCount = result.Data?.Count() ?? 0;
+            return outputGuard.CreateOversizedErrorResponse(
+                sizeCheck,
+                $"Query returned {rowCount} rows with {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
+                "Try these workarounds:\n" +
+                "  1. Reduce maxRows parameter (try 100, 50, or 10)\n" +
+                "  2. Add WHERE clause to filter results\n" +
+                "  3. Use COUNT(*) first to check result size\n" +
+                "  4. Select fewer columns (only what you need)\n" +
+                "  5. Add TOP/LIMIT clause in SQL itself",
+                new {
+                    rowsReturned = rowCount,
+                    currentMaxRows = maxRows,
+                    suggestedMaxRows = Math.Max(10, maxRows / 10)
+                });
 
-            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Query execution failed");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
+            return ex.ToErrorResponse(outputGuard, errorCode: "QUERY_EXECUTION_FAILED");
         }
     }
 
@@ -74,7 +72,7 @@ public class SqlQueryTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Non-query execution failed");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
+            return ex.ToErrorResponse(outputGuard, errorCode: "NON_QUERY_EXECUTION_FAILED");
         }
     }
 
@@ -93,7 +91,7 @@ public class SqlQueryTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Scalar execution failed");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
+            return ex.ToErrorResponse(outputGuard, errorCode: "SCALAR_EXECUTION_FAILED");
         }
     }
 }

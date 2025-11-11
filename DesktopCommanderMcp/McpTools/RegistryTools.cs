@@ -5,6 +5,7 @@ using DesktopCommander.Core.Services;
 using RegistryTools;
 using Mcp.Common.Core;
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 using ModelContextProtocol.Server;
 
 namespace DesktopCommanderMcp.McpTools;
@@ -81,7 +82,7 @@ public class RegistryTools(
             using var registry = new RegistryManager(RegistryAccessMode.ReadWrite);
 
             // Parse value type
-            if (!Enum.TryParse<Microsoft.Win32.RegistryValueKind>(valueType, ignoreCase: true, out var kind))
+            if (!Enum.TryParse<Microsoft.Win32.RegistryValueKind>(valueType, ignoreCase: true, out RegistryValueKind kind))
             {
                 return Task.FromResult(JsonSerializer.Serialize(new
                 {

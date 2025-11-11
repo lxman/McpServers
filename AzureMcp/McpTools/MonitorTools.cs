@@ -2,6 +2,8 @@ using System.ComponentModel;
 using System.Text.Json;
 using AzureServer.Core.Services.Monitor;
 using AzureServer.Core.Services.Monitor.Models;
+using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -13,7 +15,8 @@ namespace AzureMcp.McpTools;
 [McpServerToolType]
 public class MonitorTools(
     IMonitorService monitorService,
-    ILogger<MonitorTools> logger)
+    ILogger<MonitorTools> logger,
+    OutputGuard outputGuard)
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
@@ -62,22 +65,40 @@ public class MonitorTools(
                 estimate.count,
                 estimate.confidence);
 
-            return JsonSerializer.Serialize(new
+            string serialized = JsonSerializer.Serialize(new
             {
                 success = true,
                 result
             }, _jsonOptions);
+
+            // Check response size - Azure Monitor log queries can return large result sets
+            var sizeCheck = outputGuard.CheckStringSize(serialized, "query_logs");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                return outputGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Azure Monitor log query returned {sizeCheck.EstimatedTokens:N0} estimated tokens, exceeding the safe limit.",
+                    "Try these workarounds:\n" +
+                    "  1. Reduce maxResults parameter (currently {maxResults}, try 500 or 250)\n" +
+                    "  2. Add more selective filters to your KQL query\n" +
+                    "  3. Use 'project' clause to select fewer columns\n" +
+                    "  4. Reduce time range with timeRangeHours parameter\n" +
+                    "  5. Use aggregation functions (summarize, count) instead of raw results",
+                    new {
+                        currentMaxResults = maxResults ?? 1000,
+                        suggestedMaxResults = Math.Max(100, (maxResults ?? 1000) / 4),
+                        totalRows,
+                        workspaceId
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error querying logs from workspace {WorkspaceId}", workspaceId);
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                operation = "QueryLogs",
-                type = ex.GetType().Name
-            }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "QUERY_LOGS_FAILED");
         }
     }
 
@@ -99,13 +120,7 @@ public class MonitorTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing log workspaces");
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                operation = "ListLogWorkspaces",
-                type = ex.GetType().Name
-            }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -127,13 +142,7 @@ public class MonitorTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing log streams for workspace {WorkspaceId}", workspaceId);
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                operation = "ListLogStreams",
-                type = ex.GetType().Name
-            }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -169,13 +178,7 @@ public class MonitorTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error searching logs with regex");
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                operation = "SearchLogsWithRegex",
-                type = ex.GetType().Name
-            }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -217,13 +220,7 @@ public class MonitorTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error searching multiple workspaces");
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                operation = "SearchMultipleWorkspacesWithRegex",
-                type = ex.GetType().Name
-            }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -275,13 +272,7 @@ public class MonitorTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error querying metrics");
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                operation = "QueryMetrics",
-                type = ex.GetType().Name
-            }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -303,13 +294,7 @@ public class MonitorTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing metrics for resource {ResourceId}", resourceId);
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                operation = "ListMetrics",
-                type = ex.GetType().Name
-            }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -331,13 +316,7 @@ public class MonitorTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing Application Insights");
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                operation = "ListApplicationInsights",
-                type = ex.GetType().Name
-            }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -371,13 +350,7 @@ public class MonitorTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting Application Insights {ComponentName}", componentName);
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                operation = "GetApplicationInsights",
-                type = ex.GetType().Name
-            }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -399,13 +372,7 @@ public class MonitorTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing alerts");
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                operation = "ListAlerts",
-                type = ex.GetType().Name
-            }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -455,13 +422,7 @@ public class MonitorTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error creating alert {AlertName}", alertName);
-            return JsonSerializer.Serialize(new
-            {
-                success = false,
-                error = ex.Message,
-                operation = "CreateAlert",
-                type = ex.GetType().Name
-            }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 }

@@ -7,3 +7,4 @@ riderModule.iml
 /go-analyzer-mcp/docs/*.yaml
 /go-analyzer-mcp/*.exe
 /DesktopCommanderMcp/servers.json
+.claude/

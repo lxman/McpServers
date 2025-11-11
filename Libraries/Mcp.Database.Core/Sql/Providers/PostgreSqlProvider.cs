@@ -76,7 +76,7 @@ public class PostgreSqlProvider : ISqlProvider
         // Apply additional options
         if (additionalOptions != null)
         {
-            foreach (var kvp in additionalOptions)
+            foreach (KeyValuePair<string, string> kvp in additionalOptions)
             {
                 builder[kvp.Key] = kvp.Value;
             }

@@ -4,6 +4,8 @@ using DocumentServer.Core.Models.Common;
 using DocumentServer.Core.Services.Analysis;
 using DocumentServer.Core.Services.Analysis.Models;
 using DocumentServer.Core.Services.Core;
+using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -20,7 +22,8 @@ public class DocumentTools(
     DocumentProcessor processor,
     DocumentValidator validator,
     DocumentComparator comparator,
-    MetadataExtractor metadataExtractor)
+    MetadataExtractor metadataExtractor,
+    OutputGuard outputGuard)
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
@@ -91,7 +94,7 @@ public class DocumentTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error loading document: {FilePath}", filePath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "LOAD_DOCUMENT_FAILED");
         }
     }
 
@@ -120,7 +123,7 @@ public class DocumentTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error unloading document: {FilePath}", filePath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "UNLOAD_DOCUMENT_FAILED");
         }
     }
 
@@ -163,7 +166,7 @@ public class DocumentTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing documents");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "LIST_DOCUMENTS_FAILED");
         }
     }
 
@@ -182,14 +185,14 @@ public class DocumentTools(
 
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
+                return outputGuard.CreateErrorResponse("File path is required", errorCode: "INVALID_PARAMETER");
             }
 
             ServiceResult<string> result = await processor.ExtractTextAsync(filePath, null, startPage, endPage, maxPages);
 
             if (!result.Success)
             {
-                return JsonSerializer.Serialize(new { success = false, error = result.Error }, _jsonOptions);
+                return outputGuard.CreateErrorResponse(result.Error ?? "Failed to extract content", errorCode: "EXTRACTION_FAILED");
             }
 
             Dictionary<string, string>? metadata = null;
@@ -202,19 +205,48 @@ public class DocumentTools(
                 }
             }
 
-            return JsonSerializer.Serialize(new
+            var response = new
             {
                 success = true,
                 filePath,
                 content = result.Data ?? string.Empty,
                 contentLength = result.Data?.Length ?? 0,
                 metadata
-            }, _jsonOptions);
+            };
+
+            string serialized = JsonSerializer.Serialize(response, _jsonOptions);
+
+            // Check response size - document extraction can return very large text content
+            var sizeCheck = outputGuard.CheckStringSize(serialized, "extract_content");
+
+            if (!sizeCheck.IsWithinLimit)
+            {
+                int contentLength = result.Data?.Length ?? 0;
+                return outputGuard.CreateOversizedErrorResponse(
+                    sizeCheck,
+                    $"Extracted content totals {sizeCheck.EstimatedTokens:N0} estimated tokens (content length: {contentLength:N0} characters), exceeding the safe limit.",
+                    "Try these workarounds:\n" +
+                    "  1. Use maxPages parameter to limit extraction (e.g., maxPages: 5 or 10)\n" +
+                    "  2. Use startPage/endPage to extract specific page ranges\n" +
+                    "  3. Extract document in smaller chunks (e.g., pages 1-10, then 11-20)\n" +
+                    "  4. Use get_metadata first to check page count\n" +
+                    "  5. Set includeMetadata to false to reduce response size",
+                    new {
+                        currentContentLength = contentLength,
+                        currentMaxPages = maxPages,
+                        suggestedMaxPages = Math.Max(1, (maxPages ?? 100) / 10),
+                        startPage,
+                        endPage,
+                        filePath
+                    });
+            }
+
+            return sizeCheck.SerializedJson!;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error extracting content: {FilePath}", filePath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "EXTRACT_CONTENT_FAILED");
         }
     }
 
@@ -263,7 +295,7 @@ public class DocumentTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting metadata: {FilePath}", filePath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -307,7 +339,7 @@ public class DocumentTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error validating document: {FilePath}", filePath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -354,7 +386,7 @@ public class DocumentTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error comparing documents");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -382,7 +414,7 @@ public class DocumentTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error clearing cache");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 
@@ -426,7 +458,7 @@ public class DocumentTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting status");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return ex.ToErrorResponse(outputGuard, errorCode: "OPERATION_FAILED");
         }
     }
 }
