@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/jorda/go-analyzer-mcp/analyzer"
-	httpSwagger "github.com/swaggo/http-swagger"
 	_ "github.com/jorda/go-analyzer-mcp/docs" // Import generated docs
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 const serverPort = "7300"
@@ -23,7 +23,7 @@ func main() {
 	http.HandleFunc("/api/go/format", handleFormatCode)
 	http.HandleFunc("/api/go/symbols", handleGetSymbols)
 	http.HandleFunc("/api/go/metrics", handleCalculateMetrics)
-	
+
 	// Swagger UI
 	http.Handle("/docs/", httpSwagger.WrapHandler)
 
@@ -47,7 +47,7 @@ func handleDescription(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	
+
 	// Serve the generated swagger.json
 	http.ServeFile(w, r, "./docs/swagger.json")
 }
