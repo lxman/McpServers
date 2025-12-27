@@ -425,7 +425,7 @@ public class OfficeDocumentLoader : IDocumentLoader
 
         var textBuilder = new StringBuilder();
 
-        foreach (ISlide slide in presentation.Slides)
+        foreach (IUserSlide slide in presentation.Slides)
         {
             textBuilder.AppendLine($"=== Slide {slide.Number} ===");
             textBuilder.AppendLine();

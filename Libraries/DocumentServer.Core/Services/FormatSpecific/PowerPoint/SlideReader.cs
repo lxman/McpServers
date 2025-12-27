@@ -33,7 +33,7 @@ public class SlideReader(
                     $"Slide {slideNumber} not found (presentation has {presentation.Slides.Count} slides)");
             }
 
-            ISlide slide = presentation.Slides[slideNumber - 1];
+            IUserSlide slide = presentation.Slides[slideNumber - 1];
             PowerPointSlide slideModel = await ProcessSlideAsync(slide, slideNumber);
 
             logger.LogInformation("Successfully read slide #{Number}: {Title}", slideNumber, slideModel.Title);
@@ -72,7 +72,7 @@ public class SlideReader(
 
             for (int i = startSlide - 1; i < endSlide; i++)
             {
-                ISlide slide = presentation.Slides[i];
+                IUserSlide slide = presentation.Slides[i];
                 PowerPointSlide slideModel = await ProcessSlideAsync(slide, i + 1);
                 slides.Add(slideModel);
             }
@@ -103,7 +103,7 @@ public class SlideReader(
             var slides = new List<PowerPointSlide>();
             var slideNumber = 1;
 
-            foreach (ISlide slide in presentation.Slides)
+            foreach (IUserSlide slide in presentation.Slides)
             {
                 PowerPointSlide slideModel = await ProcessSlideAsync(slide, slideNumber++);
                 slides.Add(slideModel);
@@ -158,7 +158,7 @@ public class SlideReader(
             var titles = new List<string>();
             var slideNumber = 1;
 
-            foreach (ISlide slide in presentation.Slides)
+            foreach (IUserSlide slide in presentation.Slides)
             {
                 string title = ExtractSlideTitle(slide, slideNumber);
                 titles.Add(title);
@@ -181,9 +181,8 @@ public class SlideReader(
     private async Task<Presentation> OpenPresentationAsync(string filePath)
     {
         LoadedDocument? cached = cache.Get(filePath);
-        var presentation = cached?.DocumentObject as Presentation;
 
-        if (presentation is not null)
+        if (cached?.DocumentObject is Presentation presentation)
         {
             return presentation;
         }
@@ -202,7 +201,7 @@ public class SlideReader(
         return new Presentation(memoryStream);
     }
 
-    private async Task<PowerPointSlide> ProcessSlideAsync(ISlide slide, int slideNumber)
+    private async Task<PowerPointSlide> ProcessSlideAsync(IUserSlide slide, int slideNumber)
     {
         return await Task.Run(() =>
         {
@@ -253,7 +252,7 @@ public class SlideReader(
         });
     }
 
-    private string ExtractSlideTitle(ISlide slide, int slideNumber)
+    private string ExtractSlideTitle(IUserSlide slide, int slideNumber)
     {
         foreach (IShape shape in slide.Shapes)
         {

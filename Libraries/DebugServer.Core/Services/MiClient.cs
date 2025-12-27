@@ -97,13 +97,22 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
             _readerCancellations[sessionId] = cts;
 
             _outputReaders[sessionId] = StartBackgroundReaderAsync(
-                sessionId, 
-                process.StandardOutput, 
+                sessionId,
+                process.StandardOutput,
                 cts.Token);
 
             _outputProcessors[sessionId] = StartOutputProcessorAsync(
-                sessionId, 
+                sessionId,
                 cts.Token);
+
+            // Start stderr reader to prevent buffer blocking
+            _ = StartStderrReaderAsync(sessionId, process.StandardError, cts.Token);
+
+            // Send a MI command to force netcoredbg to flush its initial (gdb) prompt
+            // This works around the buffering issue where stdout is fully-buffered when redirected to a pipe
+            // We send -gdb-version which will trigger netcoredbg to process and flush output
+            await process.StandardInput.WriteLineAsync("1-gdb-version");
+            await process.StandardInput.FlushAsync();
 
             // Wait for the initial (gdb) prompt
             await WaitForInitialPromptAsync(sessionId, cts.Token);
@@ -223,8 +232,8 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
     }
 
     private async Task StartBackgroundReaderAsync(
-        string sessionId, 
-        StreamReader output, 
+        string sessionId,
+        StreamReader output,
         CancellationToken cancellationToken)
     {
         logger.LogDebug("Starting background reader for session {SessionId}", sessionId);
@@ -241,6 +250,9 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
                     await HandleStreamClosedAsync(sessionId);
                     break;
                 }
+
+                // Trim any trailing carriage returns that ReadLineAsync might not remove
+                line = line.TrimEnd('\r');
 
                 logger.LogTrace("[{SessionId}] MI RAW: {Line}", sessionId, line);
 
@@ -260,6 +272,39 @@ public class MiClient(ILogger<MiClient> logger) : IDisposable
         {
             logger.LogError(ex, "Background reader error for session {SessionId}", sessionId);
             await HandleReaderErrorAsync(sessionId, ex);
+        }
+    }
+
+    private async Task StartStderrReaderAsync(
+        string sessionId,
+        StreamReader stderr,
+        CancellationToken cancellationToken)
+    {
+        logger.LogDebug("Starting stderr reader for session {SessionId}", sessionId);
+
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                string? line = await stderr.ReadLineAsync(cancellationToken);
+
+                if (line == null)
+                {
+                    logger.LogDebug("stderr closed for session {SessionId}", sessionId);
+                    break;
+                }
+
+                // Log stderr output as warnings since it typically indicates errors or diagnostics
+                logger.LogWarning("[{SessionId}] STDERR: {Line}", sessionId, line);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogDebug("Stderr reader stopped for session {SessionId}", sessionId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Stderr reader error for session {SessionId}", sessionId);
         }
     }
 

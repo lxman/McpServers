@@ -188,7 +188,8 @@ public class RedisService
         try
         {
             IDatabase db = EnsureConnected();
-            bool result = await db.StringSetAsync(key, value, expiry);
+            Expiration expiration = expiry.HasValue ? new Expiration(expiry.Value) : new Expiration(TimeSpan.MaxValue);
+            bool result = await db.StringSetAsync(key, value, expiration);
             
             return JsonSerializer.Serialize(new 
             { 

@@ -31,7 +31,7 @@ public class NotesExtractor(
                     $"Slide {slideNumber} not found (presentation has {presentation.Slides.Count} slides)");
             }
 
-            ISlide slide = presentation.Slides[slideNumber - 1];
+            IUserSlide slide = presentation.Slides[slideNumber - 1];
             string notes = ExtractNotes(slide);
 
             logger.LogInformation("Extracted {Length} characters of notes from slide #{Number}",
@@ -61,7 +61,7 @@ public class NotesExtractor(
             var allNotes = new Dictionary<int, string>();
             var slideNumber = 1;
 
-            foreach (ISlide slide in presentation.Slides)
+            foreach (IUserSlide slide in presentation.Slides)
             {
                 string notes = ExtractNotes(slide);
 
@@ -103,7 +103,7 @@ public class NotesExtractor(
                     $"Slide {slideNumber} not found (presentation has {presentation.Slides.Count} slides)");
             }
 
-            ISlide slide = presentation.Slides[slideNumber - 1];
+            IUserSlide slide = presentation.Slides[slideNumber - 1];
             bool hasNotes = slide.Notes is not null && !string.IsNullOrWhiteSpace(slide.Notes.Text);
 
             logger.LogInformation("Slide #{Number} has notes: {HasNotes}", slideNumber, hasNotes);
@@ -132,7 +132,7 @@ public class NotesExtractor(
             var slidesWithNotes = new List<int>();
             var slideNumber = 1;
 
-            foreach (ISlide slide in presentation.Slides)
+            foreach (IUserSlide slide in presentation.Slides)
             {
                 if (slide.Notes is not null && !string.IsNullOrWhiteSpace(slide.Notes.Text))
                 {
@@ -178,7 +178,7 @@ public class NotesExtractor(
 
             for (int i = startSlide - 1; i < endSlide; i++)
             {
-                ISlide slide = presentation.Slides[i];
+                IUserSlide slide = presentation.Slides[i];
                 string slideNotes = ExtractNotes(slide);
 
                 if (!string.IsNullOrWhiteSpace(slideNotes))
@@ -205,9 +205,8 @@ public class NotesExtractor(
     private async Task<Presentation> OpenPresentationAsync(string filePath)
     {
         LoadedDocument? cached = cache.Get(filePath);
-        var presentation = cached?.DocumentObject as Presentation;
 
-        if (presentation is not null)
+        if (cached?.DocumentObject is Presentation presentation)
         {
             return presentation;
         }
@@ -226,7 +225,7 @@ public class NotesExtractor(
         return new Presentation(memoryStream);
     }
 
-    private static string ExtractNotes(ISlide slide)
+    private static string ExtractNotes(IUserSlide slide)
     {
         if (slide.Notes is null || string.IsNullOrWhiteSpace(slide.Notes.Text))
         {

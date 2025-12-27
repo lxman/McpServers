@@ -1,39 +1,39 @@
 ﻿<Solution>
   <Folder Name="/Libraries/">
-    <Project Path="Libraries\AwsServer.Core\AwsServer.Core.csproj" Type="Classic C#" />
-    <Project Path="Libraries\AzureServer.Core\AzureServer.Core.csproj" Type="Classic C#" />
-    <Project Path="Libraries\CSharpAnalyzer.Core\CSharpAnalyzer.Core.csproj" Type="Classic C#" />
-    <Project Path="Libraries\DebugServer.Core\DebugServer.Core.csproj" Type="Classic C#" />
-    <Project Path="Libraries\DesktopCommander.Core\DesktopCommander.Core.csproj" Type="Classic C#" />
-    <Project Path="Libraries\DocumentServer.Core\DocumentServer.Core.csproj" Type="Classic C#" />
-    <Project Path="Libraries\Mcp.Common.Core\Mcp.Common.Core.csproj" Type="Classic C#" />
-    <Project Path="Libraries\Mcp.Database.Core\Mcp.Database.Core.csproj" Type="Classic C#" />
-    <Project Path="Libraries\Mcp.DependencyInjection.Core\Mcp.DependencyInjection.Core.csproj" Type="Classic C#" />
-    <Project Path="Libraries\Mcp.ResponseGuard\Mcp.ResponseGuard.csproj" Type="Classic C#" />
-    <Project Path="Libraries\MongoServer.Core\MongoServer.Core.csproj" Type="Classic C#" />
-    <Project Path="Libraries\MsOfficeCrypto\MsOfficeCrypto.csproj" Type="Classic C#" />
-    <Project Path="Libraries\Playwright.Core\Playwright.Core.csproj" Type="Classic C#" />
-    <Project Path="Libraries\RedisBrowser.Core\RedisBrowser.Core.csproj" Type="Classic C#" />
-    <Project Path="Libraries\RegistryTools\RegistryTools.csproj" Type="Classic C#" />
-    <Project Path="Libraries\SeleniumChrome.Core\SeleniumChrome.Core.csproj" Type="Classic C#" />
-    <Project Path="Libraries\SerilogFileWriter\SerilogFileWriter.csproj" Type="Classic C#" />
-    <Project Path="Libraries\SqlServer.Core\SqlServer.Core.csproj" Type="Classic C#" />
+    <Project Path="Libraries/SshClient.Core/SshClient.Core.csproj" />
+    <Project Path="Libraries\AwsServer.Core\AwsServer.Core.csproj" />
+    <Project Path="Libraries\AzureServer.Core\AzureServer.Core.csproj" />
+    <Project Path="Libraries\CSharpAnalyzer.Core\CSharpAnalyzer.Core.csproj" />
+    <Project Path="Libraries\DesktopCommander.Core\DesktopCommander.Core.csproj" />
+    <Project Path="Libraries\DocumentServer.Core\DocumentServer.Core.csproj" />
+    <Project Path="Libraries\Mcp.Common.Core\Mcp.Common.Core.csproj" />
+    <Project Path="Libraries\Mcp.Database.Core\Mcp.Database.Core.csproj" />
+    <Project Path="Libraries\Mcp.DependencyInjection.Core\Mcp.DependencyInjection.Core.csproj" />
+    <Project Path="Libraries\Mcp.ResponseGuard\Mcp.ResponseGuard.csproj" />
+    <Project Path="Libraries\MongoServer.Core\MongoServer.Core.csproj" />
+    <Project Path="Libraries\MsOfficeCrypto\MsOfficeCrypto.csproj" />
+    <Project Path="Libraries\Playwright.Core\Playwright.Core.csproj" />
+    <Project Path="Libraries\RedisBrowser.Core\RedisBrowser.Core.csproj" />
+    <Project Path="Libraries\RegistryTools\RegistryTools.csproj" />
+    <Project Path="Libraries\SeleniumChrome.Core\SeleniumChrome.Core.csproj" />
+    <Project Path="Libraries\SerilogFileWriter\SerilogFileWriter.csproj" />
+    <Project Path="Libraries\SqlServer.Core\SqlServer.Core.csproj" />
   </Folder>
   <Folder Name="/SolutionFolder/">
     <File Path="README.md" />
     <File Path="Directory.Packages.props" />
   </Folder>
-  <Project Path="AwsMcp\AwsMcp.csproj" Type="Classic C#" />
-  <Project Path="AzureMcp\AzureMcp.csproj" Type="Classic C#" />
-  <Project Path="CSharpAnalyzerMcp\CSharpAnalyzerMcp.csproj" Type="Classic C#" />
-  <Project Path="DebugMcp\DebugMcp.csproj" Type="Classic C#" />
-  <Project Path="DesktopCommanderMcp\DesktopCommanderMcp.csproj" Type="Classic C#" />
-  <Project Path="DocumentMcp\DocumentMcp.csproj" Type="Classic C#" />
-  <Project Path="McpUtilitiesServer\McpUtilitiesServer.csproj" Type="Classic C#" />
-  <Project Path="MongoMcp\MongoMcp.csproj" Type="Classic C#" />
-  <Project Path="PlaywrightServerMcp\PlaywrightServerMcp.csproj" Type="Classic C#" />
-  <Project Path="RedisMcp\RedisMcp.csproj" Type="Classic C#" />
-  <Project Path="SeleniumMcp\SeleniumMcp.csproj" Type="Classic C#" />
-  <Project Path="SqlMcp\SqlMcp.csproj" Type="Classic C#" />
-  <Project Path="TrafficGenerator\TrafficGenerator.csproj" Type="Classic C#" />
+  <Project Path="AwsMcp\AwsMcp.csproj" />
+  <Project Path="AzureMcp\AzureMcp.csproj" />
+  <Project Path="CSharpAnalyzerMcp\CSharpAnalyzerMcp.csproj" />
+  <Project Path="DesktopCommanderMcp\DesktopCommanderMcp.csproj" />
+  <Project Path="DocumentMcp\DocumentMcp.csproj" />
+  <Project Path="McpUtilitiesServer\McpUtilitiesServer.csproj" />
+  <Project Path="MongoMcp\MongoMcp.csproj" />
+  <Project Path="PlaywrightServerMcp\PlaywrightServerMcp.csproj" />
+  <Project Path="RedisMcp\RedisMcp.csproj" />
+  <Project Path="SeleniumMcp\SeleniumMcp.csproj" />
+  <Project Path="SqlMcp\SqlMcp.csproj" />
+  <Project Path="SshMcp/SshMcp.csproj" />
+  <Project Path="TrafficGenerator\TrafficGenerator.csproj" />
 </Solution>

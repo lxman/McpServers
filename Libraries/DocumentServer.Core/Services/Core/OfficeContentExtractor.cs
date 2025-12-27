@@ -7,6 +7,7 @@ using DocumentServer.Core.Models.Common;
 using Microsoft.Extensions.Logging;
 using ShapeCrawler;
 using DocumentType = DocumentServer.Core.Models.Common.DocumentType;
+using Presentation = ShapeCrawler.Presentation;
 
 namespace DocumentServer.Core.Services.Core;
 
@@ -377,7 +378,7 @@ public class OfficeContentExtractor : IContentExtractor
 
         var textBuilder = new StringBuilder();
 
-        foreach (ISlide slide in presentation.Slides)
+        foreach (IUserSlide slide in presentation.Slides)
         {
             textBuilder.AppendLine($"=== Slide {slide.Number} ===");
             textBuilder.AppendLine();
@@ -420,7 +421,7 @@ public class OfficeContentExtractor : IContentExtractor
         var totalShapes = 0;
         var totalTextShapes = 0;
 
-        foreach (ISlide slide in presentation.Slides)
+        foreach (IUserSlide slide in presentation.Slides)
         {
             totalShapes += slide.Shapes.Count;
             totalTextShapes += slide.Shapes.Count(s => s.TextBox is not null);
@@ -442,7 +443,7 @@ public class OfficeContentExtractor : IContentExtractor
 
         var slides = new List<Dictionary<string, object>>();
 
-        foreach (ISlide slide in presentation.Slides)
+        foreach (IUserSlide slide in presentation.Slides)
         {
             var slideData = new Dictionary<string, object>
             {

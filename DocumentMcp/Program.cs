@@ -26,26 +26,39 @@ try
 
     // Register DocumentServer.Core services
     builder.Services.AddSingleton<DocumentCache>();
+    builder.Services.AddSingleton<PasswordManager>(); // Must be registered before document loaders
+
+    // Register document loaders (required by DocumentLoaderFactory)
+    builder.Services.AddSingleton<IDocumentLoader, PdfDocumentLoader>();
+    builder.Services.AddSingleton<IDocumentLoader, OfficeDocumentLoader>();
+
+    // Register content extractors (required by DocumentProcessor)
+    builder.Services.AddSingleton<IContentExtractor, PdfContentExtractor>();
+    builder.Services.AddSingleton<IContentExtractor, OfficeContentExtractor>();
+
     builder.Services.AddSingleton<DocumentLoaderFactory>();
     builder.Services.AddSingleton<DocumentProcessor>();
     builder.Services.AddSingleton<DocumentValidator>();
     builder.Services.AddSingleton<DocumentComparator>();
     builder.Services.AddSingleton<MetadataExtractor>();
-    builder.Services.AddSingleton<OcrService>();
+
+    // TesseractEngine and ImagePreprocessor must be registered before OcrService
     builder.Services.AddSingleton<TesseractEngine>();
     builder.Services.AddSingleton<ImagePreprocessor>();
-    builder.Services.AddSingleton<PasswordManager>();
+    builder.Services.AddSingleton<OcrService>();
+
+    // IndexManager must be registered before LuceneIndexer and LuceneSearcher
+    builder.Services.AddSingleton<IndexManager>();
     builder.Services.AddSingleton<QuickSearchService>();
     builder.Services.AddSingleton<LuceneIndexer>();
     builder.Services.AddSingleton<LuceneSearcher>();
-    builder.Services.AddSingleton<IndexManager>();
 
-    // Register OutputGuard with custom 15k token limit for document extraction operations
+    // Register OutputGuard with a custom 15k token limit for document extraction operations
     builder.Services.AddSingleton(sp => new OutputGuard(
         sp.GetRequiredService<ILogger<OutputGuard>>(),
         new OutputGuardOptions { SafeTokenLimit = 15_000 }));
 
-    // Configure MCP server with STDIO transport
+    // Configure the MCP server with STDIO transport
     builder.Services.AddMcpServer()
         .WithStdioServerTransport()
         .WithTools<DocumentTools>()

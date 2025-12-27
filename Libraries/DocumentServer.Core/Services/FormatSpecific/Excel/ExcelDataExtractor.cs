@@ -285,9 +285,8 @@ public class ExcelDataExtractor(
     private async Task<IXLWorksheet> GetWorksheetAsync(string filePath, string? worksheetName)
     {
         LoadedDocument? cached = cache.Get(filePath);
-        var workbook = cached?.DocumentObject as XLWorkbook;
 
-        if (workbook is null)
+        if (cached?.DocumentObject is not XLWorkbook workbook)
         {
             logger.LogDebug("Document not in cache, loading: {FilePath}", filePath);
             

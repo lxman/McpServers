@@ -207,7 +207,7 @@ public class StorageService(
             BlobContainerClient? containerClient = serviceClient.GetBlobContainerClient(containerName);
             var blobs = new List<BlobItemDto>();
 
-            await foreach (BlobItem? blob in containerClient.GetBlobsAsync(prefix: prefix))
+            await foreach (BlobItem? blob in containerClient.GetBlobsAsync(new GetBlobsOptions { Prefix = prefix }))
             {
                 blobs.Add(MapBlobItem(blob, containerName, accountName));
 

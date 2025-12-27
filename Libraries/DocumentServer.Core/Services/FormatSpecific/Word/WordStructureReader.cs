@@ -154,9 +154,8 @@ public class WordStructureReader(
     private async Task<WordprocessingDocument> OpenDocumentAsync(string filePath)
     {
         LoadedDocument? cached = cache.Get(filePath);
-        var doc = cached?.DocumentObject as WordprocessingDocument;
 
-        if (doc is not null)
+        if (cached?.DocumentObject is WordprocessingDocument doc)
         {
             return doc;
         }

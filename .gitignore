@@ -8,3 +8,4 @@ riderModule.iml
 /go-analyzer-mcp/*.exe
 /DesktopCommanderMcp/servers.json
 .claude/
+**/job_search.md

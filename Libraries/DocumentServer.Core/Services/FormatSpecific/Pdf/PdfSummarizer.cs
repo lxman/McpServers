@@ -166,9 +166,8 @@ public class PdfSummarizer(
         return await Task.Run(() =>
         {
             LoadedDocument? cached = cache.Get(filePath);
-            var pdf = cached?.DocumentObject as PdfDocument;
 
-            if (pdf is not null)
+            if (cached?.DocumentObject is PdfDocument pdf)
             {
                 return pdf;
             }

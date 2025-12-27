@@ -30,9 +30,8 @@ public class ExcelWorksheetReader(
         {
             // Try to get from cache first
             LoadedDocument? cached = cache.Get(filePath);
-            var workbook = cached?.DocumentObject as XLWorkbook;
 
-            if (workbook is null)
+            if (cached?.DocumentObject is not XLWorkbook workbook)
             {
                 logger.LogDebug("Document not in cache, loading: {FilePath}", filePath);
                 
@@ -97,9 +96,8 @@ public class ExcelWorksheetReader(
         try
         {
             LoadedDocument? cached = cache.Get(filePath);
-            var workbook = cached?.DocumentObject as XLWorkbook;
 
-            if (workbook is null)
+            if (cached?.DocumentObject is not XLWorkbook workbook)
             {
                 string? password = passwordManager.GetPasswordForFile(filePath);
                 await using FileStream fileStream = File.OpenRead(filePath);
