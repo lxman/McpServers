@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Renci.SshNet;
 using SshClient.Core.Models;
@@ -6,13 +7,16 @@ using SshClient.Core.Models;
 namespace SshClient.Core.Services;
 
 /// <summary>
-/// Manages SSH connections with support for multiple named connections
+/// Manages SSH connections with support for multiple named connections.
+/// Profiles are persisted to disk for reuse across sessions.
 /// </summary>
 public sealed class SshConnectionManager : IDisposable
 {
     private readonly ILogger<SshConnectionManager> _logger;
     private readonly ConcurrentDictionary<string, ManagedConnection> _connections = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, SshConnectionProfile> _profiles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly string _profilesFilePath;
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private bool _disposed;
 
     private sealed class ManagedConnection : IDisposable
@@ -39,6 +43,54 @@ public sealed class SshConnectionManager : IDisposable
     public SshConnectionManager(ILogger<SshConnectionManager> logger)
     {
         _logger = logger;
+        
+        // Set up profiles file in user's AppData
+        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var sshMcpDir = Path.Combine(appDataPath, "SshMcp");
+        Directory.CreateDirectory(sshMcpDir);
+        _profilesFilePath = Path.Combine(sshMcpDir, "profiles.json");
+        
+        // Load existing profiles from disk
+        LoadProfilesFromDisk();
+    }
+    
+    private void LoadProfilesFromDisk()
+    {
+        try
+        {
+            if (File.Exists(_profilesFilePath))
+            {
+                var json = File.ReadAllText(_profilesFilePath);
+                var profiles = JsonSerializer.Deserialize<List<SshConnectionProfile>>(json, JsonOptions);
+                if (profiles != null)
+                {
+                    foreach (var profile in profiles)
+                    {
+                        _profiles[profile.Name] = profile;
+                    }
+                    _logger.LogInformation("Loaded {Count} SSH profiles from disk", profiles.Count);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load SSH profiles from {Path}", _profilesFilePath);
+        }
+    }
+    
+    private void SaveProfilesToDisk()
+    {
+        try
+        {
+            var profiles = _profiles.Values.ToList();
+            var json = JsonSerializer.Serialize(profiles, JsonOptions);
+            File.WriteAllText(_profilesFilePath, json);
+            _logger.LogDebug("Saved {Count} SSH profiles to disk", profiles.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to save SSH profiles to {Path}", _profilesFilePath);
+        }
     }
 
     /// <summary>
@@ -47,6 +99,7 @@ public sealed class SshConnectionManager : IDisposable
     public void SaveProfile(SshConnectionProfile profile)
     {
         _profiles[profile.Name] = profile;
+        SaveProfilesToDisk();
         _logger.LogInformation("Saved SSH profile: {ProfileName} for {Username}@{Host}:{Port}",
             profile.Name, profile.Username, profile.Host, profile.Port);
     }
@@ -72,7 +125,9 @@ public sealed class SshConnectionManager : IDisposable
     /// </summary>
     public bool RemoveProfile(string name)
     {
-        return _profiles.TryRemove(name, out _);
+        var removed = _profiles.TryRemove(name, out _);
+        if (removed) SaveProfilesToDisk();
+        return removed;
     }
 
     /// <summary>
@@ -124,6 +179,7 @@ public sealed class SshConnectionManager : IDisposable
 
             // Save profile for reconnection
             _profiles[profile.Name] = profile;
+            SaveProfilesToDisk();
 
             _logger.LogInformation("Connected successfully: {Name}", profile.Name);
 
