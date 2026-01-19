@@ -20,7 +20,6 @@
       <PackageReference Include="Serilog.Extensions.Hosting"  />
       <PackageReference Include="Serilog.Extensions.Logging"  />
       <PackageReference Include="Serilog.Sinks.File"  />
-      <PackageReference Include="System.Text.Json"  />
     </ItemGroup>
 
 </Project>

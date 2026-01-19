@@ -20,9 +20,6 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"  />
         <PackageReference Include="Microsoft.Extensions.Logging.Console"  />
         <PackageReference Include="ModelContextProtocol"  />
-        <PackageReference Include="System.Security.Cryptography.Algorithms"  />
-        <PackageReference Include="System.Text.Json"  />
-        <PackageReference Include="System.Threading.Tasks.Extensions"  />
     </ItemGroup>
 
     <ItemGroup>

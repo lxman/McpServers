@@ -81,20 +81,23 @@
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <!-- Document Processing -->
     <PackageVersion Include="ClosedXML" Version="0.105.0" />
-    <PackageVersion Include="DocumentFormat.OpenXml" Version="3.3.0" />
+    <PackageVersion Include="DocumentFormat.OpenXml" Version="3.4.1" />
     <PackageVersion Include="Microsoft.OpenApi" Version="2.0.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Qdrant" Version="1.68.0-preview" />
+    <PackageVersion Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageVersion Include="NPOI" Version="2.7.5" />
+    <PackageVersion Include="OllamaSharp" Version="5.4.12" />
     <PackageVersion Include="OpenMcdf" Version="3.1.0" />
     <PackageVersion Include="PdfPig" Version="0.1.14-alpha-20251224-7c4f5" />
-    <PackageVersion Include="ShapeCrawler" Version="0.77.1" />
+    <PackageVersion Include="ShapeCrawler" Version="0.78.0" />
     <PackageVersion Include="SSH.NET" Version="2025.1.0" />
     <PackageVersion Include="TesseractOCR" Version="5.5.1" />
     <!-- Database Drivers -->
     <PackageVersion Include="Dapper" Version="2.1.66" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.0-preview3.25342.7" />
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.2" />
     <PackageVersion Include="MongoDB.Analyzer" Version="2.0.0" />
-    <PackageVersion Include="MongoDB.Driver" Version="3.5.2" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.6.0" />
     <PackageVersion Include="MySqlConnector" Version="2.5.0" />
     <PackageVersion Include="Npgsql" Version="10.0.1" />
     <PackageVersion Include="StackExchange.Redis" Version="2.10.1" />
@@ -113,20 +116,20 @@
     <PackageVersion Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00017" />
     <PackageVersion Include="Lucene.Net.QueryParser" Version="4.8.0-beta00017" />
     <!-- MCP Protocol -->
-    <PackageVersion Include="ModelContextProtocol" Version="0.5.0-preview.1" />
+    <PackageVersion Include="ModelContextProtocol" Version="0.6.0-preview.1" />
     <!-- Microsoft Extensions -->
-    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.2" />
     <!-- Roslyn & Code Analysis -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.0.0" />
@@ -147,24 +150,22 @@
     <PackageVersion Include="FuzzySharp" Version="2.0.2" />
     <!-- Web & API -->
     <PackageVersion Include="Microsoft.AspNetCore.Http.Features" Version="6.0.0-preview.4.21253.5" />
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.ResponseCompression" Version="2.3.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.AspNetCore.ResponseCompression" Version="2.3.9" />
     <PackageVersion Include="Microsoft.Playwright" Version="1.57.0" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.11.10" />
-    <PackageVersion Include="Selenium.WebDriver" Version="4.39.0" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.12.11" />
+    <PackageVersion Include="Selenium.WebDriver" Version="4.40.0" />
     <!-- Windows & Credential Management -->
-    <PackageVersion Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.15" />
-    <PackageVersion Include="Microsoft.Win32.Registry" Version="5.0.0" />
+    <PackageVersion Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.16" />
     <!-- Azure DevOps -->
-    <PackageVersion Include="Microsoft.TeamFoundationServer.Client" Version="20.264.0-preview" />
-    <PackageVersion Include="Microsoft.TeamFoundationServer.ExtendedClient" Version="20.264.0-preview" />
-    <PackageVersion Include="Microsoft.VisualStudio.Services.Client" Version="20.264.0-preview" />
-    <PackageVersion Include="Microsoft.VisualStudio.Services.Release.Client" Version="20.264.0-preview" />
+    <PackageVersion Include="Microsoft.TeamFoundationServer.Client" Version="20.265.0-preview" />
+    <PackageVersion Include="Microsoft.TeamFoundationServer.ExtendedClient" Version="20.265.0-preview" />
+    <PackageVersion Include="Microsoft.VisualStudio.Services.Client" Version="20.265.0-preview" />
+    <PackageVersion Include="Microsoft.VisualStudio.Services.Release.Client" Version="20.265.0-preview" />
     <!-- System Libraries -->
-    <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.1" />
-    <PackageVersion Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
-    <PackageVersion Include="System.Security.Permissions" Version="10.0.1" />
-    <PackageVersion Include="System.Text.Json" Version="10.0.1" />
-    <PackageVersion Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
+    <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.2" />
+    <PackageVersion Include="System.Security.Permissions" Version="10.0.2" />
+    <!-- Tree-sitter for AST parsing -->
+    <PackageVersion Include="TreeSitter.DotNet" Version="1.2.0" />
   </ItemGroup>
 </Project>
