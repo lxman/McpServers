@@ -26,7 +26,8 @@ try
         .WithStdioServerTransport()
         .WithTools<HealthTools>()
         .WithTools<IndexTools>()
-        .WithTools<SearchTools>();
+        .WithTools<SearchTools>()
+        .WithTools<RepositoryTools>();
 
     IHost host = builder.Build();
     await host.RunAsync();

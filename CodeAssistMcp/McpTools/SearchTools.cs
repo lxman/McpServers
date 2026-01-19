@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using CodeAssist.Core.Caching;
 using CodeAssist.Core.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -8,13 +9,30 @@ namespace CodeAssistMcp.McpTools;
 
 /// <summary>
 /// MCP tools for semantic code search.
+/// Uses L1 (hot cache) + L2 (Qdrant) unified search for always-fresh results.
 /// </summary>
 [McpServerToolType]
 public class SearchTools(
     RepositoryIndexer indexer,
+    UnifiedSearchService unifiedSearch,
+    FileWatcherService fileWatcher,
+    L2PromotionService l2Promotion,
     ILogger<SearchTools> logger)
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+
+    /// <summary>
+    /// Ensures the repository is being watched for file changes.
+    /// </summary>
+    private void EnsureWatching(string rootPath, string collectionName)
+    {
+        if (!fileWatcher.IsWatching(rootPath))
+        {
+            fileWatcher.WatchRepository(rootPath);
+            l2Promotion.RegisterRepositoryCollection(rootPath, collectionName);
+            logger.LogInformation("Started watching repository at {Path} for L1 cache updates", rootPath);
+        }
+    }
 
     [McpServerTool, DisplayName("search_code")]
     [Description("Semantic search across an indexed repository. Returns code chunks most similar to the query, with file paths, line numbers, and relevance scores. Use natural language queries like 'function that handles user authentication' or 'error handling for database connections'.")]
@@ -28,7 +46,20 @@ public class SearchTools(
         {
             logger.LogDebug("Searching {Repository} for: {Query}", repositoryName, query);
 
-            var response = await indexer.SearchAsync(repositoryName, query, limit, minScore);
+            var state = await indexer.GetIndexStateAsync(repositoryName);
+            if (state == null)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = $"No index found for repository '{repositoryName}'. Use index_repository to create one first."
+                }, _jsonOptions);
+            }
+
+            // Ensure we're watching this repository for L1 cache updates
+            EnsureWatching(state.RootPath, state.CollectionName);
+
+            var response = await unifiedSearch.SearchAsync(query, state.CollectionName, limit, minScore);
 
             var results = response.Results.Select(r => new
             {
@@ -40,7 +71,9 @@ public class SearchTools(
                 parentSymbol = r.Chunk.ParentSymbol,
                 language = r.Chunk.Language,
                 score = Math.Round(r.Score, 4),
-                content = r.Chunk.Content
+                content = r.Chunk.Content,
+                source = r.Source.ToString(),
+                isFresh = r.IsFresh
             }).ToList();
 
             return JsonSerializer.Serialize(new
@@ -50,6 +83,9 @@ public class SearchTools(
                 repositoryName,
                 resultCount = results.Count,
                 duration = response.Duration.ToString(),
+                l1HitCount = response.L1HitCount,
+                l2HitCount = response.L2HitCount,
+                hotFilesSearched = response.HotFilesSearched,
                 results
             }, _jsonOptions);
         }
@@ -72,7 +108,19 @@ public class SearchTools(
         {
             logger.LogDebug("Finding similar code in {Repository}", repositoryName);
 
-            var response = await indexer.SearchAsync(repositoryName, codeSnippet, limit, minScore);
+            var state = await indexer.GetIndexStateAsync(repositoryName);
+            if (state == null)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = $"No index found for repository '{repositoryName}'. Use index_repository to create one first."
+                }, _jsonOptions);
+            }
+
+            EnsureWatching(state.RootPath, state.CollectionName);
+
+            var response = await unifiedSearch.SearchAsync(codeSnippet, state.CollectionName, limit, minScore);
 
             var results = response.Results.Select(r => new
             {
@@ -84,7 +132,9 @@ public class SearchTools(
                 parentSymbol = r.Chunk.ParentSymbol,
                 language = r.Chunk.Language,
                 score = Math.Round(r.Score, 4),
-                content = r.Chunk.Content
+                content = r.Chunk.Content,
+                source = r.Source.ToString(),
+                isFresh = r.IsFresh
             }).ToList();
 
             return JsonSerializer.Serialize(new
@@ -93,6 +143,8 @@ public class SearchTools(
                 repositoryName,
                 resultCount = results.Count,
                 duration = response.Duration.ToString(),
+                l1HitCount = response.L1HitCount,
+                l2HitCount = response.L2HitCount,
                 results
             }, _jsonOptions);
         }
@@ -113,6 +165,16 @@ public class SearchTools(
     {
         try
         {
+            var state = await indexer.GetIndexStateAsync(repositoryName);
+            if (state == null)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = $"No index found for repository '{repositoryName}'. Use index_repository to create one first."
+                }, _jsonOptions);
+            }
+
             // Build a query that emphasizes the symbol
             var query = symbolType != null
                 ? $"{symbolType} named {symbolName}"
@@ -120,7 +182,9 @@ public class SearchTools(
 
             logger.LogDebug("Searching {Repository} for symbol: {Symbol}", repositoryName, symbolName);
 
-            var response = await indexer.SearchAsync(repositoryName, query, limit * 2, 0.3f);
+            EnsureWatching(state.RootPath, state.CollectionName);
+
+            var response = await unifiedSearch.SearchAsync(query, state.CollectionName, limit * 2, 0.3f);
 
             // Filter results to those containing the symbol name
             var results = response.Results
@@ -137,7 +201,9 @@ public class SearchTools(
                     parentSymbol = r.Chunk.ParentSymbol,
                     language = r.Chunk.Language,
                     score = Math.Round(r.Score, 4),
-                    content = r.Chunk.Content
+                    content = r.Chunk.Content,
+                    source = r.Source.ToString(),
+                    isFresh = r.IsFresh
                 }).ToList();
 
             return JsonSerializer.Serialize(new
@@ -148,6 +214,8 @@ public class SearchTools(
                 symbolType,
                 resultCount = results.Count,
                 duration = response.Duration.ToString(),
+                l1HitCount = response.L1HitCount,
+                l2HitCount = response.L2HitCount,
                 results
             }, _jsonOptions);
         }
@@ -167,9 +235,21 @@ public class SearchTools(
     {
         try
         {
+            var state = await indexer.GetIndexStateAsync(repositoryName);
+            if (state == null)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = $"No index found for repository '{repositoryName}'. Use index_repository to create one first."
+                }, _jsonOptions);
+            }
+
             logger.LogDebug("Explaining code area for '{Concept}' in {Repository}", concept, repositoryName);
 
-            var response = await indexer.SearchAsync(repositoryName, concept, limit, 0.4f);
+            EnsureWatching(state.RootPath, state.CollectionName);
+
+            var response = await unifiedSearch.SearchAsync(concept, state.CollectionName, limit, 0.4f);
 
             var areas = response.Results.Select(r => new
             {
@@ -179,7 +259,9 @@ public class SearchTools(
                 symbolName = r.Chunk.SymbolName,
                 parentSymbol = r.Chunk.ParentSymbol,
                 relevanceScore = Math.Round(r.Score, 4),
-                code = r.Chunk.Content
+                code = r.Chunk.Content,
+                source = r.Source.ToString(),
+                isFresh = r.IsFresh
             }).ToList();
 
             return JsonSerializer.Serialize(new
@@ -189,6 +271,8 @@ public class SearchTools(
                 repositoryName,
                 areasFound = areas.Count,
                 duration = response.Duration.ToString(),
+                l1HitCount = response.L1HitCount,
+                l2HitCount = response.L2HitCount,
                 codeAreas = areas
             }, _jsonOptions);
         }

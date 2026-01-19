@@ -302,4 +302,72 @@ public sealed class QdrantService
             throw;
         }
     }
+
+    /// <summary>
+    /// Check if a collection exists.
+    /// </summary>
+    public async Task<bool> CollectionExistsAsync(string collectionName, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _client.CollectionExistsAsync(collectionName, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to check if collection {Collection} exists", collectionName);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Upsert pre-computed vectors with payloads (used by L2 promotion).
+    /// No embedding computation needed - vectors are already computed.
+    /// </summary>
+    public async Task UpsertPointsAsync(
+        string collectionName,
+        IReadOnlyList<(Guid id, float[] vector, Dictionary<string, object> payload)> points,
+        CancellationToken cancellationToken = default)
+    {
+        if (points.Count == 0) return;
+
+        try
+        {
+            var qdrantPoints = points.Select(p =>
+            {
+                var point = new PointStruct
+                {
+                    Id = new PointId { Uuid = p.id.ToString() },
+                    Vectors = p.vector
+                };
+
+                foreach (var (key, value) in p.payload)
+                {
+                    point.Payload[key] = value switch
+                    {
+                        string s => s,
+                        int i => i,
+                        long l => l,
+                        float f => f,
+                        double d => d,
+                        bool b => b,
+                        DateTime dt => dt.ToString("O"),
+                        _ => value.ToString() ?? ""
+                    };
+                }
+
+                return point;
+            }).ToList();
+
+            await _client.UpsertAsync(collectionName, qdrantPoints, cancellationToken: cancellationToken);
+
+            _logger.LogDebug("Upserted {Count} pre-computed points to collection {Collection}",
+                points.Count, collectionName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to upsert {Count} points to collection {Collection}",
+                points.Count, collectionName);
+            throw;
+        }
+    }
 }

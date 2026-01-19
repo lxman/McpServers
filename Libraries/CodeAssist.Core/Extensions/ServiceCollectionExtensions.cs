@@ -1,3 +1,4 @@
+using CodeAssist.Core.Caching;
 using CodeAssist.Core.Chunking;
 using CodeAssist.Core.Configuration;
 using CodeAssist.Core.Services;
@@ -34,10 +35,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<DefaultChunker>();
         services.AddSingleton<ChunkerFactory>();
 
-        // Register services
+        // Register core services
         services.AddSingleton<OllamaService>();
         services.AddSingleton<QdrantService>();
         services.AddSingleton<RepositoryIndexer>();
+
+        // Register L1/L2 caching services
+        services.AddSingleton<HotCache>();
+        services.AddSingleton<FileWatcherService>();
+        services.AddSingleton<L2PromotionService>();
+        services.AddSingleton<UnifiedSearchService>();
 
         return services;
     }
@@ -56,10 +63,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<DefaultChunker>();
         services.AddSingleton<ChunkerFactory>();
 
-        // Register services
+        // Register core services
         services.AddSingleton<OllamaService>();
         services.AddSingleton<QdrantService>();
         services.AddSingleton<RepositoryIndexer>();
+
+        // Register L1/L2 caching services
+        services.AddSingleton<HotCache>();
+        services.AddSingleton<FileWatcherService>();
+        services.AddSingleton<L2PromotionService>();
+        services.AddSingleton<UnifiedSearchService>();
 
         return services;
     }

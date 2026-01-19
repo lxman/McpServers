@@ -118,4 +118,43 @@ public sealed class CodeAssistOptions
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "CodeAssist",
         "indexes");
+
+    // ============================================
+    // L1 Hot Cache Configuration
+    // ============================================
+
+    /// <summary>
+    /// Maximum number of files to keep in the L1 hot cache.
+    /// </summary>
+    public int HotCacheMaxFiles { get; set; } = 100;
+
+    /// <summary>
+    /// Time-to-live for hot cache entries before eviction.
+    /// </summary>
+    public TimeSpan HotCacheTtl { get; set; } = TimeSpan.FromMinutes(30);
+
+    /// <summary>
+    /// Enable the file watcher for automatic L1 cache updates.
+    /// </summary>
+    public bool EnableFileWatcher { get; set; } = true;
+
+    /// <summary>
+    /// Debounce delay for file watcher before triggering cache update.
+    /// </summary>
+    public TimeSpan FileWatcherDebounceDelay { get; set; } = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>
+    /// Enable automatic L2 promotion from L1 cache.
+    /// </summary>
+    public bool EnableL2Promotion { get; set; } = true;
+
+    /// <summary>
+    /// Batch size for L2 promotion operations.
+    /// </summary>
+    public int L2PromotionBatchSize { get; set; } = 10;
+
+    /// <summary>
+    /// Delay between L2 promotion batches.
+    /// </summary>
+    public TimeSpan L2PromotionDelay { get; set; } = TimeSpan.FromSeconds(5);
 }
