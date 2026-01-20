@@ -11,19 +11,13 @@ namespace CodeAssist.Core.Chunking;
 /// Default chunker that splits code by line count with overlap.
 /// Used for languages without specialized parsing support.
 /// </summary>
-public sealed class DefaultChunker : ICodeChunker
+public sealed class DefaultChunker(IOptions<CodeAssistOptions> options, ILogger<DefaultChunker> logger)
+    : ICodeChunker
 {
-    private readonly CodeAssistOptions _options;
-    private readonly ILogger<DefaultChunker> _logger;
+    private readonly CodeAssistOptions _options = options.Value;
 
     // Empty set - this is the fallback chunker
     private static readonly HashSet<string> SupportedLangs = [];
-
-    public DefaultChunker(IOptions<CodeAssistOptions> options, ILogger<DefaultChunker> logger)
-    {
-        _options = options.Value;
-        _logger = logger;
-    }
 
     public IReadOnlySet<string> SupportedLanguages => SupportedLangs;
 
@@ -49,13 +43,13 @@ public sealed class DefaultChunker : ICodeChunker
         var linesPerChunk = Math.Max(10, _options.MaxChunkSize / 60);
         var overlapLines = Math.Max(2, _options.ChunkOverlap / 60);
 
-        _logger.LogDebug("Chunking {File}: {Lines} lines, linesPerChunk={LPC}, overlap={OL}",
+        logger.LogDebug("Chunking {File}: {Lines} lines, linesPerChunk={LPC}, overlap={OL}",
             relativePath, totalLines, linesPerChunk, overlapLines);
 
         if (totalLines <= linesPerChunk)
         {
             // Small file - single chunk
-            _logger.LogDebug("Small file, creating single chunk");
+            logger.LogDebug("Small file, creating single chunk");
             chunks.Add(CreateChunk(content, filePath, relativePath, 1, totalLines, language));
             return chunks;
         }
@@ -68,7 +62,7 @@ public sealed class DefaultChunker : ICodeChunker
             iteration++;
             if (iteration > 1000)
             {
-                _logger.LogError("Infinite loop detected in chunking! startLine={Start}, totalLines={Total}", startLine, totalLines);
+                logger.LogError("Infinite loop detected in chunking! startLine={Start}, totalLines={Total}", startLine, totalLines);
                 break;
             }
 
@@ -93,11 +87,11 @@ public sealed class DefaultChunker : ICodeChunker
             startLine = nextStartLine;
         }
 
-        _logger.LogDebug("Created {Count} chunks for {File}", chunks.Count, relativePath);
+        logger.LogDebug("Created {Count} chunks for {File}", chunks.Count, relativePath);
         return chunks;
     }
 
-    private CodeChunk CreateChunk(
+    private static CodeChunk CreateChunk(
         string content,
         string filePath,
         string relativePath,

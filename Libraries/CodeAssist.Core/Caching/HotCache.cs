@@ -76,12 +76,9 @@ public sealed class HotCache : IDisposable
     public CachedFile? Get(string filePath)
     {
         var key = NormalizePath(filePath);
-        if (_cache.TryGetValue(key, out var cached))
-        {
-            _lastAccess[key] = DateTime.UtcNow;
-            return cached;
-        }
-        return null;
+        if (!_cache.TryGetValue(key, out var cached)) return null;
+        _lastAccess[key] = DateTime.UtcNow;
+        return cached;
     }
 
     /// <summary>
@@ -107,7 +104,7 @@ public sealed class HotCache : IDisposable
 
             var content = await File.ReadAllTextAsync(filePath, cancellationToken);
             var relativePath = Path.GetRelativePath(repositoryRoot, filePath);
-            var language = _chunkerFactory.GetLanguage(filePath);
+            var language = ChunkerFactory.GetLanguage(filePath);
 
             // Check if content actually changed
             if (_cache.TryGetValue(key, out var existing) && existing.ContentHash == ComputeHash(content))
@@ -227,16 +224,6 @@ public sealed class HotCache : IDisposable
             .OrderByDescending(r => r.Score)
             .Take(limit)
             .ToList();
-    }
-
-    /// <summary>
-    /// Get all cached files for a repository.
-    /// </summary>
-    public IEnumerable<CachedFile> GetFilesForRepository(string repositoryRoot)
-    {
-        var normalizedRoot = NormalizePath(repositoryRoot);
-        return _cache.Values
-            .Where(f => NormalizePath(f.RepositoryRoot) == normalizedRoot);
     }
 
     /// <summary>
@@ -391,12 +378,7 @@ public class HotCacheSearchResult
 /// <summary>
 /// Event args for when a file is ready to be promoted to L2.
 /// </summary>
-public class CachePromotionEventArgs : EventArgs
+public class CachePromotionEventArgs(CachedFile cachedFile) : EventArgs
 {
-    public CachedFile CachedFile { get; }
-
-    public CachePromotionEventArgs(CachedFile cachedFile)
-    {
-        CachedFile = cachedFile;
-    }
+    public CachedFile CachedFile { get; } = cachedFile;
 }

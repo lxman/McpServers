@@ -19,19 +19,13 @@ public sealed class SshConnectionManager : IDisposable
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private bool _disposed;
 
-    private sealed class ManagedConnection : IDisposable
+    private sealed class ManagedConnection(Renci.SshNet.SshClient sshClient, SshConnectionProfile profile)
+        : IDisposable
     {
-        public Renci.SshNet.SshClient SshClient { get; }
+        public Renci.SshNet.SshClient SshClient { get; } = sshClient;
         public SftpClient? SftpClient { get; set; }
-        public SshConnectionProfile Profile { get; }
-        public DateTime ConnectedAt { get; }
-
-        public ManagedConnection(Renci.SshNet.SshClient sshClient, SshConnectionProfile profile)
-        {
-            SshClient = sshClient;
-            Profile = profile;
-            ConnectedAt = DateTime.UtcNow;
-        }
+        public SshConnectionProfile Profile { get; } = profile;
+        public DateTime ConnectedAt { get; } = DateTime.UtcNow;
 
         public void Dispose()
         {
@@ -117,7 +111,7 @@ public sealed class SshConnectionManager : IDisposable
     /// </summary>
     public SshConnectionProfile? GetProfile(string name)
     {
-        return _profiles.TryGetValue(name, out var profile) ? profile : null;
+        return _profiles.GetValueOrDefault(name);
     }
 
     /// <summary>

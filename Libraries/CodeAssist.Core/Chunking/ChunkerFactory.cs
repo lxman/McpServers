@@ -4,11 +4,8 @@ namespace CodeAssist.Core.Chunking;
 /// Factory for selecting the appropriate code chunker based on file extension.
 /// Uses TreeSitterChunker for languages with AST support, falls back to DefaultChunker.
 /// </summary>
-public sealed class ChunkerFactory
+public sealed class ChunkerFactory(TreeSitterChunker treeSitterChunker, DefaultChunker defaultChunker)
 {
-    private readonly TreeSitterChunker _treeSitterChunker;
-    private readonly DefaultChunker _defaultChunker;
-
     private static readonly Dictionary<string, string> ExtensionToLanguage = new(StringComparer.OrdinalIgnoreCase)
     {
         // C#
@@ -88,34 +85,24 @@ public sealed class ChunkerFactory
         [".gql"] = "graphql"
     };
 
-    public ChunkerFactory(TreeSitterChunker treeSitterChunker, DefaultChunker defaultChunker)
-    {
-        _treeSitterChunker = treeSitterChunker;
-        _defaultChunker = defaultChunker;
-    }
-
     /// <summary>
     /// Get the language for a file extension.
     /// </summary>
-    public string GetLanguage(string filePath)
+    public static string GetLanguage(string filePath)
     {
         var extension = Path.GetExtension(filePath);
-        if (string.IsNullOrEmpty(extension))
+        if (!string.IsNullOrEmpty(extension))
+            return ExtensionToLanguage.GetValueOrDefault(extension, "text");
+        // Check for special filenames
+        var fileName = Path.GetFileName(filePath);
+        return fileName.ToLowerInvariant() switch
         {
-            // Check for special filenames
-            var fileName = Path.GetFileName(filePath);
-            return fileName.ToLowerInvariant() switch
-            {
-                "dockerfile" => "dockerfile",
-                "makefile" => "makefile",
-                "cmakelists.txt" => "cmake",
-                _ => "text"
-            };
-        }
+            "dockerfile" => "dockerfile",
+            "makefile" => "makefile",
+            "cmakelists.txt" => "cmake",
+            _ => "text"
+        };
 
-        return ExtensionToLanguage.TryGetValue(extension, out var language)
-            ? language
-            : "text";
     }
 
     /// <summary>
@@ -125,15 +112,15 @@ public sealed class ChunkerFactory
     public ICodeChunker GetChunker(string filePath)
     {
         var language = GetLanguage(filePath);
-        return _treeSitterChunker.SupportsLanguage(language)
-            ? _treeSitterChunker
-            : _defaultChunker;
+        return treeSitterChunker.SupportsLanguage(language)
+            ? treeSitterChunker
+            : defaultChunker;
     }
 
     /// <summary>
     /// Check if a file extension is supported for indexing.
     /// </summary>
-    public bool IsSupportedExtension(string extension)
+    public static bool IsSupportedExtension(string extension)
     {
         return ExtensionToLanguage.ContainsKey(extension);
     }

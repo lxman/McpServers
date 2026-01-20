@@ -12,12 +12,12 @@ namespace CodeAssist.Core.Chunking;
 /// Code chunker that uses tree-sitter for semantic AST-based chunking.
 /// Extracts meaningful code units (classes, functions, methods) with their full context.
 /// </summary>
-public sealed class TreeSitterChunker : ICodeChunker, IDisposable
+public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogger<TreeSitterChunker> logger)
+    : ICodeChunker, IDisposable
 {
-    private readonly CodeAssistOptions _options;
-    private readonly ILogger<TreeSitterChunker> _logger;
+    private readonly CodeAssistOptions _options = options.Value;
     private readonly Dictionary<string, Language> _languages = new();
-    private readonly object _languageLock = new();
+    private readonly Lock _languageLock = new();
     private bool _disposed;
 
     /// <summary>
@@ -121,12 +121,6 @@ public sealed class TreeSitterChunker : ICodeChunker, IDisposable
 
     private static readonly HashSet<string> SupportedLangs = new(LanguageMapping.Keys, StringComparer.OrdinalIgnoreCase);
 
-    public TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogger<TreeSitterChunker> logger)
-    {
-        _options = options.Value;
-        _logger = logger;
-    }
-
     public IReadOnlySet<string> SupportedLanguages => SupportedLangs;
 
     public bool SupportsLanguage(string language)
@@ -143,7 +137,7 @@ public sealed class TreeSitterChunker : ICodeChunker, IDisposable
 
         if (!LanguageMapping.TryGetValue(language, out var treeSitterLang))
         {
-            _logger.LogDebug("Language {Language} not supported by tree-sitter, returning empty", language);
+            logger.LogDebug("Language {Language} not supported by tree-sitter, returning empty", language);
             return [];
         }
 
@@ -154,16 +148,16 @@ public sealed class TreeSitterChunker : ICodeChunker, IDisposable
             if (chunks.Count == 0)
             {
                 // Fall back to file-level chunk if no semantic chunks found
-                _logger.LogDebug("No semantic chunks found for {File}, creating file-level chunk", relativePath);
+                logger.LogDebug("No semantic chunks found for {File}, creating file-level chunk", relativePath);
                 return [CreateFileChunk(content, filePath, relativePath, language)];
             }
 
-            _logger.LogDebug("Created {Count} semantic chunks for {File}", chunks.Count, relativePath);
+            logger.LogDebug("Created {Count} semantic chunks for {File}", chunks.Count, relativePath);
             return chunks;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Tree-sitter parsing failed for {File}, creating file-level chunk", relativePath);
+            logger.LogWarning(ex, "Tree-sitter parsing failed for {File}, creating file-level chunk", relativePath);
             return [CreateFileChunk(content, filePath, relativePath, language)];
         }
     }
@@ -183,7 +177,7 @@ public sealed class TreeSitterChunker : ICodeChunker, IDisposable
 
         if (tree == null)
         {
-            _logger.LogWarning("Failed to parse {File} with tree-sitter", relativePath);
+            logger.LogWarning("Failed to parse {File} with tree-sitter", relativePath);
             return chunks;
         }
 
@@ -200,7 +194,7 @@ public sealed class TreeSitterChunker : ICodeChunker, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogDebug(ex, "Query failed for pattern {Pattern} in {File}", queryPattern, relativePath);
+                    logger.LogDebug(ex, "Query failed for pattern {Pattern} in {File}", queryPattern, relativePath);
                 }
             }
         }
@@ -294,7 +288,7 @@ public sealed class TreeSitterChunker : ICodeChunker, IDisposable
         }
     }
 
-    private void ExtractTopLevelNodes(
+    private static void ExtractTopLevelNodes(
         Node rootNode,
         string content,
         string[] lines,
@@ -391,7 +385,7 @@ public sealed class TreeSitterChunker : ICodeChunker, IDisposable
         return chunks;
     }
 
-    private List<CodeChunk> DeduplicateChunks(List<CodeChunk> chunks)
+    private static List<CodeChunk> DeduplicateChunks(List<CodeChunk> chunks)
     {
         if (chunks.Count <= 1)
             return chunks;
@@ -411,11 +405,9 @@ public sealed class TreeSitterChunker : ICodeChunker, IDisposable
             var isContained = coveredRanges.Any(r =>
                 chunk.StartLine >= r.Start && chunk.EndLine <= r.End);
 
-            if (!isContained)
-            {
-                result.Add(chunk);
-                coveredRanges.Add((chunk.StartLine, chunk.EndLine));
-            }
+            if (isContained) continue;
+            result.Add(chunk);
+            coveredRanges.Add((chunk.StartLine, chunk.EndLine));
         }
 
         return result;

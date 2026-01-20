@@ -54,15 +54,6 @@ public sealed class L2PromotionService : IDisposable
     public int PendingCount => _promotionQueue.Reader.Count;
 
     /// <summary>
-    /// Register a file with its target collection for L2 promotion.
-    /// </summary>
-    public void RegisterFileCollection(string filePath, string collectionName)
-    {
-        var normalizedPath = Path.GetFullPath(filePath);
-        _fileToCollection[normalizedPath] = collectionName;
-    }
-
-    /// <summary>
     /// Register all files in a repository with a collection.
     /// </summary>
     public void RegisterRepositoryCollection(string repositoryRoot, string collectionName)
@@ -239,12 +230,7 @@ public sealed class L2PromotionService : IDisposable
 
         // Try to derive from repository name
         var repoName = Path.GetFileName(normalizedRoot).ToLowerInvariant();
-        if (!string.IsNullOrEmpty(repoName))
-        {
-            return $"codeassist_{repoName}";
-        }
-
-        return null;
+        return !string.IsNullOrEmpty(repoName) ? $"codeassist_{repoName}" : null;
     }
 
     public void Dispose()

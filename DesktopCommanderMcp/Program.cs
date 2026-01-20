@@ -74,7 +74,9 @@ try
         // Binary Analysis
         .WithTools<HexAnalysisTools>()
         // Configuration
-        .WithTools<ConfigurationTools>();
+        .WithTools<ConfigurationTools>()
+        // Registry Management
+        .WithTools<DesktopCommanderMcp.McpTools.RegistryTools>();
 
     IHost host = builder.Build();
 

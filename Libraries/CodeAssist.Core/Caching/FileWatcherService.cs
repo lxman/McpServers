@@ -10,28 +10,18 @@ namespace CodeAssist.Core.Caching;
 /// Watches for file changes in indexed repositories and updates the L1 hot cache.
 /// Uses debouncing to avoid excessive updates during rapid edits.
 /// </summary>
-public sealed class FileWatcherService : IDisposable
+public sealed class FileWatcherService(
+    HotCache hotCache,
+    ChunkerFactory chunkerFactory,
+    IOptions<CodeAssistOptions> options,
+    ILogger<FileWatcherService> logger)
+    : IDisposable
 {
     private readonly ConcurrentDictionary<string, FileSystemWatcher> _watchers = new();
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _debounceTokens = new();
     private readonly ConcurrentDictionary<string, string> _repositoryRoots = new(); // filePath -> repoRoot
-    private readonly HotCache _hotCache;
-    private readonly ChunkerFactory _chunkerFactory;
-    private readonly CodeAssistOptions _options;
-    private readonly ILogger<FileWatcherService> _logger;
+    private readonly CodeAssistOptions _options = options.Value;
     private bool _disposed;
-
-    public FileWatcherService(
-        HotCache hotCache,
-        ChunkerFactory chunkerFactory,
-        IOptions<CodeAssistOptions> options,
-        ILogger<FileWatcherService> logger)
-    {
-        _hotCache = hotCache;
-        _chunkerFactory = chunkerFactory;
-        _options = options.Value;
-        _logger = logger;
-    }
 
     /// <summary>
     /// Start watching a repository for file changes.
@@ -40,7 +30,7 @@ public sealed class FileWatcherService : IDisposable
     {
         if (!_options.EnableFileWatcher)
         {
-            _logger.LogDebug("File watcher disabled, skipping watch for {Root}", repositoryRoot);
+            logger.LogDebug("File watcher disabled, skipping watch for {Root}", repositoryRoot);
             return;
         }
 
@@ -48,7 +38,7 @@ public sealed class FileWatcherService : IDisposable
 
         if (_watchers.ContainsKey(normalizedRoot))
         {
-            _logger.LogDebug("Already watching repository: {Root}", normalizedRoot);
+            logger.LogDebug("Already watching repository: {Root}", normalizedRoot);
             return;
         }
 
@@ -69,11 +59,11 @@ public sealed class FileWatcherService : IDisposable
 
             _watchers[normalizedRoot] = watcher;
 
-            _logger.LogInformation("Started watching repository: {Root}", normalizedRoot);
+            logger.LogInformation("Started watching repository: {Root}", normalizedRoot);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to start watcher for repository: {Root}", normalizedRoot);
+            logger.LogError(ex, "Failed to start watcher for repository: {Root}", normalizedRoot);
         }
     }
 
@@ -88,11 +78,11 @@ public sealed class FileWatcherService : IDisposable
         {
             watcher.EnableRaisingEvents = false;
             watcher.Dispose();
-            _logger.LogInformation("Stopped watching repository: {Root}", normalizedRoot);
+            logger.LogInformation("Stopped watching repository: {Root}", normalizedRoot);
         }
 
         // Clear hot cache entries for this repository
-        _hotCache.ClearRepository(repositoryRoot);
+        hotCache.ClearRepository(repositoryRoot);
 
         // Remove repository root mappings
         var keysToRemove = _repositoryRoots
@@ -123,21 +113,11 @@ public sealed class FileWatcherService : IDisposable
         return _watchers.Keys.ToList();
     }
 
-    /// <summary>
-    /// Register a file path with its repository root for proper cache updates.
-    /// </summary>
-    public void RegisterFile(string filePath, string repositoryRoot)
-    {
-        var normalizedPath = Path.GetFullPath(filePath);
-        var normalizedRoot = Path.GetFullPath(repositoryRoot);
-        _repositoryRoots[normalizedPath] = normalizedRoot;
-    }
-
     private void OnFileChanged(object sender, FileSystemEventArgs e)
     {
         if (ShouldIgnoreFile(e.FullPath)) return;
 
-        _logger.LogDebug("File changed: {Path}", e.FullPath);
+        logger.LogDebug("File changed: {Path}", e.FullPath);
         DebouncedUpdate(e.FullPath);
     }
 
@@ -145,8 +125,8 @@ public sealed class FileWatcherService : IDisposable
     {
         if (ShouldIgnoreFile(e.FullPath)) return;
 
-        _logger.LogDebug("File deleted: {Path}", e.FullPath);
-        _hotCache.Remove(e.FullPath);
+        logger.LogDebug("File deleted: {Path}", e.FullPath);
+        hotCache.Remove(e.FullPath);
     }
 
     private void OnFileRenamed(object sender, RenamedEventArgs e)
@@ -154,20 +134,18 @@ public sealed class FileWatcherService : IDisposable
         // Remove old path
         if (!ShouldIgnoreFile(e.OldFullPath))
         {
-            _hotCache.Remove(e.OldFullPath);
+            hotCache.Remove(e.OldFullPath);
         }
 
         // Add new path
-        if (!ShouldIgnoreFile(e.FullPath))
-        {
-            _logger.LogDebug("File renamed: {OldPath} -> {NewPath}", e.OldFullPath, e.FullPath);
-            DebouncedUpdate(e.FullPath);
-        }
+        if (ShouldIgnoreFile(e.FullPath)) return;
+        logger.LogDebug("File renamed: {OldPath} -> {NewPath}", e.OldFullPath, e.FullPath);
+        DebouncedUpdate(e.FullPath);
     }
 
     private void OnWatcherError(object sender, ErrorEventArgs e)
     {
-        _logger.LogError(e.GetException(), "File watcher error");
+        logger.LogError(e.GetException(), "File watcher error");
     }
 
     private void DebouncedUpdate(string filePath)
@@ -196,11 +174,11 @@ public sealed class FileWatcherService : IDisposable
                 var repositoryRoot = GetRepositoryRoot(normalizedPath);
                 if (repositoryRoot == null)
                 {
-                    _logger.LogDebug("No repository root found for {Path}, skipping cache update", normalizedPath);
+                    logger.LogDebug("No repository root found for {Path}, skipping cache update", normalizedPath);
                     return;
                 }
 
-                await _hotCache.UpdateFileAsync(normalizedPath, repositoryRoot, CancellationToken.None);
+                await hotCache.UpdateFileAsync(normalizedPath, repositoryRoot, CancellationToken.None);
             }
             catch (OperationCanceledException)
             {
@@ -208,13 +186,13 @@ public sealed class FileWatcherService : IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating cache for {Path}", normalizedPath);
+                logger.LogError(ex, "Error updating cache for {Path}", normalizedPath);
             }
             finally
             {
                 cts.Dispose();
             }
-        });
+        }, cts.Token);
     }
 
     private string? GetRepositoryRoot(string filePath)
@@ -228,11 +206,9 @@ public sealed class FileWatcherService : IDisposable
         // Find which watcher this file belongs to
         foreach (var (root, _) in _watchers)
         {
-            if (filePath.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-            {
-                _repositoryRoots[filePath] = root; // Cache for future lookups
-                return root;
-            }
+            if (!filePath.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
+            _repositoryRoots[filePath] = root; // Cache for future lookups
+            return root;
         }
 
         return null;
@@ -249,27 +225,19 @@ public sealed class FileWatcherService : IDisposable
         if (string.IsNullOrEmpty(extension))
             return true;
 
-        if (!_chunkerFactory.IsSupportedExtension(extension))
+        if (!ChunkerFactory.IsSupportedExtension(extension))
             return true;
 
         // Check against exclude patterns
         var relativePath = filePath;
         foreach (var (root, _) in _watchers)
         {
-            if (filePath.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-            {
-                relativePath = Path.GetRelativePath(root, filePath);
-                break;
-            }
+            if (!filePath.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
+            relativePath = Path.GetRelativePath(root, filePath);
+            break;
         }
 
-        foreach (var pattern in _options.DefaultExcludePatterns)
-        {
-            if (MatchesPattern(relativePath, pattern))
-                return true;
-        }
-
-        return false;
+        return _options.DefaultExcludePatterns.Any(pattern => MatchesPattern(relativePath, pattern));
     }
 
     private static bool MatchesPattern(string path, string pattern)
@@ -278,22 +246,16 @@ public sealed class FileWatcherService : IDisposable
         var normalizedPath = path.Replace('\\', '/');
         var normalizedPattern = pattern.Replace('\\', '/');
 
-        if (normalizedPattern.StartsWith("**/"))
-        {
-            var suffix = normalizedPattern[3..];
-            if (suffix.EndsWith("/**"))
-            {
-                // Pattern like "**/bin/**" - check if path contains the directory
-                var dir = suffix[..^3];
-                return normalizedPath.Contains($"/{dir}/") ||
-                       normalizedPath.StartsWith($"{dir}/") ||
-                       normalizedPath.EndsWith($"/{dir}");
-            }
-            // Pattern like "**/*.min.js" - check suffix
-            return normalizedPath.EndsWith(suffix.TrimStart('*'));
-        }
+        if (!normalizedPattern.StartsWith("**/")) return normalizedPath.EndsWith(normalizedPattern.TrimStart('*'));
+        var suffix = normalizedPattern[3..];
+        if (!suffix.EndsWith("/**")) return normalizedPath.EndsWith(suffix.TrimStart('*'));
+        // Pattern like "**/bin/**" - check if path contains the directory
+        var dir = suffix[..^3];
+        return normalizedPath.Contains($"/{dir}/") ||
+               normalizedPath.StartsWith($"{dir}/") ||
+               normalizedPath.EndsWith($"/{dir}");
+        // Pattern like "**/*.min.js" - check suffix
 
-        return normalizedPath.EndsWith(normalizedPattern.TrimStart('*'));
     }
 
     public void Dispose()
@@ -315,6 +277,6 @@ public sealed class FileWatcherService : IDisposable
         }
         _debounceTokens.Clear();
 
-        _logger.LogInformation("FileWatcherService disposed");
+        logger.LogInformation("FileWatcherService disposed");
     }
 }

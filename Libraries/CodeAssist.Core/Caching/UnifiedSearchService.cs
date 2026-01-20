@@ -12,27 +12,14 @@ namespace CodeAssist.Core.Caching;
 /// L2 results are used for discovery across the full codebase.
 /// When files overlap, L1 content takes priority.
 /// </summary>
-public sealed class UnifiedSearchService
+public sealed class UnifiedSearchService(
+    HotCache hotCache,
+    QdrantService qdrantService,
+    OllamaService embeddingService,
+    IOptions<CodeAssistOptions> options,
+    ILogger<UnifiedSearchService> logger)
 {
-    private readonly HotCache _hotCache;
-    private readonly QdrantService _qdrantService;
-    private readonly OllamaService _embeddingService;
-    private readonly CodeAssistOptions _options;
-    private readonly ILogger<UnifiedSearchService> _logger;
-
-    public UnifiedSearchService(
-        HotCache hotCache,
-        QdrantService qdrantService,
-        OllamaService embeddingService,
-        IOptions<CodeAssistOptions> options,
-        ILogger<UnifiedSearchService> logger)
-    {
-        _hotCache = hotCache;
-        _qdrantService = qdrantService;
-        _embeddingService = embeddingService;
-        _options = options.Value;
-        _logger = logger;
-    }
+    private readonly CodeAssistOptions _options = options.Value;
 
     /// <summary>
     /// Search across both L1 (hot cache) and L2 (Qdrant).
@@ -48,7 +35,7 @@ public sealed class UnifiedSearchService
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         // Generate query embedding once
-        var queryEmbedding = await _embeddingService.GetEmbeddingAsync(query, cancellationToken);
+        var queryEmbedding = await embeddingService.GetEmbeddingAsync(query, cancellationToken);
 
         // Search L1 (hot cache) - always fresh
         var l1Task = SearchL1Async(queryEmbedding, limit, minScore, cancellationToken);
@@ -74,43 +61,14 @@ public sealed class UnifiedSearchService
             L2HitCount = l2Results.Count,
             TotalResultCount = mergedResults.Count,
             Duration = stopwatch.Elapsed,
-            HotFilesSearched = _hotCache.Count
+            HotFilesSearched = hotCache.Count
         };
 
-        _logger.LogDebug(
+        logger.LogDebug(
             "Unified search completed in {Duration}ms: L1={L1Count}, L2={L2Count}, Merged={MergedCount}",
             stopwatch.ElapsedMilliseconds, l1Results.Count, l2Results.Count, mergedResults.Count);
 
         return result;
-    }
-
-    /// <summary>
-    /// Search only the hot cache (L1).
-    /// Use for queries specifically about recently changed files.
-    /// </summary>
-    public async Task<List<UnifiedSearchHit>> SearchL1OnlyAsync(
-        string query,
-        int limit = 10,
-        float minScore = 0.5f,
-        CancellationToken cancellationToken = default)
-    {
-        var queryEmbedding = await _embeddingService.GetEmbeddingAsync(query, cancellationToken);
-        return await SearchL1Async(queryEmbedding, limit, minScore, cancellationToken);
-    }
-
-    /// <summary>
-    /// Search only Qdrant (L2).
-    /// Use for broad codebase discovery.
-    /// </summary>
-    public async Task<List<UnifiedSearchHit>> SearchL2OnlyAsync(
-        string query,
-        string collectionName,
-        int limit = 10,
-        float minScore = 0.5f,
-        CancellationToken cancellationToken = default)
-    {
-        var queryEmbedding = await _embeddingService.GetEmbeddingAsync(query, cancellationToken);
-        return await SearchL2Async(collectionName, queryEmbedding, limit, minScore, cancellationToken);
     }
 
     private async Task<List<UnifiedSearchHit>> SearchL1Async(
@@ -121,7 +79,7 @@ public sealed class UnifiedSearchService
     {
         try
         {
-            var l1Results = await _hotCache.SearchAsync(
+            var l1Results = await hotCache.SearchAsync(
                 "", // Query embedding already computed, pass empty string
                 limit,
                 minScore,
@@ -150,7 +108,7 @@ public sealed class UnifiedSearchService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "L1 search failed, continuing with L2 only");
+            logger.LogWarning(ex, "L1 search failed, continuing with L2 only");
             return [];
         }
     }
@@ -164,7 +122,7 @@ public sealed class UnifiedSearchService
     {
         try
         {
-            var l2Results = await _qdrantService.SearchAsync(
+            var l2Results = await qdrantService.SearchAsync(
                 collectionName,
                 queryEmbedding,
                 limit,
@@ -182,7 +140,7 @@ public sealed class UnifiedSearchService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "L2 search failed for collection {Collection}", collectionName);
+            logger.LogWarning(ex, "L2 search failed for collection {Collection}", collectionName);
             return [];
         }
     }
@@ -221,7 +179,7 @@ public sealed class UnifiedSearchService
 
                 // File is hot but this chunk isn't in L1 results
                 // Try to get fresh content from hot cache
-                var cachedFile = _hotCache.Get(l2Hit.Chunk.FilePath);
+                var cachedFile = hotCache.Get(l2Hit.Chunk.FilePath);
                 if (cachedFile != null)
                 {
                     // Find matching chunk in cached file

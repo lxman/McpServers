@@ -9,28 +9,19 @@ namespace SeleniumChrome.Core.Services.Enhanced;
 /// Phase 2 Enhancement: Application Management Service
 /// Provides intelligent application tracking and categorization
 /// </summary>
-public class ApplicationManagementService
+public class ApplicationManagementService(
+    ILogger<ApplicationManagementService> logger,
+    MongoConnectionManager connectionManager)
 {
     private const string DEFAULT_CONNECTION_NAME = "default";
-
-    private readonly ILogger<ApplicationManagementService> _logger;
-    private readonly MongoConnectionManager _connectionManager;
 
     private IMongoCollection<ApplicationRecord>? ApplicationCollection
     {
         get
         {
-            IMongoDatabase? database = _connectionManager.GetDatabase(DEFAULT_CONNECTION_NAME);
+            IMongoDatabase? database = connectionManager.GetDatabase(DEFAULT_CONNECTION_NAME);
             return database?.GetCollection<ApplicationRecord>("job_applications");
         }
-    }
-
-    public ApplicationManagementService(
-        ILogger<ApplicationManagementService> logger,
-        MongoConnectionManager connectionManager)
-    {
-        _logger = logger;
-        _connectionManager = connectionManager;
     }
 
     /// <summary>
@@ -40,7 +31,7 @@ public class ApplicationManagementService
         List<EnhancedJobListing> jobs, 
         ApplicationPreferences? preferences = null)
     {
-        _logger.LogInformation($"Categorizing {jobs.Count} jobs for application readiness");
+        logger.LogInformation($"Categorizing {jobs.Count} jobs for application readiness");
 
         // Provide default preferences if none provided
         if (preferences is null)
@@ -97,7 +88,7 @@ public class ApplicationManagementService
         // Calculate insights
         result.Insights = await GenerateApplicationInsightsAsync(result, preferences);
 
-        _logger.LogInformation($"Categorization complete: {result.ImmediateApplications.Count} immediate, " +
+        logger.LogInformation($"Categorization complete: {result.ImmediateApplications.Count} immediate, " +
                              $"{result.HighPriorityApplications.Count} high priority, " +
                              $"{result.AlreadyApplied.Count} already applied");
 
@@ -259,12 +250,12 @@ public class ApplicationManagementService
             
             await ApplicationCollection.InsertOneAsync(application);
             
-            _logger.LogInformation($"Tracked application: {application.Company} - {application.Title}");
+            logger.LogInformation($"Tracked application: {application.Company} - {application.Title}");
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Failed to track application: {ex.Message}");
+            logger.LogError($"Failed to track application: {ex.Message}");
             return false;
         }
     }
@@ -293,7 +284,7 @@ public class ApplicationManagementService
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Failed to update application status: {ex.Message}");
+            logger.LogError($"Failed to update application status: {ex.Message}");
             return false;
         }
     }
