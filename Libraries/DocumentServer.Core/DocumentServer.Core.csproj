@@ -26,9 +26,6 @@
         <PackageReference Include="Lucene.Net.Analysis.Common"  />
         <PackageReference Include="Lucene.Net.QueryParser"  />
         <PackageReference Include="FuzzySharp"  />
-        <PackageReference Include="System.Security.Cryptography.Algorithms"  />
-        <PackageReference Include="System.Text.Json"  />
-        <PackageReference Include="System.Threading.Tasks.Extensions"  />
 
         <!-- OCR -->
         <PackageReference Include="TesseractOCR"  />

@@ -81,20 +81,16 @@
         <PackageReference Include="Microsoft.TeamFoundationServer.ExtendedClient"  />
         <PackageReference Include="Microsoft.VisualStudio.Services.Client"  />
         <PackageReference Include="Microsoft.VisualStudio.Services.Release.Client"  />
-        <PackageReference Include="Microsoft.Win32.Registry"  />
         <PackageReference Include="MySqlConnector"  />
         <PackageReference Include="Npgsql"  />
         <PackageReference Include="Serilog"  />
         <PackageReference Include="Serilog.Extensions.Logging"  />
         <PackageReference Include="Serilog.Extensions.Logging.File"  />
         <PackageReference Include="Serilog.Sinks.File"  />
-        <PackageReference Include="System.Security.Cryptography.Algorithms"  />
         <PackageReference Include="System.Security.Permissions"  />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"  />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"  />
         <PackageReference Include="Microsoft.AspNetCore.Http.Features"  />
-        <PackageReference Include="System.Text.Json"  />
-        <PackageReference Include="System.Threading.Tasks.Extensions"  />
     </ItemGroup>
 
     <ItemGroup>
