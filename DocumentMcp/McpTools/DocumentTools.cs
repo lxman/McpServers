@@ -5,6 +5,7 @@ using DocumentServer.Core.Services.Analysis;
 using DocumentServer.Core.Services.Analysis.Models;
 using DocumentServer.Core.Services.Core;
 using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Models;
 using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -217,7 +218,7 @@ public class DocumentTools(
             string serialized = JsonSerializer.Serialize(response, _jsonOptions);
 
             // Check response size - document extraction can return very large text content
-            var sizeCheck = outputGuard.CheckStringSize(serialized, "extract_content");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(serialized, "extract_content");
 
             if (!sizeCheck.IsWithinLimit)
             {

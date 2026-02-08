@@ -5,6 +5,7 @@ using Mcp.ResponseGuard.Extensions;
 using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
+using SshClient.Core.Models;
 using SshClient.Core.Services;
 
 namespace SshMcp.McpTools;
@@ -27,7 +28,7 @@ public sealed class SshCommandTools(
     {
         try
         {
-            var result = await commandExecutor.ExecuteAsync(
+            SshCommandResult result = await commandExecutor.ExecuteAsync(
                 connectionName,
                 command,
                 timeoutSeconds,
@@ -54,13 +55,13 @@ public sealed class SshCommandTools(
     {
         try
         {
-            var commands = JsonSerializer.Deserialize<string[]>(commandsJson);
+            string[]? commands = JsonSerializer.Deserialize<string[]>(commandsJson);
             if (commands is null || commands.Length == 0)
             {
                 return "No commands provided".ToErrorResponse(outputGuard);
             }
 
-            var results = await commandExecutor.ExecuteBatchAsync(
+            IReadOnlyList<SshCommandResult> results = await commandExecutor.ExecuteBatchAsync(
                 connectionName,
                 commands,
                 stopOnError,
@@ -88,7 +89,7 @@ public sealed class SshCommandTools(
     {
         try
         {
-            var exitCode = await commandExecutor.ExecuteAndGetExitCodeAsync(connectionName, command);
+            int exitCode = await commandExecutor.ExecuteAndGetExitCodeAsync(connectionName, command);
             return new { ExitCode = exitCode, Success = exitCode == 0 }.ToGuardedResponse(outputGuard, "ssh_check_exit_code");
         }
         catch (Exception ex)

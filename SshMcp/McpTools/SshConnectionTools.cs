@@ -43,7 +43,7 @@ public sealed class SshConnectionTools(
                 TimeoutSeconds = timeoutSeconds
             };
 
-            var result = await connectionManager.ConnectAsync(profile);
+            SshConnectionInfo result = await connectionManager.ConnectAsync(profile);
             return result.ToGuardedResponse(outputGuard, "ssh_connect");
         }
         catch (Exception ex)
@@ -61,7 +61,7 @@ public sealed class SshConnectionTools(
     {
         try
         {
-            var result = await connectionManager.ConnectAsync(profileName);
+            SshConnectionInfo result = await connectionManager.ConnectAsync(profileName);
             return result.ToGuardedResponse(outputGuard, "ssh_connect_profile");
         }
         catch (Exception ex)
@@ -77,7 +77,7 @@ public sealed class SshConnectionTools(
     public string Disconnect(
         [Description("Name of the connection to disconnect")] string connectionName)
     {
-        var success = connectionManager.Disconnect(connectionName);
+        bool success = connectionManager.Disconnect(connectionName);
         return success
             ? new { Message = $"Disconnected: {connectionName}" }.ToSuccessResponse(outputGuard)
             : $"Connection '{connectionName}' not found".ToErrorResponse(outputGuard);
@@ -97,7 +97,7 @@ public sealed class SshConnectionTools(
     [Description("List all active SSH connections.")]
     public string ListConnections()
     {
-        var connections = connectionManager.GetConnections();
+        IReadOnlyList<SshConnectionInfo> connections = connectionManager.GetConnections();
         return connections.ToGuardedResponse(outputGuard, "ssh_list_connections");
     }
 
@@ -107,7 +107,7 @@ public sealed class SshConnectionTools(
     public string GetConnection(
         [Description("Name of the connection")] string connectionName)
     {
-        var connection = connectionManager.GetConnection(connectionName);
+        SshConnectionInfo? connection = connectionManager.GetConnection(connectionName);
         return connection is not null
             ? connection.ToGuardedResponse(outputGuard, "ssh_get_connection")
             : $"Connection '{connectionName}' not found".ToErrorResponse(outputGuard);
@@ -170,7 +170,7 @@ public sealed class SshConnectionTools(
     public string RemoveProfile(
         [Description("Name of the profile to remove")] string profileName)
     {
-        var success = connectionManager.RemoveProfile(profileName);
+        bool success = connectionManager.RemoveProfile(profileName);
         return success
             ? new { Message = $"Profile removed: {profileName}" }.ToSuccessResponse(outputGuard)
             : $"Profile '{profileName}' not found".ToErrorResponse(outputGuard);

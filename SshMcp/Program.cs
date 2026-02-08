@@ -11,7 +11,7 @@ using SshMcp.McpTools;
 // Setup MCP-safe logging (redirects Console to file)
 McpLoggingExtensions.SetupMcpLogging("SshMcp");
 
-var builder = Host.CreateApplicationBuilder(args);
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
 // Configure Serilog
 builder.Logging.ClearProviders();
@@ -32,6 +32,6 @@ builder.Services.AddMcpServer()
     .WithTools<SshCommandTools>()
     .WithTools<SftpTools>();
 
-var app = builder.Build();
+IHost app = builder.Build();
 
 await app.RunAsync();

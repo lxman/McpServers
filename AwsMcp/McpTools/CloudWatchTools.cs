@@ -5,6 +5,7 @@ using Amazon.CloudWatchLogs;
 using Amazon.CloudWatchLogs.Model;
 using AwsServer.Core.Services.CloudWatch;
 using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Models;
 using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -229,7 +230,7 @@ public class CloudWatchTools(
             }, _jsonOptions);
 
             // Check response size - log events can contain large message content
-            var sizeCheck = outputGuard.CheckStringSize(result, "get_log_events");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "get_log_events");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -293,7 +294,7 @@ public class CloudWatchTools(
             }, _jsonOptions);
 
             // Check response size - filtered logs can return many matching events
-            var sizeCheck = outputGuard.CheckStringSize(result, "filter_logs");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "filter_logs");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -354,7 +355,7 @@ public class CloudWatchTools(
             }, _jsonOptions);
 
             // Check response size - recent logs can return many events
-            var sizeCheck = outputGuard.CheckStringSize(result, "get_recent_logs");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "get_recent_logs");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -437,7 +438,7 @@ public class CloudWatchTools(
             }, _jsonOptions);
 
             // Check response size - multi-group queries multiply results across log groups
-            var sizeCheck = outputGuard.CheckStringSize(result, "filter_logs_multi");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "filter_logs_multi");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -647,7 +648,7 @@ public class CloudWatchTools(
                     }, _jsonOptions);
 
                     // Check response size - Insights queries can return very large result sets
-                    var sizeCheck = outputGuard.CheckStringSize(result, "run_insights_query");
+                    ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "run_insights_query");
 
                     if (!sizeCheck.IsWithinLimit)
                     {

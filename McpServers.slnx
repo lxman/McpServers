@@ -19,6 +19,7 @@
     <Project Path="Libraries\SeleniumChrome.Core\SeleniumChrome.Core.csproj" />
     <Project Path="Libraries\SerilogFileWriter\SerilogFileWriter.csproj" />
     <Project Path="Libraries\SqlServer.Core\SqlServer.Core.csproj" />
+    <Project Path="Libraries\Edgar.Core\Edgar.Core.csproj" />
   </Folder>
   <Folder Name="/SolutionFolder/">
     <File Path="README.md" />
@@ -38,4 +39,5 @@
   <Project Path="SqlMcp\SqlMcp.csproj" />
   <Project Path="SshMcp/SshMcp.csproj" />
   <Project Path="TrafficGenerator\TrafficGenerator.csproj" />
+  <Project Path="EdgarMcp\EdgarMcp.csproj" />
 </Solution>

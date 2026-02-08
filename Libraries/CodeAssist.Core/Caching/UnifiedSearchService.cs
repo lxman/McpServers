@@ -35,21 +35,21 @@ public sealed class UnifiedSearchService(
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         // Generate query embedding once
-        var queryEmbedding = await embeddingService.GetEmbeddingAsync(query, cancellationToken);
+        float[] queryEmbedding = await embeddingService.GetEmbeddingAsync(query, cancellationToken);
 
         // Search L1 (hot cache) - always fresh
-        var l1Task = SearchL1Async(queryEmbedding, limit, minScore, cancellationToken);
+        Task<List<UnifiedSearchHit>> l1Task = SearchL1Async(queryEmbedding, limit, minScore, cancellationToken);
 
         // Search L2 (Qdrant) - full codebase
-        var l2Task = SearchL2Async(collectionName, queryEmbedding, limit, minScore, cancellationToken);
+        Task<List<UnifiedSearchHit>> l2Task = SearchL2Async(collectionName, queryEmbedding, limit, minScore, cancellationToken);
 
         await Task.WhenAll(l1Task, l2Task);
 
-        var l1Results = await l1Task;
-        var l2Results = await l2Task;
+        List<UnifiedSearchHit> l1Results = await l1Task;
+        List<UnifiedSearchHit> l2Results = await l2Task;
 
         // Merge results with L1 priority
-        var mergedResults = MergeResults(l1Results, l2Results, limit);
+        List<UnifiedSearchHit> mergedResults = MergeResults(l1Results, l2Results, limit);
 
         stopwatch.Stop();
 
@@ -79,7 +79,7 @@ public sealed class UnifiedSearchService(
     {
         try
         {
-            var l1Results = await hotCache.SearchAsync(
+            List<HotCacheSearchResult> l1Results = await hotCache.SearchAsync(
                 "", // Query embedding already computed, pass empty string
                 limit,
                 minScore,
@@ -88,9 +88,9 @@ public sealed class UnifiedSearchService(
             // Re-score using the provided embedding
             var results = new List<UnifiedSearchHit>();
 
-            foreach (var r in l1Results)
+            foreach (HotCacheSearchResult r in l1Results)
             {
-                var score = CosineSimilarity(queryEmbedding, r.Embedding);
+                float score = CosineSimilarity(queryEmbedding, r.Embedding);
                 if (score >= minScore)
                 {
                     results.Add(new UnifiedSearchHit
@@ -122,7 +122,7 @@ public sealed class UnifiedSearchService(
     {
         try
         {
-            var l2Results = await qdrantService.SearchAsync(
+            List<SearchResult> l2Results = await qdrantService.SearchAsync(
                 collectionName,
                 queryEmbedding,
                 limit,
@@ -161,13 +161,13 @@ public sealed class UnifiedSearchService(
         merged.AddRange(l1Results);
 
         // Add L2 results, but replace content for hot files
-        foreach (var l2Hit in l2Results)
+        foreach (UnifiedSearchHit l2Hit in l2Results)
         {
             // Skip if we already have this file from L1 (L1 has fresher content)
             if (hotFilePaths.Contains(l2Hit.Chunk.FilePath))
             {
                 // Check if this specific chunk is already in results
-                var existingChunk = merged.FirstOrDefault(m =>
+                UnifiedSearchHit? existingChunk = merged.FirstOrDefault(m =>
                     m.Chunk.FilePath == l2Hit.Chunk.FilePath &&
                     m.Chunk.StartLine == l2Hit.Chunk.StartLine);
 
@@ -179,11 +179,11 @@ public sealed class UnifiedSearchService(
 
                 // File is hot but this chunk isn't in L1 results
                 // Try to get fresh content from hot cache
-                var cachedFile = hotCache.Get(l2Hit.Chunk.FilePath);
+                CachedFile? cachedFile = hotCache.Get(l2Hit.Chunk.FilePath);
                 if (cachedFile != null)
                 {
                     // Find matching chunk in cached file
-                    var freshChunk = cachedFile.Chunks.FirstOrDefault(c =>
+                    CodeChunk? freshChunk = cachedFile.Chunks.FirstOrDefault(c =>
                         c.StartLine == l2Hit.Chunk.StartLine);
 
                     if (freshChunk != null)
@@ -227,7 +227,7 @@ public sealed class UnifiedSearchService(
             normB += b[i] * b[i];
         }
 
-        var denominator = MathF.Sqrt(normA) * MathF.Sqrt(normB);
+        float denominator = MathF.Sqrt(normA) * MathF.Sqrt(normB);
         return denominator == 0 ? 0 : dotProduct / denominator;
     }
 }

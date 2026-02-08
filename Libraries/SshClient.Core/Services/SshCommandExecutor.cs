@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using Renci.SshNet;
 using SshClient.Core.Models;
 
 namespace SshClient.Core.Services;
@@ -26,7 +27,7 @@ public sealed class SshCommandExecutor(
         string? workingDirectory = null,
         CancellationToken cancellationToken = default)
     {
-        var client = connectionManager.GetSshClient(connectionName);
+        Renci.SshNet.SshClient? client = connectionManager.GetSshClient(connectionName);
         if (client is null || !client.IsConnected)
         {
             return new SshCommandResult
@@ -37,11 +38,11 @@ public sealed class SshCommandExecutor(
             };
         }
 
-        var timeout = timeoutSeconds ?? DefaultTimeoutSeconds;
-        var maxOutput = maxOutputBytes ?? DefaultMaxOutputBytes;
+        int timeout = timeoutSeconds ?? DefaultTimeoutSeconds;
+        int maxOutput = maxOutputBytes ?? DefaultMaxOutputBytes;
 
         // Prepend cd command if working directory specified
-        var fullCommand = string.IsNullOrEmpty(workingDirectory)
+        string fullCommand = string.IsNullOrEmpty(workingDirectory)
             ? command
             : $"cd {EscapeShellArg(workingDirectory)} && {command}";
 
@@ -50,7 +51,7 @@ public sealed class SshCommandExecutor(
 
         try
         {
-            using var sshCommand = client.CreateCommand(fullCommand);
+            using SshCommand sshCommand = client.CreateCommand(fullCommand);
             sshCommand.CommandTimeout = TimeSpan.FromSeconds(timeout);
 
             var outputBuilder = new StringBuilder();
@@ -59,9 +60,9 @@ public sealed class SshCommandExecutor(
             var errorTruncated = false;
 
             // Execute asynchronously
-            var result = await Task.Run(() =>
+            int result = await Task.Run(() =>
             {
-                var asyncResult = sshCommand.BeginExecute();
+                IAsyncResult asyncResult = sshCommand.BeginExecute();
 
                 // Read output streams
                 using var outputReader = new StreamReader(sshCommand.OutputStream, Encoding.UTF8, leaveOpen: true);
@@ -74,7 +75,7 @@ public sealed class SshCommandExecutor(
                     // Read stdout
                     if (!outputReader.EndOfStream)
                     {
-                        var line = outputReader.ReadLine();
+                        string? line = outputReader.ReadLine();
                         if (line != null && outputBuilder.Length < maxOutput)
                         {
                             if (outputBuilder.Length + line.Length > maxOutput)
@@ -96,7 +97,7 @@ public sealed class SshCommandExecutor(
                     // Read stderr
                     if (!errorReader.EndOfStream)
                     {
-                        var line = errorReader.ReadLine();
+                        string? line = errorReader.ReadLine();
                         if (line != null && errorBuilder.Length < maxOutput)
                         {
                             if (errorBuilder.Length + line.Length > maxOutput)
@@ -175,9 +176,9 @@ public sealed class SshCommandExecutor(
     {
         var results = new List<SshCommandResult>();
 
-        foreach (var command in commands)
+        foreach (string command in commands)
         {
-            var result = await ExecuteAsync(connectionName, command, timeoutSeconds, cancellationToken: cancellationToken);
+            SshCommandResult result = await ExecuteAsync(connectionName, command, timeoutSeconds, cancellationToken: cancellationToken);
             results.Add(result);
 
             if (stopOnError && !result.Success)
@@ -198,7 +199,7 @@ public sealed class SshCommandExecutor(
         string command,
         CancellationToken cancellationToken = default)
     {
-        var result = await ExecuteAsync(connectionName, command, maxOutputBytes: 1000, cancellationToken: cancellationToken);
+        SshCommandResult result = await ExecuteAsync(connectionName, command, maxOutputBytes: 1000, cancellationToken: cancellationToken);
         return result.ExitCode;
     }
 

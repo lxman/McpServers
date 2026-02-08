@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using CodeAssist.Core.Caching;
+using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -29,7 +30,7 @@ public class RepositoryTools(
         try
         {
             // Resolve repository name to path
-            var state = await indexer.GetIndexStateAsync(repositoryName);
+            IndexState? state = await indexer.GetIndexStateAsync(repositoryName);
             if (state == null)
             {
                 return JsonSerializer.Serialize(new
@@ -39,13 +40,13 @@ public class RepositoryTools(
                 }, _jsonOptions);
             }
 
-            var targetPath = state.RootPath;
-            var currentlyWatched = fileWatcher.GetWatchedRepositories();
+            string targetPath = state.RootPath;
+            IReadOnlyList<string> currentlyWatched = fileWatcher.GetWatchedRepositories();
             var stoppedWatching = new List<string>();
             var clearedCaches = new List<string>();
 
             // Stop watching all other repositories
-            foreach (var watchedPath in currentlyWatched)
+            foreach (string watchedPath in currentlyWatched)
             {
                 if (!string.Equals(watchedPath, targetPath, StringComparison.OrdinalIgnoreCase))
                 {
@@ -93,8 +94,8 @@ public class RepositoryTools(
     {
         try
         {
-            var watched = fileWatcher.GetWatchedRepositories();
-            var hotCacheCount = hotCache.Count;
+            IReadOnlyList<string> watched = fileWatcher.GetWatchedRepositories();
+            int hotCacheCount = hotCache.Count;
 
             return Task.FromResult(JsonSerializer.Serialize(new
             {
@@ -117,9 +118,9 @@ public class RepositoryTools(
     {
         try
         {
-            var watched = fileWatcher.GetWatchedRepositories().ToList();
+            List<string> watched = fileWatcher.GetWatchedRepositories().ToList();
 
-            foreach (var path in watched)
+            foreach (string path in watched)
             {
                 fileWatcher.StopWatching(path);
             }

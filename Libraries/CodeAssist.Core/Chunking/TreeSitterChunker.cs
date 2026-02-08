@@ -135,7 +135,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             return [];
         }
 
-        if (!LanguageMapping.TryGetValue(language, out var treeSitterLang))
+        if (!LanguageMapping.TryGetValue(language, out string? treeSitterLang))
         {
             logger.LogDebug("Language {Language} not supported by tree-sitter, returning empty", language);
             return [];
@@ -143,7 +143,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
 
         try
         {
-            var chunks = ParseWithTreeSitter(content, filePath, relativePath, language, treeSitterLang);
+            List<CodeChunk> chunks = ParseWithTreeSitter(content, filePath, relativePath, language, treeSitterLang);
 
             if (chunks.Count == 0)
             {
@@ -170,10 +170,10 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
         string treeSitterLang)
     {
         var chunks = new List<CodeChunk>();
-        var lang = GetOrCreateLanguage(treeSitterLang);
+        Language lang = GetOrCreateLanguage(treeSitterLang);
 
         using var parser = new Parser(lang);
-        using var tree = parser.Parse(content);
+        using Tree? tree = parser.Parse(content);
 
         if (tree == null)
         {
@@ -181,12 +181,12 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             return chunks;
         }
 
-        var lines = content.Split('\n');
+        string[] lines = content.Split('\n');
 
         // Try query-based extraction first
-        if (LanguageQueries.TryGetValue(language, out var queries))
+        if (LanguageQueries.TryGetValue(language, out string[]? queries))
         {
-            foreach (var queryPattern in queries)
+            foreach (string queryPattern in queries)
             {
                 try
                 {
@@ -221,30 +221,30 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
         List<CodeChunk> chunks)
     {
         using var query = new Query(lang, queryPattern);
-        var result = query.Execute(tree.RootNode);
+        QueryCursor result = query.Execute(tree.RootNode);
 
-        foreach (var capture in result.Captures)
+        foreach (QueryCapture capture in result.Captures)
         {
-            var captureName = capture.Name;
-            var node = capture.Node;
+            string captureName = capture.Name;
+            Node node = capture.Node;
 
             // Skip if this is just the name capture
             if (captureName == "name")
                 continue;
 
-            var startLine = (int)node.StartPosition.Row + 1;
-            var endLine = (int)node.EndPosition.Row + 1;
-            var nodeContent = node.Text;
-            var chunkType = captureName;
+            int startLine = (int)node.StartPosition.Row + 1;
+            int endLine = (int)node.EndPosition.Row + 1;
+            string nodeContent = node.Text;
+            string chunkType = captureName;
 
             // Try to get symbol name from children
             string? symbolName = null;
-            using var cursor = node.Walk();
+            using TreeCursor cursor = node.Walk();
             if (cursor.GotoFirstChild())
             {
                 do
                 {
-                    var childNode = cursor.CurrentNode;
+                    Node childNode = cursor.CurrentNode;
                     if (childNode.Type == "identifier" ||
                         childNode.Type == "type_identifier" ||
                         childNode.Type == "name" ||
@@ -265,7 +265,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             if (nodeContent.Length > _options.MaxChunkSize * 2)
             {
                 // For very large chunks, create sub-chunks
-                var subChunks = SplitLargeChunk(nodeContent, filePath, relativePath, startLine, language, symbolName, chunkType);
+                List<CodeChunk> subChunks = SplitLargeChunk(nodeContent, filePath, relativePath, startLine, language, symbolName, chunkType);
                 chunks.AddRange(subChunks);
             }
             else
@@ -298,26 +298,26 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
         List<CodeChunk> chunks)
     {
         // Walk immediate children of root for top-level declarations
-        using var cursor = rootNode.Walk();
+        using TreeCursor cursor = rootNode.Walk();
 
         if (!cursor.GotoFirstChild())
             return;
 
         do
         {
-            var node = cursor.CurrentNode;
-            var nodeType = node.Type;
+            Node node = cursor.CurrentNode;
+            string nodeType = node.Type;
 
             // Skip comments, whitespace, etc.
             if (IsSkippableNode(nodeType))
                 continue;
 
-            var nodeContent = node.Text;
+            string nodeContent = node.Text;
             if (string.IsNullOrWhiteSpace(nodeContent) || nodeContent.Length < 20)
                 continue;
 
-            var startLine = (int)node.StartPosition.Row + 1;
-            var endLine = (int)node.EndPosition.Row + 1;
+            int startLine = (int)node.StartPosition.Row + 1;
+            int endLine = (int)node.EndPosition.Row + 1;
 
             chunks.Add(new CodeChunk
             {
@@ -346,18 +346,18 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
         string? chunkType)
     {
         var chunks = new List<CodeChunk>();
-        var lines = content.Split('\n');
-        var linesPerChunk = Math.Max(10, _options.MaxChunkSize / 60);
-        var overlapLines = Math.Max(2, _options.ChunkOverlap / 60);
+        string[] lines = content.Split('\n');
+        int linesPerChunk = Math.Max(10, _options.MaxChunkSize / 60);
+        int overlapLines = Math.Max(2, _options.ChunkOverlap / 60);
 
         var startLine = 0;
         var partNumber = 1;
 
         while (startLine < lines.Length)
         {
-            var endLine = Math.Min(startLine + linesPerChunk, lines.Length);
-            var chunkLines = lines[startLine..endLine];
-            var chunkContent = string.Join('\n', chunkLines);
+            int endLine = Math.Min(startLine + linesPerChunk, lines.Length);
+            string[] chunkLines = lines[startLine..endLine];
+            string chunkContent = string.Join('\n', chunkLines);
 
             chunks.Add(new CodeChunk
             {
@@ -374,7 +374,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
                 ContentHash = ComputeHash(chunkContent)
             });
 
-            var nextStart = endLine - overlapLines;
+            int nextStart = endLine - overlapLines;
             if (nextStart <= startLine)
                 nextStart = startLine + 1;
 
@@ -391,7 +391,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             return chunks;
 
         // Sort by start line, then by size (larger first)
-        var sorted = chunks
+        List<CodeChunk> sorted = chunks
             .OrderBy(c => c.StartLine)
             .ThenByDescending(c => c.EndLine - c.StartLine)
             .ToList();
@@ -399,10 +399,10 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
         var result = new List<CodeChunk>();
         var coveredRanges = new List<(int Start, int End)>();
 
-        foreach (var chunk in sorted)
+        foreach (CodeChunk chunk in sorted)
         {
             // Check if this chunk is fully contained within an existing chunk
-            var isContained = coveredRanges.Any(r =>
+            bool isContained = coveredRanges.Any(r =>
                 chunk.StartLine >= r.Start && chunk.EndLine <= r.End);
 
             if (isContained) continue;
@@ -417,7 +417,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
     {
         lock (_languageLock)
         {
-            if (_languages.TryGetValue(treeSitterLang, out var existing))
+            if (_languages.TryGetValue(treeSitterLang, out Language? existing))
                 return existing;
 
             var lang = new Language(treeSitterLang);
@@ -428,7 +428,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
 
     private CodeChunk CreateFileChunk(string content, string filePath, string relativePath, string language)
     {
-        var lines = content.Split('\n');
+        string[] lines = content.Split('\n');
         return new CodeChunk
         {
             Id = Guid.NewGuid(),
@@ -473,7 +473,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
 
     private static string ComputeHash(string content)
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(content));
+        byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
@@ -484,7 +484,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
 
         lock (_languageLock)
         {
-            foreach (var lang in _languages.Values)
+            foreach (Language lang in _languages.Values)
             {
                 lang.Dispose();
             }

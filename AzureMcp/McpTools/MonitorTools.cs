@@ -3,6 +3,7 @@ using System.Text.Json;
 using AzureServer.Core.Services.Monitor;
 using AzureServer.Core.Services.Monitor.Models;
 using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Models;
 using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -72,7 +73,7 @@ public class MonitorTools(
             }, _jsonOptions);
 
             // Check response size - Azure Monitor log queries can return large result sets
-            var sizeCheck = outputGuard.CheckStringSize(serialized, "query_logs");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(serialized, "query_logs");
 
             if (!sizeCheck.IsWithinLimit)
             {

@@ -27,7 +27,7 @@ public sealed class QdrantService
 
         // Use port 6334 for gRPC (Qdrant's dedicated gRPC port)
         // Port 6333 is REST API, port 6334 is gRPC
-        var grpcPort = uri.Port == 6333 ? 6334 : uri.Port;
+        int grpcPort = uri.Port == 6333 ? 6334 : uri.Port;
 
         _client = new QdrantClient(
             host: uri.Host,
@@ -42,7 +42,7 @@ public sealed class QdrantService
     {
         try
         {
-            var exists = await _client.CollectionExistsAsync(collectionName, cancellationToken);
+            bool exists = await _client.CollectionExistsAsync(collectionName, cancellationToken);
 
             if (!exists)
             {
@@ -83,7 +83,7 @@ public sealed class QdrantService
 
         try
         {
-            var points = chunks.Select((chunk, i) => new PointStruct
+            List<PointStruct> points = chunks.Select((chunk, i) => new PointStruct
             {
                 Id = new PointId { Uuid = chunk.Id.ToString() },
                 Vectors = embeddings[i],
@@ -145,7 +145,7 @@ public sealed class QdrantService
                 };
             }
 
-            var results = await _client.SearchAsync(
+            IReadOnlyList<ScoredPoint> results = await _client.SearchAsync(
                 collectionName,
                 queryEmbedding,
                 limit: (ulong)limit,
@@ -231,7 +231,7 @@ public sealed class QdrantService
 
         try
         {
-            var pointIds = ids.Select(id => new PointId { Uuid = id.ToString() }).ToList();
+            List<PointId> pointIds = ids.Select(id => new PointId { Uuid = id.ToString() }).ToList();
             await _client.DeleteAsync(collectionName, pointIds, cancellationToken: cancellationToken);
 
             _logger.LogDebug("Deleted {Count} chunks by ID from collection {Collection}", ids.Count, collectionName);
@@ -252,10 +252,10 @@ public sealed class QdrantService
     {
         try
         {
-            var exists = await _client.CollectionExistsAsync(collectionName, cancellationToken);
+            bool exists = await _client.CollectionExistsAsync(collectionName, cancellationToken);
             if (!exists) return (0, false);
 
-            var info = await _client.GetCollectionInfoAsync(collectionName, cancellationToken);
+            CollectionInfo info = await _client.GetCollectionInfoAsync(collectionName, cancellationToken);
             return (info.PointsCount, true);
         }
         catch (Exception ex)
@@ -272,7 +272,7 @@ public sealed class QdrantService
     {
         try
         {
-            var exists = await _client.CollectionExistsAsync(collectionName, cancellationToken);
+            bool exists = await _client.CollectionExistsAsync(collectionName, cancellationToken);
             if (exists)
             {
                 await _client.DeleteCollectionAsync(collectionName, cancellationToken: cancellationToken);
@@ -293,7 +293,7 @@ public sealed class QdrantService
     {
         try
         {
-            var collections = await _client.ListCollectionsAsync(cancellationToken);
+            IReadOnlyList<string> collections = await _client.ListCollectionsAsync(cancellationToken);
             return collections.ToList();
         }
         catch (Exception ex)
@@ -332,7 +332,7 @@ public sealed class QdrantService
 
         try
         {
-            var qdrantPoints = points.Select(p =>
+            List<PointStruct> qdrantPoints = points.Select(p =>
             {
                 var point = new PointStruct
                 {
@@ -340,7 +340,7 @@ public sealed class QdrantService
                     Vectors = p.vector
                 };
 
-                foreach (var (key, value) in p.payload)
+                foreach ((string key, object value) in p.payload)
                 {
                     point.Payload[key] = value switch
                     {

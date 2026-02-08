@@ -77,7 +77,7 @@ public class JobScrapingTools(
         {
             logger.LogDebug("Scraping site {Site} for {SearchTerm} in {Location}", site, searchTerm, location);
 
-            if (!Enum.TryParse<JobSite>(site, ignoreCase: true, out JobSite jobSite))
+            if (!Enum.TryParse(site, ignoreCase: true, out JobSite jobSite))
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Invalid site: {site}" }, _jsonOptions);
             }

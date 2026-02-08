@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Models;
 using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -45,7 +46,7 @@ public class CrossServerTools(
             string result = await crossServerOps.CompareCollectionsAsync(server1, server2, collectionName, filterJson ?? "{}");
 
             // Check response size - comparisons can return large difference reports
-            var sizeCheck = outputGuard.CheckStringSize(result, "compare_collections");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "compare_collections");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -130,7 +131,7 @@ public class CrossServerTools(
             string result = await crossServerOps.CrossServerQueryAsync(serverNames, collectionName, filterJson ?? "{}", limitPerServer);
 
             // Check response size - cross-server queries multiply results across servers
-            var sizeCheck = outputGuard.CheckStringSize(result, "cross_server_query");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "cross_server_query");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -212,7 +213,7 @@ public class CrossServerTools(
             string result = await crossServerOps.ExecuteOnAllServersAsync(command);
 
             // Check response size - commands executed on all servers multiply results
-            var sizeCheck = outputGuard.CheckStringSize(result, "execute_on_all_servers");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "execute_on_all_servers");
 
             if (!sizeCheck.IsWithinLimit)
             {

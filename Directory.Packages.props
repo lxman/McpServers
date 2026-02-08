@@ -11,7 +11,7 @@
     <PackageVersion Include="AWSSDK.ECS" Version="4.0.12.2" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.22" />
     <PackageVersion Include="AWSSDK.QuickSight" Version="4.0.14" />
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.18.2" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.18.3" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.5.9" />
     <!-- Azure SDKs - Aspire & Provisioning -->
     <PackageVersion Include="Aspire.Hosting.Azure.AppService" Version="13.1.0-preview.1.25616.3" />
@@ -89,6 +89,8 @@
     <PackageVersion Include="ShapeCrawler" Version="0.78.2" />
     <PackageVersion Include="SSH.NET" Version="2025.1.0" />
     <PackageVersion Include="TesseractOCR" Version="5.5.1" />
+    <!-- Trading -->
+    <PackageVersion Include="Alpaca.Markets" Version="8.0.0-beta4" />
     <!-- Database Drivers -->
     <PackageVersion Include="Dapper" Version="2.1.66" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.0-preview3.25342.7" />
@@ -150,7 +152,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
     <PackageVersion Include="Microsoft.AspNetCore.ResponseCompression" Version="2.3.9" />
     <PackageVersion Include="Microsoft.Playwright" Version="1.58.0" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.12.34" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.12.36" />
     <PackageVersion Include="Selenium.WebDriver" Version="4.40.0" />
     <!-- Windows & Credential Management -->
     <PackageVersion Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.17" />

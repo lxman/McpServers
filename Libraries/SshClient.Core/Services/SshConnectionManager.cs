@@ -39,8 +39,8 @@ public sealed class SshConnectionManager : IDisposable
         _logger = logger;
         
         // Set up profiles file in user's AppData
-        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var sshMcpDir = Path.Combine(appDataPath, "SshMcp");
+        string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        string sshMcpDir = Path.Combine(appDataPath, "SshMcp");
         Directory.CreateDirectory(sshMcpDir);
         _profilesFilePath = Path.Combine(sshMcpDir, "profiles.json");
         
@@ -54,11 +54,11 @@ public sealed class SshConnectionManager : IDisposable
         {
             if (File.Exists(_profilesFilePath))
             {
-                var json = File.ReadAllText(_profilesFilePath);
+                string json = File.ReadAllText(_profilesFilePath);
                 var profiles = JsonSerializer.Deserialize<List<SshConnectionProfile>>(json, JsonOptions);
                 if (profiles != null)
                 {
-                    foreach (var profile in profiles)
+                    foreach (SshConnectionProfile profile in profiles)
                     {
                         _profiles[profile.Name] = profile;
                     }
@@ -76,8 +76,8 @@ public sealed class SshConnectionManager : IDisposable
     {
         try
         {
-            var profiles = _profiles.Values.ToList();
-            var json = JsonSerializer.Serialize(profiles, JsonOptions);
+            List<SshConnectionProfile> profiles = _profiles.Values.ToList();
+            string json = JsonSerializer.Serialize(profiles, JsonOptions);
             File.WriteAllText(_profilesFilePath, json);
             _logger.LogDebug("Saved {Count} SSH profiles to disk", profiles.Count);
         }
@@ -119,7 +119,7 @@ public sealed class SshConnectionManager : IDisposable
     /// </summary>
     public bool RemoveProfile(string name)
     {
-        var removed = _profiles.TryRemove(name, out _);
+        bool removed = _profiles.TryRemove(name, out _);
         if (removed) SaveProfilesToDisk();
         return removed;
     }
@@ -129,7 +129,7 @@ public sealed class SshConnectionManager : IDisposable
     /// </summary>
     public async Task<SshConnectionInfo> ConnectAsync(string profileName, CancellationToken cancellationToken = default)
     {
-        if (!_profiles.TryGetValue(profileName, out var profile))
+        if (!_profiles.TryGetValue(profileName, out SshConnectionProfile? profile))
         {
             return new SshConnectionInfo
             {
@@ -154,13 +154,13 @@ public sealed class SshConnectionManager : IDisposable
         try
         {
             // Disconnect existing connection with same name
-            if (_connections.TryRemove(profile.Name, out var existing))
+            if (_connections.TryRemove(profile.Name, out ManagedConnection? existing))
             {
                 _logger.LogInformation("Disconnecting existing connection: {Name}", profile.Name);
                 existing.Dispose();
             }
 
-            var connectionInfo = CreateConnectionInfo(profile);
+            ConnectionInfo connectionInfo = CreateConnectionInfo(profile);
             var client = new Renci.SshNet.SshClient(connectionInfo);
 
             _logger.LogInformation("Connecting to {Username}@{Host}:{Port} as '{Name}'",
@@ -210,7 +210,7 @@ public sealed class SshConnectionManager : IDisposable
     /// </summary>
     public bool Disconnect(string connectionName)
     {
-        if (_connections.TryRemove(connectionName, out var connection))
+        if (_connections.TryRemove(connectionName, out ManagedConnection? connection))
         {
             _logger.LogInformation("Disconnecting: {Name}", connectionName);
             connection.Dispose();
@@ -224,7 +224,7 @@ public sealed class SshConnectionManager : IDisposable
     /// </summary>
     public void DisconnectAll()
     {
-        foreach (var name in _connections.Keys.ToList())
+        foreach (string name in _connections.Keys.ToList())
         {
             Disconnect(name);
         }
@@ -253,7 +253,7 @@ public sealed class SshConnectionManager : IDisposable
     /// </summary>
     public SshConnectionInfo? GetConnection(string connectionName)
     {
-        if (!_connections.TryGetValue(connectionName, out var connection))
+        if (!_connections.TryGetValue(connectionName, out ManagedConnection? connection))
             return null;
 
         return new SshConnectionInfo
@@ -274,7 +274,7 @@ public sealed class SshConnectionManager : IDisposable
     /// </summary>
     internal Renci.SshNet.SshClient? GetSshClient(string connectionName)
     {
-        return _connections.TryGetValue(connectionName, out var connection) 
+        return _connections.TryGetValue(connectionName, out ManagedConnection? connection) 
             ? connection.SshClient 
             : null;
     }
@@ -284,14 +284,14 @@ public sealed class SshConnectionManager : IDisposable
     /// </summary>
     internal SftpClient? GetOrCreateSftpClient(string connectionName)
     {
-        if (!_connections.TryGetValue(connectionName, out var connection))
+        if (!_connections.TryGetValue(connectionName, out ManagedConnection? connection))
             return null;
 
         if (connection.SftpClient is { IsConnected: true })
             return connection.SftpClient;
 
         // Create new SFTP client
-        var connectionInfo = CreateConnectionInfo(connection.Profile);
+        ConnectionInfo connectionInfo = CreateConnectionInfo(connection.Profile);
         var sftpClient = new SftpClient(connectionInfo);
         sftpClient.Connect();
 
@@ -306,7 +306,7 @@ public sealed class SshConnectionManager : IDisposable
         // Private key authentication
         if (!string.IsNullOrEmpty(profile.PrivateKeyPath))
         {
-            var keyFile = string.IsNullOrEmpty(profile.Passphrase)
+            PrivateKeyFile keyFile = string.IsNullOrEmpty(profile.Passphrase)
                 ? new PrivateKeyFile(profile.PrivateKeyPath)
                 : new PrivateKeyFile(profile.PrivateKeyPath, profile.Passphrase);
             
@@ -348,7 +348,7 @@ public sealed class SshConnectionManager : IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        foreach (var connection in _connections.Values)
+        foreach (ManagedConnection connection in _connections.Values)
         {
             try
             {

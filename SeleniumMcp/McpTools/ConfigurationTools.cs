@@ -32,7 +32,7 @@ public class ConfigurationTools(
         {
             logger.LogDebug("Retrieving configuration for site {Site}", site);
 
-            if (!Enum.TryParse<JobSite>(site, ignoreCase: true, out JobSite siteEnum))
+            if (!Enum.TryParse(site, ignoreCase: true, out JobSite siteEnum))
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Invalid site: {site}" }, _jsonOptions);
             }
@@ -110,7 +110,7 @@ public class ConfigurationTools(
         {
             logger.LogDebug("Testing accessibility for site {Site}", site);
 
-            if (!Enum.TryParse<JobSite>(site, ignoreCase: true, out JobSite siteEnum))
+            if (!Enum.TryParse(site, ignoreCase: true, out JobSite siteEnum))
             {
                 return JsonSerializer.Serialize(new { success = false, error = $"Invalid site: {site}" }, _jsonOptions);
             }

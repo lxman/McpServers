@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Models;
 using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -109,7 +110,7 @@ public class CollectionTools(
             string result = await mongoService.QueryAsync(serverName, collectionName, filterJson ?? "{}", limit, skip);
 
             // Check response size before returning
-            var sizeCheck = outputGuard.CheckStringSize(result, "query");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "query");
 
             if (!sizeCheck.IsWithinLimit)
             {

@@ -25,10 +25,10 @@ public class HealthTools(
     [Description("Check if all required services (Ollama, Qdrant) are running and properly configured. Run this first if you encounter errors with indexing or searching.")]
     public async Task<string> CheckHealth()
     {
-        var ollamaStatus = await CheckOllamaAsync();
-        var qdrantStatus = await CheckQdrantAsync();
+        (bool isHealthy, bool modelAvailable, string? error) ollamaStatus = await CheckOllamaAsync();
+        (bool isHealthy, int collectionsCount, string? error) qdrantStatus = await CheckQdrantAsync();
 
-        var allHealthy = ollamaStatus.isHealthy && qdrantStatus.isHealthy;
+        bool allHealthy = ollamaStatus.isHealthy && qdrantStatus.isHealthy;
 
         var result = new
         {
@@ -140,7 +140,7 @@ volumes:
     {
         try
         {
-            var modelAvailable = await ollamaService.IsModelAvailableAsync();
+            bool modelAvailable = await ollamaService.IsModelAvailableAsync();
             return (true, modelAvailable, null);
         }
         catch (HttpRequestException ex)
@@ -157,7 +157,7 @@ volumes:
     {
         try
         {
-            var collections = await qdrantService.ListCollectionsAsync();
+            List<string> collections = await qdrantService.ListCollectionsAsync();
             return (true, collections.Count, null);
         }
         catch (Exception ex) when (ex.Message.Contains("refused") || ex.Message.Contains("connect"))

@@ -5,6 +5,7 @@ using Mcp.ResponseGuard.Extensions;
 using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
+using SshClient.Core.Models;
 using SshClient.Core.Services;
 
 namespace SshMcp.McpTools;
@@ -24,7 +25,7 @@ public sealed class SftpTools(
     {
         try
         {
-            var result = await fileManager.ListAsync(connectionName, remotePath);
+            SftpListResult result = await fileManager.ListAsync(connectionName, remotePath);
             return result.ToGuardedResponse(outputGuard, "sftp_list");
         }
         catch (Exception ex)
@@ -44,7 +45,7 @@ public sealed class SftpTools(
     {
         try
         {
-            var result = await fileManager.DownloadAsync(connectionName, remotePath, localPath);
+            SftpTransferResult result = await fileManager.DownloadAsync(connectionName, remotePath, localPath);
             return result.ToGuardedResponse(outputGuard, "sftp_download");
         }
         catch (Exception ex)
@@ -64,7 +65,7 @@ public sealed class SftpTools(
     {
         try
         {
-            var result = await fileManager.UploadAsync(connectionName, localPath, remotePath);
+            SftpTransferResult result = await fileManager.UploadAsync(connectionName, localPath, remotePath);
             return result.ToGuardedResponse(outputGuard, "sftp_upload");
         }
         catch (Exception ex)
@@ -84,7 +85,7 @@ public sealed class SftpTools(
     {
         try
         {
-            var (success, content, error) = await fileManager.ReadTextAsync(connectionName, remotePath, maxBytes);
+            (bool success, string content, string? error) = await fileManager.ReadTextAsync(connectionName, remotePath, maxBytes);
 
             if (!success)
                 return (error ?? "Read failed").ToErrorResponse(outputGuard);
@@ -108,7 +109,7 @@ public sealed class SftpTools(
     {
         try
         {
-            var (success, error) = await fileManager.WriteTextAsync(connectionName, remotePath, content);
+            (bool success, string? error) = await fileManager.WriteTextAsync(connectionName, remotePath, content);
 
             return success
                 ? new { Message = $"File written: {remotePath}" }.ToSuccessResponse(outputGuard)
@@ -130,7 +131,7 @@ public sealed class SftpTools(
     {
         try
         {
-            var (success, error) = await fileManager.DeleteFileAsync(connectionName, remotePath);
+            (bool success, string? error) = await fileManager.DeleteFileAsync(connectionName, remotePath);
 
             return success
                 ? new { Message = $"File deleted: {remotePath}" }.ToSuccessResponse(outputGuard)
@@ -152,7 +153,7 @@ public sealed class SftpTools(
     {
         try
         {
-            var (success, error) = await fileManager.CreateDirectoryAsync(connectionName, remotePath);
+            (bool success, string? error) = await fileManager.CreateDirectoryAsync(connectionName, remotePath);
 
             return success
                 ? new { Message = $"Directory created: {remotePath}" }.ToSuccessResponse(outputGuard)
@@ -174,7 +175,7 @@ public sealed class SftpTools(
     {
         try
         {
-            var (exists, isDirectory, error) = await fileManager.ExistsAsync(connectionName, remotePath);
+            (bool exists, bool isDirectory, string? error) = await fileManager.ExistsAsync(connectionName, remotePath);
 
             if (error is not null)
                 return error.ToErrorResponse(outputGuard);

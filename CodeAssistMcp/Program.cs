@@ -1,5 +1,6 @@
 using CodeAssist.Core.Extensions;
 using CodeAssistMcp.McpTools;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -13,7 +14,12 @@ try
 {
     Log.Information("Starting CodeAssist MCP server");
 
-    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+    // Create builder with explicit base path
+    HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+    {
+        Args = args,
+        ContentRootPath = AppContext.BaseDirectory
+    });
 
     builder.Logging.ClearProviders();
     builder.Logging.AddSerilog(Log.Logger, dispose: false);

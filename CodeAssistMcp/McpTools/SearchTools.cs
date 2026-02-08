@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using CodeAssist.Core.Caching;
+using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -46,7 +47,7 @@ public class SearchTools(
         {
             logger.LogDebug("Searching {Repository} for: {Query}", repositoryName, query);
 
-            var state = await indexer.GetIndexStateAsync(repositoryName);
+            IndexState? state = await indexer.GetIndexStateAsync(repositoryName);
             if (state == null)
             {
                 return JsonSerializer.Serialize(new
@@ -59,7 +60,7 @@ public class SearchTools(
             // Ensure we're watching this repository for L1 cache updates
             EnsureWatching(state.RootPath, state.CollectionName);
 
-            var response = await unifiedSearch.SearchAsync(query, state.CollectionName, limit, minScore);
+            UnifiedSearchResult response = await unifiedSearch.SearchAsync(query, state.CollectionName, limit, minScore);
 
             var results = response.Results.Select(r => new
             {
@@ -108,7 +109,7 @@ public class SearchTools(
         {
             logger.LogDebug("Finding similar code in {Repository}", repositoryName);
 
-            var state = await indexer.GetIndexStateAsync(repositoryName);
+            IndexState? state = await indexer.GetIndexStateAsync(repositoryName);
             if (state == null)
             {
                 return JsonSerializer.Serialize(new
@@ -120,7 +121,7 @@ public class SearchTools(
 
             EnsureWatching(state.RootPath, state.CollectionName);
 
-            var response = await unifiedSearch.SearchAsync(codeSnippet, state.CollectionName, limit, minScore);
+            UnifiedSearchResult response = await unifiedSearch.SearchAsync(codeSnippet, state.CollectionName, limit, minScore);
 
             var results = response.Results.Select(r => new
             {
@@ -165,7 +166,7 @@ public class SearchTools(
     {
         try
         {
-            var state = await indexer.GetIndexStateAsync(repositoryName);
+            IndexState? state = await indexer.GetIndexStateAsync(repositoryName);
             if (state == null)
             {
                 return JsonSerializer.Serialize(new
@@ -176,7 +177,7 @@ public class SearchTools(
             }
 
             // Build a query that emphasizes the symbol
-            var query = symbolType != null
+            string query = symbolType != null
                 ? $"{symbolType} named {symbolName}"
                 : $"symbol named {symbolName}";
 
@@ -184,7 +185,7 @@ public class SearchTools(
 
             EnsureWatching(state.RootPath, state.CollectionName);
 
-            var response = await unifiedSearch.SearchAsync(query, state.CollectionName, limit * 2, 0.3f);
+            UnifiedSearchResult response = await unifiedSearch.SearchAsync(query, state.CollectionName, limit * 2, 0.3f);
 
             // Filter results to those containing the symbol name
             var results = response.Results
@@ -235,7 +236,7 @@ public class SearchTools(
     {
         try
         {
-            var state = await indexer.GetIndexStateAsync(repositoryName);
+            IndexState? state = await indexer.GetIndexStateAsync(repositoryName);
             if (state == null)
             {
                 return JsonSerializer.Serialize(new
@@ -249,7 +250,7 @@ public class SearchTools(
 
             EnsureWatching(state.RootPath, state.CollectionName);
 
-            var response = await unifiedSearch.SearchAsync(concept, state.CollectionName, limit, 0.4f);
+            UnifiedSearchResult response = await unifiedSearch.SearchAsync(concept, state.CollectionName, limit, 0.4f);
 
             var areas = response.Results.Select(r => new
             {

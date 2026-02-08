@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -28,15 +29,15 @@ public class IndexTools(
         {
             logger.LogInformation("Indexing repository at {Path}", repositoryPath);
 
-            var includes = string.IsNullOrEmpty(includePatterns)
+            List<string>? includes = string.IsNullOrEmpty(includePatterns)
                 ? null
                 : includePatterns.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
-            var excludes = string.IsNullOrEmpty(excludePatterns)
+            List<string>? excludes = string.IsNullOrEmpty(excludePatterns)
                 ? null
                 : excludePatterns.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
-            var result = await indexer.IndexRepositoryAsync(
+            IndexingResult result = await indexer.IndexRepositoryAsync(
                 repositoryPath,
                 repositoryName,
                 includes,
@@ -70,12 +71,12 @@ public class IndexTools(
     {
         try
         {
-            var repositories = await indexer.ListIndexedRepositoriesAsync();
+            List<string?> repositories = await indexer.ListIndexedRepositoriesAsync();
             var indexes = new List<object>();
 
-            foreach (var repo in repositories)
+            foreach (string? repo in repositories)
             {
-                var state = await indexer.GetIndexStateAsync(repo);
+                IndexState? state = await indexer.GetIndexStateAsync(repo);
                 if (state != null)
                 {
                     indexes.Add(new
@@ -111,7 +112,7 @@ public class IndexTools(
     {
         try
         {
-            var state = await indexer.GetIndexStateAsync(repositoryName);
+            IndexState? state = await indexer.GetIndexStateAsync(repositoryName);
 
             if (state == null)
             {
@@ -174,7 +175,7 @@ public class IndexTools(
     {
         try
         {
-            var state = await indexer.GetIndexStateAsync(repositoryName);
+            IndexState? state = await indexer.GetIndexStateAsync(repositoryName);
 
             if (state == null)
             {
@@ -188,7 +189,7 @@ public class IndexTools(
             logger.LogInformation("Refreshing index for repository {Repository} at {Path}",
                 repositoryName, state.RootPath);
 
-            var result = await indexer.IndexRepositoryAsync(
+            IndexingResult result = await indexer.IndexRepositoryAsync(
                 state.RootPath,
                 repositoryName,
                 state.IncludePatterns,

@@ -90,11 +90,11 @@ public sealed class ChunkerFactory(TreeSitterChunker treeSitterChunker, DefaultC
     /// </summary>
     public static string GetLanguage(string filePath)
     {
-        var extension = Path.GetExtension(filePath);
+        string extension = Path.GetExtension(filePath);
         if (!string.IsNullOrEmpty(extension))
             return ExtensionToLanguage.GetValueOrDefault(extension, "text");
         // Check for special filenames
-        var fileName = Path.GetFileName(filePath);
+        string fileName = Path.GetFileName(filePath);
         return fileName.ToLowerInvariant() switch
         {
             "dockerfile" => "dockerfile",
@@ -111,7 +111,7 @@ public sealed class ChunkerFactory(TreeSitterChunker treeSitterChunker, DefaultC
     /// </summary>
     public ICodeChunker GetChunker(string filePath)
     {
-        var language = GetLanguage(filePath);
+        string language = GetLanguage(filePath);
         return treeSitterChunker.SupportsLanguage(language)
             ? treeSitterChunker
             : defaultChunker;

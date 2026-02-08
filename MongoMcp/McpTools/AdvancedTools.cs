@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using Mcp.ResponseGuard.Extensions;
+using Mcp.ResponseGuard.Models;
 using Mcp.ResponseGuard.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -45,7 +46,7 @@ public class AdvancedTools(
             string result = await mongoService.AggregateAsync(serverName, collectionName, pipelineJson);
 
             // Check response size before returning - aggregation can produce large result sets
-            var sizeCheck = outputGuard.CheckStringSize(result, "aggregate");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "aggregate");
 
             if (!sizeCheck.IsWithinLimit)
             {
@@ -186,7 +187,7 @@ public class AdvancedTools(
             string result = await mongoService.ExecuteCommandAsync(serverName, command);
 
             // Check response size - commands can return large results
-            var sizeCheck = outputGuard.CheckStringSize(result, "execute_command");
+            ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "execute_command");
 
             if (!sizeCheck.IsWithinLimit)
             {

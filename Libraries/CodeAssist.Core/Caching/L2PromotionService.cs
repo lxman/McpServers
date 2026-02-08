@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
 using CodeAssist.Core.Configuration;
+using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -89,7 +90,7 @@ public sealed class L2PromotionService : IDisposable
     {
         if (!_options.EnableL2Promotion) return;
 
-        var collectionName = GetCollectionForFile(e.CachedFile.FilePath, e.CachedFile.RepositoryRoot);
+        string? collectionName = GetCollectionForFile(e.CachedFile.FilePath, e.CachedFile.RepositoryRoot);
         if (collectionName == null)
         {
             _logger.LogDebug("No collection registered for {File}, skipping L2 promotion",
@@ -117,12 +118,12 @@ public sealed class L2PromotionService : IDisposable
             while (!_shutdownCts.Token.IsCancellationRequested)
             {
                 // Wait for first item
-                var firstTask = await _promotionQueue.Reader.ReadAsync(_shutdownCts.Token);
+                PromotionTask firstTask = await _promotionQueue.Reader.ReadAsync(_shutdownCts.Token);
                 batch.Add(firstTask);
 
                 // Collect more items up to batch size (non-blocking)
                 while (batch.Count < _options.L2PromotionBatchSize &&
-                       _promotionQueue.Reader.TryRead(out var task))
+                       _promotionQueue.Reader.TryRead(out PromotionTask? task))
                 {
                     batch.Add(task);
                 }
@@ -152,16 +153,16 @@ public sealed class L2PromotionService : IDisposable
         _logger.LogDebug("Processing L2 promotion batch of {Count} files", batch.Count);
 
         // Group by collection
-        var byCollection = batch.GroupBy(t => t.CollectionName);
+        IEnumerable<IGrouping<string, PromotionTask>> byCollection = batch.GroupBy(t => t.CollectionName);
 
-        foreach (var group in byCollection)
+        foreach (IGrouping<string, PromotionTask> group in byCollection)
         {
-            var collectionName = group.Key;
+            string collectionName = group.Key;
 
             try
             {
                 // Ensure collection exists
-                var exists = await _qdrantService.CollectionExistsAsync(collectionName);
+                bool exists = await _qdrantService.CollectionExistsAsync(collectionName);
                 if (!exists)
                 {
                     _logger.LogWarning("Collection {Collection} does not exist, skipping promotion",
@@ -172,12 +173,12 @@ public sealed class L2PromotionService : IDisposable
                 // Build points for upsert
                 var points = new List<(Guid id, float[] vector, Dictionary<string, object> payload)>();
 
-                foreach (var task in group)
+                foreach (PromotionTask task in group)
                 {
                     for (var i = 0; i < task.CachedFile.Chunks.Count; i++)
                     {
-                        var chunk = task.CachedFile.Chunks[i];
-                        var embedding = task.CachedFile.Embeddings[i];
+                        CodeChunk chunk = task.CachedFile.Chunks[i];
+                        float[] embedding = task.CachedFile.Embeddings[i];
 
                         var payload = new Dictionary<string, object>
                         {
@@ -213,11 +214,11 @@ public sealed class L2PromotionService : IDisposable
 
     private string? GetCollectionForFile(string filePath, string repositoryRoot)
     {
-        var normalizedPath = Path.GetFullPath(filePath);
-        var normalizedRoot = Path.GetFullPath(repositoryRoot);
+        string normalizedPath = Path.GetFullPath(filePath);
+        string normalizedRoot = Path.GetFullPath(repositoryRoot);
 
         // Check file-specific mapping
-        if (_fileToCollection.TryGetValue(normalizedPath, out var collection))
+        if (_fileToCollection.TryGetValue(normalizedPath, out string? collection))
         {
             return collection;
         }
@@ -229,7 +230,7 @@ public sealed class L2PromotionService : IDisposable
         }
 
         // Try to derive from repository name
-        var repoName = Path.GetFileName(normalizedRoot).ToLowerInvariant();
+        string repoName = Path.GetFileName(normalizedRoot).ToLowerInvariant();
         return !string.IsNullOrEmpty(repoName) ? $"codeassist_{repoName}" : null;
     }
 

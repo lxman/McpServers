@@ -40,7 +40,7 @@ public sealed class RepositoryIndexer(
 
         repositoryPath = Path.GetFullPath(repositoryPath);
         repositoryName ??= Path.GetFileName(repositoryPath);
-        var collectionName = SanitizeCollectionName(repositoryName);
+        string collectionName = SanitizeCollectionName(repositoryName);
 
         includePatterns ??= _options.DefaultIncludePatterns;
         excludePatterns ??= _options.DefaultExcludePatterns;
@@ -59,17 +59,17 @@ public sealed class RepositoryIndexer(
 
             logger.LogDebug("Loading index state...");
             // Load existing index state
-            var existingState = await LoadIndexStateAsync(repositoryName, cancellationToken);
-            var existingFiles = existingState?.Files ?? new Dictionary<string, IndexedFile>();
+            IndexStateFile? existingState = await LoadIndexStateAsync(repositoryName, cancellationToken);
+            Dictionary<string, IndexedFile> existingFiles = existingState?.Files ?? new Dictionary<string, IndexedFile>();
 
             logger.LogDebug("Discovering files...");
             // Discover files to index
-            var filesToProcess = DiscoverFiles(repositoryPath, includePatterns, excludePatterns);
+            List<string> filesToProcess = DiscoverFiles(repositoryPath, includePatterns, excludePatterns);
 
             logger.LogInformation("Found {Count} files to process", filesToProcess.Count);
 
             // Categorize files
-            var (filesToAdd, filesToUpdate, filesToRemove, filesToSkip) =
+            (List<string> filesToAdd, List<string> filesToUpdate, List<string> filesToRemove, List<string> filesToSkip) =
                 CategorizeFiles(filesToProcess, existingFiles, repositoryPath);
 
             logger.LogInformation(
@@ -77,7 +77,7 @@ public sealed class RepositoryIndexer(
                 filesToAdd.Count, filesToUpdate.Count, filesToRemove.Count, filesToSkip.Count);
 
             // Remove stale files from index
-            foreach (var file in filesToRemove)
+            foreach (string file in filesToRemove)
             {
                 await qdrantService.DeleteByFilePathAsync(collectionName, file, cancellationToken);
             }
@@ -87,9 +87,9 @@ public sealed class RepositoryIndexer(
             var newFileStates = new System.Collections.Concurrent.ConcurrentDictionary<string, IndexedFile>();
             var failedFilesBag = new System.Collections.Concurrent.ConcurrentBag<string>();
 
-            var filesToChunk = filesToAdd.Concat(filesToUpdate).ToList();
+            List<string> filesToChunk = filesToAdd.Concat(filesToUpdate).ToList();
             var processedCount = 0;
-            var updateHashSet = filesToUpdate.ToHashSet();
+            HashSet<string> updateHashSet = filesToUpdate.ToHashSet();
 
             logger.LogInformation("Processing {Count} files in parallel...", filesToChunk.Count);
 
@@ -109,9 +109,9 @@ public sealed class RepositoryIndexer(
                     logger.LogDebug("Processing file: {File}", relativePath);
                     try
                     {
-                        var fullPath = Path.Combine(repositoryPath, relativePath);
+                        string fullPath = Path.Combine(repositoryPath, relativePath);
                         logger.LogDebug("Reading file: {File}", relativePath);
-                        var content = await File.ReadAllTextAsync(fullPath, ct);
+                        string content = await File.ReadAllTextAsync(fullPath, ct);
                         logger.LogDebug("Read {Bytes} bytes from {File}", content.Length, relativePath);
                         var fileInfo = new FileInfo(fullPath);
 
@@ -123,14 +123,14 @@ public sealed class RepositoryIndexer(
 
                         // Chunk the file
                         logger.LogDebug("Chunking file: {File}", relativePath);
-                        var language = ChunkerFactory.GetLanguage(fullPath);
-                        var chunker = chunkerFactory.GetChunker(fullPath);
-                        var chunks = chunker.ChunkCode(content, fullPath, relativePath, language);
+                        string language = ChunkerFactory.GetLanguage(fullPath);
+                        ICodeChunker chunker = chunkerFactory.GetChunker(fullPath);
+                        IReadOnlyList<CodeChunk> chunks = chunker.ChunkCode(content, fullPath, relativePath, language);
                         logger.LogDebug("Created {Count} chunks for {File}", chunks.Count, relativePath);
 
                         if (chunks.Count > 0)
                         {
-                            foreach (var chunk in chunks)
+                            foreach (CodeChunk chunk in chunks)
                             {
                                 allChunks.Add(chunk);
                             }
@@ -147,15 +147,15 @@ public sealed class RepositoryIndexer(
                         }
 
                         activeFiles.TryRemove(relativePath, out _);
-                        var count = Interlocked.Increment(ref processedCount);
+                        int count = Interlocked.Increment(ref processedCount);
                         if (count % 10 == 0 || count == filesToChunk.Count)
                         {
-                            var stuckFiles = activeFiles
+                            List<string> stuckFiles = activeFiles
                                 .Where(kvp => (DateTime.UtcNow - kvp.Value).TotalSeconds > 2)
                                 .Select(kvp => kvp.Key)
                                 .Take(5)
                                 .ToList();
-                            var stuckInfo = stuckFiles.Count > 0
+                            string stuckInfo = stuckFiles.Count > 0
                                 ? $" [SLOW: {string.Join(", ", stuckFiles.Select(f => Path.GetFileName(f)))}]"
                                 : "";
                             logger.LogInformation("Chunked {Count}/{Total} ({Chunks} chunks, {Rate:F0}/sec){Stuck}",
@@ -177,9 +177,9 @@ public sealed class RepositoryIndexer(
                 filesToChunk.Count - failedFiles.Count, allChunks.Count);
 
             // Embed and store chunks in batches
-            var chunkList = allChunks.ToList();
+            List<CodeChunk> chunkList = allChunks.ToList();
             var totalChunks = 0;
-            var totalBatches = (chunkList.Count + EmbeddingBatchSize - 1) / EmbeddingBatchSize;
+            int totalBatches = (chunkList.Count + EmbeddingBatchSize - 1) / EmbeddingBatchSize;
 
             logger.LogInformation("Embedding {ChunkCount} chunks in {BatchCount} batches...",
                 chunkList.Count, totalBatches);
@@ -189,34 +189,34 @@ public sealed class RepositoryIndexer(
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var batch = chunkList.Skip(i).Take(EmbeddingBatchSize).ToList();
-                var texts = batch.Select(c => c.Content).ToList();
+                List<CodeChunk> batch = chunkList.Skip(i).Take(EmbeddingBatchSize).ToList();
+                List<string> texts = batch.Select(c => c.Content).ToList();
 
-                var batchNum = i / EmbeddingBatchSize + 1;
+                int batchNum = i / EmbeddingBatchSize + 1;
                 if (batchNum % 5 == 0 || batchNum == totalBatches)
                 {
-                    var embeddedSoFar = i + batch.Count;
-                    var rate = embeddedSoFar / embedSw.Elapsed.TotalSeconds;
+                    int embeddedSoFar = i + batch.Count;
+                    double rate = embeddedSoFar / embedSw.Elapsed.TotalSeconds;
                     logger.LogInformation("Embedding batch {BatchNum}/{TotalBatches} ({Rate:F0} chunks/sec)",
                         batchNum, totalBatches, rate);
                 }
 
-                var embeddings = await ollamaService.GetEmbeddingsAsync(texts, cancellationToken);
+                float[][] embeddings = await ollamaService.GetEmbeddingsAsync(texts, cancellationToken);
                 await qdrantService.UpsertChunksAsync(collectionName, batch, embeddings, cancellationToken);
 
                 totalChunks += batch.Count;
             }
 
             // Preserve unchanged file states
-            foreach (var relativePath in filesToSkip)
+            foreach (string relativePath in filesToSkip)
             {
-                if (!existingFiles.TryGetValue(relativePath, out var existingFile)) continue;
+                if (!existingFiles.TryGetValue(relativePath, out IndexedFile? existingFile)) continue;
                 newFileStates[relativePath] = existingFile;
                 totalChunks += existingFile.ChunkCount;
             }
 
             // Save updated index state
-            var gitCommit = GetGitCommitSha(repositoryPath);
+            string? gitCommit = GetGitCommitSha(repositoryPath);
             var newState = new IndexStateFile
             {
                 RepositoryName = repositoryName,
@@ -285,10 +285,10 @@ public sealed class RepositoryIndexer(
         CancellationToken cancellationToken = default)
     {
         var sw = Stopwatch.StartNew();
-        var collectionName = SanitizeCollectionName(repositoryName);
+        string collectionName = SanitizeCollectionName(repositoryName);
 
-        var queryEmbedding = await ollamaService.GetEmbeddingAsync(query, cancellationToken);
-        var results = await qdrantService.SearchAsync(
+        float[] queryEmbedding = await ollamaService.GetEmbeddingAsync(query, cancellationToken);
+        List<SearchResult> results = await qdrantService.SearchAsync(
             collectionName,
             queryEmbedding,
             limit,
@@ -311,7 +311,7 @@ public sealed class RepositoryIndexer(
     /// </summary>
     public async Task<IndexState?> GetIndexStateAsync(string repositoryName, CancellationToken cancellationToken = default)
     {
-        var stateFile = await LoadIndexStateAsync(repositoryName, cancellationToken);
+        IndexStateFile? stateFile = await LoadIndexStateAsync(repositoryName, cancellationToken);
         if (stateFile == null) return null;
 
         return new IndexState
@@ -335,13 +335,13 @@ public sealed class RepositoryIndexer(
     /// </summary>
     public async Task<List<string?>> ListIndexedRepositoriesAsync(CancellationToken cancellationToken = default)
     {
-        var stateDir = _options.IndexStateDirectory;
+        string stateDir = _options.IndexStateDirectory;
         if (!Directory.Exists(stateDir))
         {
             return [];
         }
 
-        var files = Directory.GetFiles(stateDir, "*.json");
+        string[] files = Directory.GetFiles(stateDir, "*.json");
         return files.Select(Path.GetFileNameWithoutExtension).ToList();
     }
 
@@ -350,10 +350,10 @@ public sealed class RepositoryIndexer(
     /// </summary>
     public async Task DeleteIndexAsync(string repositoryName, CancellationToken cancellationToken = default)
     {
-        var collectionName = SanitizeCollectionName(repositoryName);
+        string collectionName = SanitizeCollectionName(repositoryName);
         await qdrantService.DeleteCollectionAsync(collectionName, cancellationToken);
 
-        var statePath = GetIndexStatePath(repositoryName);
+        string statePath = GetIndexStatePath(repositoryName);
         if (File.Exists(statePath))
         {
             File.Delete(statePath);
@@ -371,17 +371,17 @@ public sealed class RepositoryIndexer(
     {
         var matcher = new Matcher();
 
-        foreach (var pattern in includePatterns)
+        foreach (string pattern in includePatterns)
         {
             matcher.AddInclude(pattern);
         }
 
-        foreach (var pattern in excludePatterns)
+        foreach (string pattern in excludePatterns)
         {
             matcher.AddExclude(pattern);
         }
 
-        var result = matcher.Execute(new Microsoft.Extensions.FileSystemGlobbing.Abstractions.DirectoryInfoWrapper(
+        PatternMatchingResult result = matcher.Execute(new Microsoft.Extensions.FileSystemGlobbing.Abstractions.DirectoryInfoWrapper(
             new DirectoryInfo(repositoryPath)));
 
         return result.Files.Select(f => f.Path).ToList();
@@ -396,20 +396,20 @@ public sealed class RepositoryIndexer(
         var toAdd = new List<string>();
         var toUpdate = new List<string>();
         var toSkip = new List<string>();
-        var currentFileSet = currentFiles.ToHashSet();
+        HashSet<string> currentFileSet = currentFiles.ToHashSet();
 
-        foreach (var relativePath in currentFiles)
+        foreach (string relativePath in currentFiles)
         {
-            var fullPath = Path.Combine(repositoryPath, relativePath);
+            string fullPath = Path.Combine(repositoryPath, relativePath);
 
-            if (!existingFiles.TryGetValue(relativePath, out var existingFile))
+            if (!existingFiles.TryGetValue(relativePath, out IndexedFile? existingFile))
             {
                 toAdd.Add(relativePath);
                 continue;
             }
 
             // Check if file has changed
-            var currentHash = ComputeFileHash(File.ReadAllText(fullPath));
+            string currentHash = ComputeFileHash(File.ReadAllText(fullPath));
             if (currentHash != existingFile.ContentHash)
             {
                 toUpdate.Add(relativePath);
@@ -421,7 +421,7 @@ public sealed class RepositoryIndexer(
         }
 
         // Files that exist in index but not on disk
-        var toRemove = existingFiles.Keys
+        List<string> toRemove = existingFiles.Keys
             .Where(f => !currentFileSet.Contains(f))
             .ToList();
 
@@ -430,7 +430,7 @@ public sealed class RepositoryIndexer(
 
     private static string ComputeFileHash(string content)
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(content));
+        byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
@@ -444,13 +444,13 @@ public sealed class RepositoryIndexer(
     {
         try
         {
-            var gitDir = Path.Combine(repositoryPath, ".git");
+            string gitDir = Path.Combine(repositoryPath, ".git");
             if (!Directory.Exists(gitDir)) return null;
 
-            var headPath = Path.Combine(gitDir, "HEAD");
+            string headPath = Path.Combine(gitDir, "HEAD");
             if (!File.Exists(headPath)) return null;
 
-            var headContent = File.ReadAllText(headPath).Trim();
+            string headContent = File.ReadAllText(headPath).Trim();
 
             // HEAD might be a direct SHA or a ref
             if (!headContent.StartsWith("ref:"))
@@ -458,8 +458,8 @@ public sealed class RepositoryIndexer(
                 return headContent;
             }
 
-            var refPath = headContent["ref:".Length..].Trim();
-            var refFile = Path.Combine(gitDir, refPath);
+            string refPath = headContent["ref:".Length..].Trim();
+            string refFile = Path.Combine(gitDir, refPath);
 
             if (File.Exists(refFile))
             {
@@ -467,9 +467,9 @@ public sealed class RepositoryIndexer(
             }
 
             // Check packed-refs
-            var packedRefsPath = Path.Combine(gitDir, "packed-refs");
+            string packedRefsPath = Path.Combine(gitDir, "packed-refs");
             if (!File.Exists(packedRefsPath)) return null;
-            var lines = File.ReadAllLines(packedRefsPath);
+            string[] lines = File.ReadAllLines(packedRefsPath);
             return (from line in lines where line.EndsWith(refPath) select line.Split(' ')[0]).FirstOrDefault();
 
         }
@@ -481,26 +481,26 @@ public sealed class RepositoryIndexer(
 
     private string GetIndexStatePath(string repositoryName)
     {
-        var safeFileName = SanitizeCollectionName(repositoryName);
+        string safeFileName = SanitizeCollectionName(repositoryName);
         return Path.Combine(_options.IndexStateDirectory, $"{safeFileName}.json");
     }
 
     private async Task<IndexStateFile?> LoadIndexStateAsync(string repositoryName, CancellationToken cancellationToken)
     {
-        var path = GetIndexStatePath(repositoryName);
+        string path = GetIndexStatePath(repositoryName);
         if (!File.Exists(path)) return null;
 
-        var json = await File.ReadAllTextAsync(path, cancellationToken);
+        string json = await File.ReadAllTextAsync(path, cancellationToken);
         return JsonSerializer.Deserialize<IndexStateFile>(json);
     }
 
     private async Task SaveIndexStateAsync(string repositoryName, IndexStateFile state, CancellationToken cancellationToken)
     {
-        var path = GetIndexStatePath(repositoryName);
-        var dir = Path.GetDirectoryName(path)!;
+        string path = GetIndexStatePath(repositoryName);
+        string dir = Path.GetDirectoryName(path)!;
         Directory.CreateDirectory(dir);
 
-        var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
+        string json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
         await File.WriteAllTextAsync(path, json, cancellationToken);
     }
 

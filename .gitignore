@@ -9,3 +9,6 @@ riderModule.iml
 /DesktopCommanderMcp/servers.json
 .claude/
 **/job_search.md
+/.vs/McpServers.slnx
+/TrafficGenerator/TrafficGenerator.csproj.user
+/EdgarMcp/appsettings.json

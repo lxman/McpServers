@@ -34,7 +34,7 @@ public sealed class FileWatcherService(
             return;
         }
 
-        var normalizedRoot = Path.GetFullPath(repositoryRoot);
+        string normalizedRoot = Path.GetFullPath(repositoryRoot);
 
         if (_watchers.ContainsKey(normalizedRoot))
         {
@@ -72,9 +72,9 @@ public sealed class FileWatcherService(
     /// </summary>
     public void StopWatching(string repositoryRoot)
     {
-        var normalizedRoot = Path.GetFullPath(repositoryRoot);
+        string normalizedRoot = Path.GetFullPath(repositoryRoot);
 
-        if (_watchers.TryRemove(normalizedRoot, out var watcher))
+        if (_watchers.TryRemove(normalizedRoot, out FileSystemWatcher? watcher))
         {
             watcher.EnableRaisingEvents = false;
             watcher.Dispose();
@@ -85,12 +85,12 @@ public sealed class FileWatcherService(
         hotCache.ClearRepository(repositoryRoot);
 
         // Remove repository root mappings
-        var keysToRemove = _repositoryRoots
+        List<string> keysToRemove = _repositoryRoots
             .Where(kvp => kvp.Value == normalizedRoot)
             .Select(kvp => kvp.Key)
             .ToList();
 
-        foreach (var key in keysToRemove)
+        foreach (string key in keysToRemove)
         {
             _repositoryRoots.TryRemove(key, out _);
         }
@@ -101,7 +101,7 @@ public sealed class FileWatcherService(
     /// </summary>
     public bool IsWatching(string repositoryRoot)
     {
-        var normalizedRoot = Path.GetFullPath(repositoryRoot);
+        string normalizedRoot = Path.GetFullPath(repositoryRoot);
         return _watchers.ContainsKey(normalizedRoot);
     }
 
@@ -150,10 +150,10 @@ public sealed class FileWatcherService(
 
     private void DebouncedUpdate(string filePath)
     {
-        var normalizedPath = Path.GetFullPath(filePath);
+        string normalizedPath = Path.GetFullPath(filePath);
 
         // Cancel any pending debounce for this file
-        if (_debounceTokens.TryRemove(normalizedPath, out var existingCts))
+        if (_debounceTokens.TryRemove(normalizedPath, out CancellationTokenSource? existingCts))
         {
             existingCts.Cancel();
             existingCts.Dispose();
@@ -171,7 +171,7 @@ public sealed class FileWatcherService(
                 // Debounce completed, update cache
                 _debounceTokens.TryRemove(normalizedPath, out _);
 
-                var repositoryRoot = GetRepositoryRoot(normalizedPath);
+                string? repositoryRoot = GetRepositoryRoot(normalizedPath);
                 if (repositoryRoot == null)
                 {
                     logger.LogDebug("No repository root found for {Path}, skipping cache update", normalizedPath);
@@ -198,13 +198,13 @@ public sealed class FileWatcherService(
     private string? GetRepositoryRoot(string filePath)
     {
         // Check if we have a registered mapping
-        if (_repositoryRoots.TryGetValue(filePath, out var registeredRoot))
+        if (_repositoryRoots.TryGetValue(filePath, out string? registeredRoot))
         {
             return registeredRoot;
         }
 
         // Find which watcher this file belongs to
-        foreach (var (root, _) in _watchers)
+        foreach ((string root, FileSystemWatcher _) in _watchers)
         {
             if (!filePath.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
             _repositoryRoots[filePath] = root; // Cache for future lookups
@@ -221,7 +221,7 @@ public sealed class FileWatcherService(
             return true;
 
         // Check if file type is supported
-        var extension = Path.GetExtension(filePath);
+        string extension = Path.GetExtension(filePath);
         if (string.IsNullOrEmpty(extension))
             return true;
 
@@ -229,8 +229,8 @@ public sealed class FileWatcherService(
             return true;
 
         // Check against exclude patterns
-        var relativePath = filePath;
-        foreach (var (root, _) in _watchers)
+        string relativePath = filePath;
+        foreach ((string root, FileSystemWatcher _) in _watchers)
         {
             if (!filePath.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
             relativePath = Path.GetRelativePath(root, filePath);
@@ -243,14 +243,14 @@ public sealed class FileWatcherService(
     private static bool MatchesPattern(string path, string pattern)
     {
         // Simple glob matching for common patterns
-        var normalizedPath = path.Replace('\\', '/');
-        var normalizedPattern = pattern.Replace('\\', '/');
+        string normalizedPath = path.Replace('\\', '/');
+        string normalizedPattern = pattern.Replace('\\', '/');
 
         if (!normalizedPattern.StartsWith("**/")) return normalizedPath.EndsWith(normalizedPattern.TrimStart('*'));
-        var suffix = normalizedPattern[3..];
+        string suffix = normalizedPattern[3..];
         if (!suffix.EndsWith("/**")) return normalizedPath.EndsWith(suffix.TrimStart('*'));
         // Pattern like "**/bin/**" - check if path contains the directory
-        var dir = suffix[..^3];
+        string dir = suffix[..^3];
         return normalizedPath.Contains($"/{dir}/") ||
                normalizedPath.StartsWith($"{dir}/") ||
                normalizedPath.EndsWith($"/{dir}");
@@ -263,14 +263,14 @@ public sealed class FileWatcherService(
         if (_disposed) return;
         _disposed = true;
 
-        foreach (var (_, watcher) in _watchers)
+        foreach ((string _, FileSystemWatcher watcher) in _watchers)
         {
             watcher.EnableRaisingEvents = false;
             watcher.Dispose();
         }
         _watchers.Clear();
 
-        foreach (var (_, cts) in _debounceTokens)
+        foreach ((string _, CancellationTokenSource cts) in _debounceTokens)
         {
             cts.Cancel();
             cts.Dispose();

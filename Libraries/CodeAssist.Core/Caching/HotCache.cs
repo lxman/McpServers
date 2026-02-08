@@ -75,8 +75,8 @@ public sealed class HotCache : IDisposable
     /// </summary>
     public CachedFile? Get(string filePath)
     {
-        var key = NormalizePath(filePath);
-        if (!_cache.TryGetValue(key, out var cached)) return null;
+        string key = NormalizePath(filePath);
+        if (!_cache.TryGetValue(key, out CachedFile? cached)) return null;
         _lastAccess[key] = DateTime.UtcNow;
         return cached;
     }
@@ -89,7 +89,7 @@ public sealed class HotCache : IDisposable
         string repositoryRoot,
         CancellationToken cancellationToken = default)
     {
-        var key = NormalizePath(filePath);
+        string key = NormalizePath(filePath);
 
         await _updateLock.WaitAsync(cancellationToken);
         try
@@ -102,12 +102,12 @@ public sealed class HotCache : IDisposable
                 return null;
             }
 
-            var content = await File.ReadAllTextAsync(filePath, cancellationToken);
-            var relativePath = Path.GetRelativePath(repositoryRoot, filePath);
-            var language = ChunkerFactory.GetLanguage(filePath);
+            string content = await File.ReadAllTextAsync(filePath, cancellationToken);
+            string relativePath = Path.GetRelativePath(repositoryRoot, filePath);
+            string language = ChunkerFactory.GetLanguage(filePath);
 
             // Check if content actually changed
-            if (_cache.TryGetValue(key, out var existing) && existing.ContentHash == ComputeHash(content))
+            if (_cache.TryGetValue(key, out CachedFile? existing) && existing.ContentHash == ComputeHash(content))
             {
                 _logger.LogDebug("File content unchanged, skipping re-embedding: {File}", relativePath);
                 _lastAccess[key] = DateTime.UtcNow;
@@ -117,8 +117,8 @@ public sealed class HotCache : IDisposable
             _logger.LogInformation("Updating L1 cache for: {File}", relativePath);
 
             // Chunk the file using tree-sitter
-            var chunker = _chunkerFactory.GetChunker(filePath);
-            var chunks = chunker.ChunkCode(content, filePath, relativePath, language);
+            ICodeChunker chunker = _chunkerFactory.GetChunker(filePath);
+            IReadOnlyList<CodeChunk> chunks = chunker.ChunkCode(content, filePath, relativePath, language);
 
             if (chunks.Count == 0)
             {
@@ -127,7 +127,7 @@ public sealed class HotCache : IDisposable
             }
 
             // Generate embeddings for all chunks
-            var embeddings = await EmbedChunksAsync(chunks, cancellationToken);
+            List<float[]> embeddings = await EmbedChunksAsync(chunks, cancellationToken);
 
             var cachedFile = new CachedFile
             {
@@ -173,7 +173,7 @@ public sealed class HotCache : IDisposable
     /// </summary>
     public void Remove(string filePath)
     {
-        var key = NormalizePath(filePath);
+        string key = NormalizePath(filePath);
         _cache.TryRemove(key, out _);
         _lastAccess.TryRemove(key, out _);
     }
@@ -194,18 +194,18 @@ public sealed class HotCache : IDisposable
         }
 
         // Get query embedding
-        var queryEmbedding = await _embeddingService.GetEmbeddingAsync(query, cancellationToken);
+        float[] queryEmbedding = await _embeddingService.GetEmbeddingAsync(query, cancellationToken);
 
         var results = new List<HotCacheSearchResult>();
 
-        foreach (var (_, cachedFile) in _cache)
+        foreach ((string _, CachedFile cachedFile) in _cache)
         {
             for (var i = 0; i < cachedFile.Chunks.Count; i++)
             {
-                var chunk = cachedFile.Chunks[i];
-                var embedding = cachedFile.Embeddings[i];
+                CodeChunk chunk = cachedFile.Chunks[i];
+                float[] embedding = cachedFile.Embeddings[i];
 
-                var score = CosineSimilarity(queryEmbedding, embedding);
+                float score = CosineSimilarity(queryEmbedding, embedding);
 
                 if (score >= minScore)
                 {
@@ -231,13 +231,13 @@ public sealed class HotCache : IDisposable
     /// </summary>
     public void ClearRepository(string repositoryRoot)
     {
-        var normalizedRoot = NormalizePath(repositoryRoot);
-        var keysToRemove = _cache
+        string normalizedRoot = NormalizePath(repositoryRoot);
+        List<string> keysToRemove = _cache
             .Where(kvp => NormalizePath(kvp.Value.RepositoryRoot) == normalizedRoot)
             .Select(kvp => kvp.Key)
             .ToList();
 
-        foreach (var key in keysToRemove)
+        foreach (string key in keysToRemove)
         {
             _cache.TryRemove(key, out _);
             _lastAccess.TryRemove(key, out _);
@@ -261,8 +261,8 @@ public sealed class HotCache : IDisposable
         IReadOnlyList<CodeChunk> chunks,
         CancellationToken cancellationToken)
     {
-        var contents = chunks.Select(c => c.Content).ToList();
-        var embeddings = await _embeddingService.GetEmbeddingsAsync(contents, cancellationToken);
+        List<string> contents = chunks.Select(c => c.Content).ToList();
+        float[][] embeddings = await _embeddingService.GetEmbeddingsAsync(contents, cancellationToken);
         return embeddings.ToList();
     }
 
@@ -270,13 +270,13 @@ public sealed class HotCache : IDisposable
     {
         if (_disposed) return;
 
-        var cutoff = DateTime.UtcNow - CacheTtl;
-        var staleKeys = _lastAccess
+        DateTime cutoff = DateTime.UtcNow - CacheTtl;
+        List<string> staleKeys = _lastAccess
             .Where(kvp => kvp.Value < cutoff)
             .Select(kvp => kvp.Key)
             .ToList();
 
-        foreach (var key in staleKeys)
+        foreach (string key in staleKeys)
         {
             _cache.TryRemove(key, out _);
             _lastAccess.TryRemove(key, out _);
@@ -293,13 +293,13 @@ public sealed class HotCache : IDisposable
         if (_cache.Count <= MaxCachedFiles) return;
 
         // Evict least recently accessed entries
-        var toEvict = _lastAccess
+        List<string> toEvict = _lastAccess
             .OrderBy(kvp => kvp.Value)
             .Take(_cache.Count - MaxCachedFiles)
             .Select(kvp => kvp.Key)
             .ToList();
 
-        foreach (var key in toEvict)
+        foreach (string key in toEvict)
         {
             _cache.TryRemove(key, out _);
             _lastAccess.TryRemove(key, out _);
@@ -324,7 +324,7 @@ public sealed class HotCache : IDisposable
             normB += b[i] * b[i];
         }
 
-        var denominator = MathF.Sqrt(normA) * MathF.Sqrt(normB);
+        float denominator = MathF.Sqrt(normA) * MathF.Sqrt(normB);
         return denominator == 0 ? 0 : dotProduct / denominator;
     }
 
@@ -333,7 +333,7 @@ public sealed class HotCache : IDisposable
 
     private static string ComputeHash(string content)
     {
-        var bytes = System.Security.Cryptography.SHA256.HashData(
+        byte[] bytes = System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }

@@ -31,7 +31,7 @@ public sealed class OllamaService
     {
         try
         {
-            var response = await _client.EmbedAsync(new EmbedRequest
+            EmbedResponse response = await _client.EmbedAsync(new EmbedRequest
             {
                 Model = _options.EmbeddingModel,
                 Input = [text]
@@ -65,7 +65,7 @@ public sealed class OllamaService
         {
             _logger.LogDebug("Generating embeddings for {Count} texts", texts.Count);
 
-            var response = await _client.EmbedAsync(new EmbedRequest
+            EmbedResponse response = await _client.EmbedAsync(new EmbedRequest
             {
                 Model = _options.EmbeddingModel,
                 Input = texts.ToList()
@@ -95,7 +95,7 @@ public sealed class OllamaService
         try
         {
             // Functional test: try to generate a small embedding
-            var response = await _client.EmbedAsync(new EmbedRequest
+            EmbedResponse response = await _client.EmbedAsync(new EmbedRequest
             {
                 Model = _options.EmbeddingModel,
                 Input = ["test"]
@@ -128,7 +128,7 @@ public sealed class OllamaService
         {
             _logger.LogInformation("Pulling model {Model}...", _options.EmbeddingModel);
 
-            await foreach (var status in _client.PullModelAsync(_options.EmbeddingModel, cancellationToken))
+            await foreach (PullModelResponse? status in _client.PullModelAsync(_options.EmbeddingModel, cancellationToken))
             {
                 if (status?.Status is { Length: > 0 } statusText)
                 {

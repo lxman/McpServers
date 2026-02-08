@@ -35,13 +35,13 @@ public sealed class DefaultChunker(IOptions<CodeAssistOptions> options, ILogger<
             return chunks;
         }
 
-        var lines = content.Split('\n');
-        var totalLines = lines.Length;
+        string[] lines = content.Split('\n');
+        int totalLines = lines.Length;
 
         // Calculate lines per chunk based on max chunk size
         // Assume average line length of ~60 chars
-        var linesPerChunk = Math.Max(10, _options.MaxChunkSize / 60);
-        var overlapLines = Math.Max(2, _options.ChunkOverlap / 60);
+        int linesPerChunk = Math.Max(10, _options.MaxChunkSize / 60);
+        int overlapLines = Math.Max(2, _options.ChunkOverlap / 60);
 
         logger.LogDebug("Chunking {File}: {Lines} lines, linesPerChunk={LPC}, overlap={OL}",
             relativePath, totalLines, linesPerChunk, overlapLines);
@@ -66,9 +66,9 @@ public sealed class DefaultChunker(IOptions<CodeAssistOptions> options, ILogger<
                 break;
             }
 
-            var endLine = Math.Min(startLine + linesPerChunk, totalLines);
-            var chunkLines = lines[startLine..endLine];
-            var chunkContent = string.Join('\n', chunkLines);
+            int endLine = Math.Min(startLine + linesPerChunk, totalLines);
+            string[] chunkLines = lines[startLine..endLine];
+            string chunkContent = string.Join('\n', chunkLines);
 
             chunks.Add(CreateChunk(
                 chunkContent,
@@ -79,7 +79,7 @@ public sealed class DefaultChunker(IOptions<CodeAssistOptions> options, ILogger<
                 language));
 
             // Move to next chunk with overlap, ensuring we always advance
-            var nextStartLine = endLine - overlapLines;
+            int nextStartLine = endLine - overlapLines;
             if (nextStartLine <= startLine)
             {
                 nextStartLine = startLine + 1; // Ensure progress
@@ -117,7 +117,7 @@ public sealed class DefaultChunker(IOptions<CodeAssistOptions> options, ILogger<
 
     private static string ComputeHash(string content)
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(content));
+        byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 }

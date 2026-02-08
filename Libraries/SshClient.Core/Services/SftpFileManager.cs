@@ -21,7 +21,7 @@ public sealed class SftpFileManager(
         string remotePath,
         CancellationToken cancellationToken = default)
     {
-        var sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
         if (sftpClient is null)
         {
             return new SftpListResult
@@ -36,9 +36,9 @@ public sealed class SftpFileManager(
         {
             logger.LogInformation("Listing {Path} on {Connection}", remotePath, connectionName);
 
-            var items = await Task.Run(() => sftpClient.ListDirectory(remotePath).ToList(), cancellationToken);
+            List<ISftpFile> items = await Task.Run(() => sftpClient.ListDirectory(remotePath).ToList(), cancellationToken);
 
-            var files = items
+            List<SftpFileInfo> files = items
                 .Where(f => f.Name != "." && f.Name != "..")
                 .Select(f => new SftpFileInfo
                 {
@@ -87,7 +87,7 @@ public sealed class SftpFileManager(
         string localPath,
         CancellationToken cancellationToken = default)
     {
-        var sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
         if (sftpClient is null)
         {
             return new SftpTransferResult
@@ -106,11 +106,11 @@ public sealed class SftpFileManager(
             logger.LogInformation("Downloading {Remote} to {Local}", remotePath, localPath);
 
             // Ensure directory exists
-            var directory = Path.GetDirectoryName(localPath);
+            string? directory = Path.GetDirectoryName(localPath);
             if (!string.IsNullOrEmpty(directory))
                 Directory.CreateDirectory(directory);
 
-            await using var fileStream = File.Create(localPath);
+            await using FileStream fileStream = File.Create(localPath);
             await Task.Run(() => sftpClient.DownloadFile(remotePath, fileStream), cancellationToken);
 
             stopwatch.Stop();
@@ -149,7 +149,7 @@ public sealed class SftpFileManager(
         string remotePath,
         CancellationToken cancellationToken = default)
     {
-        var sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
         if (sftpClient is null)
         {
             return new SftpTransferResult
@@ -179,7 +179,7 @@ public sealed class SftpFileManager(
             logger.LogInformation("Uploading {Local} to {Remote}", localPath, remotePath);
 
             var fileInfo = new FileInfo(localPath);
-            await using var fileStream = File.OpenRead(localPath);
+            await using FileStream fileStream = File.OpenRead(localPath);
             await Task.Run(() => sftpClient.UploadFile(fileStream, remotePath, true), cancellationToken);
 
             stopwatch.Stop();
@@ -217,7 +217,7 @@ public sealed class SftpFileManager(
         int maxBytes = 1_000_000,
         CancellationToken cancellationToken = default)
     {
-        var sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
         if (sftpClient is null)
             return (false, string.Empty, $"Connection '{connectionName}' not found or not connected");
 
@@ -225,13 +225,13 @@ public sealed class SftpFileManager(
         {
             logger.LogInformation("Reading {Path} on {Connection}", remotePath, connectionName);
 
-            var content = await Task.Run(() =>
+            string content = await Task.Run(() =>
             {
-                using var stream = sftpClient.OpenRead(remotePath);
+                using SftpFileStream stream = sftpClient.OpenRead(remotePath);
                 using var reader = new StreamReader(stream);
 
                 var buffer = new char[maxBytes];
-                var read = reader.Read(buffer, 0, maxBytes);
+                int read = reader.Read(buffer, 0, maxBytes);
                 return new string(buffer, 0, read);
             }, cancellationToken);
 
@@ -253,7 +253,7 @@ public sealed class SftpFileManager(
         string content,
         CancellationToken cancellationToken = default)
     {
-        var sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
         if (sftpClient is null)
             return (false, $"Connection '{connectionName}' not found or not connected");
 
@@ -279,7 +279,7 @@ public sealed class SftpFileManager(
         string remotePath,
         CancellationToken cancellationToken = default)
     {
-        var sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
         if (sftpClient is null)
             return (false, $"Connection '{connectionName}' not found or not connected");
 
@@ -304,7 +304,7 @@ public sealed class SftpFileManager(
         string remotePath,
         CancellationToken cancellationToken = default)
     {
-        var sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
         if (sftpClient is null)
             return (false, $"Connection '{connectionName}' not found or not connected");
 
@@ -329,17 +329,17 @@ public sealed class SftpFileManager(
         string remotePath,
         CancellationToken cancellationToken = default)
     {
-        var sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
         if (sftpClient is null)
             return (false, false, $"Connection '{connectionName}' not found or not connected");
 
         try
         {
-            var exists = await Task.Run(() => sftpClient.Exists(remotePath), cancellationToken);
+            bool exists = await Task.Run(() => sftpClient.Exists(remotePath), cancellationToken);
             if (!exists)
                 return (false, false, null);
 
-            var attrs = await Task.Run(() => sftpClient.GetAttributes(remotePath), cancellationToken);
+            SftpFileAttributes attrs = await Task.Run(() => sftpClient.GetAttributes(remotePath), cancellationToken);
             return (true, attrs.IsDirectory, null);
         }
         catch (Exception ex)
@@ -352,15 +352,15 @@ public sealed class SftpFileManager(
     private static string GetPermissionsString(ISftpFile file)
     {
         // Get permission bits from the file mode
-        var mode = (int)(file.Attributes.OwnerCanRead ? 256 : 0)
-                 | (int)(file.Attributes.OwnerCanWrite ? 128 : 0)
-                 | (int)(file.Attributes.OwnerCanExecute ? 64 : 0)
-                 | (int)(file.Attributes.GroupCanRead ? 32 : 0)
-                 | (int)(file.Attributes.GroupCanWrite ? 16 : 0)
-                 | (int)(file.Attributes.GroupCanExecute ? 8 : 0)
-                 | (int)(file.Attributes.OthersCanRead ? 4 : 0)
-                 | (int)(file.Attributes.OthersCanWrite ? 2 : 0)
-                 | (int)(file.Attributes.OthersCanExecute ? 1 : 0);
+        int mode = (int)(file.Attributes.OwnerCanRead ? 256 : 0)
+                   | (int)(file.Attributes.OwnerCanWrite ? 128 : 0)
+                   | (int)(file.Attributes.OwnerCanExecute ? 64 : 0)
+                   | (int)(file.Attributes.GroupCanRead ? 32 : 0)
+                   | (int)(file.Attributes.GroupCanWrite ? 16 : 0)
+                   | (int)(file.Attributes.GroupCanExecute ? 8 : 0)
+                   | (int)(file.Attributes.OthersCanRead ? 4 : 0)
+                   | (int)(file.Attributes.OthersCanWrite ? 2 : 0)
+                   | (int)(file.Attributes.OthersCanExecute ? 1 : 0);
 
         var sb = new System.Text.StringBuilder(10);
 

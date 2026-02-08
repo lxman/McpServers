@@ -82,7 +82,7 @@ public class RegistryTools(
             using var registry = new RegistryManager(RegistryAccessMode.ReadWrite);
 
             // Parse value type
-            if (!Enum.TryParse<Microsoft.Win32.RegistryValueKind>(valueType, ignoreCase: true, out RegistryValueKind kind))
+            if (!Enum.TryParse(valueType, ignoreCase: true, out RegistryValueKind kind))
             {
                 return Task.FromResult(JsonSerializer.Serialize(new
                 {
