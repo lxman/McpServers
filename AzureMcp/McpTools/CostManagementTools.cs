@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using AzureServer.Core.Services.CostManagement;
 using AzureServer.Core.Services.CostManagement.Models;
 using Microsoft.Extensions.Logging;
@@ -15,8 +16,6 @@ public class CostManagementTools(
     ICostManagementService costService,
     ILogger<CostManagementTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("get_current_month_costs")]
     [Description("Get current month costs. See skills/azure/costmanagement/get-current-month-costs.md only when using this tool")]
     public async Task<string> GetCurrentMonthCosts(string? subscriptionId = null)
@@ -30,7 +29,7 @@ public class CostManagementTools(
             {
                 success = true,
                 costs = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -41,7 +40,7 @@ public class CostManagementTools(
                 error = ex.Message,
                 operation = "GetCurrentMonthCosts",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -64,7 +63,7 @@ public class CostManagementTools(
             {
                 success = true,
                 costs = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -75,7 +74,7 @@ public class CostManagementTools(
                 error = ex.Message,
                 operation = "GetCostsForPeriod",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -98,7 +97,7 @@ public class CostManagementTools(
             {
                 success = true,
                 costs = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -109,7 +108,7 @@ public class CostManagementTools(
                 error = ex.Message,
                 operation = "GetCostsByService",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -132,7 +131,7 @@ public class CostManagementTools(
             {
                 success = true,
                 costs = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -143,7 +142,7 @@ public class CostManagementTools(
                 error = ex.Message,
                 operation = "GetCostsByResourceGroup",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -166,7 +165,7 @@ public class CostManagementTools(
             {
                 success = true,
                 costs = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -177,7 +176,7 @@ public class CostManagementTools(
                 error = ex.Message,
                 operation = "GetDailyCosts",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -194,7 +193,7 @@ public class CostManagementTools(
             {
                 success = true,
                 forecast = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -205,7 +204,7 @@ public class CostManagementTools(
                 error = ex.Message,
                 operation = "GetCostForecast",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -222,7 +221,7 @@ public class CostManagementTools(
             {
                 success = true,
                 budgets = budgets.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -233,7 +232,7 @@ public class CostManagementTools(
                 error = ex.Message,
                 operation = "GetBudgets",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -252,14 +251,14 @@ public class CostManagementTools(
                 {
                     success = false,
                     error = $"Budget {budgetName} not found"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 budget
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -270,7 +269,7 @@ public class CostManagementTools(
                 error = ex.Message,
                 operation = "GetBudget",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

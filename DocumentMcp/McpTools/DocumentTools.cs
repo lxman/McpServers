@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using DocumentServer.Core.Models.Common;
 using DocumentServer.Core.Services.Analysis;
 using DocumentServer.Core.Services.Analysis.Models;
@@ -26,8 +27,6 @@ public class DocumentTools(
     MetadataExtractor metadataExtractor,
     OutputGuard outputGuard)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("load_document")]
     [Description("Load a document into memory. See skills/document/load-document.md only when using this tool")]
     public async Task<string> LoadDocument(string filePath, string? password = null, bool shouldCache = true)
@@ -38,12 +37,12 @@ public class DocumentTools(
 
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (!File.Exists(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File not found" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File not found" }, SerializerOptions.JsonOptionsIndented);
             }
 
             // Check if already loaded
@@ -58,14 +57,14 @@ public class DocumentTools(
                     isEncrypted = false,
                     isCached = true,
                     loadedAt = cached.LoadedAt
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             // Get appropriate loader
             IDocumentLoader? loader = loaderFactory.GetLoader(filePath);
             if (loader is null)
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Unsupported document type" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Unsupported document type" }, SerializerOptions.JsonOptionsIndented);
             }
 
             // Load document
@@ -73,7 +72,7 @@ public class DocumentTools(
 
             if (!result.Success)
             {
-                return JsonSerializer.Serialize(new { success = false, error = result.Error }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = result.Error }, SerializerOptions.JsonOptionsIndented);
             }
 
             // Cache if requested
@@ -90,7 +89,7 @@ public class DocumentTools(
                 isEncrypted = !string.IsNullOrEmpty(password),
                 isCached = shouldCache,
                 loadedAt = result.Data?.LoadedAt ?? DateTime.UtcNow
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -109,7 +108,7 @@ public class DocumentTools(
 
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             bool removed = cache.Remove(filePath);
@@ -119,7 +118,7 @@ public class DocumentTools(
                 success = removed,
                 filePath,
                 message = removed ? "Document unloaded from memory" : "Document was not loaded"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -162,7 +161,7 @@ public class DocumentTools(
                 totalCount = cachedPaths.Count,
                 totalMemoryMB = totalMemory / (1024.0 * 1024.0),
                 documents
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -215,7 +214,7 @@ public class DocumentTools(
                 metadata
             };
 
-            string serialized = JsonSerializer.Serialize(response, _jsonOptions);
+            string serialized = JsonSerializer.Serialize(response, SerializerOptions.JsonOptionsIndented);
 
             // Check response size - document extraction can return very large text content
             ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(serialized, "extract_content");
@@ -261,14 +260,14 @@ public class DocumentTools(
 
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             ServiceResult<EnrichedMetadata> result = await metadataExtractor.ExtractAsync(filePath);
 
             if (!result.Success)
             {
-                return JsonSerializer.Serialize(new { success = false, error = result.Error }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = result.Error }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
@@ -291,7 +290,7 @@ public class DocumentTools(
                 wordCount = result.Data?.WordCount,
                 lineCount = result.Data?.LineCount,
                 documentMetadata = result.Data?.DocumentMetadata
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -310,14 +309,14 @@ public class DocumentTools(
 
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             ServiceResult<ValidationResult> result = await validator.ValidateAsync(filePath);
 
             if (!result.Success)
             {
-                return JsonSerializer.Serialize(new { success = false, error = result.Error }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = result.Error }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
@@ -335,7 +334,7 @@ public class DocumentTools(
                 errors = result.Data?.Errors,
                 warnings = result.Data?.Warnings,
                 metadata = result.Data?.Metadata
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -354,14 +353,14 @@ public class DocumentTools(
 
             if (string.IsNullOrWhiteSpace(filePath1) || string.IsNullOrWhiteSpace(filePath2))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Both file paths are required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Both file paths are required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             ServiceResult<ComparisonResult> result = await comparator.CompareAsync(filePath1, filePath2);
 
             if (!result.Success)
             {
-                return JsonSerializer.Serialize(new { success = false, error = result.Error }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = result.Error }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
@@ -382,7 +381,7 @@ public class DocumentTools(
                 similarityScore = result.Data?.SimilarityScore ?? 0,
                 summary = result.Data?.Summary,
                 differences = result.Data?.Differences
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -410,7 +409,7 @@ public class DocumentTools(
                 documentsCleared = countBefore,
                 memoryReleasedMB = memoryBefore / (1024.0 * 1024.0),
                 message = $"Cleared {countBefore} documents from cache"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -454,7 +453,7 @@ public class DocumentTools(
                     search = true,
                     passwordProtected = true
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Amazon.CloudWatch.Model;
 using Amazon.CloudWatchLogs;
 using Amazon.CloudWatchLogs.Model;
@@ -22,8 +23,6 @@ public class CloudWatchTools(
     ILogger<CloudWatchTools> logger,
     OutputGuard outputGuard)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     #region Log Groups Management
 
     [McpServerTool, DisplayName("list_log_groups")]
@@ -49,7 +48,7 @@ public class CloudWatchTools(
                     storedBytes = lg.StoredBytes,
                     retentionInDays = lg.RetentionInDays
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -73,7 +72,7 @@ public class CloudWatchTools(
                 success = true,
                 message = "Log group created successfully",
                 logGroupName
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -97,7 +96,7 @@ public class CloudWatchTools(
                 success = true,
                 message = "Log group deleted successfully",
                 logGroupName
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -123,7 +122,7 @@ public class CloudWatchTools(
                 message = "Retention policy set successfully",
                 logGroupName,
                 retentionInDays
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -170,7 +169,7 @@ public class CloudWatchTools(
                     firstEventTime = ls.FirstEventTimestamp,
                     lastEventTime = ls.LastEventTimestamp
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -227,7 +226,7 @@ public class CloudWatchTools(
                     message = e.Message,
                     ingestionTime = e.IngestionTime
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
 
             // Check response size - log events can contain large message content
             ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "get_log_events");
@@ -291,7 +290,7 @@ public class CloudWatchTools(
                     eventId = e.EventId
                 }),
                 nextToken = response.NextToken
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
 
             // Check response size - filtered logs can return many matching events
             ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "filter_logs");
@@ -352,7 +351,7 @@ public class CloudWatchTools(
                     message = e.Message,
                     logStreamName = e.LogStreamName
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
 
             // Check response size - recent logs can return many events
             ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "get_recent_logs");
@@ -435,7 +434,7 @@ public class CloudWatchTools(
                 groupCount = groups.Count,
                 timeRange = new { start, end, minutes },
                 results
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
 
             // Check response size - multi-group queries multiply results across log groups
             ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "filter_logs_multi");
@@ -518,7 +517,7 @@ public class CloudWatchTools(
                     message = e.Message,
                     logStreamName = e.LogStreamName
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -584,7 +583,7 @@ public class CloudWatchTools(
                     message = e.Message,
                     isTarget = (e.Timestamp.HasValue ? new DateTimeOffset(e.Timestamp.Value).ToUnixTimeMilliseconds() : 0) == timestamp
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -621,7 +620,7 @@ public class CloudWatchTools(
                 {
                     success = false,
                     error = "Start and end times are required"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             string queryId = await logsService.StartInsightsQueryAsync(groups, queryString, start.Value, end.Value);
@@ -645,7 +644,7 @@ public class CloudWatchTools(
                         status = "Complete",
                         statistics = results.Statistics,
                         results = results.Results
-                    }, _jsonOptions);
+                    }, SerializerOptions.JsonOptionsIndented);
 
                     // Check response size - Insights queries can return very large result sets
                     ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(result, "run_insights_query");
@@ -679,7 +678,7 @@ public class CloudWatchTools(
                         queryId,
                         status = results.Status.Value,
                         error = "Query failed or was cancelled"
-                    }, _jsonOptions);
+                    }, SerializerOptions.JsonOptionsIndented);
                 }
             }
 
@@ -688,7 +687,7 @@ public class CloudWatchTools(
                 success = false,
                 queryId,
                 error = "Query timed out after 30 seconds"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -721,7 +720,7 @@ public class CloudWatchTools(
                 {
                     success = false,
                     error = "Start and end times are required"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             string queryId = await logsService.StartInsightsQueryAsync(groups, queryString, start.Value, end.Value);
@@ -731,7 +730,7 @@ public class CloudWatchTools(
                 success = true,
                 queryId,
                 message = "Query started successfully"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -758,7 +757,7 @@ public class CloudWatchTools(
                 status = results.Status?.Value,
                 statistics = results.Statistics,
                 results = results.Results
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -782,7 +781,7 @@ public class CloudWatchTools(
             {
                 queryId,
                 message = "Query stopped successfully"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -837,7 +836,7 @@ public class CloudWatchTools(
                 value,
                 unit,
                 timestamp = time
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -900,7 +899,7 @@ public class CloudWatchTools(
                 success = true,
                 groupCount = logGroupNames.Count,
                 results
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -960,7 +959,7 @@ public class CloudWatchTools(
                 groupCount = logGroupNames.Count,
                 minutesBack,
                 results
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1022,7 +1021,7 @@ public class CloudWatchTools(
                 minutesBack,
                 filterPattern,
                 results
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1064,7 +1063,7 @@ public class CloudWatchTools(
                     message = e.Message,
                     logStreamName = e.LogStreamName
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1093,7 +1092,7 @@ public class CloudWatchTools(
                 success = true,
                 namespaceCount = namespaces.Count,
                 namespaces
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1116,7 +1115,7 @@ public class CloudWatchTools(
                 success = true,
                 message = "Alarms deleted successfully",
                 deletedAlarms = alarmNames
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1139,7 +1138,7 @@ public class CloudWatchTools(
                 success = true,
                 message = "Alarms enabled successfully",
                 enabledAlarms = alarmNames
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1162,7 +1161,7 @@ public class CloudWatchTools(
                 success = true,
                 message = "Alarms disabled successfully",
                 disabledAlarms = alarmNames
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -1204,7 +1203,7 @@ public class CloudWatchTools(
                     historySummary = h.HistorySummary,
                     historyData = h.HistoryData
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {

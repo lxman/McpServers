@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using DocumentServer.Core.Models.Common;
 using DocumentServer.Core.Services.DocumentSearch;
 using Microsoft.Extensions.Logging;
@@ -15,8 +16,6 @@ public class SearchTools(
     QuickSearchService searchService,
     ILogger<SearchTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("search_document")]
     [Description("Search within a single document. See skills/document/search/search-document.md only when using this tool")]
     public async Task<string> SearchDocument(
@@ -31,24 +30,24 @@ public class SearchTools(
 
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(searchTerm))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Search term is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Search term is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (!File.Exists(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File not found" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File not found" }, SerializerOptions.JsonOptionsIndented);
             }
 
             ServiceResult<SearchResult> result = await searchService.SearchInDocumentAsync(filePath, searchTerm, fuzzySearch, maxResults, null);
 
             if (!result.Success)
             {
-                return JsonSerializer.Serialize(new { success = false, error = result.Error }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = result.Error }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
@@ -70,12 +69,12 @@ public class SearchTools(
                     fuzzySearch,
                     maxResults
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error searching document: {FilePath}", filePath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -92,14 +91,14 @@ public class SearchTools(
 
             if (string.IsNullOrWhiteSpace(searchTerm))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Search term is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Search term is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             ServiceResult<List<SearchResult>> result = await searchService.SearchAcrossDocumentsAsync(searchTerm, fuzzySearch, maxResultsPerDocument);
 
             if (!result.Success)
             {
-                return JsonSerializer.Serialize(new { success = false, error = result.Error }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = result.Error }, SerializerOptions.JsonOptionsIndented);
             }
 
             // Format results
@@ -135,12 +134,12 @@ public class SearchTools(
                     fuzzySearch,
                     maxResultsPerDocument
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error searching all documents");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

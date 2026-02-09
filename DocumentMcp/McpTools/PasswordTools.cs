@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using DocumentServer.Core.Services.Core;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
@@ -14,8 +15,6 @@ public class PasswordTools(
     PasswordManager passwordManager,
     ILogger<PasswordTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("register_password")]
     [Description("Register a password for a specific file. See skills/document/password/register.md only when using this tool")]
     public string RegisterPassword(string filePath, string password)
@@ -26,12 +25,12 @@ public class PasswordTools(
 
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(password))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Password is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Password is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             passwordManager.RegisterSpecificPassword(filePath, password);
@@ -41,12 +40,12 @@ public class PasswordTools(
                 success = true,
                 filePath,
                 message = "Password registered successfully"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error registering password for: {FilePath}", filePath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -60,12 +59,12 @@ public class PasswordTools(
 
             if (string.IsNullOrWhiteSpace(pattern))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Pattern is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Pattern is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(password))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Password is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Password is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             passwordManager.RegisterPasswordPattern(pattern, password);
@@ -75,12 +74,12 @@ public class PasswordTools(
                 success = true,
                 pattern,
                 message = "Password pattern registered successfully"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error registering password pattern: {Pattern}", pattern);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -94,7 +93,7 @@ public class PasswordTools(
 
             if (filePasswords == null || filePasswords.Count == 0)
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File passwords dictionary is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File passwords dictionary is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             var successCount = 0;
@@ -127,12 +126,12 @@ public class PasswordTools(
                 successCount,
                 failedCount = errors.Count,
                 errors = errors.Any() ? errors : null
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error registering bulk passwords");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -146,12 +145,12 @@ public class PasswordTools(
 
             if (string.IsNullOrWhiteSpace(rootPath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Root path is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Root path is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (!Directory.Exists(rootPath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Directory not found" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Directory not found" }, SerializerOptions.JsonOptionsIndented);
             }
 
             int detectedCount = await passwordManager.AutoDetectPasswordFilesAsync(rootPath);
@@ -164,12 +163,12 @@ public class PasswordTools(
                 message = detectedCount > 0
                     ? $"Successfully detected and registered {detectedCount} password file(s)"
                     : "No password files detected in the directory tree"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error auto-detecting password files in: {RootPath}", rootPath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -183,7 +182,7 @@ public class PasswordTools(
 
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             bool hasPassword = passwordManager.HasPasswordForFile(filePath);
@@ -193,12 +192,12 @@ public class PasswordTools(
                 success = true,
                 filePath,
                 hasPassword
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error checking password for: {FilePath}", filePath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -221,12 +220,12 @@ public class PasswordTools(
                     pattern = p.Key,
                     maskedPassword = p.Value
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting password patterns");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -247,12 +246,12 @@ public class PasswordTools(
                 registeredFiles = specificCount,
                 registeredPatterns = patternCount,
                 totalRegistrations = specificCount + patternCount
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting password stats");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -275,12 +274,12 @@ public class PasswordTools(
                 success = true,
                 clearedCount = totalCount,
                 message = $"Cleared {totalCount} registered passwords and patterns"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error clearing passwords");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

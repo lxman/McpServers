@@ -87,6 +87,7 @@
         <PackageReference Include="Serilog.Extensions.Logging"  />
         <PackageReference Include="Serilog.Extensions.Logging.File"  />
         <PackageReference Include="Serilog.Sinks.File"  />
+        <PackageReference Include="System.Security.Cryptography.Xml" />
         <PackageReference Include="System.Security.Permissions"  />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"  />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"  />

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using CodeAssist.Core.Caching;
 using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
@@ -19,8 +20,6 @@ public class RepositoryTools(
     RepositoryIndexer indexer,
     ILogger<RepositoryTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("set_active_repository")]
     [Description("Set the active repository for file watching. Stops watching all other repositories and starts watching the specified one. Use this when switching between projects to ensure only the current project is monitored for changes.")]
     public async Task<string> SetActiveRepository(
@@ -37,7 +36,7 @@ public class RepositoryTools(
                 {
                     success = false,
                     error = $"No index found for repository '{repositoryName}'. Index the repository first using index_repository."
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             string targetPath = state.RootPath;
@@ -79,12 +78,12 @@ public class RepositoryTools(
                 stoppedWatching,
                 clearedCaches,
                 message = $"Now watching '{repositoryName}' exclusively"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error setting active repository to {Repository}", repositoryName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -103,12 +102,12 @@ public class RepositoryTools(
                 watchedRepositories = watched,
                 watchedCount = watched.Count,
                 hotCacheFileCount = hotCacheCount
-            }, _jsonOptions));
+            }, SerializerOptions.JsonOptionsIndented));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting watched repositories");
-            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions));
+            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented));
         }
     }
 
@@ -145,12 +144,12 @@ public class RepositoryTools(
                 message = watched.Count > 0
                     ? $"Stopped watching {watched.Count} repositories"
                     : "No repositories were being watched"
-            }, _jsonOptions));
+            }, SerializerOptions.JsonOptionsIndented));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error stopping all watchers");
-            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions));
+            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented));
         }
     }
 }

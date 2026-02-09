@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
-using PlaywrightServerMcp.Common;
+using Mcp.Common.Core;
 
 namespace PlaywrightServerMcp.Tools;
 

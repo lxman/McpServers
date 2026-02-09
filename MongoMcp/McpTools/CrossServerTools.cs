@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Mcp.ResponseGuard.Extensions;
 using Mcp.ResponseGuard.Models;
 using Mcp.ResponseGuard.Services;
@@ -18,8 +19,6 @@ public class CrossServerTools(
     CrossServerOperations crossServerOps,
     OutputGuard outputGuard)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("compare_collections")]
     [Description("Compare collections across two MongoDB servers. See skills/mongo/cross-server/compare-collections.md only when using this tool")]
     public async Task<string> CompareCollections(string server1, string server2, string collectionName, string? filterJson = null)
@@ -85,17 +84,17 @@ public class CrossServerTools(
 
             if (string.IsNullOrWhiteSpace(sourceServer))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Source server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Source server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(targetServer))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Target server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Target server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(collectionName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await crossServerOps.SyncDataAsync(sourceServer, targetServer, collectionName, filterJson ?? "{}", dryRun);
@@ -173,17 +172,17 @@ public class CrossServerTools(
 
             if (string.IsNullOrWhiteSpace(sourceServer))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Source server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Source server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(targetServer))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Target server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Target server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (collectionNames == null || collectionNames.Length == 0)
             {
-                return JsonSerializer.Serialize(new { success = false, error = "At least one collection name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "At least one collection name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await crossServerOps.BulkTransferAsync(sourceServer, targetServer, collectionNames, dryRun);

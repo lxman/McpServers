@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
@@ -14,15 +15,7 @@ namespace PlaywrightServerMcp.Tools;
 [McpServerToolType]
 public class AngularStabilityDetection(PlaywrightSessionManager sessionManager)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    [McpServerTool]
+[McpServerTool]
     [Description("Wait for Angular application to reach stability by monitoring Zone.js and async operations. See skills/playwright-mcp/tools/angular/stability-detection.md.")]
     public async Task<string> WaitForAngularStability(
         int timeoutSeconds = 30,
@@ -451,7 +444,7 @@ public class AngularStabilityDetection(PlaywrightSessionManager sessionManager)
                            """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -649,11 +642,11 @@ public class AngularStabilityDetection(PlaywrightSessionManager sessionManager)
                                      """;
                 
                 var finalResult = await session.Page.EvaluateAsync<object>(finalResultsJs);
-                return JsonSerializer.Serialize(finalResult, JsonOptions);
+                return JsonSerializer.Serialize(finalResult, SerializerOptions.JsonOptionsComplex);
             }
             catch
             {
-                return JsonSerializer.Serialize(result, JsonOptions);
+                return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
             }
         }
         catch (Exception ex)
@@ -776,7 +769,7 @@ public class AngularStabilityDetection(PlaywrightSessionManager sessionManager)
                            """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {

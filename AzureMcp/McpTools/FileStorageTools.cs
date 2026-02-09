@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using AzureServer.Core.Services.Storage;
 using AzureServer.Core.Services.Storage.Models;
 using Microsoft.Extensions.Logging;
@@ -15,8 +16,6 @@ public class FileStorageTools(
     IFileStorageService fileStorageService,
     ILogger<FileStorageTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     #region File Share Operations
 
     [McpServerTool, DisplayName("list_file_shares")]
@@ -32,12 +31,12 @@ public class FileStorageTools(
             {
                 success = true,
                 shares = shares.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing file shares in account {AccountName}", accountName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -54,12 +53,12 @@ public class FileStorageTools(
             {
                 success = true,
                 share
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting file share {ShareName}", shareName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -80,12 +79,12 @@ public class FileStorageTools(
             {
                 success = true,
                 share
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error creating file share {ShareName}", shareName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -102,12 +101,12 @@ public class FileStorageTools(
             {
                 success = true,
                 deleted
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error deleting file share {ShareName}", shareName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -124,12 +123,12 @@ public class FileStorageTools(
             {
                 success = true,
                 exists
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error checking if file share {ShareName} exists", shareName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -153,12 +152,12 @@ public class FileStorageTools(
             {
                 success = true,
                 created
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error creating directory {DirectoryPath}", directoryPath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -178,12 +177,12 @@ public class FileStorageTools(
             {
                 success = true,
                 deleted
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error deleting directory {DirectoryPath}", directoryPath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 

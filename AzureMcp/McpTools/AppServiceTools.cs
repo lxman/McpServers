@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using AzureServer.Core.Services.AppService;
 using AzureServer.Core.Services.AppService.Models;
 using Microsoft.Extensions.Logging;
@@ -15,8 +16,6 @@ public class AppServiceTools(
     IAppServiceService appServiceService,
     ILogger<AppServiceTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     #region Web Apps
 
     [McpServerTool, DisplayName("list_webapps")]
@@ -32,12 +31,12 @@ public class AppServiceTools(
             {
                 success = true,
                 webApps = webApps.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing web apps");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -54,12 +53,12 @@ public class AppServiceTools(
             {
                 success = true,
                 webApp
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting web app {WebAppName}", webAppName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -76,12 +75,12 @@ public class AppServiceTools(
             {
                 success,
                 message = success ? $"Web app {webAppName} started" : $"Failed to start web app {webAppName}"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error starting web app {WebAppName}", webAppName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -98,12 +97,12 @@ public class AppServiceTools(
             {
                 success,
                 message = success ? $"Web app {webAppName} stopped" : $"Failed to stop web app {webAppName}"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error stopping web app {WebAppName}", webAppName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -120,12 +119,12 @@ public class AppServiceTools(
             {
                 success,
                 message = success ? $"Web app {webAppName} restarted" : $"Failed to restart web app {webAppName}"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error restarting web app {WebAppName}", webAppName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -146,12 +145,12 @@ public class AppServiceTools(
             {
                 success = true,
                 slots = slots.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing deployment slots for {WebAppName}", webAppName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -168,12 +167,12 @@ public class AppServiceTools(
             {
                 success = true,
                 slot
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting deployment slot {SlotName}", slotName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -195,12 +194,12 @@ public class AppServiceTools(
             {
                 success,
                 message = success ? $"Swapped {sourceSlotName} -> {targetSlotName}" : "Swap failed"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error swapping slots for {WebAppName}", webAppName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -217,12 +216,12 @@ public class AppServiceTools(
             {
                 success,
                 message = success ? $"Slot {slotName} started" : "Start failed"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error starting slot {SlotName}", slotName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -239,12 +238,12 @@ public class AppServiceTools(
             {
                 success,
                 message = success ? $"Slot {slotName} stopped" : "Stop failed"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error stopping slot {SlotName}", slotName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -265,12 +264,12 @@ public class AppServiceTools(
             {
                 success = true,
                 settings = settings.Settings
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting app settings for {WebAppName}", webAppName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -291,12 +290,12 @@ public class AppServiceTools(
             {
                 success,
                 message = success ? "Settings updated" : "Update failed"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error updating app settings for {WebAppName}", webAppName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -313,12 +312,12 @@ public class AppServiceTools(
             {
                 success = true,
                 connectionStrings = connectionStrings.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting connection strings for {WebAppName}", webAppName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -342,7 +341,7 @@ public class AppServiceTools(
                 {
                     success = false,
                     error = "Instance count must be between 1 and 30"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             logger.LogDebug("Scaling web app {WebAppName} to {Count} instances", webAppName, instanceCount);
@@ -352,12 +351,12 @@ public class AppServiceTools(
             {
                 success,
                 message = success ? $"Scaled to {instanceCount} instances" : "Scaling failed"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error scaling web app {WebAppName}", webAppName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -378,12 +377,12 @@ public class AppServiceTools(
             {
                 success = true,
                 plans = plans.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing app service plans");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -400,12 +399,12 @@ public class AppServiceTools(
             {
                 success = true,
                 plan
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting app service plan {PlanName}", planName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -431,12 +430,12 @@ public class AppServiceTools(
                 success = true,
                 logs,
                 note = "Full log streaming requires Kudu API or Azure Monitor integration"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting logs for {WebAppName}", webAppName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 

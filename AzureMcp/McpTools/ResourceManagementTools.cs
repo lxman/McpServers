@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using AzureServer.Core.Services.ResourceManagement;
 using AzureServer.Core.Services.ResourceManagement.Models;
 using Microsoft.Extensions.Logging;
@@ -15,8 +16,6 @@ public class ResourceManagementTools(
     IResourceManagementService resourceService,
     ILogger<ResourceManagementTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("list_subscriptions")]
     [Description("List Azure subscriptions. See skills/azure/resourcemanagement/list-subscriptions.md only when using this tool")]
     public async Task<string> ListSubscriptions()
@@ -30,7 +29,7 @@ public class ResourceManagementTools(
             {
                 success = true,
                 subscriptions = subscriptions.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -41,7 +40,7 @@ public class ResourceManagementTools(
                 error = ex.Message,
                 operation = "ListSubscriptions",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -60,14 +59,14 @@ public class ResourceManagementTools(
                 {
                     success = false,
                     error = $"Subscription {subscriptionId} not found"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 subscription
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -78,7 +77,7 @@ public class ResourceManagementTools(
                 error = ex.Message,
                 operation = "GetSubscription",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -95,7 +94,7 @@ public class ResourceManagementTools(
             {
                 success = true,
                 resourceGroups = resourceGroups.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -106,7 +105,7 @@ public class ResourceManagementTools(
                 error = ex.Message,
                 operation = "ListResourceGroups",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -125,14 +124,14 @@ public class ResourceManagementTools(
                 {
                     success = false,
                     error = $"Resource group {resourceGroupName} not found"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 resourceGroup
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -143,7 +142,7 @@ public class ResourceManagementTools(
                 error = ex.Message,
                 operation = "GetResourceGroup",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -161,7 +160,7 @@ public class ResourceManagementTools(
                 success = true,
                 resources = resources.ToArray(),
                 count = resources.Count
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -172,7 +171,7 @@ public class ResourceManagementTools(
                 error = ex.Message,
                 operation = "ListResources",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -191,7 +190,7 @@ public class ResourceManagementTools(
                 resourceType,
                 resources = resources.ToArray(),
                 count = resources.Count
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -202,7 +201,7 @@ public class ResourceManagementTools(
                 error = ex.Message,
                 operation = "ListResourcesByType",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -221,14 +220,14 @@ public class ResourceManagementTools(
                 {
                     success = false,
                     error = $"Resource {resourceId} not found"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 resource
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -239,7 +238,7 @@ public class ResourceManagementTools(
                 error = ex.Message,
                 operation = "GetResource",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -262,7 +261,7 @@ public class ResourceManagementTools(
                 success = true,
                 totalTypes = sortedCounts.Length,
                 resourceCounts = sortedCounts
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -273,7 +272,7 @@ public class ResourceManagementTools(
                 error = ex.Message,
                 operation = "GetResourceCountByType",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using SeleniumChrome.Core.Models;
@@ -22,8 +23,6 @@ public class ConfigurationTools(
     MarketIntelligenceService marketService,
     ILogger<ConfigurationTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("get_site_config")]
     [Description("See skills/selenium/config/get_site_config.md only when using this tool")]
     public async Task<string> get_site_config(string site)
@@ -34,7 +33,7 @@ public class ConfigurationTools(
 
             if (!Enum.TryParse(site, ignoreCase: true, out JobSite siteEnum))
             {
-                return JsonSerializer.Serialize(new { success = false, error = $"Invalid site: {site}" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = $"Invalid site: {site}" }, SerializerOptions.JsonOptionsIndented);
             }
 
             SiteConfiguration config = await scrapingService.GetSiteConfigurationAsync(siteEnum);
@@ -44,12 +43,12 @@ public class ConfigurationTools(
                 success = true,
                 site,
                 config
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error retrieving configuration for site {Site}", site);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -71,12 +70,12 @@ public class ConfigurationTools(
                 success = true,
                 site = config.SiteName,
                 message = "Configuration updated successfully"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error updating configuration");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -93,12 +92,12 @@ public class ConfigurationTools(
                 success = true,
                 status = "healthy",
                 timestamp = DateTime.UtcNow
-            }, _jsonOptions));
+            }, SerializerOptions.JsonOptionsIndented));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error performing health check");
-            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions));
+            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented));
         }
     }
 
@@ -112,7 +111,7 @@ public class ConfigurationTools(
 
             if (!Enum.TryParse(site, ignoreCase: true, out JobSite siteEnum))
             {
-                return JsonSerializer.Serialize(new { success = false, error = $"Invalid site: {site}" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = $"Invalid site: {site}" }, SerializerOptions.JsonOptionsIndented);
             }
 
             SiteConfiguration config = await scrapingService.GetSiteConfigurationAsync(siteEnum);
@@ -123,12 +122,12 @@ public class ConfigurationTools(
                 site,
                 accessible = true,
                 timestamp = DateTime.UtcNow
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error testing accessibility for site {Site}", site);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -174,12 +173,12 @@ public class ConfigurationTools(
                 deduplication = deduplicationResult,
                 categorization = categorizationResult,
                 marketIntelligence = marketResult
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error performing enhanced job analysis");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -203,12 +202,12 @@ public class ConfigurationTools(
                 jobIdsCount = jobIds.Length,
                 jobsRetrieved = result.Count,
                 jobs = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error fetching jobs by IDs");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
@@ -14,15 +15,7 @@ namespace PlaywrightServerMcp.Tools;
 [McpServerToolType]
 public class AngularStyleTools(PlaywrightSessionManager sessionManager)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    [McpServerTool]
+[McpServerTool]
     [Description("Analyze Angular component styling and detect component isolation issues. See skills/playwright-mcp/tools/angular/style-tools.md.")]
     public async Task<string> AnalyzeAngularComponentStyles(
         string componentSelector,
@@ -159,7 +152,7 @@ public class AngularStyleTools(PlaywrightSessionManager sessionManager)
                 """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -277,7 +270,7 @@ public class AngularStyleTools(PlaywrightSessionManager sessionManager)
                 """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -445,7 +438,7 @@ public class AngularStyleTools(PlaywrightSessionManager sessionManager)
                 """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -676,7 +669,7 @@ public class AngularStyleTools(PlaywrightSessionManager sessionManager)
                 """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using CodeAssist.Core.Configuration;
 using CodeAssist.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -18,7 +19,6 @@ public class HealthTools(
     IOptions<CodeAssistOptions> options,
     ILogger<HealthTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
     private readonly CodeAssistOptions _options = options.Value;
 
     [McpServerTool, DisplayName("check_health")]
@@ -61,7 +61,7 @@ public class HealthTools(
             recommendations = GetRecommendations(ollamaStatus, qdrantStatus)
         };
 
-        return JsonSerializer.Serialize(result, _jsonOptions);
+        return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
     }
 
     [McpServerTool, DisplayName("setup_services")]
@@ -104,7 +104,7 @@ volumes:
             }
         };
 
-        return Task.FromResult(JsonSerializer.Serialize(instructions, _jsonOptions));
+        return Task.FromResult(JsonSerializer.Serialize(instructions, SerializerOptions.JsonOptionsIndented));
     }
 
     [McpServerTool, DisplayName("pull_embedding_model")]
@@ -122,7 +122,7 @@ volumes:
                 success = true,
                 message = $"Model '{_options.EmbeddingModel}' is ready",
                 model = _options.EmbeddingModel
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -132,7 +132,7 @@ volumes:
                 success = false,
                 error = ex.Message,
                 hint = "Make sure Ollama is running: ollama serve"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 

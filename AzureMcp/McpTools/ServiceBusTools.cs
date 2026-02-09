@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using AzureServer.Core.Services.ServiceBus;
 using AzureServer.Core.Services.ServiceBus.Models;
 using Microsoft.Extensions.Logging;
@@ -15,8 +16,6 @@ public class ServiceBusTools(
     IServiceBusService serviceBusService,
     ILogger<ServiceBusTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("list_servicebus_namespaces")]
     [Description("List Service Bus namespaces. See skills/azure/servicebus/list-namespaces.md only when using this tool")]
     public async Task<string> ListNamespaces(string? resourceGroupName = null, string? subscriptionId = null)
@@ -30,7 +29,7 @@ public class ServiceBusTools(
             {
                 success = true,
                 namespaces = namespaces.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -41,7 +40,7 @@ public class ServiceBusTools(
                 error = ex.Message,
                 operation = "ListNamespaces",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -63,14 +62,14 @@ public class ServiceBusTools(
                 {
                     success = false,
                     error = $"Namespace {namespaceName} not found"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 @namespace = ns
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -81,7 +80,7 @@ public class ServiceBusTools(
                 error = ex.Message,
                 operation = "GetNamespace",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -105,7 +104,7 @@ public class ServiceBusTools(
             {
                 success = true,
                 @namespace = ns
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -116,7 +115,7 @@ public class ServiceBusTools(
                 error = ex.Message,
                 operation = "CreateNamespace",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -136,7 +135,7 @@ public class ServiceBusTools(
             {
                 success = true,
                 message = $"Namespace {namespaceName} deleted successfully"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -147,7 +146,7 @@ public class ServiceBusTools(
                 error = ex.Message,
                 operation = "DeleteNamespace",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -167,7 +166,7 @@ public class ServiceBusTools(
             {
                 success = true,
                 queues = queues.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -178,7 +177,7 @@ public class ServiceBusTools(
                 error = ex.Message,
                 operation = "ListQueues",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Amazon.ECS.Model;
 using AwsServer.Core.Services.ECS;
 using Microsoft.Extensions.Logging;
@@ -15,8 +16,6 @@ public class EcsTools(
     EcsService ecsService,
     ILogger<EcsTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("list_ecs_clusters")]
     [Description("List ECS clusters. See skills/aws/ecs/list-clusters.md only when using this tool")]
     public async Task<string> ListEcsClusters()
@@ -31,12 +30,12 @@ public class EcsTools(
                 success = true,
                 clusterCount = response.ClusterArns.Count,
                 clusters = response.ClusterArns
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing ECS clusters");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -55,12 +54,12 @@ public class EcsTools(
                 success = true,
                 serviceCount = response.ServiceArns.Count,
                 services = response.ServiceArns
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing ECS services in cluster {ClusterName}", clusterName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -80,12 +79,12 @@ public class EcsTools(
                 success = true,
                 taskCount = response.TaskArns.Count,
                 tasks = response.TaskArns
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing ECS tasks in cluster {ClusterName}", clusterName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -119,12 +118,12 @@ public class EcsTools(
                     reason = f.Reason,
                     detail = f.Detail
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error running ECS task in cluster {ClusterName}", clusterName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -150,13 +149,13 @@ public class EcsTools(
                     lastStatus = response.Task.LastStatus,
                     stoppedReason = response.Task.StoppedReason
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error stopping ECS task {TaskArn} in cluster {ClusterName}",
                 taskArn, clusterName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -188,12 +187,12 @@ public class EcsTools(
                     reason = f.Reason,
                     detail = f.Detail
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error describing ECS cluster {ClusterName}", clusterName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -227,12 +226,12 @@ public class EcsTools(
                     reason = f.Reason,
                     detail = f.Detail
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error describing ECS services in cluster {ClusterName}", clusterName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -269,12 +268,12 @@ public class EcsTools(
                     reason = f.Reason,
                     detail = f.Detail
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error describing ECS tasks in cluster {ClusterName}", clusterName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -292,12 +291,12 @@ public class EcsTools(
                 success = true,
                 taskDefinitionCount = response.TaskDefinitionArns.Count,
                 taskDefinitions = response.TaskDefinitionArns
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing ECS task definitions");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -333,12 +332,12 @@ public class EcsTools(
                         portMappings = cd.PortMappings
                     })
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error describing ECS task definition {TaskDefinition}", taskDefinition);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -372,13 +371,13 @@ public class EcsTools(
                     pendingCount = response.Service.PendingCount,
                     taskDefinition = response.Service.TaskDefinition
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error updating ECS service {ServiceName} in cluster {ClusterName}",
                 serviceName, clusterName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

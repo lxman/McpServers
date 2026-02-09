@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
@@ -12,15 +13,7 @@ namespace PlaywrightServerMcp.Tools;
 [McpServerToolType]
 public class AngularPerformanceTools(PlaywrightSessionManager sessionManager)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    [McpServerTool]
+[McpServerTool]
     [Description("Monitor Angular change detection cycles. See skills/playwright-mcp/tools/angular/performance-tools.md.")]
     public async Task<string> AnalyzeChangeDetection(
         string sessionId = "default")
@@ -179,7 +172,7 @@ public class AngularPerformanceTools(PlaywrightSessionManager sessionManager)
                          """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -404,7 +397,7 @@ public class AngularPerformanceTools(PlaywrightSessionManager sessionManager)
                            """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -763,7 +756,7 @@ public class AngularPerformanceTools(PlaywrightSessionManager sessionManager)
                            """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Mcp.ResponseGuard.Extensions;
 using Mcp.ResponseGuard.Models;
 using Mcp.ResponseGuard.Services;
@@ -18,8 +19,6 @@ public class CollectionTools(
     MongoDbService mongoService,
     OutputGuard outputGuard)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("insert_one")]
     [Description("Insert a single document into a collection. See skills/mongo/collection/insert-one.md only when using this tool")]
     public async Task<string> InsertOne(string serverName, string collectionName, string documentJson)
@@ -30,17 +29,17 @@ public class CollectionTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(collectionName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(documentJson))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Document JSON is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Document JSON is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.InsertOneAsync(serverName, collectionName, documentJson);
@@ -64,17 +63,17 @@ public class CollectionTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(collectionName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(documentsJson))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Documents JSON array is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Documents JSON array is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.InsertManyAsync(serverName, collectionName, documentsJson);
@@ -149,22 +148,22 @@ public class CollectionTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(collectionName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(filterJson))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Filter JSON is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Filter JSON is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(updateJson))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Update JSON is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Update JSON is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.UpdateOneAsync(serverName, collectionName, filterJson, updateJson);
@@ -188,22 +187,22 @@ public class CollectionTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(collectionName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(filterJson))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Filter JSON is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Filter JSON is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(updateJson))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Update JSON is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Update JSON is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.UpdateManyAsync(serverName, collectionName, filterJson, updateJson);
@@ -227,17 +226,17 @@ public class CollectionTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(collectionName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(filterJson))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Filter JSON is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Filter JSON is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.DeleteOneAsync(serverName, collectionName, filterJson);
@@ -261,17 +260,17 @@ public class CollectionTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(collectionName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(filterJson))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Filter JSON is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Filter JSON is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.DeleteManyAsync(serverName, collectionName, filterJson);

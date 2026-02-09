@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Mcp.ResponseGuard.Extensions;
 using Mcp.ResponseGuard.Models;
 using Mcp.ResponseGuard.Services;
@@ -18,8 +19,6 @@ public class AdvancedTools(
     MongoDbService mongoService,
     OutputGuard outputGuard)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("aggregate")]
     [Description("Execute MongoDB aggregation pipeline. See skills/mongo/advanced/aggregate.md only when using this tool")]
     public async Task<string> Aggregate(string serverName, string collectionName, string pipelineJson)
@@ -84,12 +83,12 @@ public class AdvancedTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(collectionName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.CountDocumentsAsync(serverName, collectionName, filterJson ?? "{}");
@@ -113,17 +112,17 @@ public class AdvancedTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(collectionName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(indexJson))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Index JSON is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Index JSON is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.CreateIndexAsync(serverName, collectionName, indexJson, indexName);
@@ -147,12 +146,12 @@ public class AdvancedTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(collectionName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Collection name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.DropCollectionAsync(serverName, collectionName);

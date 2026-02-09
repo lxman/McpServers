@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
@@ -13,15 +14,7 @@ namespace PlaywrightServerMcp.Tools;
 [McpServerToolType]
 public class AngularMaterialAccessibilityTesting(PlaywrightSessionManager sessionManager)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    [McpServerTool]
+[McpServerTool]
     [Description("Validate Angular Material components for accessibility compliance with comprehensive WCAG testing. See skills/playwright-mcp/tools/angular/material-accessibility-testing.md.")]
     public async Task<string> ValidateMaterialAccessibilityCompliance(
         string sessionId = "default",
@@ -1096,7 +1089,7 @@ public class AngularMaterialAccessibilityTesting(PlaywrightSessionManager sessio
                                                                      """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -1255,7 +1248,7 @@ public class AngularMaterialAccessibilityTesting(PlaywrightSessionManager sessio
                          """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {

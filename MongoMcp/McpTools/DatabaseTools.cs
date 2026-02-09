@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using MongoServer.Core;
@@ -14,8 +15,6 @@ public class DatabaseTools(
     ILogger<DatabaseTools> logger,
     MongoDbService mongoService)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("list_databases")]
     [Description("List all databases on a MongoDB server. See skills/mongo/database/list-databases.md only when using this tool")]
     public async Task<string> ListDatabases(string serverName)
@@ -26,7 +25,7 @@ public class DatabaseTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.ListDatabasesAsync(serverName);
@@ -36,7 +35,7 @@ public class DatabaseTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing databases on server: {ServerName}", serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -50,12 +49,12 @@ public class DatabaseTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(databaseName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Database name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Database name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.SwitchDatabaseAsync(serverName, databaseName);
@@ -65,7 +64,7 @@ public class DatabaseTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error switching database on server: {ServerName}", serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -79,7 +78,7 @@ public class DatabaseTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = mongoService.GetCurrentDatabaseInfo(serverName);
@@ -89,7 +88,7 @@ public class DatabaseTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting current database info: {ServerName}", serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -103,12 +102,12 @@ public class DatabaseTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(databaseName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Database name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Database name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.ListCollectionsByDatabaseAsync(serverName, databaseName);
@@ -118,7 +117,7 @@ public class DatabaseTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing collections in database {DatabaseName} on server: {ServerName}", databaseName, serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

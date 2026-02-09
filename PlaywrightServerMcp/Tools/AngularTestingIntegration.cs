@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
@@ -18,16 +19,7 @@ namespace PlaywrightServerMcp.Tools;
 public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
 {
     private readonly PlaywrightSessionManager _sessionManager = sessionManager;
-    
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    [McpServerTool]
+[McpServerTool]
     [Description("Execute Angular unit tests with comprehensive result parsing and analysis. See skills/playwright-mcp/tools/angular/testing-integration.md.")]
     public async Task<string> ExecuteAngularUnitTests(
         string mode = "single-run",
@@ -50,7 +42,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
                     WorkingDirectory = workingDirectory,
                     ErrorMessage = $"Session {sessionId} not found",
                     ExitCode = -1
-                }, JsonOptions);
+                }, SerializerOptions.JsonOptionsComplex);
             }
 
             var config = new TestExecutionConfig
@@ -75,7 +67,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
                     WorkingDirectory = config.WorkingDirectory,
                     ErrorMessage = "Not an Angular project - angular.json not found",
                     ExitCode = -1
-                }, JsonOptions);
+                }, SerializerOptions.JsonOptionsComplex);
             }
 
             // Get environment information
@@ -97,7 +89,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
             await ParseTestResults(result, config);
             await ParseCoverageResults(result, config);
 
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -110,7 +102,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
                 ExitCode = -1
             };
             
-            return JsonSerializer.Serialize(errorResult, JsonOptions);
+            return JsonSerializer.Serialize(errorResult, SerializerOptions.JsonOptionsComplex);
         }
     }
 

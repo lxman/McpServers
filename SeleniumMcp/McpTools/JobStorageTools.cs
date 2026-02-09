@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using SeleniumChrome.Core.Models;
@@ -15,8 +16,6 @@ public class JobStorageTools(
     IEnhancedJobScrapingService scrapingService,
     ILogger<JobStorageTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("save_jobs")]
     [Description("See skills/selenium/storage/save_jobs.md only when using this tool")]
     public async Task<string> save_jobs(
@@ -45,12 +44,12 @@ public class JobStorageTools(
                 userId,
                 jobsCount = jobs.Count,
                 saved = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error saving jobs for user {UserId}", userId);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -118,12 +117,12 @@ public class JobStorageTools(
                 limit,
                 hasMore = (skip + limit) < totalCount,
                 jobs = paginatedResults
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error retrieving stored jobs for user {UserId}", userId);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -142,12 +141,12 @@ public class JobStorageTools(
                 success = true,
                 url,
                 filePath = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error taking screenshot for URL {Url}", url);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
@@ -16,16 +17,7 @@ namespace PlaywrightServerMcp.Tools;
 public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessionManager)
 {
     private readonly PlaywrightSessionManager _sessionManager = sessionManager;
-    
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    [McpServerTool]
+[McpServerTool]
     [Description("Analyze Angular workspace configuration (angular.json) with comprehensive parsing and validation. See skills/playwright-mcp/tools/angular/configuration-analyzer.md.")]
     public async Task<string> AnalyzeAngularJsonConfig(
         string workingDirectory = "",
@@ -45,7 +37,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
                     Success = false,
                     WorkingDirectory = workingDirectory,
                     ErrorMessage = $"Session {sessionId} not found"
-                }, JsonOptions);
+                }, SerializerOptions.JsonOptionsComplex);
             }
 
             string targetDirectory = string.IsNullOrWhiteSpace(workingDirectory) 
@@ -58,7 +50,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
                 includeSecurityScan, 
                 includeArchitecturalInsights);
 
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -69,7 +61,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
                 ErrorMessage = $"Failed to analyze Angular configuration: {ex.Message}"
             };
             
-            return JsonSerializer.Serialize(errorResult, JsonOptions);
+            return JsonSerializer.Serialize(errorResult, SerializerOptions.JsonOptionsComplex);
         }
     }
 

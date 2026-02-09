@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using DocumentServer.Core.Services.Ocr;
 using DocumentServer.Core.Services.Ocr.Models;
 using Microsoft.Extensions.Logging;
@@ -15,8 +16,6 @@ public class OcrTools(
     OcrService ocrService,
     ILogger<OcrTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("get_ocr_status")]
     [Description("Get OCR service status and configuration. See skills/document/ocr/get-status.md only when using this tool")]
     public string GetOcrStatus()
@@ -41,12 +40,12 @@ public class OcrTools(
                     autoRotation = true,
                     textDetection = true
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting OCR status");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -60,17 +59,17 @@ public class OcrTools(
 
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (!File.Exists(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File not found" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File not found" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (!filePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File must be a PDF" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File must be a PDF" }, SerializerOptions.JsonOptionsIndented);
             }
 
             bool isScanned = ocrService.IsPdfScanned(filePath, null);
@@ -84,12 +83,12 @@ public class OcrTools(
                 recommendation = isScanned
                     ? "PDF is image-based, OCR is recommended to extract text"
                     : "PDF contains searchable text, OCR is not needed"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error checking scanned PDF: {FilePath}", filePath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -107,24 +106,24 @@ public class OcrTools(
 
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (!File.Exists(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File not found" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File not found" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (!filePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File must be a PDF" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File must be a PDF" }, SerializerOptions.JsonOptionsIndented);
             }
 
             OcrResult result = await ocrService.ExtractTextFromScannedPdf(filePath, null);
 
             if (!result.Success)
             {
-                return JsonSerializer.Serialize(new { success = false, error = result.ErrorMessage }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = result.ErrorMessage }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
@@ -136,12 +135,12 @@ public class OcrTools(
                 pagesWithErrors = result.PagesWithErrors,
                 warnings = result.Warnings,
                 metadata = result.Metadata
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error performing OCR on PDF: {FilePath}", filePath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -159,12 +158,12 @@ public class OcrTools(
 
             if (string.IsNullOrWhiteSpace(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File path is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (!File.Exists(filePath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "File not found" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "File not found" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string[] supportedFormats = [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".tif"];
@@ -175,14 +174,14 @@ public class OcrTools(
                 {
                     success = false,
                     error = $"Unsupported image format. Supported formats: {string.Join(", ", supportedFormats)}"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             OcrResult result = await ocrService.ExtractTextFromImage(filePath, enhanceImage);
 
             if (!result.Success)
             {
-                return JsonSerializer.Serialize(new { success = false, error = result.ErrorMessage }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = result.ErrorMessage }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
@@ -193,12 +192,12 @@ public class OcrTools(
                 confidence = result.Confidence,
                 pagesProcessed = result.PagesProcessed,
                 metadata = result.Metadata
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error performing OCR on image: {FilePath}", filePath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

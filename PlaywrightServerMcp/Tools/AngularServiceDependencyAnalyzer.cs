@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
@@ -25,15 +26,7 @@ namespace PlaywrightServerMcp.Tools;
 [McpServerToolType]
 public class AngularServiceDependencyAnalyzer(PlaywrightSessionManager sessionManager)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    /// <summary>
+/// <summary>
     /// Analyzes Angular service dependency graph with comprehensive DI hierarchy mapping
     /// 
     /// ANG-016 Implementation: Service Dependency Graph Analysis
@@ -82,7 +75,7 @@ public class AngularServiceDependencyAnalyzer(PlaywrightSessionManager sessionMa
         {
             PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
-                return JsonSerializer.Serialize(new { error = "No active browser session found", sessionId }, JsonOptions);
+                return JsonSerializer.Serialize(new { error = "No active browser session found", sessionId }, SerializerOptions.JsonOptionsComplex);
 
             // Execute comprehensive service dependency analysis with embedded parameters
             var jsCode = $$"""
@@ -1235,7 +1228,7 @@ public class AngularServiceDependencyAnalyzer(PlaywrightSessionManager sessionMa
 
             var analysisResult = await session.Page.EvaluateAsync<object>(jsCode);
 
-            return JsonSerializer.Serialize(analysisResult, JsonOptions);
+            return JsonSerializer.Serialize(analysisResult, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -1247,7 +1240,7 @@ public class AngularServiceDependencyAnalyzer(PlaywrightSessionManager sessionMa
                 sessionId,
                 analysisType = "service_dependency_graph",
                 recommendation = "Ensure the page has an Angular application loaded and try enabling development mode for better analysis"
-            }, JsonOptions);
+            }, SerializerOptions.JsonOptionsComplex);
         }
     }
 }

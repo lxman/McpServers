@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -36,6 +36,10 @@
 
     <ItemGroup>
       <Folder Include="skills\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Libraries\Mcp.Common.Core\Mcp.Common.Core.csproj" />
     </ItemGroup>
 
 </Project>

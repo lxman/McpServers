@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
@@ -17,16 +18,7 @@ namespace PlaywrightServerMcp.Tools;
 public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
 {
     private readonly PlaywrightSessionManager _sessionManager = sessionManager;
-    
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    /// <summary>
+/// <summary>
     /// Commands that can be executed without requiring an Angular project
     /// </summary>
     private static readonly string[] GlobalCommands = ["new", "version", "help", "--version", "completion", "analytics"
@@ -64,7 +56,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                     WorkingDirectory = workingDirectory,
                     ErrorMessage = $"Session {sessionId} not found",
                     ExitCode = -1
-                }, JsonOptions);
+                }, SerializerOptions.JsonOptionsComplex);
             }
 
             var config = new CliExecutionConfig
@@ -76,7 +68,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
             };
 
             CliCommandResult result = await ExecuteAngularCliCommand(command, config);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -89,7 +81,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                 ExitCode = -1
             };
             
-            return JsonSerializer.Serialize(errorResult, JsonOptions);
+            return JsonSerializer.Serialize(errorResult, SerializerOptions.JsonOptionsComplex);
         }
     }
 
@@ -110,7 +102,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                     AngularCliInstalled = false,
                     ErrorMessage = $"Session {sessionId} not found",
                     WorkingDirectory = workingDirectory
-                }, JsonOptions);
+                }, SerializerOptions.JsonOptionsComplex);
             }
 
             var config = new CliExecutionConfig
@@ -140,7 +132,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                 }
             };
 
-            return JsonSerializer.Serialize(status, JsonOptions);
+            return JsonSerializer.Serialize(status, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -151,7 +143,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                 WorkingDirectory = workingDirectory
             };
             
-            return JsonSerializer.Serialize(errorStatus, JsonOptions);
+            return JsonSerializer.Serialize(errorStatus, SerializerOptions.JsonOptionsComplex);
         }
     }
 
@@ -177,7 +169,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                     WorkingDirectory = workingDirectory,
                     ErrorMessage = $"Session {sessionId} not found",
                     ExitCode = -1
-                }, JsonOptions);
+                }, SerializerOptions.JsonOptionsComplex);
             }
 
             var config = new CliExecutionConfig
@@ -197,7 +189,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                     WorkingDirectory = config.WorkingDirectory,
                     ErrorMessage = "Not an Angular project - angular.json not found",
                     ExitCode = -1
-                }, JsonOptions);
+                }, SerializerOptions.JsonOptionsComplex);
             }
 
             // Capture files before generation
@@ -220,7 +212,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                 result.ModifiedFiles = await GetModifiedFiles(filesBefore, filesAfter, config.WorkingDirectory);
             }
 
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -233,7 +225,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                 ExitCode = -1
             };
             
-            return JsonSerializer.Serialize(errorResult, JsonOptions);
+            return JsonSerializer.Serialize(errorResult, SerializerOptions.JsonOptionsComplex);
         }
     }
 
@@ -258,7 +250,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                     WorkingDirectory = workingDirectory,
                     ErrorMessage = $"Session {sessionId} not found",
                     ExitCode = -1
-                }, JsonOptions);
+                }, SerializerOptions.JsonOptionsComplex);
             }
 
             var config = new CliExecutionConfig
@@ -278,7 +270,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                     WorkingDirectory = config.WorkingDirectory,
                     ErrorMessage = "Not an Angular project - angular.json not found",
                     ExitCode = -1
-                }, JsonOptions);
+                }, SerializerOptions.JsonOptionsComplex);
             }
 
             // Build the command
@@ -299,11 +291,11 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                 Dictionary<string, object> buildStats = ExtractBuildStatistics(result.StandardOutput);
                 if (buildStats.Count > 0)
                 {
-                    result.StandardOutput += $"\n\nExtracted Build Statistics:\n{JsonSerializer.Serialize(buildStats, JsonOptions)}";
+                    result.StandardOutput += $"\n\nExtracted Build Statistics:\n{JsonSerializer.Serialize(buildStats, SerializerOptions.JsonOptionsComplex)}";
                 }
             }
 
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -316,7 +308,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
                 ExitCode = -1
             };
             
-            return JsonSerializer.Serialize(errorResult, JsonOptions);
+            return JsonSerializer.Serialize(errorResult, SerializerOptions.JsonOptionsComplex);
         }
     }
 

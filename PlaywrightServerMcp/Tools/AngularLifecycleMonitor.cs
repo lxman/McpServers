@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
@@ -13,15 +14,7 @@ namespace PlaywrightServerMcp.Tools;
 [McpServerToolType]
 public class AngularLifecycleMonitor(PlaywrightSessionManager sessionManager)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    [McpServerTool]
+[McpServerTool]
     [Description("Monitor Angular component lifecycle hooks execution with timing and performance analysis. See skills/playwright-mcp/tools/angular/lifecycle-monitor.md.")]
     public async Task<string> TraceComponentLifecycleHooks(
         int durationSeconds = 30,
@@ -478,12 +471,12 @@ public class AngularLifecycleMonitor(PlaywrightSessionManager sessionManager)
                                      """;
                 
                 var finalResult = await session.Page.EvaluateAsync<object>(finalResultsJs);
-                return JsonSerializer.Serialize(finalResult, JsonOptions);
+                return JsonSerializer.Serialize(finalResult, SerializerOptions.JsonOptionsComplex);
             }
             catch
             {
                 // Return initial result if final results aren't available
-                return JsonSerializer.Serialize(result, JsonOptions);
+                return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
             }
         }
         catch (Exception ex)
@@ -597,7 +590,7 @@ public class AngularLifecycleMonitor(PlaywrightSessionManager sessionManager)
                          """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -818,11 +811,11 @@ public class AngularLifecycleMonitor(PlaywrightSessionManager sessionManager)
                                      """;
                 
                 var finalResult = await session.Page.EvaluateAsync<object>(finalResultsJs);
-                return JsonSerializer.Serialize(finalResult, JsonOptions);
+                return JsonSerializer.Serialize(finalResult, SerializerOptions.JsonOptionsComplex);
             }
             catch
             {
-                return JsonSerializer.Serialize(result, JsonOptions);
+                return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
             }
         }
         catch (Exception ex)

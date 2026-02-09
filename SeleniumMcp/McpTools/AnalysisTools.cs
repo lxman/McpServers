@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using SeleniumChrome.Core.Models;
@@ -22,8 +23,6 @@ public class AnalysisTools(
     IEnhancedJobScrapingService scrapingService,
     ILogger<AnalysisTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("automated_comprehensive_search")]
     [Description("See skills/selenium/analysis/automated_comprehensive_search.md only when using this tool")]
     public async Task<string> automated_comprehensive_search(
@@ -61,12 +60,12 @@ public class AnalysisTools(
                 locationsCount = locations.Count,
                 targetJobsPerSearch,
                 result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error running automated comprehensive search");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -102,12 +101,12 @@ public class AnalysisTools(
                 location,
                 targetJobs,
                 result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error processing jobs in bulk for {SearchTerm}", searchTerm);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -143,12 +142,12 @@ public class AnalysisTools(
                 location,
                 maxResults,
                 result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error processing SimplifyJobs enhanced for {SearchTerm}", searchTerm);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -167,12 +166,12 @@ public class AnalysisTools(
             {
                 success = true,
                 result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error deduplicating jobs");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -200,12 +199,12 @@ public class AnalysisTools(
             {
                 success = true,
                 result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error categorizing applications");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -235,12 +234,12 @@ public class AnalysisTools(
             {
                 success = true,
                 report = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error generating market intelligence report");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -290,12 +289,12 @@ public class AnalysisTools(
                 location,
                 targetJobs,
                 message = $"Bulk job started. Use check_job_status(jobId='{jobId}') to monitor progress."
-            }, _jsonOptions));
+            }, SerializerOptions.JsonOptionsIndented));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, $"Error starting bulk job for {searchTerm}");
-            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions));
+            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented));
         }
     }
 
@@ -326,12 +325,12 @@ public class AnalysisTools(
                 message = status.Found
                     ? $"Job {status.Status.ToLower()}: {status.ProgressMessage}"
                     : $"Job {jobId} not found"
-            }, _jsonOptions));
+            }, SerializerOptions.JsonOptionsIndented));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, $"Error checking job status for {jobId}");
-            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions));
+            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented));
         }
     }
 
@@ -353,12 +352,12 @@ public class AnalysisTools(
                 jobsProcessed = response.JobsProcessed,
                 partialResults = response.PartialResults,
                 hasResults = response.PartialResults?.ProcessedJobs.Count > 0
-            }, _jsonOptions));
+            }, SerializerOptions.JsonOptionsIndented));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, $"Error cancelling job {jobId}");
-            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions));
+            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented));
         }
     }
 
@@ -377,12 +376,12 @@ public class AnalysisTools(
                 success = true,
                 count = jobs.Count,
                 jobs
-            }, _jsonOptions));
+            }, SerializerOptions.JsonOptionsIndented));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing bulk jobs");
-            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions));
+            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented));
         }
     }
 
@@ -402,7 +401,7 @@ public class AnalysisTools(
                 {
                     success = false,
                     message = $"Job {jobId} not found"
-                }, _jsonOptions));
+                }, SerializerOptions.JsonOptionsIndented));
             }
 
             if (!status.IsComplete)
@@ -414,7 +413,7 @@ public class AnalysisTools(
                     status = status.Status,
                     jobsProcessed = status.JobsProcessed,
                     summary = status.Summary
-                }, _jsonOptions));
+                }, SerializerOptions.JsonOptionsIndented));
             }
 
             BulkProcessingResult? result = jobQueueManager.GetJobResults(jobId);
@@ -425,7 +424,7 @@ public class AnalysisTools(
                 {
                     success = false,
                     message = $"Job {jobId} completed but results are no longer available"
-                }, _jsonOptions));
+                }, SerializerOptions.JsonOptionsIndented));
             }
 
             return Task.FromResult(JsonSerializer.Serialize(new
@@ -434,12 +433,12 @@ public class AnalysisTools(
                 jobId,
                 status = status.Status,
                 result
-            }, _jsonOptions));
+            }, SerializerOptions.JsonOptionsIndented));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, $"Error retrieving results for job {jobId}");
-            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions));
+            return Task.FromResult(JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented));
         }
     }
 
@@ -460,12 +459,12 @@ public class AnalysisTools(
                 jobsConsolidated = result.JobsConsolidated,
                 jobsSaved = result.JobsSaved,
                 message = result.Message
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, $"Error consolidating temporary results for session {sessionId}");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -520,12 +519,12 @@ public class AnalysisTools(
                         }
                     }).ToList()
                     : null
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error retrieving temporary results");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

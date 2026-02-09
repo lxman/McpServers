@@ -31,4 +31,8 @@
         </None>
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Libraries\Mcp.Common.Core\Mcp.Common.Core.csproj" />
+    </ItemGroup>
+
 </Project>

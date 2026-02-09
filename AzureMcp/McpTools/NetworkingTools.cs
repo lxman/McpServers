@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using AzureServer.Core.Services.Networking.Interfaces;
 using AzureServer.Core.Services.Networking.Models;
 using Microsoft.Extensions.Logging;
@@ -19,8 +20,6 @@ public class NetworkingTools(
     ILoadBalancerService loadBalancerService,
     ILogger<NetworkingTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("list_virtual_networks")]
     [Description("List virtual networks. See skills/azure/networking/list-virtual-networks.md only when using this tool")]
     public async Task<string> ListVirtualNetworks(string? subscriptionId = null, string? resourceGroupName = null)
@@ -34,7 +33,7 @@ public class NetworkingTools(
             {
                 success = true,
                 virtualNetworks = vnets.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -45,7 +44,7 @@ public class NetworkingTools(
                 error = ex.Message,
                 operation = "ListVirtualNetworks",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -67,14 +66,14 @@ public class NetworkingTools(
                 {
                     success = false,
                     error = $"Virtual network {vnetName} not found"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 virtualNetwork = vnet
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -85,7 +84,7 @@ public class NetworkingTools(
                 error = ex.Message,
                 operation = "GetVirtualNetwork",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -105,7 +104,7 @@ public class NetworkingTools(
             {
                 success = true,
                 subnets = subnets.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -116,7 +115,7 @@ public class NetworkingTools(
                 error = ex.Message,
                 operation = "ListSubnets",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -133,7 +132,7 @@ public class NetworkingTools(
             {
                 success = true,
                 networkSecurityGroups = nsgs.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -144,7 +143,7 @@ public class NetworkingTools(
                 error = ex.Message,
                 operation = "ListNetworkSecurityGroups",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -166,14 +165,14 @@ public class NetworkingTools(
                 {
                     success = false,
                     error = $"Network security group {nsgName} not found"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 networkSecurityGroup = nsg
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -184,7 +183,7 @@ public class NetworkingTools(
                 error = ex.Message,
                 operation = "GetNetworkSecurityGroup",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -201,7 +200,7 @@ public class NetworkingTools(
             {
                 success = true,
                 publicIpAddresses = publicIps.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -212,7 +211,7 @@ public class NetworkingTools(
                 error = ex.Message,
                 operation = "ListPublicIpAddresses",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -229,7 +228,7 @@ public class NetworkingTools(
             {
                 success = true,
                 loadBalancers = loadBalancers.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -240,7 +239,7 @@ public class NetworkingTools(
                 error = ex.Message,
                 operation = "ListLoadBalancers",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

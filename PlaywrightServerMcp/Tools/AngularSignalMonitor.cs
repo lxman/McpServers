@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
@@ -14,15 +15,7 @@ namespace PlaywrightServerMcp.Tools;
 [McpServerToolType]
 public class AngularSignalMonitor(PlaywrightSessionManager sessionManager)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    [McpServerTool]
+[McpServerTool]
     [Description("Monitor Angular signals in real-time, tracking signal changes and dependencies. See skills/playwright-mcp/tools/angular/signal-monitor.md.")]
     public async Task<string> MonitorSignalUpdates(
         int durationSeconds = 30,
@@ -124,7 +117,7 @@ public class AngularSignalMonitor(PlaywrightSessionManager sessionManager)
                                                                                const value = component[prop];
                                                                                // Detect Angular signals by their characteristics
                                                                                if (value && typeof value === 'function' && 
-                                                                                   (value.ƵIsSignal || 
+                                                                                   (value.?IsSignal || 
                                                                                     (value.constructor && value.constructor.name === 'SignalImpl') ||
                                                                                     (typeof value.set === 'function' && typeof value.update === 'function'))) {
                                                                                    
@@ -178,7 +171,7 @@ public class AngularSignalMonitor(PlaywrightSessionManager sessionManager)
                                                        if (window.signals) {
                                                            Object.keys(window.signals).forEach(key => {
                                                                const signal = window.signals[key];
-                                                               if (signal && typeof signal === 'function' && signal.ƵIsSignal) {
+                                                               if (signal && typeof signal === 'function' && signal.?IsSignal) {
                                                                    discoveredSignals.push({
                                                                        id: `global-${key}`,
                                                                        componentName: 'Global',
@@ -460,12 +453,12 @@ public class AngularSignalMonitor(PlaywrightSessionManager sessionManager)
                                      """;
                 
                 var finalResult = await session.Page.EvaluateAsync<object>(finalResultsJs);
-                return JsonSerializer.Serialize(finalResult, JsonOptions);
+                return JsonSerializer.Serialize(finalResult, SerializerOptions.JsonOptionsComplex);
             }
             catch
             {
                 // Return initial result if final results aren't available
-                return JsonSerializer.Serialize(result, JsonOptions);
+                return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
             }
         }
         catch (Exception ex)
@@ -686,7 +679,7 @@ public class AngularSignalMonitor(PlaywrightSessionManager sessionManager)
 
                                                      // Multiple detection strategies
                                                      return !!(
-                                                         value.ƵIsSignal ||                                           // Angular 16+ signal marker
+                                                         value.?IsSignal ||                                           // Angular 16+ signal marker
                                                          (value.constructor && value.constructor.name === 'SignalImpl') ||  // WritableSignal
                                                          (value.constructor && value.constructor.name === 'ComputedImpl') || // ComputedSignal
                                                          (value.constructor && value.constructor.name === 'EffectImpl') ||   // Effect
@@ -1441,7 +1434,7 @@ public class AngularSignalMonitor(PlaywrightSessionManager sessionManager)
                          """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {

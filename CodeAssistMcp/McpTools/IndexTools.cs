@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -15,8 +16,6 @@ public class IndexTools(
     RepositoryIndexer indexer,
     ILogger<IndexTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("index_repository")]
     [Description("Index a code repository for semantic search. This scans all supported source files, chunks them intelligently (by class/method for C#), generates embeddings, and stores them in the vector database. Supports incremental updates - only changed files are re-indexed.")]
     public async Task<string> IndexRepository(
@@ -56,12 +55,12 @@ public class IndexTools(
                 duration = result.Duration.ToString(),
                 failedFiles = result.FailedFiles,
                 error = result.ErrorMessage
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error indexing repository at {Path}", repositoryPath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -97,12 +96,12 @@ public class IndexTools(
                 success = true,
                 count = indexes.Count,
                 indexes
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing indexes");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -120,7 +119,7 @@ public class IndexTools(
                 {
                     success = false,
                     error = $"No index found for repository '{repositoryName}'"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
@@ -137,12 +136,12 @@ public class IndexTools(
                 lastCommitSha = state.LastCommitSha,
                 includePatterns = state.IncludePatterns,
                 excludePatterns = state.ExcludePatterns
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting index status for {Repository}", repositoryName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -160,12 +159,12 @@ public class IndexTools(
             {
                 success = true,
                 message = $"Index for '{repositoryName}' deleted successfully"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error deleting index for {Repository}", repositoryName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -183,7 +182,7 @@ public class IndexTools(
                 {
                     success = false,
                     error = $"No index found for repository '{repositoryName}'. Use index_repository to create one first."
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             logger.LogInformation("Refreshing index for repository {Repository} at {Path}",
@@ -207,12 +206,12 @@ public class IndexTools(
                 totalChunks = result.TotalChunks,
                 duration = result.Duration.ToString(),
                 error = result.ErrorMessage
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error refreshing index for {Repository}", repositoryName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

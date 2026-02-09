@@ -165,6 +165,7 @@
     <!-- System Libraries -->
     <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.2" />
     <PackageVersion Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.0" />
     <PackageVersion Include="System.Security.Permissions" Version="10.0.2" />
     <PackageVersion Include="System.Text.Json" Version="10.0.2" />
     <PackageVersion Include="System.Threading.Tasks.Extensions" Version="4.6.3" />

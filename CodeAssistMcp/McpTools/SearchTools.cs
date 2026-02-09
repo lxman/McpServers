@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using CodeAssist.Core.Caching;
 using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
@@ -20,8 +21,6 @@ public class SearchTools(
     L2PromotionService l2Promotion,
     ILogger<SearchTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     /// <summary>
     /// Ensures the repository is being watched for file changes.
     /// </summary>
@@ -54,7 +53,7 @@ public class SearchTools(
                 {
                     success = false,
                     error = $"No index found for repository '{repositoryName}'. Use index_repository to create one first."
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             // Ensure we're watching this repository for L1 cache updates
@@ -88,12 +87,12 @@ public class SearchTools(
                 l2HitCount = response.L2HitCount,
                 hotFilesSearched = response.HotFilesSearched,
                 results
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error searching {Repository} for: {Query}", repositoryName, query);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -116,7 +115,7 @@ public class SearchTools(
                 {
                     success = false,
                     error = $"No index found for repository '{repositoryName}'. Use index_repository to create one first."
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             EnsureWatching(state.RootPath, state.CollectionName);
@@ -147,12 +146,12 @@ public class SearchTools(
                 l1HitCount = response.L1HitCount,
                 l2HitCount = response.L2HitCount,
                 results
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error finding similar code in {Repository}", repositoryName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -173,7 +172,7 @@ public class SearchTools(
                 {
                     success = false,
                     error = $"No index found for repository '{repositoryName}'. Use index_repository to create one first."
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             // Build a query that emphasizes the symbol
@@ -218,12 +217,12 @@ public class SearchTools(
                 l1HitCount = response.L1HitCount,
                 l2HitCount = response.L2HitCount,
                 results
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error searching for symbol {Symbol} in {Repository}", symbolName, repositoryName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -243,7 +242,7 @@ public class SearchTools(
                 {
                     success = false,
                     error = $"No index found for repository '{repositoryName}'. Use index_repository to create one first."
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             logger.LogDebug("Explaining code area for '{Concept}' in {Repository}", concept, repositoryName);
@@ -275,12 +274,12 @@ public class SearchTools(
                 l1HitCount = response.L1HitCount,
                 l2HitCount = response.L2HitCount,
                 codeAreas = areas
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error explaining code area for '{Concept}' in {Repository}", concept, repositoryName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

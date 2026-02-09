@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
@@ -14,15 +15,7 @@ namespace PlaywrightServerMcp.Tools;
 [McpServerToolType]
 public class AngularChangeDetectionAnalyzer(PlaywrightSessionManager sessionManager)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    [McpServerTool]
+[McpServerTool]
     [Description("Detect and analyze change detection bottlenecks in Angular applications. See skills/playwright-mcp/tools/angular/change-detection-analyzer.md.")]
     public async Task<string> DetectChangeDetectionBottlenecks(
         int durationSeconds = 30,
@@ -162,7 +155,7 @@ public class AngularChangeDetectionAnalyzer(PlaywrightSessionManager sessionMana
                                                                    };
 
                                                                    // Detect change detection strategy
-                                                                   if (component.constructor.ɵcmp?.changeDetection === 0) {
+                                                                   if (component.constructor.?cmp?.changeDetection === 0) {
                                                                        componentInfo.changeDetectionStrategy = 'OnPush';
                                                                        componentInfo.hasOnPush = true;
                                                                        results.componentAnalysis.onPushComponents++;
@@ -171,7 +164,7 @@ public class AngularChangeDetectionAnalyzer(PlaywrightSessionManager sessionMana
                                                                    }
 
                                                                    // Check for standalone components
-                                                                   if (component.constructor.ɵcmp?.standalone) {
+                                                                   if (component.constructor.?cmp?.standalone) {
                                                                        componentInfo.isStandalone = true;
                                                                    }
 
@@ -180,7 +173,7 @@ public class AngularChangeDetectionAnalyzer(PlaywrightSessionManager sessionMana
                                                                        Object.getOwnPropertyNames(component).forEach(prop => {
                                                                            const value = component[prop];
                                                                            if (value && typeof value === 'function' && 
-                                                                               (value.ɵIsSignal || 
+                                                                               (value.?IsSignal || 
                                                                                 (value.constructor && value.constructor.name === 'SignalImpl'))) {
                                                                                componentInfo.hasSignals = true;
                                                                            }
@@ -739,11 +732,11 @@ public class AngularChangeDetectionAnalyzer(PlaywrightSessionManager sessionMana
                                      """;
                 
                 var finalResult = await session.Page.EvaluateAsync<object>(finalResultsJs);
-                return JsonSerializer.Serialize(finalResult, JsonOptions);
+                return JsonSerializer.Serialize(finalResult, SerializerOptions.JsonOptionsComplex);
             }
             catch
             {
-                return JsonSerializer.Serialize(result, JsonOptions);
+                return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
             }
         }
         catch (Exception ex)

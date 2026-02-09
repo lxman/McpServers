@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
@@ -26,15 +27,7 @@ namespace PlaywrightServerMcp.Tools;
 [McpServerToolType]
 public class AngularCircularDependencyDetector(PlaywrightSessionManager sessionManager)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    /// <summary>
+/// <summary>
     /// Detect circular dependencies in Angular applications with comprehensive analysis
     /// 
     /// ANG-017 Implementation: Circular Dependency Detection
@@ -82,7 +75,7 @@ public class AngularCircularDependencyDetector(PlaywrightSessionManager sessionM
         {
             PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
             if (session?.Page == null)
-                return JsonSerializer.Serialize(new { error = "No active browser session found", sessionId }, JsonOptions);
+                return JsonSerializer.Serialize(new { error = "No active browser session found", sessionId }, SerializerOptions.JsonOptionsComplex);
 
             // Execute comprehensive circular dependency detection with embedded parameters
             var jsCode = $$"""
@@ -1806,7 +1799,7 @@ public class AngularCircularDependencyDetector(PlaywrightSessionManager sessionM
 
             var analysisResult = await session.Page.EvaluateAsync<object>(jsCode);
 
-            return JsonSerializer.Serialize(analysisResult, JsonOptions);
+            return JsonSerializer.Serialize(analysisResult, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -1818,7 +1811,7 @@ public class AngularCircularDependencyDetector(PlaywrightSessionManager sessionM
                 sessionId,
                 analysisType = "circular_dependency_detection",
                 recommendation = "Ensure the page has an Angular application loaded and try enabling development mode for better analysis"
-            }, JsonOptions);
+            }, SerializerOptions.JsonOptionsComplex);
         }
     }
 }

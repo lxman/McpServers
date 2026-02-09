@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Microsoft.Extensions.Logging;
 using Renci.SshNet;
 using SshClient.Core.Models;
@@ -16,7 +17,6 @@ public sealed class SshConnectionManager : IDisposable
     private readonly ConcurrentDictionary<string, ManagedConnection> _connections = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, SshConnectionProfile> _profiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _profilesFilePath;
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private bool _disposed;
 
     private sealed class ManagedConnection(Renci.SshNet.SshClient sshClient, SshConnectionProfile profile)
@@ -55,7 +55,7 @@ public sealed class SshConnectionManager : IDisposable
             if (File.Exists(_profilesFilePath))
             {
                 string json = File.ReadAllText(_profilesFilePath);
-                var profiles = JsonSerializer.Deserialize<List<SshConnectionProfile>>(json, JsonOptions);
+                var profiles = JsonSerializer.Deserialize<List<SshConnectionProfile>>(json, SerializerOptions.JsonOptionsIndented);
                 if (profiles != null)
                 {
                     foreach (SshConnectionProfile profile in profiles)
@@ -77,7 +77,7 @@ public sealed class SshConnectionManager : IDisposable
         try
         {
             List<SshConnectionProfile> profiles = _profiles.Values.ToList();
-            string json = JsonSerializer.Serialize(profiles, JsonOptions);
+            string json = JsonSerializer.Serialize(profiles, SerializerOptions.JsonOptionsIndented);
             File.WriteAllText(_profilesFilePath, json);
             _logger.LogDebug("Saved {Count} SSH profiles to disk", profiles.Count);
         }

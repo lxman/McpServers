@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Mcp.Common.Core;
 using AzureServer.Core.Authentication.models;
 
 namespace AzureServer.Core.Authentication;
@@ -28,12 +29,7 @@ public class EntraAuthConfigLoader(ILogger<EntraAuthConfigLoader> logger)
         try
         {
             string jsonContent = File.ReadAllText(configPath);
-            var config = JsonSerializer.Deserialize<EntraAuthConfig>(jsonContent, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                AllowTrailingCommas = true
-            });
+            var config = JsonSerializer.Deserialize<EntraAuthConfig>(jsonContent, SerializerOptions.JsonOptionsPermissive);
 
             if (config == null)
             {

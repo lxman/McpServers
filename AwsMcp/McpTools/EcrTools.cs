@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Amazon.ECR.Model;
 using AwsServer.Core.Services.ECR;
 using AwsServer.Core.Services.ECR.Models;
@@ -16,8 +17,6 @@ public class EcrTools(
     EcrService ecrService,
     ILogger<EcrTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("list_ecr_repositories")]
     [Description("List ECR repositories. See skills/aws/ecr/list-repositories.md only when using this tool")]
     public async Task<string> ListEcrRepositories()
@@ -40,12 +39,12 @@ public class EcrTools(
                     imageScanningEnabled = r.ImageScanningConfiguration?.ScanOnPush,
                     encryptionType = r.EncryptionConfiguration?.EncryptionType?.Value
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing ECR repositories");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -69,12 +68,12 @@ public class EcrTools(
                     imageDigest = i.ImageDigest,
                     imageTag = i.ImageTag
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing images in ECR repository {RepositoryName}", repositoryName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -131,12 +130,12 @@ public class EcrTools(
                         findingSeverityCounts = i.ImageScanFindingsSummary.FindingSeverityCounts
                     }
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error describing images in ECR repository {RepositoryName}", repositoryName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -168,12 +167,12 @@ public class EcrTools(
                     uri = response.Repository.RepositoryUri,
                     createdAt = response.Repository.CreatedAt
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error creating ECR repository {RepositoryName}", repositoryName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -197,12 +196,12 @@ public class EcrTools(
                     name = response.Repository.RepositoryName,
                     arn = response.Repository.RepositoryArn
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error deleting ECR repository {RepositoryName}", repositoryName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -229,12 +228,12 @@ public class EcrTools(
                     encryptionType = r.EncryptionConfiguration?.EncryptionType?.Value,
                     imageTagMutability = r.ImageTagMutability?.Value
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error describing ECR repositories");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -267,12 +266,12 @@ public class EcrTools(
                     failureCode = f.FailureCode?.Value,
                     failureReason = f.FailureReason
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error batch deleting images from ECR repository {RepositoryName}", repositoryName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -294,12 +293,12 @@ public class EcrTools(
                     proxyEndpoint = a.ProxyEndpoint,
                     expiresAt = a.ExpiresAt
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting ECR authorization token");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -319,12 +318,12 @@ public class EcrTools(
                 repositoryName = response.RepositoryName,
                 lifecyclePolicyText = response.LifecyclePolicyText,
                 lastEvaluatedAt = response.LastEvaluatedAt
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting lifecycle policy for ECR repository {RepositoryName}", repositoryName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -343,12 +342,12 @@ public class EcrTools(
                 registryId = response.RegistryId,
                 repositoryName = response.RepositoryName,
                 lifecyclePolicyText = response.LifecyclePolicyText
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error putting lifecycle policy for ECR repository {RepositoryName}", repositoryName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Azure.Core;
 using AzureServer.Core.Authentication;
 using Microsoft.Extensions.Logging;
@@ -15,8 +16,6 @@ public class CredentialManagementTools(
     CredentialSelectionService selectionService,
     ILogger<CredentialManagementTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("list_credentials")]
     [Description("List available Azure credentials. See skills/azure/credentialmanagement/list-credentials.md only when using this tool")]
     public async Task<string> ListCredentials()
@@ -39,7 +38,7 @@ public class CredentialManagementTools(
                         "Environment Variables: Set AZURE_CLIENT_ID, AZURE_TENANT_ID, and AZURE_CLIENT_SECRET",
                         "Azure PowerShell: Run 'Connect-AzAccount'"
                     }
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             List<CredentialInfo> credentials =
@@ -52,7 +51,7 @@ public class CredentialManagementTools(
                 {
                     success = false,
                     message = "No credentials available"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             CredentialInfo? selected = selectionService.GetSelectedCredential();
@@ -72,7 +71,7 @@ public class CredentialManagementTools(
                     isSelected = selected?.Id == c.Id
                 }).ToArray(),
                 currentlySelected = selected?.Source
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -83,7 +82,7 @@ public class CredentialManagementTools(
                 error = ex.Message,
                 operation = "ListCredentials",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -102,7 +101,7 @@ public class CredentialManagementTools(
                 {
                     success = false,
                     error = result.ErrorMessage
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (result.Status != SelectionStatus.Selected || result.SelectedCredential is null)
@@ -111,7 +110,7 @@ public class CredentialManagementTools(
                 {
                     success = false,
                     error = "Failed to select credential"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             CredentialInfo? info = result.SelectedCredential;
@@ -128,7 +127,7 @@ public class CredentialManagementTools(
                     tenantName = info.TenantName,
                     subscriptionCount = info.SubscriptionCount
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -139,7 +138,7 @@ public class CredentialManagementTools(
                 error = ex.Message,
                 operation = "SelectCredential",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -159,7 +158,7 @@ public class CredentialManagementTools(
                     success = false,
                     message = "No credential selected",
                     instructions = "Use list_credentials to see available credentials, then select_credential to choose one"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
@@ -174,7 +173,7 @@ public class CredentialManagementTools(
                     tenantName = selected.TenantName,
                     subscriptionCount = selected.SubscriptionCount
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -185,7 +184,7 @@ public class CredentialManagementTools(
                 error = ex.Message,
                 operation = "GetCurrentCredential",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -203,7 +202,7 @@ public class CredentialManagementTools(
                 success = true,
                 message = "Credential selection cleared",
                 note = "The next Azure operation will discover and select credentials again"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -214,7 +213,7 @@ public class CredentialManagementTools(
                 error = ex.Message,
                 operation = "ClearCredentialSelection",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -265,7 +264,7 @@ public class CredentialManagementTools(
                 new { tool = "clear_credential_selection", description = "Clear credential selection" }
             },
             learnMore = "https://learn.microsoft.com/azure/developer/intro/azure-developer-authentication"
-        }, _jsonOptions);
+        }, SerializerOptions.JsonOptionsIndented);
     }
 
     [McpServerTool, DisplayName("test_credential")]
@@ -284,7 +283,7 @@ public class CredentialManagementTools(
                     success = false,
                     message = "No credentials found to test",
                     instructions = "Use list_credentials to see available credentials"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (result.Status == SelectionStatus.Error)
@@ -293,7 +292,7 @@ public class CredentialManagementTools(
                 {
                     success = false,
                     error = result.ErrorMessage
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             CredentialInfo? selected = result.SelectedCredential;
@@ -308,7 +307,7 @@ public class CredentialManagementTools(
                     tenantId = selected?.TenantId,
                     subscriptionCount = selected?.SubscriptionCount
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -319,7 +318,7 @@ public class CredentialManagementTools(
                 error = ex.Message,
                 operation = "TestCredential",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

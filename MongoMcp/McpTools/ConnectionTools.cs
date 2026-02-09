@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using MongoServer.Core;
@@ -14,8 +15,6 @@ public class ConnectionTools(
     ILogger<ConnectionTools> logger,
     MongoDbService mongoService)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("connect_to_server")]
     [Description("Connect to MongoDB server. See skills/mongo/connection/connect-to-server.md only when using this tool")]
     public async Task<string> ConnectToServer(string serverName, string connectionString, string databaseName)
@@ -26,17 +25,17 @@ public class ConnectionTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(connectionString))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Connection string is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Connection string is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(databaseName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Database name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Database name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.ConnectToServerAsync(serverName, connectionString, databaseName);
@@ -47,12 +46,12 @@ public class ConnectionTools(
                 serverName,
                 databaseName,
                 message = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error connecting to MongoDB server: {ServerName}", serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -66,7 +65,7 @@ public class ConnectionTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = mongoService.DisconnectFromServer(serverName);
@@ -76,12 +75,12 @@ public class ConnectionTools(
                 success = true,
                 serverName,
                 message = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error disconnecting from MongoDB server: {ServerName}", serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -100,7 +99,7 @@ public class ConnectionTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing active connections");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -114,7 +113,7 @@ public class ConnectionTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = mongoService.SetDefaultServer(serverName);
@@ -124,12 +123,12 @@ public class ConnectionTools(
                 success = true,
                 serverName,
                 message = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error setting default server: {ServerName}", serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -143,7 +142,7 @@ public class ConnectionTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = mongoService.GetServerConnectionStatus(serverName);
@@ -153,7 +152,7 @@ public class ConnectionTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting server status: {ServerName}", serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -167,7 +166,7 @@ public class ConnectionTools(
 
             if (string.IsNullOrWhiteSpace(serverName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Server name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.PingServerAsync(serverName);
@@ -177,7 +176,7 @@ public class ConnectionTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error pinging server: {ServerName}", serverName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -196,7 +195,7 @@ public class ConnectionTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing connection profiles");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -210,7 +209,7 @@ public class ConnectionTools(
 
             if (string.IsNullOrWhiteSpace(profileName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Profile name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Profile name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string result = await mongoService.ConnectWithProfileAsync(profileName);
@@ -220,12 +219,12 @@ public class ConnectionTools(
                 success = true,
                 profileName,
                 message = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error connecting with profile: {ProfileName}", profileName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -244,7 +243,7 @@ public class ConnectionTools(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting auto-connect status");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

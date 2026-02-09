@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
@@ -14,15 +15,7 @@ namespace PlaywrightServerMcp.Tools;
 [McpServerToolType]
 public class AngularComponentAnalyzer(PlaywrightSessionManager sessionManager)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    [McpServerTool]
+[McpServerTool]
     [Description("Enhanced Angular component hierarchy analysis with Angular 17+ support, standalone components, and signals detection. See skills/playwright-mcp/tools/angular/component-analyzer.md.")]
     public async Task<string> GetAngularComponentTree(
         string sessionId = "default")
@@ -136,7 +129,7 @@ public class AngularComponentAnalyzer(PlaywrightSessionManager sessionManager)
                                                                      const componentMetadata = component.constructor;
                                                                      
                                                                      // Look for standalone indicators
-                                                                     const isStandalone = componentMetadata.ɵcmp?.standalone === true ||
+                                                                     const isStandalone = componentMetadata.?cmp?.standalone === true ||
                                                                                         componentMetadata.standalone === true;
                                                                      
                                                                      if (isStandalone) {
@@ -144,7 +137,7 @@ public class AngularComponentAnalyzer(PlaywrightSessionManager sessionManager)
                                                                              tagName: el.tagName.toLowerCase(),
                                                                              selector: el.tagName.toLowerCase(),
                                                                              componentName: componentMetadata.name || 'Unknown',
-                                                                             hasImports: !!(componentMetadata.ɵcmp?.imports),
+                                                                             hasImports: !!(componentMetadata.?cmp?.imports),
                                                                              standalone: true
                                                                          });
                                                                      }
@@ -212,7 +205,7 @@ public class AngularComponentAnalyzer(PlaywrightSessionManager sessionManager)
                                                                              const value = component[prop];
                                                                              // Angular signals have specific characteristics
                                                                              if (value && typeof value === 'function' && 
-                                                                                 (value.ɵIsSignal || 
+                                                                                 (value.?IsSignal || 
                                                                                   (value.constructor && value.constructor.name === 'SignalImpl') ||
                                                                                   (typeof value.set === 'function' && typeof value.update === 'function'))) {
                                                                                  signalProperties.push({
@@ -377,7 +370,7 @@ public class AngularComponentAnalyzer(PlaywrightSessionManager sessionManager)
                          """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -482,7 +475,7 @@ public class AngularComponentAnalyzer(PlaywrightSessionManager sessionManager)
                                                                  const component = window.ng.getComponent(el);
                                                                  if (component && component.constructor) {
                                                                      const componentMetadata = component.constructor;
-                                                                     const componentDef = componentMetadata.ɵcmp;
+                                                                     const componentDef = componentMetadata.?cmp;
                                                                      
                                                                      // Check if component is standalone
                                                                      const isStandalone = componentDef?.standalone === true ||
@@ -967,7 +960,7 @@ public class AngularComponentAnalyzer(PlaywrightSessionManager sessionManager)
                          """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {

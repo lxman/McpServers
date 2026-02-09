@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using AzureServer.Core.Services.KeyVault;
 using AzureServer.Core.Services.KeyVault.Models;
 using Microsoft.Extensions.Logging;
@@ -15,8 +16,6 @@ public class KeyVaultTools(
     IKeyVaultService keyVaultService,
     ILogger<KeyVaultTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     #region Secret Operations
 
     [McpServerTool, DisplayName("list_secrets")]
@@ -42,7 +41,7 @@ public class KeyVaultTools(
                     contentType = s.ContentType,
                     tags = s.Tags
                 }).ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -53,7 +52,7 @@ public class KeyVaultTools(
                 error = ex.Message,
                 operation = "ListSecrets",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -72,7 +71,7 @@ public class KeyVaultTools(
                 {
                     success = false,
                     error = $"Secret {secretName} not found in vault {vaultName}"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
@@ -90,7 +89,7 @@ public class KeyVaultTools(
                     contentType = secret.ContentType,
                     tags = secret.Tags
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -101,7 +100,7 @@ public class KeyVaultTools(
                 error = ex.Message,
                 operation = "GetSecret",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -142,7 +141,7 @@ public class KeyVaultTools(
                     contentType = secret.ContentType,
                     tags = secret.Tags
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -153,7 +152,7 @@ public class KeyVaultTools(
                 error = ex.Message,
                 operation = "SetSecret",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -176,7 +175,7 @@ public class KeyVaultTools(
                     scheduledPurgeDate = deletedSecret.ScheduledPurgeDate,
                     recoveryId = deletedSecret.RecoveryId
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -187,7 +186,7 @@ public class KeyVaultTools(
                 error = ex.Message,
                 operation = "DeleteSecret",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -215,7 +214,7 @@ public class KeyVaultTools(
                     contentType = v.ContentType,
                     tags = v.Tags
                 }).ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -226,7 +225,7 @@ public class KeyVaultTools(
                 error = ex.Message,
                 operation = "GetSecretVersions",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -253,7 +252,7 @@ public class KeyVaultTools(
                     scheduledPurgeDate = s.ScheduledPurgeDate,
                     recoveryId = s.RecoveryId
                 }).ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -264,7 +263,7 @@ public class KeyVaultTools(
                 error = ex.Message,
                 operation = "ListDeletedSecrets",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -283,7 +282,7 @@ public class KeyVaultTools(
                 {
                     success = false,
                     error = $"Deleted secret {secretName} not found in vault {vaultName}"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
@@ -296,7 +295,7 @@ public class KeyVaultTools(
                     scheduledPurgeDate = deletedSecret.ScheduledPurgeDate,
                     recoveryId = deletedSecret.RecoveryId
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -307,7 +306,7 @@ public class KeyVaultTools(
                 error = ex.Message,
                 operation = "GetDeletedSecret",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -334,7 +333,7 @@ public class KeyVaultTools(
                     contentType = properties.ContentType,
                     tags = properties.Tags
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -345,7 +344,7 @@ public class KeyVaultTools(
                 error = ex.Message,
                 operation = "RecoverDeletedSecret",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -362,7 +361,7 @@ public class KeyVaultTools(
             {
                 success = true,
                 message = $"Secret {secretName} permanently purged from vault {vaultName}"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -373,7 +372,7 @@ public class KeyVaultTools(
                 error = ex.Message,
                 operation = "PurgeDeletedSecret",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -418,7 +417,7 @@ public class KeyVaultTools(
                     contentType = properties.ContentType,
                     tags = properties.Tags
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -429,7 +428,7 @@ public class KeyVaultTools(
                 error = ex.Message,
                 operation = "UpdateSecretProperties",
                 type = ex.GetType().Name
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 

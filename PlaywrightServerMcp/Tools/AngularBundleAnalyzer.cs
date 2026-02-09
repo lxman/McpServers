@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using ModelContextProtocol.Server;
@@ -16,16 +17,7 @@ namespace PlaywrightServerMcp.Tools;
 public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 {
     private readonly PlaywrightSessionManager _sessionManager = sessionManager;
-    
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    [McpServerTool]
+[McpServerTool]
     [Description("Analyze Angular bundle size by component with detailed impact analysis and optimization recommendations. See skills/playwright-mcp/tools/angular/bundle-analyzer.md.")]
     public async Task<string> AnalyzeBundleSizeByComponent(
         string workingDirectory = "",
@@ -48,7 +40,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                     Success = false,
                     WorkingDirectory = workingDirectory,
                     ErrorMessage = $"Session {sessionId} not found"
-                }, JsonOptions);
+                }, SerializerOptions.JsonOptionsComplex);
             }
 
             string targetDirectory = string.IsNullOrWhiteSpace(workingDirectory) 
@@ -64,7 +56,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 generateRecommendations,
                 maxComponents);
 
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -75,7 +67,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 ErrorMessage = $"Failed to analyze bundle size: {ex.Message}"
             };
             
-            return JsonSerializer.Serialize(errorResult, JsonOptions);
+            return JsonSerializer.Serialize(errorResult, SerializerOptions.JsonOptionsComplex);
         }
     }
 

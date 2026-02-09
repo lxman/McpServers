@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using SeleniumChrome.Core.Models;
@@ -17,8 +18,6 @@ public class JobScrapingTools(
     GoogleSimplifyJobsService googleService,
     ILogger<JobScrapingTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("scrape_multiple_sites")]
     [Description("See skills/selenium/scraping/scrape_multiple_sites.md only when using this tool")]
     public async Task<string> scrape_multiple_sites(
@@ -54,12 +53,12 @@ public class JobScrapingTools(
                 location,
                 siteCount = sites.Count,
                 result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error scraping multiple sites for {SearchTerm} in {Location}", searchTerm, location);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -79,7 +78,7 @@ public class JobScrapingTools(
 
             if (!Enum.TryParse(site, ignoreCase: true, out JobSite jobSite))
             {
-                return JsonSerializer.Serialize(new { success = false, error = $"Invalid site: {site}" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = $"Invalid site: {site}" }, SerializerOptions.JsonOptionsIndented);
             }
 
             var request = new EnhancedScrapeRequest
@@ -100,12 +99,12 @@ public class JobScrapingTools(
                 searchTerm,
                 location,
                 result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error scraping site {Site} for {SearchTerm} in {Location}", site, searchTerm, location);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -140,12 +139,12 @@ public class JobScrapingTools(
                 location,
                 maxResults,
                 result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error discovering SimplifyJobs via Google for {SearchTerm} in {Location}", searchTerm, location);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

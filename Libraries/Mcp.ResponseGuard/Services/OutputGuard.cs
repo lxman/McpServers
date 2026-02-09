@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Mcp.Common.Core;
 using Mcp.ResponseGuard.Configuration;
 using Mcp.ResponseGuard.Models;
 using Microsoft.Extensions.Logging;
@@ -12,7 +13,6 @@ public class OutputGuard
 {
     private readonly ILogger<OutputGuard> _logger;
     private readonly OutputGuardOptions _options;
-    private readonly JsonSerializerOptions _jsonOptions;
 
     /// <summary>
     /// Creates an OutputGuard with default options
@@ -29,11 +29,6 @@ public class OutputGuard
     {
         _logger = logger;
         _options = options;
-        _jsonOptions = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
     }
 
     /// <summary>
@@ -47,7 +42,7 @@ public class OutputGuard
         try
         {
             // Serialize the response to measure its size
-            string jsonResult = JsonSerializer.Serialize(responseObject, _jsonOptions);
+            string jsonResult = JsonSerializer.Serialize(responseObject, SerializerOptions.JsonOptionsCamelCase);
             int characterCount = jsonResult.Length;
             int estimatedTokens = characterCount / _options.CharsPerToken;
 
@@ -168,7 +163,7 @@ public class OutputGuard
             Message = message
         };
 
-        return JsonSerializer.Serialize(response, _jsonOptions);
+        return JsonSerializer.Serialize(response, SerializerOptions.JsonOptionsCamelCase);
     }
 
     /// <summary>
@@ -189,7 +184,7 @@ public class OutputGuard
             ErrorCode = errorCode
         };
 
-        return JsonSerializer.Serialize(response, _jsonOptions);
+        return JsonSerializer.Serialize(response, SerializerOptions.JsonOptionsCamelCase);
     }
 
     /// <summary>
@@ -206,7 +201,7 @@ public class OutputGuard
             ErrorCode = errorCode
         };
 
-        return JsonSerializer.Serialize(response, _jsonOptions);
+        return JsonSerializer.Serialize(response, SerializerOptions.JsonOptionsCamelCase);
     }
 
     /// <summary>
@@ -237,7 +232,7 @@ public class OutputGuard
             Metrics = additionalMetrics
         };
 
-        return JsonSerializer.Serialize(response, _jsonOptions);
+        return JsonSerializer.Serialize(response, SerializerOptions.JsonOptionsCamelCase);
     }
 
     /// <summary>

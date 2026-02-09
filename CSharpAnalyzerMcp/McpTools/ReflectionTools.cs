@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using CSharpAnalyzer.Core.Models.Reflection;
 using CSharpAnalyzer.Core.Services.Reflection;
 using Microsoft.Extensions.Logging;
@@ -13,8 +14,6 @@ namespace CSharpAnalyzerMcp.McpTools;
 [McpServerToolType]
 public class ReflectionTools(AssemblyAnalysisService analysisService, ILogger<ReflectionTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("get_assembly_info")]
     [Description("Get detailed metadata and information about a .NET assembly. See skills/csharp/get-assembly-info.md only when using this tool")]
     public string GetAssemblyInfo(string assemblyPath)
@@ -23,12 +22,12 @@ public class ReflectionTools(AssemblyAnalysisService analysisService, ILogger<Re
         {
             logger.LogDebug("Getting assembly info for: {AssemblyPath}", assemblyPath);
             AssemblyInfoResponse result = analysisService.GetAssemblyInfo(assemblyPath);
-            return JsonSerializer.Serialize(result, _jsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting assembly info");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -55,7 +54,7 @@ public class ReflectionTools(AssemblyAnalysisService analysisService, ILogger<Re
             };
 
             ListTypesResponse result = analysisService.ListTypes(request);
-            return JsonSerializer.Serialize(result, _jsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -66,7 +65,7 @@ public class ReflectionTools(AssemblyAnalysisService analysisService, ILogger<Re
                 error = ex.Message,
                 types = Array.Empty<object>(),
                 totalCount = 0
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

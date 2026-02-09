@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using SeleniumChrome.Core.Models;
@@ -15,8 +16,6 @@ public class EmailAlertTools(
     EmailJobAlertService emailService,
     ILogger<EmailAlertTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("get_email_alert_summary")]
     [Description("See skills/selenium/email/get_email_alert_summary.md only when using this tool")]
     public async Task<string> get_email_alert_summary(int daysBack = 7)
@@ -32,12 +31,12 @@ public class EmailAlertTools(
                 success = true,
                 daysBack,
                 summary = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error retrieving email alert summary");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -71,12 +70,12 @@ public class EmailAlertTools(
                 daysBack,
                 source,
                 jobs = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error retrieving email alert jobs for source {Source}", source);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -94,12 +93,12 @@ public class EmailAlertTools(
             {
                 success = true,
                 alerts = result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error retrieving recent email alerts");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -119,12 +118,12 @@ public class EmailAlertTools(
                 success = true,
                 daysBack,
                 enhancedJobs
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error retrieving enhanced email alerts");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

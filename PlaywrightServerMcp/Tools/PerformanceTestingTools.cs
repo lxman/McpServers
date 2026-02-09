@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using Microsoft.Playwright;
 using ModelContextProtocol.Server;
@@ -13,14 +14,7 @@ namespace PlaywrightServerMcp.Tools;
 public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
 {
     // Enhanced JSON serialization options with aggressive flattening for MCP compatibility
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 16, // Very limited depth for MCP protocol compatibility
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-    // Track active coverage sessions
+// Track active coverage sessions
     private static readonly ConcurrentDictionary<string, CoverageSession> _coverageSessions = new();
     private static readonly ConcurrentDictionary<string, List<MemorySnapshot>> _memorySnapshots = new();
 
@@ -80,7 +74,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                 jsCoverage = js,
                 cssCoverage = css,
                 message = "Coverage tracking started successfully"
-            }, JsonOptions);
+            }, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -308,7 +302,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                 recommendations
             };
 
-            return JsonSerializer.Serialize(finalResults, JsonOptions);
+            return JsonSerializer.Serialize(finalResults, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -536,7 +530,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                 resultDict["recommendations"] = recommendations;
             }
 
-            return JsonSerializer.Serialize(resultDict, JsonOptions);
+            return JsonSerializer.Serialize(resultDict, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -680,7 +674,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                          """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -747,7 +741,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                 recommendations = new List<object>()
             };
 
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -960,7 +954,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                 note = "This is a simplified Lighthouse-style audit using available browser APIs. For full Lighthouse functionality, consider using the official Lighthouse Node.js package."
             };
 
-            return JsonSerializer.Serialize(audit, JsonOptions);
+            return JsonSerializer.Serialize(audit, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -1113,7 +1107,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                 }
             };
 
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -1244,7 +1238,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                 note = "Performance tracing completed. Data includes timing metrics, resource loading, and custom performance marks."
             };
 
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {

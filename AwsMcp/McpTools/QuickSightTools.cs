@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Amazon.QuickSight.Model;
 using AwsServer.Core.Services.QuickSight;
 using Microsoft.Extensions.Logging;
@@ -15,7 +16,6 @@ public class QuickSightTools(
     QuickSightService quickSightService,
     ILogger<QuickSightTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
     private string? _awsAccountId;
 
     [McpServerTool, DisplayName("initialize_quicksight")]
@@ -33,12 +33,12 @@ public class QuickSightTools(
                 success = true,
                 message = "QuickSight initialized successfully",
                 awsAccountId
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error initializing QuickSight");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -66,12 +66,12 @@ public class QuickSightTools(
                     publishedVersionNumber = d.PublishedVersionNumber,
                     lastPublishedTime = d.LastPublishedTime
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing QuickSight dashboards");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -99,12 +99,12 @@ public class QuickSightTools(
                     lastUpdatedTime = response.Dashboard.LastUpdatedTime,
                     lastPublishedTime = response.Dashboard.LastPublishedTime
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error describing QuickSight dashboard {DashboardId}", dashboardId);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -131,12 +131,12 @@ public class QuickSightTools(
                     createdTime = a.CreatedTime,
                     lastUpdatedTime = a.LastUpdatedTime
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing QuickSight analyses");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -165,12 +165,12 @@ public class QuickSightTools(
                     rowLevelPermissionDataSet = d.RowLevelPermissionDataSet,
                     columnLevelPermissionRulesApplied = d.ColumnLevelPermissionRulesApplied
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing QuickSight datasets");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -203,12 +203,12 @@ public class QuickSightTools(
                         message = ds.ErrorInfo.Message
                     }
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing QuickSight data sources");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -243,12 +243,12 @@ public class QuickSightTools(
                 embedUrl = response.EmbedUrl,
                 requestId = response.RequestId,
                 expiresInMinutes = sessionLifetimeInMinutes
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error generating embed URL for dashboard {DashboardId}", dashboardId);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -279,12 +279,12 @@ public class QuickSightTools(
                         message = e.Message
                     })
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error describing QuickSight analysis {AnalysisId}", analysisId);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -312,12 +312,12 @@ public class QuickSightTools(
                     consumedSpiceCapacityInBytes = response.DataSet.ConsumedSpiceCapacityInBytes,
                     rowLevelPermissionDataSet = response.DataSet.RowLevelPermissionDataSet
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error describing QuickSight dataset {DataSetId}", dataSetId);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -349,12 +349,12 @@ public class QuickSightTools(
                         message = response.DataSource.ErrorInfo.Message
                     }
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error describing QuickSight data source {DataSourceId}", dataSourceId);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -382,12 +382,12 @@ public class QuickSightTools(
                     arn = u.Arn,
                     principalId = u.PrincipalId
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing QuickSight users");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -415,12 +415,12 @@ public class QuickSightTools(
                     principalId = response.User.PrincipalId,
                     customPermissionsName = response.User.CustomPermissionsName
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error describing QuickSight user {UserName}", userName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 

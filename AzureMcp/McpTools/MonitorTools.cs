@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using AzureServer.Core.Services.Monitor;
 using AzureServer.Core.Services.Monitor.Models;
 using Mcp.ResponseGuard.Extensions;
@@ -19,8 +20,6 @@ public class MonitorTools(
     ILogger<MonitorTools> logger,
     OutputGuard outputGuard)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("query_logs")]
     [Description("Query logs from Azure Monitor workspace. See skills/azure/monitor/query-logs.md only when using this tool")]
     public async Task<string> QueryLogs(
@@ -48,7 +47,7 @@ public class MonitorTools(
                 {
                     success = false,
                     error = result.Error
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             (long? count, string confidence) estimate = await monitorService.GetLogCountEstimateAsync(
@@ -70,7 +69,7 @@ public class MonitorTools(
             {
                 success = true,
                 result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
 
             // Check response size - Azure Monitor log queries can return large result sets
             ResponseSizeCheck sizeCheck = outputGuard.CheckStringSize(serialized, "query_logs");
@@ -116,7 +115,7 @@ public class MonitorTools(
             {
                 success = true,
                 workspaces = workspaces.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -138,7 +137,7 @@ public class MonitorTools(
             {
                 success = true,
                 streams = streams.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -174,7 +173,7 @@ public class MonitorTools(
                 success = true,
                 matchCount = matches.Count,
                 matches
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -216,7 +215,7 @@ public class MonitorTools(
                 matchCount = matches.Count,
                 workspacesSearched = workspaceList.Take(maxWorkspaces).Count(),
                 matches
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -261,14 +260,14 @@ public class MonitorTools(
                 {
                     success = false,
                     error = result.Error
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 result
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -290,7 +289,7 @@ public class MonitorTools(
             {
                 success = true,
                 metrics = metrics.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -312,7 +311,7 @@ public class MonitorTools(
             {
                 success = true,
                 components = components.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -339,14 +338,14 @@ public class MonitorTools(
                 {
                     success = false,
                     error = $"Application Insights component '{componentName}' not found in resource group '{resourceGroupName}'"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 component
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -368,7 +367,7 @@ public class MonitorTools(
             {
                 success = true,
                 alerts = alerts.ToArray()
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -411,14 +410,14 @@ public class MonitorTools(
                 {
                     success = false,
                     error = "Failed to create alert"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 alert
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {

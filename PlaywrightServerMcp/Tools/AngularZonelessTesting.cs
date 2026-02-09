@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
@@ -14,15 +15,7 @@ namespace PlaywrightServerMcp.Tools;
 [McpServerToolType]
 public class AngularZonelessTesting(PlaywrightSessionManager sessionManager)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    [McpServerTool]
+[McpServerTool]
     [Description("Test zoneless change detection in Angular 18+ applications. See skills/playwright-mcp/tools/angular/zoneless-testing.md.")]
     public async Task<string> TestZonelessChangeDetection(
         int timeoutSeconds = 60,
@@ -281,7 +274,7 @@ public class AngularZonelessTesting(PlaywrightSessionManager sessionManager)
                                                                        componentCount++;
                                                                        
                                                                        // Analyze change detection strategy
-                                                                       const componentDef = component.constructor.ɵcmp || component.constructor.ɵdir;
+                                                                       const componentDef = component.constructor.?cmp || component.constructor.?dir;
                                                                        if (componentDef) {
                                                                            const strategy = componentDef.changeDetection;
                                                                            if (strategy === 0) { // OnPush
@@ -677,7 +670,7 @@ public class AngularZonelessTesting(PlaywrightSessionManager sessionManager)
                            """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -752,7 +745,7 @@ public class AngularZonelessTesting(PlaywrightSessionManager sessionManager)
                                                            const component = window.ng.getComponent(el);
                                                            if (component && component.constructor) {
                                                                totalComponents++;
-                                                               const componentDef = component.constructor.ɵcmp;
+                                                               const componentDef = component.constructor.?cmp;
                                                                if (componentDef) {
                                                                    const isOnPush = componentDef.changeDetection === 0;
                                                                    if (isOnPush) {
@@ -964,7 +957,7 @@ public class AngularZonelessTesting(PlaywrightSessionManager sessionManager)
                            """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -1091,7 +1084,7 @@ public class AngularZonelessTesting(PlaywrightSessionManager sessionManager)
                                                            try {
                                                                const component = window.ng.getComponent(el);
                                                                if (component && component.constructor) {
-                                                                   const componentDef = component.constructor.ɵcmp;
+                                                                   const componentDef = component.constructor.?cmp;
                                                                    if (componentDef && componentDef.changeDetection === 0) {
                                                                        onPushComponents++;
                                                                    }
@@ -1397,7 +1390,7 @@ public class AngularZonelessTesting(PlaywrightSessionManager sessionManager)
                            """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {

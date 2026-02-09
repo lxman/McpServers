@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
@@ -16,16 +17,7 @@ namespace PlaywrightServerMcp.Tools;
 public class AngularComponentContractTesting(PlaywrightSessionManager sessionManager)
 {
     private readonly PlaywrightSessionManager _sessionManager = sessionManager;
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    [McpServerTool]
+[McpServerTool]
     [Description("Validate Angular component contracts including inputs, outputs, and interfaces. See skills/playwright-mcp/tools/angular/component-contract-testing.md.")]
     public async Task<string> ValidateComponentContracts(
         string componentSelector,
@@ -46,7 +38,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
                     Success = false,
                     ComponentSelector = componentSelector,
                     ErrorMessage = $"Session {sessionId} not found"
-                }, JsonOptions);
+                }, SerializerOptions.JsonOptionsComplex);
             }
 
             var result = new ContractValidationResult
@@ -59,7 +51,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
             if (!result.Environment.AngularDetected)
             {
                 result.ErrorMessage = "Angular not detected or not in development mode. Component contract testing requires Angular DevTools API.";
-                return JsonSerializer.Serialize(result, JsonOptions);
+                return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
             }
 
             // Extract component contract information
@@ -68,7 +60,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
             if (string.IsNullOrEmpty(result.ContractInfo.ComponentName))
             {
                 result.ErrorMessage = $"Component not found or not accessible with selector: {componentSelector}";
-                return JsonSerializer.Serialize(result, JsonOptions);
+                return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
             }
 
             result.ComponentName = result.ContractInfo.ComponentName;
@@ -105,7 +97,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
             result.Success = result.Violations.Count(v => v.Severity == "Critical") == 0 &&
                            result.ComplianceScore.OverallScore >= 70;
 
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {
@@ -116,7 +108,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
                 ErrorMessage = $"Failed to validate component contracts: {ex.Message}"
             };
 
-            return JsonSerializer.Serialize(errorResult, JsonOptions);
+            return JsonSerializer.Serialize(errorResult, SerializerOptions.JsonOptionsComplex);
         }
     }
 
@@ -145,7 +137,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
                                                  
                                                  // Get Angular version
                                                  try {
-                                                     const version = window.ng.version?.full || window.ng.getComponent?.(document.body)?.constructor?.ɵcmp?.factory?.toString().match(/Angular v([\d.]+)/)?.[1] || 'Unknown';
+                                                     const version = window.ng.version?.full || window.ng.getComponent?.(document.body)?.constructor?.?cmp?.factory?.toString().match(/Angular v([\d.]+)/)?.[1] || 'Unknown';
                                                      envInfo.angularVersion = version;
                                                      
                                                      // Check version capabilities
@@ -272,7 +264,7 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
                                                            contractInfo.componentName = componentInstance.constructor.name;
                                                            
                                                            // Check if standalone component
-                                                           const componentDef = componentInstance.constructor.ɵcmp;
+                                                           const componentDef = componentInstance.constructor.?cmp;
                                                            if (componentDef) {
                                                                contractInfo.isStandalone = componentDef.standalone === true;
                                                                

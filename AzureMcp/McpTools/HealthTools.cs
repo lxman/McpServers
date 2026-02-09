@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Azure.ResourceManager;
 using Azure.ResourceManager.Resources;
 using AzureServer.Core.Authentication;
@@ -18,8 +19,6 @@ public class HealthTools(
     CredentialSelectionService credentialService,
     ILogger<HealthTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("get_health")]
     [Description("Get Azure service health status. See skills/azure/health/get-health.md only when using this tool")]
     public async Task<string> GetHealth()
@@ -165,12 +164,12 @@ public class HealthTools(
                 availableServices,
                 totalServices,
                 healthPercentage = (int)((double)availableServices / totalServices * 100)
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting health status");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -190,7 +189,7 @@ public class HealthTools(
                 {
                     success = false,
                     error = "No Azure credentials found. Please authenticate using Azure CLI, Visual Studio, or environment variables."
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             CredentialInfo? credential = result.SelectedCredential;
@@ -200,7 +199,7 @@ public class HealthTools(
                 {
                     success = false,
                     error = "No credential selected"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             // Get subscription information
@@ -237,12 +236,12 @@ public class HealthTools(
                     subscriptionCount = credential.SubscriptionCount,
                     subscriptions
                 }
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting account info");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

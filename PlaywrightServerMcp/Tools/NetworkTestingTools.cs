@@ -6,7 +6,7 @@ using Microsoft.Playwright;
 using ModelContextProtocol.Server;
 using Playwright.Core.Models;
 using Playwright.Core.Services;
-using PlaywrightServerMcp.Common;
+using Mcp.Common.Core;
 using PlaywrightServerMcp.Models;
 
 namespace PlaywrightServerMcp.Tools;

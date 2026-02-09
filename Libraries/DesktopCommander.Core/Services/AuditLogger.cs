@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Mcp.Common.Core;
 using Microsoft.Extensions.Logging;
 
 namespace DesktopCommander.Core.Services;
@@ -35,7 +36,7 @@ public class AuditLogger
         {
             lock (_lockObject)
             {
-                string json = JsonSerializer.Serialize(logEntry, new JsonSerializerOptions { WriteIndented = false });
+                string json = JsonSerializer.Serialize(logEntry, SerializerOptions.JsonOptionsCompact);
                 File.AppendAllText(_auditLogPath, json + Environment.NewLine);
             }
         }

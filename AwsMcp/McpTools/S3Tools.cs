@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using Amazon.S3;
 using Amazon.S3.Model;
 using AwsServer.Core.Services.S3;
@@ -17,8 +18,6 @@ public class S3Tools(
     S3Service s3Service,
     ILogger<S3Tools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("list_s3_buckets")]
     [Description("List S3 buckets. See skills/aws/s3/list-buckets.md only when using this tool")]
     public async Task<string> ListS3Buckets()
@@ -37,12 +36,12 @@ public class S3Tools(
                     name = b.BucketName,
                     creationDate = b.CreationDate
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing S3 buckets");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -59,12 +58,12 @@ public class S3Tools(
             logger.LogDebug("Listing objects in bucket {BucketName} with prefix {Prefix}", bucketName, prefix);
             ListObjectsResult result = await s3Service.ListObjectsAsync(bucketName, prefix, maxKeys, continuationToken);
 
-            return JsonSerializer.Serialize(result, _jsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing objects in bucket {BucketName}", bucketName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -85,12 +84,12 @@ public class S3Tools(
                 bucketName,
                 key,
                 content
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting object {Key} from bucket {BucketName}", key, bucketName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -113,12 +112,12 @@ public class S3Tools(
                 bucketName,
                 key,
                 etag = response.ETag
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error putting object {Key} to bucket {BucketName}", key, bucketName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -139,12 +138,12 @@ public class S3Tools(
                 message = "Object deleted successfully",
                 bucketName,
                 key
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error deleting object {Key} from bucket {BucketName}", key, bucketName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -163,12 +162,12 @@ public class S3Tools(
                 success = true,
                 message = "Bucket created successfully",
                 bucketName
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error creating S3 bucket {BucketName}", bucketName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -201,12 +200,12 @@ public class S3Tools(
                 key,
                 presignedUrl = url,
                 expiresAt = expiry
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error generating presigned URL for {Key} in bucket {BucketName}", key, bucketName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -224,12 +223,12 @@ public class S3Tools(
                 success = true,
                 message = "Bucket deleted successfully",
                 bucketName
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error deleting S3 bucket {BucketName}", bucketName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -247,12 +246,12 @@ public class S3Tools(
                 success = true,
                 bucketName,
                 exists
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error checking if S3 bucket {BucketName} exists", bucketName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -271,12 +270,12 @@ public class S3Tools(
                 bucketName,
                 key,
                 exists
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error checking if S3 object {Key} exists in bucket {BucketName}", key, bucketName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -295,12 +294,12 @@ public class S3Tools(
                 bucketName,
                 versioningEnabled = response.VersioningConfig.Status == VersionStatus.Enabled,
                 status = response.VersioningConfig.Status?.Value
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting versioning for S3 bucket {BucketName}", bucketName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -328,12 +327,12 @@ public class S3Tools(
                     size = v.Size,
                     etag = v.ETag
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing object versions in S3 bucket {BucketName}", bucketName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }

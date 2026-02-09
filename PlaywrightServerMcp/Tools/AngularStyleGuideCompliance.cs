@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
@@ -14,15 +15,7 @@ namespace PlaywrightServerMcp.Tools;
 [McpServerToolType]
 public class AngularStyleGuideCompliance(PlaywrightSessionManager sessionManager)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        MaxDepth = 32,
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
-    [McpServerTool]
+[McpServerTool]
     [Description("Validate Angular application against Angular Style Guide compliance rules and best practices. See skills/playwright-mcp/tools/angular/style-guide-compliance.md.")]
     public async Task<string> ValidateAngularStyleGuideCompliance(
         string sessionId = "default")
@@ -574,7 +567,7 @@ public class AngularStyleGuideCompliance(PlaywrightSessionManager sessionManager
                                                              try {
                                                                  const component = window.ng.getComponent(el);
                                                                  if (component && component.constructor) {
-                                                                     const componentDef = component.constructor.ɵcmp;
+                                                                     const componentDef = component.constructor.?cmp;
                                                                      if (componentDef?.standalone === true) {
                                                                          standaloneCount++;
                                                                      }
@@ -863,7 +856,7 @@ public class AngularStyleGuideCompliance(PlaywrightSessionManager sessionManager
                          """;
 
             var result = await session.Page.EvaluateAsync<object>(jsCode);
-            return JsonSerializer.Serialize(result, JsonOptions);
+            return JsonSerializer.Serialize(result, SerializerOptions.JsonOptionsComplex);
         }
         catch (Exception ex)
         {

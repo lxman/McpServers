@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Mcp.Common.Core;
 using DocumentServer.Core.Models.Common;
 using DocumentServer.Core.Services.Lucene;
 using DocumentServer.Core.Services.Lucene.Models;
@@ -18,8 +19,6 @@ public class IndexTools(
     LuceneSearcher searcher,
     ILogger<IndexTools> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
     [McpServerTool, DisplayName("create_index")]
     [Description("Create a new search index from a directory of documents. See skills/document/index/create-index.md only when using this tool")]
     public async Task<string> CreateIndex(
@@ -34,17 +33,17 @@ public class IndexTools(
 
             if (string.IsNullOrWhiteSpace(indexName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Index name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Index name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(rootPath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Root path is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Root path is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (!Directory.Exists(rootPath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Root path does not exist" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Root path does not exist" }, SerializerOptions.JsonOptionsIndented);
             }
 
             ServiceResult<IndexingResult> result = await indexer.BuildIndexAsync(
@@ -56,7 +55,7 @@ public class IndexTools(
             if (!result.Success)
             {
                 logger.LogWarning("Failed to create index: {IndexName}, Error: {Error}", indexName, result.Error);
-                return JsonSerializer.Serialize(new { success = false, error = result.Error }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = result.Error }, SerializerOptions.JsonOptionsIndented);
             }
 
             logger.LogInformation("Index created successfully: {IndexName}, Indexed: {Count} documents",
@@ -73,12 +72,12 @@ public class IndexTools(
                 totalDocuments = result.Data?.TotalDocuments ?? 0,
                 indexedDocuments = result.Data?.IndexedDocuments ?? 0,
                 failedDocuments = result.Data?.FailedDocuments ?? 0
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error creating index: {IndexName}", indexName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -110,12 +109,12 @@ public class IndexTools(
                     isLoadedInMemory = kvp.Value.IsLoadedInMemory,
                     estimatedMemoryUsageMb = kvp.Value.EstimatedMemoryUsageMb
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error listing indexes");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -138,18 +137,18 @@ public class IndexTools(
 
             if (string.IsNullOrWhiteSpace(indexName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Index name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Index name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(query))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Query is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Query is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (!indexManager.IndexExists(indexName))
             {
                 logger.LogWarning("Index not found: {IndexName}", indexName);
-                return JsonSerializer.Serialize(new { success = false, error = $"Index '{indexName}' not found" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = $"Index '{indexName}' not found" }, SerializerOptions.JsonOptionsIndented);
             }
 
             var searchOptions = new SearchOptions
@@ -187,12 +186,12 @@ public class IndexTools(
                     modifiedDate = r.ModifiedDate,
                     fileSizeBytes = r.FileSizeBytes
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error searching index: {IndexName}, Query: {Query}", indexName, query);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -206,18 +205,18 @@ public class IndexTools(
 
             if (string.IsNullOrWhiteSpace(indexName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Index name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Index name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (string.IsNullOrWhiteSpace(query))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Query is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Query is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (!indexManager.IndexExists(indexName))
             {
                 logger.LogWarning("Index not found: {IndexName}", indexName);
-                return JsonSerializer.Serialize(new { success = false, error = $"Index '{indexName}' not found" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = $"Index '{indexName}' not found" }, SerializerOptions.JsonOptionsIndented);
             }
 
             try
@@ -234,7 +233,7 @@ public class IndexTools(
                     query,
                     totalHits,
                     isValid = true
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
             catch (Exception queryEx)
             {
@@ -248,13 +247,13 @@ public class IndexTools(
                     totalHits = 0,
                     isValid = false,
                     errorMessage = queryEx.Message
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error testing query: {IndexName}, Query: {Query}", indexName, query);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -268,13 +267,13 @@ public class IndexTools(
 
             if (string.IsNullOrWhiteSpace(indexName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Index name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Index name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (!indexManager.IndexExists(indexName))
             {
                 logger.LogWarning("Index not found: {IndexName}", indexName);
-                return JsonSerializer.Serialize(new { success = false, error = $"Index '{indexName}' not found" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = $"Index '{indexName}' not found" }, SerializerOptions.JsonOptionsIndented);
             }
 
             bool unloaded = indexManager.UnloadIndex(indexName);
@@ -289,12 +288,12 @@ public class IndexTools(
                 message = unloaded
                     ? $"Index '{indexName}' unloaded from memory"
                     : $"Index '{indexName}' was not loaded in memory"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error unloading index: {IndexName}", indexName);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -315,12 +314,12 @@ public class IndexTools(
                 success = true,
                 unloadedCount,
                 message = $"Unloaded {unloadedCount} indexes from memory"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error unloading all indexes");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -334,7 +333,7 @@ public class IndexTools(
 
             if (string.IsNullOrWhiteSpace(indexName))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Index name is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Index name is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             if (!indexManager.IndexExists(indexName))
@@ -345,7 +344,7 @@ public class IndexTools(
                     success = false,
                     indexName,
                     message = $"Index '{indexName}' not found"
-                }, _jsonOptions);
+                }, SerializerOptions.JsonOptionsIndented);
             }
 
             bool deleted = indexManager.DeleteIndex(indexName);
@@ -359,7 +358,7 @@ public class IndexTools(
                 message = deleted
                     ? $"Index '{indexName}' deleted successfully"
                     : $"Failed to delete index '{indexName}'"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
@@ -369,7 +368,7 @@ public class IndexTools(
                 success = false,
                 indexName,
                 message = $"Error deleting index: {ex.Message}"
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -403,12 +402,12 @@ public class IndexTools(
                     isLoadedInMemory = kvp.Value.IsLoadedInMemory,
                     estimatedMemoryUsageMb = kvp.Value.EstimatedMemoryUsageMb
                 })
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error getting memory status");
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 
@@ -422,7 +421,7 @@ public class IndexTools(
 
             if (string.IsNullOrWhiteSpace(directoryPath))
             {
-                return JsonSerializer.Serialize(new { success = false, error = "Directory path is required" }, _jsonOptions);
+                return JsonSerializer.Serialize(new { success = false, error = "Directory path is required" }, SerializerOptions.JsonOptionsIndented);
             }
 
             string? indexName = indexManager.FindIndexForDirectory(directoryPath);
@@ -436,12 +435,12 @@ public class IndexTools(
                 directoryPath,
                 indexName = indexName ?? "none",
                 found = indexName != null
-            }, _jsonOptions);
+            }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error finding index for directory: {DirectoryPath}", directoryPath);
-            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, _jsonOptions);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
 }
