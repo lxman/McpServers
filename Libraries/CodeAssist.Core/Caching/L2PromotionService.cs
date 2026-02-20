@@ -192,6 +192,7 @@ public sealed class L2PromotionService : IDisposable
                             ["parent_symbol"] = chunk.ParentSymbol ?? "",
                             ["language"] = chunk.Language,
                             ["content_hash"] = chunk.ContentHash,
+                            ["calls_out"] = (object?)chunk.CallsOut ?? Array.Empty<string>(),
                             ["promoted_at"] = DateTime.UtcNow.ToString("O")
                         };
 

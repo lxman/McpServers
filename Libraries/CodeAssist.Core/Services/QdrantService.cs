@@ -1,5 +1,6 @@
 using CodeAssist.Core.Configuration;
 using CodeAssist.Core.Models;
+using Google.Protobuf.Collections;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Qdrant.Client;
@@ -98,7 +99,10 @@ public sealed class QdrantService
                     ["symbol_name"] = chunk.SymbolName ?? "",
                     ["parent_symbol"] = chunk.ParentSymbol ?? "",
                     ["language"] = chunk.Language,
-                    ["content_hash"] = chunk.ContentHash
+                    ["content_hash"] = chunk.ContentHash,
+                    ["calls_out"] = chunk.CallsOut is { Count: > 0 }
+                        ? new Value { ListValue = BuildStringList(chunk.CallsOut) }
+                        : new Value { ListValue = new ListValue() }
                 }
             }).ToList();
 
@@ -156,24 +160,7 @@ public sealed class QdrantService
             return results.Select(r => new SearchResult
             {
                 Score = r.Score,
-                Chunk = new CodeChunk
-                {
-                    Id = Guid.Parse(r.Id.Uuid),
-                    FilePath = r.Payload["file_path"].StringValue,
-                    RelativePath = r.Payload["relative_path"].StringValue,
-                    Content = r.Payload["content"].StringValue,
-                    StartLine = (int)r.Payload["start_line"].IntegerValue,
-                    EndLine = (int)r.Payload["end_line"].IntegerValue,
-                    ChunkType = r.Payload["chunk_type"].StringValue,
-                    SymbolName = string.IsNullOrEmpty(r.Payload["symbol_name"].StringValue)
-                        ? null
-                        : r.Payload["symbol_name"].StringValue,
-                    ParentSymbol = string.IsNullOrEmpty(r.Payload["parent_symbol"].StringValue)
-                        ? null
-                        : r.Payload["parent_symbol"].StringValue,
-                    Language = r.Payload["language"].StringValue,
-                    ContentHash = r.Payload["content_hash"].StringValue
-                }
+                Chunk = BuildChunkFromPayload(r.Id.Uuid, r.Payload)
             }).ToList();
         }
         catch (Exception ex)
@@ -320,6 +307,173 @@ public sealed class QdrantService
     }
 
     /// <summary>
+    /// Create a payload index on a field for efficient filtering.
+    /// Idempotent — no-op if the index already exists.
+    /// </summary>
+    public async Task CreatePayloadIndexAsync(
+        string collectionName,
+        string fieldName,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _client.CreatePayloadIndexAsync(
+                collectionName,
+                fieldName,
+                PayloadSchemaType.Keyword,
+                cancellationToken: cancellationToken);
+
+            _logger.LogDebug("Created payload index on {Field} in {Collection}", fieldName, collectionName);
+        }
+        catch (Exception ex)
+        {
+            // Non-fatal — index may already exist or field type mismatch
+            _logger.LogWarning(ex, "Failed to create payload index on {Field} in {Collection} (may already exist)",
+                fieldName, collectionName);
+        }
+    }
+
+    /// <summary>
+    /// Search for chunks whose symbol_name matches any of the given names.
+    /// Used to find callee definitions from calls_out edges.
+    /// </summary>
+    public async Task<List<SearchResult>> SearchBySymbolNamesAsync(
+        string collectionName,
+        IReadOnlyList<string> symbolNames,
+        CancellationToken cancellationToken = default)
+    {
+        if (symbolNames.Count == 0) return [];
+
+        try
+        {
+            // Build OR filter: symbol_name matches any of the given names
+            var conditions = symbolNames.Select(name => new Condition
+            {
+                Field = new FieldCondition
+                {
+                    Key = "symbol_name",
+                    Match = new Match { Keyword = name }
+                }
+            }).ToList();
+
+            var filter = new Filter();
+            filter.Should.AddRange(conditions);
+
+            ScrollResponse response = await _client.ScrollAsync(
+                collectionName,
+                filter: filter,
+                limit: (uint)Math.Min(symbolNames.Count * 3, 100),
+                cancellationToken: cancellationToken);
+
+            return response.Result.Select(r => new SearchResult
+            {
+                Score = 0f, // Not vector-scored
+                Chunk = BuildChunkFromPayload(r.Id.Uuid, r.Payload)
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to search by symbol names in {Collection}", collectionName);
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Search for chunks whose calls_out contains the given symbol name.
+    /// Used to find callers of a given symbol.
+    /// </summary>
+    public async Task<List<SearchResult>> SearchCallersOfAsync(
+        string collectionName,
+        string symbolName,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var filter = new Filter
+            {
+                Must =
+                {
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "calls_out",
+                            Match = new Match { Keyword = symbolName }
+                        }
+                    }
+                }
+            };
+
+            ScrollResponse response = await _client.ScrollAsync(
+                collectionName,
+                filter: filter,
+                limit: 50,
+                cancellationToken: cancellationToken);
+
+            return response.Result.Select(r => new SearchResult
+            {
+                Score = 0f,
+                Chunk = BuildChunkFromPayload(r.Id.Uuid, r.Payload)
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to search callers of {Symbol} in {Collection}",
+                symbolName, collectionName);
+            return [];
+        }
+    }
+
+    private static CodeChunk BuildChunkFromPayload(string uuid, MapField<string, Value> payload)
+    {
+        return new CodeChunk
+        {
+            Id = Guid.Parse(uuid),
+            FilePath = payload["file_path"].StringValue,
+            RelativePath = payload["relative_path"].StringValue,
+            Content = payload["content"].StringValue,
+            StartLine = (int)payload["start_line"].IntegerValue,
+            EndLine = (int)payload["end_line"].IntegerValue,
+            ChunkType = payload["chunk_type"].StringValue,
+            SymbolName = string.IsNullOrEmpty(payload["symbol_name"].StringValue)
+                ? null
+                : payload["symbol_name"].StringValue,
+            ParentSymbol = string.IsNullOrEmpty(payload["parent_symbol"].StringValue)
+                ? null
+                : payload["parent_symbol"].StringValue,
+            Language = payload["language"].StringValue,
+            ContentHash = payload["content_hash"].StringValue,
+            CallsOut = ParseCallsOut(payload)
+        };
+    }
+
+    private static IReadOnlyList<string>? ParseCallsOut(MapField<string, Value> payload)
+    {
+        if (!payload.TryGetValue("calls_out", out Value? value))
+            return null;
+
+        if (value.KindCase != Value.KindOneofCase.ListValue)
+            return null;
+
+        List<string> calls = value.ListValue.Values
+            .Where(v => v.KindCase == Value.KindOneofCase.StringValue && !string.IsNullOrEmpty(v.StringValue))
+            .Select(v => v.StringValue)
+            .ToList();
+
+        return calls.Count > 0 ? calls : null;
+    }
+
+    private static ListValue BuildStringList(IReadOnlyList<string> values)
+    {
+        var list = new ListValue();
+        foreach (string val in values)
+        {
+            list.Values.Add(new Value { StringValue = val });
+        }
+        return list;
+    }
+
+    /// <summary>
     /// Upsert pre-computed vectors with payloads (used by L2 promotion).
     /// No embedding computation needed - vectors are already computed.
     /// </summary>
@@ -351,6 +505,7 @@ public sealed class QdrantService
                         double d => d,
                         bool b => b,
                         DateTime dt => dt.ToString("O"),
+                        IReadOnlyList<string> list => new Value { ListValue = BuildStringList(list) },
                         _ => value.ToString() ?? ""
                     };
                 }

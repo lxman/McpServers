@@ -57,6 +57,10 @@ public sealed class RepositoryIndexer(
             // Ensure collection exists
             await qdrantService.EnsureCollectionAsync(collectionName, cancellationToken);
 
+            // Create payload indexes for dependency graph queries
+            await qdrantService.CreatePayloadIndexAsync(collectionName, "symbol_name", cancellationToken);
+            await qdrantService.CreatePayloadIndexAsync(collectionName, "calls_out", cancellationToken);
+
             logger.LogDebug("Loading index state...");
             // Load existing index state
             IndexStateFile? existingState = await LoadIndexStateAsync(repositoryName, cancellationToken);

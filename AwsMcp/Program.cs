@@ -23,12 +23,12 @@ try
     // Register AWS Core services
     builder.Services.AddAwsServices();
 
-    // Register OutputGuard with custom 15k token limit for AWS CloudWatch log operations
+    // Register OutputGuard with a custom 15k token limit for AWS CloudWatch log operations
     builder.Services.AddSingleton(sp => new OutputGuard(
         sp.GetRequiredService<ILogger<OutputGuard>>(),
         new OutputGuardOptions { SafeTokenLimit = 15_000 }));
 
-    // Configure MCP server with STDIO transport
+    // Configure an MCP server with STDIO transport
     builder.Services.AddMcpServer()
         .WithStdioServerTransport()
         // AWS Service Tools

@@ -157,4 +157,10 @@ public sealed class CodeAssistOptions
     /// Delay between L2 promotion batches.
     /// </summary>
     public TimeSpan L2PromotionDelay { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Path to the user's voice profile markdown file.
+    /// Used by the get_voice_profile tool to serve writing style guidance.
+    /// </summary>
+    public string? VoiceProfilePath { get; set; }
 }

@@ -35,16 +35,17 @@ public class SearchTools(
     }
 
     [McpServerTool, DisplayName("search_code")]
-    [Description("Semantic search across an indexed repository. Returns code chunks most similar to the query, with file paths, line numbers, and relevance scores. Use natural language queries like 'function that handles user authentication' or 'error handling for database connections'.")]
+    [Description("Semantic search across an indexed repository. Returns code chunks most similar to the query, with file paths, line numbers, and relevance scores. Use natural language queries like 'function that handles user authentication' or 'error handling for database connections'. Set includeDependencies=true to also return callers and callees of matched symbols.")]
     public async Task<string> SearchCode(
         string repositoryName,
         string query,
         int limit = 10,
-        float minScore = 0.5f)
+        float minScore = 0.5f,
+        bool includeDependencies = false)
     {
         try
         {
-            logger.LogDebug("Searching {Repository} for: {Query}", repositoryName, query);
+            logger.LogDebug("Searching {Repository} for: {Query} (deps={Deps})", repositoryName, query, includeDependencies);
 
             IndexState? state = await indexer.GetIndexStateAsync(repositoryName);
             if (state == null)
@@ -59,22 +60,27 @@ public class SearchTools(
             // Ensure we're watching this repository for L1 cache updates
             EnsureWatching(state.RootPath, state.CollectionName);
 
-            UnifiedSearchResult response = await unifiedSearch.SearchAsync(query, state.CollectionName, limit, minScore);
+            UnifiedSearchResult response = await unifiedSearch.SearchAsync(
+                query, state.CollectionName, limit, minScore, includeDependencies);
 
-            var results = response.Results.Select(r => new
+            var results = response.Results.Select(FormatHit).ToList();
+
+            object? dependencies = null;
+            if (response.DependencyResults is { Count: > 0 })
             {
-                filePath = r.Chunk.RelativePath,
-                startLine = r.Chunk.StartLine,
-                endLine = r.Chunk.EndLine,
-                chunkType = r.Chunk.ChunkType,
-                symbolName = r.Chunk.SymbolName,
-                parentSymbol = r.Chunk.ParentSymbol,
-                language = r.Chunk.Language,
-                score = Math.Round(r.Score, 4),
-                content = r.Chunk.Content,
-                source = r.Source.ToString(),
-                isFresh = r.IsFresh
-            }).ToList();
+                dependencies = response.DependencyResults.Select(r => new
+                {
+                    filePath = r.Chunk.RelativePath,
+                    startLine = r.Chunk.StartLine,
+                    endLine = r.Chunk.EndLine,
+                    chunkType = r.Chunk.ChunkType,
+                    symbolName = r.Chunk.SymbolName,
+                    parentSymbol = r.Chunk.ParentSymbol,
+                    language = r.Chunk.Language,
+                    content = r.Chunk.Content,
+                    dependencyType = r.DependencyType
+                }).ToList();
+            }
 
             return JsonSerializer.Serialize(new
             {
@@ -86,7 +92,8 @@ public class SearchTools(
                 l1HitCount = response.L1HitCount,
                 l2HitCount = response.L2HitCount,
                 hotFilesSearched = response.HotFilesSearched,
-                results
+                results,
+                dependencies
             }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)
@@ -95,6 +102,22 @@ public class SearchTools(
             return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
         }
     }
+
+    private static object FormatHit(UnifiedSearchHit r) => new
+    {
+        filePath = r.Chunk.RelativePath,
+        startLine = r.Chunk.StartLine,
+        endLine = r.Chunk.EndLine,
+        chunkType = r.Chunk.ChunkType,
+        symbolName = r.Chunk.SymbolName,
+        parentSymbol = r.Chunk.ParentSymbol,
+        language = r.Chunk.Language,
+        score = Math.Round(r.Score, 4),
+        content = r.Chunk.Content,
+        source = r.Source.ToString(),
+        isFresh = r.IsFresh,
+        callsOut = r.Chunk.CallsOut
+    };
 
     [McpServerTool, DisplayName("find_similar_code")]
     [Description("Find code similar to a given code snippet. Useful for finding duplicates, related implementations, or understanding patterns used elsewhere in the codebase.")]
@@ -122,20 +145,7 @@ public class SearchTools(
 
             UnifiedSearchResult response = await unifiedSearch.SearchAsync(codeSnippet, state.CollectionName, limit, minScore);
 
-            var results = response.Results.Select(r => new
-            {
-                filePath = r.Chunk.RelativePath,
-                startLine = r.Chunk.StartLine,
-                endLine = r.Chunk.EndLine,
-                chunkType = r.Chunk.ChunkType,
-                symbolName = r.Chunk.SymbolName,
-                parentSymbol = r.Chunk.ParentSymbol,
-                language = r.Chunk.Language,
-                score = Math.Round(r.Score, 4),
-                content = r.Chunk.Content,
-                source = r.Source.ToString(),
-                isFresh = r.IsFresh
-            }).ToList();
+            var results = response.Results.Select(FormatHit).ToList();
 
             return JsonSerializer.Serialize(new
             {

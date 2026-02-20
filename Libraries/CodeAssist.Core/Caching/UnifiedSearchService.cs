@@ -30,6 +30,7 @@ public sealed class UnifiedSearchService(
         string collectionName,
         int limit = 10,
         float minScore = 0.5f,
+        bool includeDependencies = false,
         CancellationToken cancellationToken = default)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -51,12 +52,20 @@ public sealed class UnifiedSearchService(
         // Merge results with L1 priority
         List<UnifiedSearchHit> mergedResults = MergeResults(l1Results, l2Results, limit);
 
+        // Expand dependencies if requested
+        List<UnifiedSearchHit>? dependencyResults = null;
+        if (includeDependencies && mergedResults.Count > 0)
+        {
+            dependencyResults = await ExpandDependenciesAsync(collectionName, mergedResults, cancellationToken);
+        }
+
         stopwatch.Stop();
 
         var result = new UnifiedSearchResult
         {
             Query = query,
             Results = mergedResults,
+            DependencyResults = dependencyResults,
             L1HitCount = l1Results.Count,
             L2HitCount = l2Results.Count,
             TotalResultCount = mergedResults.Count,
@@ -65,8 +74,9 @@ public sealed class UnifiedSearchService(
         };
 
         logger.LogDebug(
-            "Unified search completed in {Duration}ms: L1={L1Count}, L2={L2Count}, Merged={MergedCount}",
-            stopwatch.ElapsedMilliseconds, l1Results.Count, l2Results.Count, mergedResults.Count);
+            "Unified search completed in {Duration}ms: L1={L1Count}, L2={L2Count}, Merged={MergedCount}, Deps={DepCount}",
+            stopwatch.ElapsedMilliseconds, l1Results.Count, l2Results.Count, mergedResults.Count,
+            dependencyResults?.Count ?? 0);
 
         return result;
     }
@@ -212,6 +222,86 @@ public sealed class UnifiedSearchService(
             .ToList();
     }
 
+    private async Task<List<UnifiedSearchHit>> ExpandDependenciesAsync(
+        string collectionName,
+        List<UnifiedSearchHit> primaryHits,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Collect all calls_out from primary hits (callees to look up)
+            var calleeNames = new HashSet<string>(StringComparer.Ordinal);
+            // Collect all symbol names from primary hits (to find callers of)
+            var primarySymbols = new HashSet<string>(StringComparer.Ordinal);
+            var primaryIds = new HashSet<Guid>();
+
+            foreach (UnifiedSearchHit hit in primaryHits)
+            {
+                primaryIds.Add(hit.Chunk.Id);
+
+                if (hit.Chunk.CallsOut is { Count: > 0 })
+                {
+                    foreach (string call in hit.Chunk.CallsOut)
+                        calleeNames.Add(call);
+                }
+
+                if (!string.IsNullOrEmpty(hit.Chunk.SymbolName))
+                    primarySymbols.Add(hit.Chunk.SymbolName);
+            }
+
+            var depResults = new List<UnifiedSearchHit>();
+
+            // Find callee definitions (chunks whose symbol_name matches a calls_out entry)
+            if (calleeNames.Count > 0)
+            {
+                List<SearchResult> callees = await qdrantService.SearchBySymbolNamesAsync(
+                    collectionName, calleeNames.ToList(), cancellationToken);
+
+                foreach (SearchResult r in callees)
+                {
+                    if (primaryIds.Contains(r.Chunk.Id)) continue;
+                    depResults.Add(new UnifiedSearchHit
+                    {
+                        Chunk = r.Chunk,
+                        Score = r.Score,
+                        Source = SearchSource.DependencyGraph,
+                        IsFresh = false,
+                        DependencyType = "callee"
+                    });
+                }
+            }
+
+            // Find callers (chunks whose calls_out contains a primary symbol)
+            foreach (string symbol in primarySymbols)
+            {
+                List<SearchResult> callers = await qdrantService.SearchCallersOfAsync(
+                    collectionName, symbol, cancellationToken);
+
+                foreach (SearchResult r in callers)
+                {
+                    if (primaryIds.Contains(r.Chunk.Id)) continue;
+                    // Avoid duplicates in dependency results
+                    if (depResults.Any(d => d.Chunk.Id == r.Chunk.Id)) continue;
+                    depResults.Add(new UnifiedSearchHit
+                    {
+                        Chunk = r.Chunk,
+                        Score = r.Score,
+                        Source = SearchSource.DependencyGraph,
+                        IsFresh = false,
+                        DependencyType = "caller"
+                    });
+                }
+            }
+
+            return depResults;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to expand dependencies for search results");
+            return [];
+        }
+    }
+
     private static float CosineSimilarity(float[] a, float[] b)
     {
         if (a.Length != b.Length) return 0;
@@ -239,6 +329,7 @@ public class UnifiedSearchResult
 {
     public required string Query { get; init; }
     public required List<UnifiedSearchHit> Results { get; init; }
+    public List<UnifiedSearchHit>? DependencyResults { get; init; }
     public required int L1HitCount { get; init; }
     public required int L2HitCount { get; init; }
     public required int TotalResultCount { get; init; }
@@ -256,6 +347,7 @@ public class UnifiedSearchHit
     public required SearchSource Source { get; init; }
     public required bool IsFresh { get; init; }
     public DateTime? CachedAt { get; init; }
+    public string? DependencyType { get; init; }
 }
 
 /// <summary>
@@ -276,5 +368,10 @@ public enum SearchSource
     /// <summary>
     /// Score from L2, but content replaced with fresh L1 content.
     /// </summary>
-    L2WithL1Content
+    L2WithL1Content,
+
+    /// <summary>
+    /// Result from dependency graph expansion (caller/callee lookup).
+    /// </summary>
+    DependencyGraph
 }

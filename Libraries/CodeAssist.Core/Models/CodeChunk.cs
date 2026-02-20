@@ -51,6 +51,11 @@ public sealed record CodeChunk
     public string? ParentSymbol { get; init; }
 
     /// <summary>
+    /// Names of functions/methods called from this chunk, or null if not extracted.
+    /// </summary>
+    public IReadOnlyList<string>? CallsOut { get; init; }
+
+    /// <summary>
     /// Programming language of this chunk.
     /// </summary>
     public required string Language { get; init; }

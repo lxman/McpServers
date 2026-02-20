@@ -33,7 +33,8 @@ try
         .WithTools<HealthTools>()
         .WithTools<IndexTools>()
         .WithTools<SearchTools>()
-        .WithTools<RepositoryTools>();
+        .WithTools<RepositoryTools>()
+        .WithTools<PersonalContextTools>();
 
     IHost host = builder.Build();
     await host.RunAsync();

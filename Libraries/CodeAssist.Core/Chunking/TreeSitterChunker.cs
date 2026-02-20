@@ -119,6 +119,25 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
         ]
     };
 
+    /// <summary>
+    /// Node types that represent function/method calls in each language.
+    /// Used to extract outgoing call edges for the dependency graph.
+    /// </summary>
+    private static readonly Dictionary<string, HashSet<string>> CallExpressionTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["csharp"] = ["invocation_expression"],
+        ["python"] = ["call"],
+        ["javascript"] = ["call_expression"],
+        ["typescript"] = ["call_expression"],
+        ["go"] = ["call_expression"],
+        ["rust"] = ["call_expression", "method_call_expression"],
+        ["java"] = ["method_invocation"],
+        ["c"] = ["call_expression"],
+        ["cpp"] = ["call_expression"],
+        ["ruby"] = ["method_call", "call"],
+        ["php"] = ["function_call_expression", "method_call_expression"]
+    };
+
     private static readonly HashSet<string> SupportedLangs = new(LanguageMapping.Keys, StringComparer.OrdinalIgnoreCase);
 
     public IReadOnlySet<string> SupportedLanguages => SupportedLangs;
@@ -270,6 +289,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             }
             else
             {
+                List<string> callsOut = ExtractCallsOut(node, language);
                 chunks.Add(new CodeChunk
                 {
                     Id = Guid.NewGuid(),
@@ -282,7 +302,8 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
                     SymbolName = symbolName,
                     ParentSymbol = null, // Could be enhanced to track parent
                     Language = language.ToLowerInvariant(),
-                    ContentHash = ComputeHash(nodeContent)
+                    ContentHash = ComputeHash(nodeContent),
+                    CallsOut = callsOut.Count > 0 ? callsOut : null
                 });
             }
         }
@@ -319,6 +340,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             int startLine = (int)node.StartPosition.Row + 1;
             int endLine = (int)node.EndPosition.Row + 1;
 
+            List<string> callsOut = ExtractCallsOut(node, language);
             chunks.Add(new CodeChunk
             {
                 Id = Guid.NewGuid(),
@@ -331,7 +353,8 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
                 SymbolName = null,
                 ParentSymbol = null,
                 Language = language.ToLowerInvariant(),
-                ContentHash = ComputeHash(nodeContent)
+                ContentHash = ComputeHash(nodeContent),
+                CallsOut = callsOut.Count > 0 ? callsOut : null
             });
         } while (cursor.GotoNextSibling());
     }
@@ -411,6 +434,78 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
         }
 
         return result;
+    }
+
+    private static List<string> ExtractCallsOut(Node node, string language)
+    {
+        if (!CallExpressionTypes.TryGetValue(language, out HashSet<string>? callTypes))
+            return [];
+
+        var calls = new HashSet<string>(StringComparer.Ordinal);
+        WalkForCalls(node, callTypes, calls);
+        return calls.Count > 0 ? calls.ToList() : [];
+    }
+
+    private static void WalkForCalls(Node node, HashSet<string> callTypes, HashSet<string> calls)
+    {
+        if (callTypes.Contains(node.Type))
+        {
+            string? name = ExtractCallName(node);
+            if (name != null)
+                calls.Add(name);
+        }
+
+        using TreeCursor cursor = node.Walk();
+        if (!cursor.GotoFirstChild())
+            return;
+
+        do
+        {
+            WalkForCalls(cursor.CurrentNode, callTypes, calls);
+        } while (cursor.GotoNextSibling());
+    }
+
+    private static string? ExtractCallName(Node callNode)
+    {
+        // The first child of a call expression is usually the function reference.
+        // For member access (obj.Method()), we want the rightmost identifier.
+        using TreeCursor cursor = callNode.Walk();
+        if (!cursor.GotoFirstChild())
+            return null;
+
+        Node funcNode = cursor.CurrentNode;
+
+        // Walk right through member access / field expressions to get the method name
+        while (funcNode.Type is "member_expression" or "member_access_expression"
+               or "field_expression" or "attribute" or "scoped_identifier"
+               or "qualified_name" or "scope_resolution")
+        {
+            using TreeCursor innerCursor = funcNode.Walk();
+            if (!innerCursor.GotoFirstChild())
+                break;
+
+            // Navigate to the last child
+            Node last = innerCursor.CurrentNode;
+            while (innerCursor.GotoNextSibling())
+            {
+                last = innerCursor.CurrentNode;
+            }
+
+            if (last.Type is "identifier" or "property_identifier" or "field_identifier"
+                or "type_identifier" or "name")
+            {
+                return last.Text;
+            }
+            funcNode = last;
+        }
+
+        // Direct identifier (simple function call)
+        if (funcNode.Type is "identifier" or "property_identifier" or "field_identifier" or "name")
+        {
+            return funcNode.Text;
+        }
+
+        return null;
     }
 
     private Language GetOrCreateLanguage(string treeSitterLang)
