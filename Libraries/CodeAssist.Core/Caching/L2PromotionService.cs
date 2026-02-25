@@ -5,6 +5,7 @@ using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Qdrant.Client.Grpc;
 
 namespace CodeAssist.Core.Caching;
 
@@ -192,14 +193,32 @@ public sealed class L2PromotionService : IDisposable
                             ["parent_symbol"] = chunk.ParentSymbol ?? "",
                             ["language"] = chunk.Language,
                             ["content_hash"] = chunk.ContentHash,
-                            ["calls_out"] = (object?)chunk.CallsOut?.Select(c => new Dictionary<string, object>
-                            {
-                                ["method_name"] = c.MethodName,
-                                ["line"] = c.Line,
-                                ["receiver_type"] = c.ReceiverType ?? "",
-                                ["receiver_expression"] = c.ReceiverExpression ?? "",
-                                ["qualified_name"] = c.QualifiedName ?? ""
-                            }).ToArray() ?? Array.Empty<object>(),
+                            ["calls_out"] = chunk.CallsOut is { Count: > 0 }
+                                ? new Value { ListValue = QdrantService.BuildCallReferenceList(chunk.CallsOut) }
+                                : new Value { ListValue = new ListValue() },
+                            ["calls_out_names"] = chunk.CallsOut is { Count: > 0 }
+                                ? new Value { ListValue = QdrantService.BuildStringList(chunk.CallsOut.Select(c => c.MethodName).ToList()) }
+                                : new Value { ListValue = new ListValue() },
+                            ["return_type"] = chunk.ReturnType ?? "",
+                            ["base_type"] = chunk.BaseType ?? "",
+                            ["implemented_interfaces"] = chunk.ImplementedInterfaces is { Count: > 0 }
+                                ? new Value { ListValue = QdrantService.BuildStringList(chunk.ImplementedInterfaces.ToList()) }
+                                : new Value { ListValue = new ListValue() },
+                            ["access_modifier"] = chunk.AccessModifier ?? "",
+                            ["modifiers"] = chunk.Modifiers is { Count: > 0 }
+                                ? new Value { ListValue = QdrantService.BuildStringList(chunk.Modifiers.ToList()) }
+                                : new Value { ListValue = new ListValue() },
+                            ["attributes"] = chunk.Attributes is { Count: > 0 }
+                                ? new Value { ListValue = QdrantService.BuildStringList(chunk.Attributes.ToList()) }
+                                : new Value { ListValue = new ListValue() },
+                            ["namespace"] = chunk.Namespace ?? "",
+                            ["qualified_name"] = chunk.QualifiedName ?? "",
+                            ["parameters"] = chunk.Parameters is { Count: > 0 }
+                                ? new Value { ListValue = QdrantService.BuildParameterList(chunk.Parameters) }
+                                : new Value { ListValue = new ListValue() },
+                            ["field_accesses"] = chunk.FieldAccesses is { Count: > 0 }
+                                ? new Value { ListValue = QdrantService.BuildFieldAccessList(chunk.FieldAccesses) }
+                                : new Value { ListValue = new ListValue() },
                             ["promoted_at"] = DateTime.UtcNow.ToString("O")
                         };
 

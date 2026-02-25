@@ -57,6 +57,8 @@ public sealed class QdrantService
                         Distance = Distance.Cosine
                     },
                     cancellationToken: cancellationToken);
+
+                await EnsurePayloadIndexesAsync(collectionName, cancellationToken);
             }
         }
         catch (Exception ex)
@@ -102,6 +104,31 @@ public sealed class QdrantService
                     ["content_hash"] = chunk.ContentHash,
                     ["calls_out"] = chunk.CallsOut is { Count: > 0 }
                         ? new Value { ListValue = BuildCallReferenceList(chunk.CallsOut) }
+                        : new Value { ListValue = new ListValue() },
+                    // Denormalized call names for efficient keyword filtering
+                    ["calls_out_names"] = chunk.CallsOut is { Count: > 0 }
+                        ? new Value { ListValue = BuildStringList(chunk.CallsOut.Select(c => c.MethodName).ToList()) }
+                        : new Value { ListValue = new ListValue() },
+                    // New Phase 1 fields
+                    ["return_type"] = chunk.ReturnType ?? "",
+                    ["base_type"] = chunk.BaseType ?? "",
+                    ["implemented_interfaces"] = chunk.ImplementedInterfaces is { Count: > 0 }
+                        ? new Value { ListValue = BuildStringList(chunk.ImplementedInterfaces.ToList()) }
+                        : new Value { ListValue = new ListValue() },
+                    ["access_modifier"] = chunk.AccessModifier ?? "",
+                    ["modifiers"] = chunk.Modifiers is { Count: > 0 }
+                        ? new Value { ListValue = BuildStringList(chunk.Modifiers.ToList()) }
+                        : new Value { ListValue = new ListValue() },
+                    ["attributes"] = chunk.Attributes is { Count: > 0 }
+                        ? new Value { ListValue = BuildStringList(chunk.Attributes.ToList()) }
+                        : new Value { ListValue = new ListValue() },
+                    ["namespace"] = chunk.Namespace ?? "",
+                    ["qualified_name"] = chunk.QualifiedName ?? "",
+                    ["parameters"] = chunk.Parameters is { Count: > 0 }
+                        ? new Value { ListValue = BuildParameterList(chunk.Parameters) }
+                        : new Value { ListValue = new ListValue() },
+                    ["field_accesses"] = chunk.FieldAccesses is { Count: > 0 }
+                        ? new Value { ListValue = BuildFieldAccessList(chunk.FieldAccesses) }
                         : new Value { ListValue = new ListValue() }
                 }
             }).ToList();
@@ -396,7 +423,7 @@ public sealed class QdrantService
                     {
                         Field = new FieldCondition
                         {
-                            Key = "calls_out",
+                            Key = "calls_out_names",
                             Match = new Match { Keyword = symbolName }
                         }
                     }
@@ -434,15 +461,21 @@ public sealed class QdrantService
             StartLine = (int)payload["start_line"].IntegerValue,
             EndLine = (int)payload["end_line"].IntegerValue,
             ChunkType = payload["chunk_type"].StringValue,
-            SymbolName = string.IsNullOrEmpty(payload["symbol_name"].StringValue)
-                ? null
-                : payload["symbol_name"].StringValue,
-            ParentSymbol = string.IsNullOrEmpty(payload["parent_symbol"].StringValue)
-                ? null
-                : payload["parent_symbol"].StringValue,
+            SymbolName = GetOptionalString(payload, "symbol_name"),
+            ParentSymbol = GetOptionalString(payload, "parent_symbol"),
             Language = payload["language"].StringValue,
             ContentHash = payload["content_hash"].StringValue,
-            CallsOut = ParseCallsOut(payload)
+            CallsOut = ParseCallsOut(payload),
+            ReturnType = GetOptionalString(payload, "return_type"),
+            BaseType = GetOptionalString(payload, "base_type"),
+            ImplementedInterfaces = ParseStringList(payload, "implemented_interfaces"),
+            AccessModifier = GetOptionalString(payload, "access_modifier"),
+            Modifiers = ParseStringList(payload, "modifiers"),
+            Attributes = ParseStringList(payload, "attributes"),
+            Namespace = GetOptionalString(payload, "namespace"),
+            QualifiedName = GetOptionalString(payload, "qualified_name"),
+            Parameters = ParseParameters(payload),
+            FieldAccesses = ParseFieldAccesses(payload)
         };
     }
 
@@ -482,7 +515,7 @@ public sealed class QdrantService
         return calls.Count > 0 ? calls : null;
     }
 
-    private static ListValue BuildCallReferenceList(IReadOnlyList<CallReference> calls)
+    internal static ListValue BuildCallReferenceList(IReadOnlyList<CallReference> calls)
     {
         var list = new ListValue();
         foreach (CallReference call in calls)
@@ -502,7 +535,7 @@ public sealed class QdrantService
         return list;
     }
 
-    private static ListValue BuildStringList(IReadOnlyList<string> values)
+    internal static ListValue BuildStringList(IReadOnlyList<string> values)
     {
         var list = new ListValue();
         foreach (string val in values)
@@ -510,6 +543,318 @@ public sealed class QdrantService
             list.Values.Add(new Value { StringValue = val });
         }
         return list;
+    }
+
+    internal static ListValue BuildParameterList(IReadOnlyList<ParameterInfo> parameters)
+    {
+        var list = new ListValue();
+        foreach (ParameterInfo p in parameters)
+        {
+            var fields = new Struct();
+            fields.Fields["name"] = new Value { StringValue = p.Name };
+            if (p.Type != null) fields.Fields["type"] = new Value { StringValue = p.Type };
+            if (p.DefaultValue != null) fields.Fields["default_value"] = new Value { StringValue = p.DefaultValue };
+            if (p.IsOut) fields.Fields["is_out"] = new Value { BoolValue = true };
+            if (p.IsRef) fields.Fields["is_ref"] = new Value { BoolValue = true };
+            if (p.IsParams) fields.Fields["is_params"] = new Value { BoolValue = true };
+            list.Values.Add(new Value { StructValue = fields });
+        }
+        return list;
+    }
+
+    internal static ListValue BuildFieldAccessList(IReadOnlyList<FieldAccess> accesses)
+    {
+        var list = new ListValue();
+        foreach (FieldAccess fa in accesses)
+        {
+            var fields = new Struct();
+            fields.Fields["field_name"] = new Value { StringValue = fa.FieldName };
+            if (fa.ContainingType != null) fields.Fields["containing_type"] = new Value { StringValue = fa.ContainingType };
+            fields.Fields["kind"] = new Value { StringValue = fa.Kind.ToString() };
+            fields.Fields["line"] = new Value { IntegerValue = fa.Line };
+            list.Values.Add(new Value { StructValue = fields });
+        }
+        return list;
+    }
+
+    private static string? GetOptionalString(MapField<string, Value> payload, string key)
+    {
+        if (!payload.TryGetValue(key, out Value? value)) return null;
+        return string.IsNullOrEmpty(value.StringValue) ? null : value.StringValue;
+    }
+
+    private static IReadOnlyList<string>? ParseStringList(MapField<string, Value> payload, string key)
+    {
+        if (!payload.TryGetValue(key, out Value? value)) return null;
+        if (value.KindCase != Value.KindOneofCase.ListValue) return null;
+
+        List<string> items = value.ListValue.Values
+            .Where(v => v.KindCase == Value.KindOneofCase.StringValue && !string.IsNullOrEmpty(v.StringValue))
+            .Select(v => v.StringValue)
+            .ToList();
+
+        return items.Count > 0 ? items : null;
+    }
+
+    private static IReadOnlyList<ParameterInfo>? ParseParameters(MapField<string, Value> payload)
+    {
+        if (!payload.TryGetValue("parameters", out Value? value)) return null;
+        if (value.KindCase != Value.KindOneofCase.ListValue) return null;
+
+        var parameters = new List<ParameterInfo>();
+        foreach (Value item in value.ListValue.Values)
+        {
+            if (item.KindCase != Value.KindOneofCase.StructValue) continue;
+            MapField<string, Value> f = item.StructValue.Fields;
+
+            string name = f.TryGetValue("name", out Value? n) ? n.StringValue : "";
+            if (string.IsNullOrEmpty(name)) continue;
+
+            parameters.Add(new ParameterInfo
+            {
+                Name = name,
+                Type = f.TryGetValue("type", out Value? t) && !string.IsNullOrEmpty(t.StringValue) ? t.StringValue : null,
+                DefaultValue = f.TryGetValue("default_value", out Value? dv) && !string.IsNullOrEmpty(dv.StringValue) ? dv.StringValue : null,
+                IsOut = f.TryGetValue("is_out", out Value? io) && io.BoolValue,
+                IsRef = f.TryGetValue("is_ref", out Value? ir) && ir.BoolValue,
+                IsParams = f.TryGetValue("is_params", out Value? ip) && ip.BoolValue
+            });
+        }
+
+        return parameters.Count > 0 ? parameters : null;
+    }
+
+    private static IReadOnlyList<FieldAccess>? ParseFieldAccesses(MapField<string, Value> payload)
+    {
+        if (!payload.TryGetValue("field_accesses", out Value? value)) return null;
+        if (value.KindCase != Value.KindOneofCase.ListValue) return null;
+
+        var accesses = new List<FieldAccess>();
+        foreach (Value item in value.ListValue.Values)
+        {
+            if (item.KindCase != Value.KindOneofCase.StructValue) continue;
+            MapField<string, Value> f = item.StructValue.Fields;
+
+            string fieldName = f.TryGetValue("field_name", out Value? fn) ? fn.StringValue : "";
+            if (string.IsNullOrEmpty(fieldName)) continue;
+
+            accesses.Add(new FieldAccess
+            {
+                FieldName = fieldName,
+                ContainingType = f.TryGetValue("containing_type", out Value? ct) && !string.IsNullOrEmpty(ct.StringValue) ? ct.StringValue : null,
+                Kind = f.TryGetValue("kind", out Value? k) && Enum.TryParse<FieldAccessKind>(k.StringValue, out var kind) ? kind : FieldAccessKind.Read,
+                Line = f.TryGetValue("line", out Value? ln) ? (int)ln.IntegerValue : 0
+            });
+        }
+
+        return accesses.Count > 0 ? accesses : null;
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  4b — Payload Indexes
+    // ────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Create payload indexes on all enriched fields for efficient graph queries.
+    /// Idempotent — safe to call on existing collections.
+    /// </summary>
+    public async Task EnsurePayloadIndexesAsync(string collectionName, CancellationToken cancellationToken = default)
+    {
+        string[] indexFields =
+        [
+            "qualified_name",
+            "base_type",
+            "implemented_interfaces",
+            "namespace",
+            "return_type",
+            "access_modifier",
+            "calls_out_names",
+            "symbol_name",
+            "chunk_type"
+        ];
+
+        foreach (string field in indexFields)
+        {
+            await CreatePayloadIndexAsync(collectionName, field, cancellationToken);
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  4c — Graph Query Methods
+    // ────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Find all chunks that implement a given interface.
+    /// </summary>
+    public async Task<List<SearchResult>> FindImplementationsOfAsync(
+        string collectionName,
+        string interfaceName,
+        CancellationToken cancellationToken = default)
+    {
+        return await ScrollWithKeywordFilterAsync(
+            collectionName, "implemented_interfaces", interfaceName, cancellationToken);
+    }
+
+    /// <summary>
+    /// Find all chunks that extend a given base type.
+    /// </summary>
+    public async Task<List<SearchResult>> FindSubclassesOfAsync(
+        string collectionName,
+        string baseType,
+        CancellationToken cancellationToken = default)
+    {
+        return await ScrollWithKeywordFilterAsync(
+            collectionName, "base_type", baseType, cancellationToken);
+    }
+
+    /// <summary>
+    /// Find methods returning a specific type.
+    /// </summary>
+    public async Task<List<SearchResult>> FindMethodsByReturnTypeAsync(
+        string collectionName,
+        string typeName,
+        CancellationToken cancellationToken = default)
+    {
+        return await ScrollWithKeywordFilterAsync(
+            collectionName, "return_type", typeName, cancellationToken);
+    }
+
+    /// <summary>
+    /// Find a chunk by its fully qualified name.
+    /// </summary>
+    public async Task<SearchResult?> FindByQualifiedNameAsync(
+        string collectionName,
+        string qualifiedName,
+        CancellationToken cancellationToken = default)
+    {
+        List<SearchResult> results = await ScrollWithKeywordFilterAsync(
+            collectionName, "qualified_name", qualifiedName, cancellationToken, limit: 1);
+        return results.Count > 0 ? results[0] : null;
+    }
+
+    /// <summary>
+    /// Find all chunks in a given namespace.
+    /// </summary>
+    public async Task<List<SearchResult>> FindByNamespaceAsync(
+        string collectionName,
+        string namespaceName,
+        CancellationToken cancellationToken = default)
+    {
+        return await ScrollWithKeywordFilterAsync(
+            collectionName, "namespace", namespaceName, cancellationToken);
+    }
+
+    /// <summary>
+    /// Trace a call chain forward or backward from a symbol, up to the given depth.
+    /// Returns all chunks in the chain, grouped by hop distance.
+    /// </summary>
+    public async Task<Dictionary<int, List<SearchResult>>> TraceCallChainAsync(
+        string collectionName,
+        string symbolName,
+        int maxDepth = 3,
+        bool forward = true,
+        CancellationToken cancellationToken = default)
+    {
+        var result = new Dictionary<int, List<SearchResult>>();
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var currentSymbols = new List<string> { symbolName };
+
+        for (int depth = 1; depth <= maxDepth && currentSymbols.Count > 0; depth++)
+        {
+            var hitsAtDepth = new List<SearchResult>();
+            var nextSymbols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (forward)
+            {
+                // Forward: find definitions of the symbols we call
+                List<SearchResult> definitions = await SearchBySymbolNamesAsync(
+                    collectionName, currentSymbols, cancellationToken);
+
+                foreach (SearchResult def in definitions)
+                {
+                    string key = def.Chunk.QualifiedName ?? def.Chunk.SymbolName ?? "";
+                    if (string.IsNullOrEmpty(key) || !visited.Add(key)) continue;
+
+                    hitsAtDepth.Add(def);
+
+                    if (def.Chunk.CallsOut is { Count: > 0 })
+                    {
+                        foreach (CallReference call in def.Chunk.CallsOut)
+                            nextSymbols.Add(call.MethodName);
+                    }
+                }
+            }
+            else
+            {
+                // Backward: find callers of the current symbols
+                foreach (string sym in currentSymbols)
+                {
+                    List<SearchResult> callers = await SearchCallersOfAsync(
+                        collectionName, sym, cancellationToken);
+
+                    foreach (SearchResult caller in callers)
+                    {
+                        string key = caller.Chunk.QualifiedName ?? caller.Chunk.SymbolName ?? "";
+                        if (string.IsNullOrEmpty(key) || !visited.Add(key)) continue;
+
+                        hitsAtDepth.Add(caller);
+                        if (!string.IsNullOrEmpty(caller.Chunk.SymbolName))
+                            nextSymbols.Add(caller.Chunk.SymbolName);
+                    }
+                }
+            }
+
+            if (hitsAtDepth.Count > 0)
+                result[depth] = hitsAtDepth;
+
+            currentSymbols = nextSymbols.ToList();
+        }
+
+        return result;
+    }
+
+    private async Task<List<SearchResult>> ScrollWithKeywordFilterAsync(
+        string collectionName,
+        string fieldKey,
+        string value,
+        CancellationToken cancellationToken,
+        uint limit = 100)
+    {
+        try
+        {
+            var filter = new Filter
+            {
+                Must =
+                {
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = fieldKey,
+                            Match = new Match { Keyword = value }
+                        }
+                    }
+                }
+            };
+
+            ScrollResponse response = await _client.ScrollAsync(
+                collectionName,
+                filter: filter,
+                limit: limit,
+                cancellationToken: cancellationToken);
+
+            return response.Result.Select(r => new SearchResult
+            {
+                Score = 0f,
+                Chunk = BuildChunkFromPayload(r.Id.Uuid, r.Payload)
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to scroll {Field}={Value} in {Collection}",
+                fieldKey, value, collectionName);
+            return [];
+        }
     }
 
     /// <summary>
@@ -537,6 +882,7 @@ public sealed class QdrantService
                 {
                     point.Payload[key] = value switch
                     {
+                        Value v => v,
                         string s => s,
                         int i => i,
                         long l => l,
