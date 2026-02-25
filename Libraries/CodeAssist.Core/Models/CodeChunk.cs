@@ -51,9 +51,9 @@ public sealed record CodeChunk
     public string? ParentSymbol { get; init; }
 
     /// <summary>
-    /// Names of functions/methods called from this chunk, or null if not extracted.
+    /// Methods/functions called from this chunk, with receiver and location info.
     /// </summary>
-    public IReadOnlyList<string>? CallsOut { get; init; }
+    public IReadOnlyList<CallReference>? CallsOut { get; init; }
 
     /// <summary>
     /// Programming language of this chunk.
@@ -64,4 +64,54 @@ public sealed record CodeChunk
     /// SHA256 hash of the content for change detection.
     /// </summary>
     public required string ContentHash { get; init; }
+
+    /// <summary>
+    /// Parameters of the method/function, or null for non-callable chunks.
+    /// </summary>
+    public IReadOnlyList<ParameterInfo>? Parameters { get; init; }
+
+    /// <summary>
+    /// Return type of the method/function, or null if not applicable.
+    /// </summary>
+    public string? ReturnType { get; init; }
+
+    /// <summary>
+    /// Base type this type extends, or null.
+    /// </summary>
+    public string? BaseType { get; init; }
+
+    /// <summary>
+    /// Interfaces this type implements, or null.
+    /// </summary>
+    public IReadOnlyList<string>? ImplementedInterfaces { get; init; }
+
+    /// <summary>
+    /// Access modifier (public, private, protected, internal), or null if not extracted.
+    /// </summary>
+    public string? AccessModifier { get; init; }
+
+    /// <summary>
+    /// Additional modifiers (static, abstract, virtual, async, sealed, etc.), or null.
+    /// </summary>
+    public IReadOnlyList<string>? Modifiers { get; init; }
+
+    /// <summary>
+    /// Attributes or decorators applied to this declaration, or null.
+    /// </summary>
+    public IReadOnlyList<string>? Attributes { get; init; }
+
+    /// <summary>
+    /// Fields and properties accessed within this chunk, or null.
+    /// </summary>
+    public IReadOnlyList<FieldAccess>? FieldAccesses { get; init; }
+
+    /// <summary>
+    /// Namespace or module this chunk belongs to, or null.
+    /// </summary>
+    public string? Namespace { get; init; }
+
+    /// <summary>
+    /// Fully qualified name (e.g., "Namespace.Class.Method"), or null.
+    /// </summary>
+    public string? QualifiedName { get; init; }
 }

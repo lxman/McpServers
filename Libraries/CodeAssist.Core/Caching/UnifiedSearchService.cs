@@ -241,8 +241,8 @@ public sealed class UnifiedSearchService(
 
                 if (hit.Chunk.CallsOut is { Count: > 0 })
                 {
-                    foreach (string call in hit.Chunk.CallsOut)
-                        calleeNames.Add(call);
+                    foreach (CallReference call in hit.Chunk.CallsOut)
+                        calleeNames.Add(call.MethodName);
                 }
 
                 if (!string.IsNullOrEmpty(hit.Chunk.SymbolName))

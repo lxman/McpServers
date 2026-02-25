@@ -289,7 +289,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             }
             else
             {
-                List<string> callsOut = ExtractCallsOut(node, language);
+                List<CallReference> callsOut = ExtractCallsOut(node, language);
                 chunks.Add(new CodeChunk
                 {
                     Id = Guid.NewGuid(),
@@ -340,7 +340,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             int startLine = (int)node.StartPosition.Row + 1;
             int endLine = (int)node.EndPosition.Row + 1;
 
-            List<string> callsOut = ExtractCallsOut(node, language);
+            List<CallReference> callsOut = ExtractCallsOut(node, language);
             chunks.Add(new CodeChunk
             {
                 Id = Guid.NewGuid(),
@@ -436,23 +436,30 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
         return result;
     }
 
-    private static List<string> ExtractCallsOut(Node node, string language)
+    private static List<CallReference> ExtractCallsOut(Node node, string language)
     {
         if (!CallExpressionTypes.TryGetValue(language, out HashSet<string>? callTypes))
             return [];
 
-        var calls = new HashSet<string>(StringComparer.Ordinal);
-        WalkForCalls(node, callTypes, calls);
-        return calls.Count > 0 ? calls.ToList() : [];
+        var calls = new List<CallReference>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        WalkForCalls(node, callTypes, calls, seen);
+        return calls;
     }
 
-    private static void WalkForCalls(Node node, HashSet<string> callTypes, HashSet<string> calls)
+    private static void WalkForCalls(Node node, HashSet<string> callTypes, List<CallReference> calls, HashSet<string> seen)
     {
         if (callTypes.Contains(node.Type))
         {
             string? name = ExtractCallName(node);
-            if (name != null)
-                calls.Add(name);
+            if (name != null && seen.Add(name))
+            {
+                calls.Add(new CallReference
+                {
+                    MethodName = name,
+                    Line = (int)node.StartPosition.Row + 1
+                });
+            }
         }
 
         using TreeCursor cursor = node.Walk();
@@ -461,7 +468,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
 
         do
         {
-            WalkForCalls(cursor.CurrentNode, callTypes, calls);
+            WalkForCalls(cursor.CurrentNode, callTypes, calls, seen);
         } while (cursor.GotoNextSibling());
     }
 

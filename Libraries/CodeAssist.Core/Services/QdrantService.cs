@@ -101,7 +101,7 @@ public sealed class QdrantService
                     ["language"] = chunk.Language,
                     ["content_hash"] = chunk.ContentHash,
                     ["calls_out"] = chunk.CallsOut is { Count: > 0 }
-                        ? new Value { ListValue = BuildStringList(chunk.CallsOut) }
+                        ? new Value { ListValue = BuildCallReferenceList(chunk.CallsOut) }
                         : new Value { ListValue = new ListValue() }
                 }
             }).ToList();
@@ -447,7 +447,7 @@ public sealed class QdrantService
         };
     }
 
-    private static IReadOnlyList<string>? ParseCallsOut(MapField<string, Value> payload)
+    private static IReadOnlyList<CallReference>? ParseCallsOut(MapField<string, Value> payload)
     {
         if (!payload.TryGetValue("calls_out", out Value? value))
             return null;
@@ -455,12 +455,52 @@ public sealed class QdrantService
         if (value.KindCase != Value.KindOneofCase.ListValue)
             return null;
 
-        List<string> calls = value.ListValue.Values
-            .Where(v => v.KindCase == Value.KindOneofCase.StringValue && !string.IsNullOrEmpty(v.StringValue))
-            .Select(v => v.StringValue)
-            .ToList();
+        var calls = new List<CallReference>();
+        foreach (Value item in value.ListValue.Values)
+        {
+            if (item.KindCase == Value.KindOneofCase.StructValue)
+            {
+                MapField<string, Value> fields = item.StructValue.Fields;
+                string methodName = fields.TryGetValue("method_name", out Value? mn) ? mn.StringValue : "";
+                if (string.IsNullOrEmpty(methodName)) continue;
+
+                calls.Add(new CallReference
+                {
+                    MethodName = methodName,
+                    ReceiverType = fields.TryGetValue("receiver_type", out Value? rt) && !string.IsNullOrEmpty(rt.StringValue) ? rt.StringValue : null,
+                    ReceiverExpression = fields.TryGetValue("receiver_expression", out Value? re) && !string.IsNullOrEmpty(re.StringValue) ? re.StringValue : null,
+                    QualifiedName = fields.TryGetValue("qualified_name", out Value? qn) && !string.IsNullOrEmpty(qn.StringValue) ? qn.StringValue : null,
+                    Line = fields.TryGetValue("line", out Value? ln) ? (int)ln.IntegerValue : 0
+                });
+            }
+            else if (item.KindCase == Value.KindOneofCase.StringValue && !string.IsNullOrEmpty(item.StringValue))
+            {
+                // Backward compat: old data stored as bare strings
+                calls.Add(new CallReference { MethodName = item.StringValue });
+            }
+        }
 
         return calls.Count > 0 ? calls : null;
+    }
+
+    private static ListValue BuildCallReferenceList(IReadOnlyList<CallReference> calls)
+    {
+        var list = new ListValue();
+        foreach (CallReference call in calls)
+        {
+            var fields = new Struct();
+            fields.Fields["method_name"] = new Value { StringValue = call.MethodName };
+            fields.Fields["line"] = new Value { IntegerValue = call.Line };
+            if (call.ReceiverType != null)
+                fields.Fields["receiver_type"] = new Value { StringValue = call.ReceiverType };
+            if (call.ReceiverExpression != null)
+                fields.Fields["receiver_expression"] = new Value { StringValue = call.ReceiverExpression };
+            if (call.QualifiedName != null)
+                fields.Fields["qualified_name"] = new Value { StringValue = call.QualifiedName };
+
+            list.Values.Add(new Value { StructValue = fields });
+        }
+        return list;
     }
 
     private static ListValue BuildStringList(IReadOnlyList<string> values)
