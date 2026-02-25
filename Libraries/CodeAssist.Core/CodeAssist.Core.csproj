@@ -13,9 +13,19 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Microsoft.Build.Locator" />
+      <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+      <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
       <PackageReference Include="Microsoft.SemanticKernel.Connectors.Qdrant" />
       <PackageReference Include="OllamaSharp" />
       <PackageReference Include="TreeSitter.DotNet" />
+    </ItemGroup>
+
+    <!-- MSBuild assemblies must be loaded at runtime via MSBuildLocator, not from NuGet -->
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
+      <PackageReference Include="Microsoft.Build" ExcludeAssets="runtime" PrivateAssets="all" />
+      <PackageReference Include="Microsoft.Build.Utilities.Core" ExcludeAssets="runtime" PrivateAssets="all" />
     </ItemGroup>
 
 </Project>

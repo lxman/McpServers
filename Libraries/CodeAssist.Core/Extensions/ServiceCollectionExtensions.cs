@@ -1,3 +1,5 @@
+using CodeAssist.Core.Analysis;
+using CodeAssist.Core.Analysis.Roslyn;
 using CodeAssist.Core.Caching;
 using CodeAssist.Core.Chunking;
 using CodeAssist.Core.Configuration;
@@ -46,6 +48,15 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<L2PromotionService>();
             services.AddSingleton<UnifiedSearchService>();
 
+            // Register semantic analysis (Tier 2)
+            services.AddSingleton<RoslynSemanticAnalyzer>();
+            services.AddSingleton<SemanticAnalyzerRegistry>(sp =>
+            {
+                var registry = new SemanticAnalyzerRegistry();
+                registry.Register(sp.GetRequiredService<RoslynSemanticAnalyzer>());
+                return registry;
+            });
+
             return services;
         }
 
@@ -71,6 +82,15 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<FileWatcherService>();
             services.AddSingleton<L2PromotionService>();
             services.AddSingleton<UnifiedSearchService>();
+
+            // Register semantic analysis (Tier 2)
+            services.AddSingleton<RoslynSemanticAnalyzer>();
+            services.AddSingleton<SemanticAnalyzerRegistry>(sp =>
+            {
+                var registry = new SemanticAnalyzerRegistry();
+                registry.Register(sp.GetRequiredService<RoslynSemanticAnalyzer>());
+                return registry;
+            });
 
             return services;
         }
