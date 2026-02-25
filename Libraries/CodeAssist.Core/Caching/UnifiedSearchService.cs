@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using CodeAssist.Core.Configuration;
 using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
@@ -33,7 +34,7 @@ public sealed class UnifiedSearchService(
         bool includeDependencies = false,
         CancellationToken cancellationToken = default)
     {
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var stopwatch = Stopwatch.StartNew();
 
         // Generate query embedding once
         float[] queryEmbedding = await embeddingService.GetEmbeddingAsync(query, cancellationToken);

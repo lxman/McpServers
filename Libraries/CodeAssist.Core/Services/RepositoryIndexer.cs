@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
@@ -6,6 +7,7 @@ using CodeAssist.Core.Chunking;
 using CodeAssist.Core.Configuration;
 using CodeAssist.Core.Models;
 using Microsoft.Extensions.FileSystemGlobbing;
+using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -87,9 +89,9 @@ public sealed class RepositoryIndexer(
             }
 
             // Process new and updated files in parallel
-            var allChunks = new System.Collections.Concurrent.ConcurrentBag<CodeChunk>();
-            var newFileStates = new System.Collections.Concurrent.ConcurrentDictionary<string, IndexedFile>();
-            var failedFilesBag = new System.Collections.Concurrent.ConcurrentBag<string>();
+            var allChunks = new ConcurrentBag<CodeChunk>();
+            var newFileStates = new ConcurrentDictionary<string, IndexedFile>();
+            var failedFilesBag = new ConcurrentBag<string>();
 
             List<string> filesToChunk = filesToAdd.Concat(filesToUpdate).ToList();
             var processedCount = 0;
@@ -98,7 +100,7 @@ public sealed class RepositoryIndexer(
             logger.LogInformation("Processing {Count} files in parallel...", filesToChunk.Count);
 
             var chunkSw = Stopwatch.StartNew();
-            var activeFiles = new System.Collections.Concurrent.ConcurrentDictionary<string, DateTime>();
+            var activeFiles = new ConcurrentDictionary<string, DateTime>();
 
             await Parallel.ForEachAsync(
                 filesToChunk,
@@ -385,7 +387,7 @@ public sealed class RepositoryIndexer(
             matcher.AddExclude(pattern);
         }
 
-        PatternMatchingResult result = matcher.Execute(new Microsoft.Extensions.FileSystemGlobbing.Abstractions.DirectoryInfoWrapper(
+        PatternMatchingResult result = matcher.Execute(new DirectoryInfoWrapper(
             new DirectoryInfo(repositoryPath)));
 
         return result.Files.Select(f => f.Path).ToList();

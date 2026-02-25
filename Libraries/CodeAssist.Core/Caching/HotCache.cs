@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using CodeAssist.Core.Chunking;
 using CodeAssist.Core.Configuration;
 using CodeAssist.Core.Models;
@@ -333,8 +335,8 @@ public sealed class HotCache : IDisposable
 
     private static string ComputeHash(string content)
     {
-        byte[] bytes = System.Security.Cryptography.SHA256.HashData(
-            System.Text.Encoding.UTF8.GetBytes(content));
+        byte[] bytes = SHA256.HashData(
+            Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 

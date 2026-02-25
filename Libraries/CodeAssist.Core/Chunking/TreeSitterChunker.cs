@@ -251,8 +251,8 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             if (captureName == "name")
                 continue;
 
-            int startLine = (int)node.StartPosition.Row + 1;
-            int endLine = (int)node.EndPosition.Row + 1;
+            int startLine = node.StartPosition.Row + 1;
+            int endLine = node.EndPosition.Row + 1;
             string nodeContent = node.Text;
             string chunkType = captureName;
 
@@ -337,8 +337,8 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             if (string.IsNullOrWhiteSpace(nodeContent) || nodeContent.Length < 20)
                 continue;
 
-            int startLine = (int)node.StartPosition.Row + 1;
-            int endLine = (int)node.EndPosition.Row + 1;
+            int startLine = node.StartPosition.Row + 1;
+            int endLine = node.EndPosition.Row + 1;
 
             List<CallReference> callsOut = ExtractCallsOut(node, language);
             chunks.Add(new CodeChunk
@@ -457,7 +457,7 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
                 calls.Add(new CallReference
                 {
                     MethodName = name,
-                    Line = (int)node.StartPosition.Row + 1
+                    Line = node.StartPosition.Row + 1
                 });
             }
         }

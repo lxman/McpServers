@@ -320,7 +320,6 @@ public sealed class QdrantService
             await _client.CreatePayloadIndexAsync(
                 collectionName,
                 fieldName,
-                PayloadSchemaType.Keyword,
                 cancellationToken: cancellationToken);
 
             _logger.LogDebug("Created payload index on {Field} in {Collection}", fieldName, collectionName);
