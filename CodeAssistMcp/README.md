@@ -14,7 +14,7 @@ This server bridges Claude Code with local AI infrastructure to enable:
 
 ## Architecture
 
-```
+```text
 Claude Code <--MCP--> CodeAssistMcp <--> MLX Server (embeddings, optimized for Apple Silicon)
                                     <--> Qdrant (vector storage)
 ```
@@ -30,6 +30,7 @@ Claude Code <--MCP--> CodeAssistMcp <--> MLX Server (embeddings, optimized for A
 The included MLX server provides optimized embeddings for M-series Macs.
 
 **Setup:**
+
 ```bash
 cd mlx-server
 python3 -m venv .venv
@@ -42,6 +43,7 @@ python3 -m venv .venv
 The server uses `BAAI/bge-base-en-v1.5` model (768 dimensions, BERT-based).
 
 **Auto-start on boot (macOS):**
+
 ```bash
 # Copy the provided launchd plist
 cp com.mlx-embeddings.server.plist ~/Library/LaunchAgents/
@@ -68,6 +70,7 @@ Then configure `OllamaUrl` to `http://localhost:11434` in appsettings.json.
 Qdrant is the vector database for storing and querying embeddings.
 
 **Run with Docker:**
+
 ```bash
 docker run -d -p 6333:6333 -p 6334:6334 \
   -v qdrant_storage:/qdrant/storage \
@@ -77,6 +80,7 @@ docker run -d -p 6333:6333 -p 6334:6334 \
 ```
 
 **Auto-start on macOS with Colima:**
+
 ```bash
 # Start Colima (Docker runtime)
 colima start
@@ -89,7 +93,7 @@ colima start
 The server uses these default settings (configurable via appsettings.json):
 
 | Setting | Default | Description |
-|---------|---------|-------------|
+| ------- | ------- | ----------- |
 | `OllamaUrl` | `http://localhost:11435` | Embedding server API (MLX or Ollama) |
 | `QdrantUrl` | `http://localhost:6333` | Qdrant API endpoint |
 | `EmbeddingModel` | `nomic-embed-text` | Model name (for display) |
@@ -101,7 +105,7 @@ The server uses these default settings (configurable via appsettings.json):
 On Apple M4 Pro (14 cores, 48GB RAM):
 
 | Operation | Speed |
-|-----------|-------|
+| --------- | ----- |
 | MLX Embeddings | ~140 embeddings/sec |
 | Ollama Embeddings | ~45 embeddings/sec |
 | File Chunking | Parallel across all cores |
@@ -113,7 +117,7 @@ MLX is approximately **3x faster** than Ollama for embeddings on Apple Silicon.
 ### Health Tools
 
 | Tool | Description |
-|------|-------------|
+| ---- | ----------- |
 | `check_health` | Verify embedding server and Qdrant are running |
 | `setup_services` | Get installation and setup instructions |
 | `pull_embedding_model` | Download the embedding model (Ollama only) |
@@ -121,7 +125,7 @@ MLX is approximately **3x faster** than Ollama for embeddings on Apple Silicon.
 ### Index Tools
 
 | Tool | Description |
-|------|-------------|
+| ---- | ----------- |
 | `index_repository` | Index a code repository for semantic search |
 | `list_indexes` | List all indexed repositories with metadata |
 | `get_index_status` | Get detailed status of a specific index |
@@ -131,7 +135,7 @@ MLX is approximately **3x faster** than Ollama for embeddings on Apple Silicon.
 ### Search Tools
 
 | Tool | Description |
-|------|-------------|
+| ---- | ----------- |
 | `search_code` | Semantic search using natural language queries |
 | `find_similar_code` | Find code similar to a given snippet |
 | `search_by_symbol` | Search for classes, methods, or properties by name |
@@ -141,18 +145,23 @@ MLX is approximately **3x faster** than Ollama for embeddings on Apple Silicon.
 
 1. Ensure MLX server (or Ollama) and Qdrant are running
 2. Add the server to Claude Code:
+
    ```bash
    claude mcp add --transport stdio codeassist-mcp --scope user -- \
      dotnet /path/to/CodeAssistMcp.dll
    ```
+
 3. Restart Claude Code
 4. Use `check_health` to verify the setup
 5. Index a repository:
-   ```
+
+   ```text
    Use index_repository to index /path/to/your/project
    ```
+
 6. Search the indexed code:
-   ```
+
+   ```text
    Use search_code to find "error handling for database connections" in my-project
    ```
 
@@ -166,6 +175,7 @@ The server includes intelligent code chunking for:
 ## Excluded Patterns
 
 By default, these patterns are excluded from indexing:
+
 - Build outputs: `bin/`, `obj/`, `dist/`, `build/`, `target/`
 - Dependencies: `node_modules/`, `packages/`, `.venv/`
 - IDE files: `.vs/`, `.idea/`, `.git/`
