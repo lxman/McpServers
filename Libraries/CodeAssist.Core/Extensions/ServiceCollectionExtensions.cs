@@ -49,6 +49,9 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<L2PromotionService>();
             services.AddSingleton<UnifiedSearchService>();
 
+            // Register solution structure analysis
+            services.AddSingleton<SolutionAnalyzer>();
+
             // Register semantic analysis (Tier 2)
             services.AddSingleton<RoslynSemanticAnalyzer>();
             services.AddSingleton<SemanticAnalyzerRegistry>(sp =>
@@ -84,6 +87,9 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<FileWatcherService>();
             services.AddSingleton<L2PromotionService>();
             services.AddSingleton<UnifiedSearchService>();
+
+            // Register solution structure analysis
+            services.AddSingleton<SolutionAnalyzer>();
 
             // Register semantic analysis (Tier 2)
             services.AddSingleton<RoslynSemanticAnalyzer>();

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using CodeAssist.Core.Analysis;
 using CodeAssist.Core.Chunking;
 using CodeAssist.Core.Models;
 using CodeAssist.Core.Models.Graph;
@@ -13,15 +14,19 @@ namespace CodeAssist.Core.Services;
 public sealed class DataFlowGraphService
 {
     private readonly QdrantService _qdrant;
+    private readonly SolutionAnalyzer _solutionAnalyzer;
     private readonly ILogger<DataFlowGraphService> _logger;
     private readonly ConcurrentDictionary<string, CodeGraph> _graphs = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _buildLocks = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, SolutionStructure> _solutions = new(StringComparer.OrdinalIgnoreCase);
 
     public DataFlowGraphService(
         QdrantService qdrant,
+        SolutionAnalyzer solutionAnalyzer,
         ILogger<DataFlowGraphService> logger)
     {
         _qdrant = qdrant;
+        _solutionAnalyzer = solutionAnalyzer;
         _logger = logger;
     }
 
@@ -60,6 +65,83 @@ public sealed class DataFlowGraphService
         finally
         {
             buildLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Analyze the solution structure for a repository.
+    /// Parses .slnx and .csproj files to extract projects, references, and packages.
+    /// Links namespaces from the code graph to their containing projects.
+    /// </summary>
+    public SolutionStructure? AnalyzeSolution(string collectionName, string repositoryPath)
+    {
+        string? solutionFile = SolutionAnalyzer.FindSolutionFile(repositoryPath);
+
+        SolutionStructure? structure = solutionFile != null
+            ? _solutionAnalyzer.Analyze(solutionFile)
+            : _solutionAnalyzer.AnalyzeFromCsprojFiles(repositoryPath);
+
+        if (structure == null) return null;
+
+        // Link namespaces to projects using file paths from the code graph
+        if (_graphs.TryGetValue(collectionName, out CodeGraph? graph))
+        {
+            LinkNamespacesToProjects(graph, structure);
+        }
+
+        _solutions[collectionName] = structure;
+        return structure;
+    }
+
+    /// <summary>
+    /// Get a previously analyzed solution structure.
+    /// </summary>
+    public SolutionStructure? GetSolutionStructure(string collectionName)
+    {
+        _solutions.TryGetValue(collectionName, out SolutionStructure? structure);
+        return structure;
+    }
+
+    /// <summary>
+    /// Link namespaces from the code graph to their containing projects
+    /// by matching file paths to project directories.
+    /// </summary>
+    private static void LinkNamespacesToProjects(CodeGraph graph, SolutionStructure structure)
+    {
+        // Build a map from directory prefix → project
+        var dirToProject = new Dictionary<string, ProjectInfo>(StringComparer.OrdinalIgnoreCase);
+        foreach (ProjectInfo project in structure.Projects)
+        {
+            // Project directory is the csproj's parent directory
+            // Path.GetDirectoryName on Windows converts to backslashes, so normalize back
+            string projectDir = (Path.GetDirectoryName(project.RelativePath.Replace('\\', '/'))
+                ?? "").Replace('\\', '/');
+            if (!string.IsNullOrEmpty(projectDir))
+                dirToProject[projectDir] = project;
+        }
+
+        // For each namespace in the graph, find which project its files belong to
+        foreach (string ns in graph.GetAllNamespaces())
+        {
+            IReadOnlyList<GraphNode> nodes = graph.GetNodesByNamespace(ns);
+            if (nodes.Count == 0) continue;
+
+            // Check the first node's file path to determine the project
+            GraphNode node = nodes[0];
+            if (node.FilePath == null) continue;
+
+            string filePath = node.FilePath.Replace('\\', '/');
+
+            foreach ((string dir, ProjectInfo project) in dirToProject)
+            {
+                if (filePath.StartsWith(dir, StringComparison.OrdinalIgnoreCase))
+                {
+                    project.Namespaces ??= [];
+                    if (!project.Namespaces.Contains(ns, StringComparer.OrdinalIgnoreCase))
+                        project.Namespaces.Add(ns);
+                    break;
+                }
+            }
         }
     }
 

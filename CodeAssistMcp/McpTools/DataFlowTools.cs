@@ -514,6 +514,76 @@ public class DataFlowTools(
         }
     }
 
+    [McpServerTool, DisplayName("get_solution_structure")]
+    [Description("Get the project-level structure of a solution. Shows all projects, their references (project and NuGet package), target frameworks, solution folder groupings, and which namespaces belong to each project. Requires the repository to be indexed first.")]
+    public async Task<string> GetSolutionStructure(string repositoryName)
+    {
+        try
+        {
+            (IndexState? state, string? error) = await ResolveRepository(repositoryName);
+            if (state == null) return error!;
+
+            logger.LogDebug("Getting solution structure for {Repository}", repositoryName);
+
+            // Ensure graph is built so namespace linking works
+            await EnsureGraphAsync(state.CollectionName, CancellationToken.None);
+
+            // Check cache first, then analyze
+            SolutionStructure? structure = graphService.GetSolutionStructure(state.CollectionName)
+                ?? graphService.AnalyzeSolution(state.CollectionName, state.RootPath);
+
+            if (structure == null)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    repositoryName,
+                    found = false,
+                    message = "No .slnx/.sln solution file or .csproj projects found in the repository."
+                }, SerializerOptions.JsonOptionsIndented);
+            }
+
+            return JsonSerializer.Serialize(new
+            {
+                success = true,
+                repositoryName,
+                found = true,
+                solution = new
+                {
+                    name = structure.Name,
+                    filePath = structure.FilePath,
+                    projectCount = structure.Projects.Count,
+                    folderCount = structure.Folders.Count,
+                    projects = structure.Projects.Select(p => new
+                    {
+                        name = p.Name,
+                        relativePath = p.RelativePath,
+                        solutionFolder = p.SolutionFolder,
+                        targetFramework = p.TargetFramework,
+                        outputType = p.OutputType ?? "Library",
+                        projectReferences = p.ProjectReferences,
+                        packageReferences = p.PackageReferences.Select(pkg => new
+                        {
+                            name = pkg.Name,
+                            version = pkg.Version
+                        }).ToList(),
+                        namespaces = p.Namespaces ?? []
+                    }).ToList(),
+                    folders = structure.Folders.Select(f => new
+                    {
+                        name = f.Name,
+                        projects = f.ProjectNames
+                    }).ToList()
+                }
+            }, SerializerOptions.JsonOptionsIndented);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting solution structure for {Repository}", repositoryName);
+            return JsonSerializer.Serialize(new { success = false, error = ex.Message }, SerializerOptions.JsonOptionsIndented);
+        }
+    }
+
     // ── Formatting helpers ──────────────────────────────────────────
 
     private static object FormatNodeSummary(GraphNode node) => new
