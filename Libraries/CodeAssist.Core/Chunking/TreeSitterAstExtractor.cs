@@ -37,6 +37,7 @@ internal static class TreeSitterAstExtractor
     private static readonly HashSet<string> CallableNodeTypes =
     [
         "method_declaration", "constructor_declaration", "local_function_statement", // C#
+        "class_declaration", "record_declaration", "struct_declaration", // C# primary constructors
         "function_definition", // Python
         "function_declaration", "method_definition", "arrow_function", // JS/TS
         "function_item", // Rust
@@ -279,7 +280,8 @@ internal static class TreeSitterAstExtractor
         if (!CallableNodeTypes.Contains(node.Type))
             return null;
 
-        if (node.Type is "constructor_declaration")
+        if (node.Type is "constructor_declaration"
+            or "class_declaration" or "record_declaration" or "struct_declaration")
             return null;
 
         return language switch

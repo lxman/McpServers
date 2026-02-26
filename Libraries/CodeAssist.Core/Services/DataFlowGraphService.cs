@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using CodeAssist.Core.Chunking;
 using CodeAssist.Core.Models;
 using CodeAssist.Core.Models.Graph;
 using Microsoft.Extensions.Logging;
@@ -432,17 +433,30 @@ public sealed class DataFlowGraphService
 
     private static void BuildEdgesFromChunks(CodeGraph graph, List<CodeChunk> chunks)
     {
+        // Build constructor parameter map: (className, paramName) → paramType
+        // This lets us resolve receiver expressions like "qdrantService" to "QdrantService"
+        // when the receiver is a constructor-injected dependency.
+        Dictionary<(string ClassName, string ParamName), string> ctorParamMap = BuildConstructorParamMap(chunks);
+
+        // Build DI service map: interfaceName → implementationName
+        // from Program.cs / ServiceCollectionExtensions.cs files.
+        Dictionary<string, string> diMap = BuildDiServiceMap(chunks);
+
         foreach (CodeChunk chunk in chunks)
         {
             string sourceId = BuildNodeId(chunk);
             if (string.IsNullOrEmpty(sourceId)) continue;
+
+            // Determine the enclosing class for receiver type lookups
+            string? enclosingClass = chunk.ParentSymbol ?? chunk.SymbolName;
 
             // Calls edges
             if (chunk.CallsOut is { Count: > 0 })
             {
                 foreach (CallReference call in chunk.CallsOut)
                 {
-                    IReadOnlyList<string> targetIds = ResolveCallTargets(graph, call);
+                    IReadOnlyList<string> targetIds = ResolveCallTargets(
+                        graph, call, enclosingClass, ctorParamMap, diMap);
                     foreach (string targetId in targetIds)
                     {
                         graph.AddEdge(new GraphEdge
@@ -515,6 +529,72 @@ public sealed class DataFlowGraphService
     }
 
     /// <summary>
+    /// Build a map from (className, parameterName) → parameterType by scanning
+    /// class-level and constructor chunks for their parameters.  This enables
+    /// resolving constructor-injected receivers like "qdrantService" → "QdrantService".
+    /// </summary>
+    private static Dictionary<(string, string), string> BuildConstructorParamMap(List<CodeChunk> chunks)
+    {
+        var map = new Dictionary<(string, string), string>(CtorParamKeyComparer.Instance);
+
+        foreach (CodeChunk chunk in chunks)
+        {
+            if (chunk.Parameters is not { Count: > 0 }) continue;
+
+            // For class chunks with primary constructor params, use SymbolName as the class
+            // For constructor chunks, use ParentSymbol as the class
+            string? className = chunk.ChunkType switch
+            {
+                "class" or "record" or "struct" => chunk.SymbolName,
+                "constructor" => chunk.ParentSymbol,
+                _ when chunk.ChunkType.StartsWith("class_part", StringComparison.Ordinal) => chunk.ParentSymbol,
+                _ => null
+            };
+
+            if (string.IsNullOrEmpty(className)) continue;
+
+            foreach (ParameterInfo param in chunk.Parameters)
+            {
+                if (!string.IsNullOrEmpty(param.Type))
+                {
+                    // Strip generic args for lookup: IOptions<Foo> → IOptions
+                    string normalizedType = param.Type;
+                    int angleBracket = normalizedType.IndexOf('<');
+                    if (angleBracket >= 0)
+                        normalizedType = normalizedType[..angleBracket];
+
+                    map.TryAdd((className, param.Name), normalizedType);
+                }
+            }
+        }
+
+        return map;
+    }
+
+    /// <summary>
+    /// Build a DI service map (interfaceName → implementationName) by parsing
+    /// DI registration patterns from Program.cs and ServiceCollectionExtensions.cs files.
+    /// </summary>
+    private static Dictionary<string, string> BuildDiServiceMap(List<CodeChunk> chunks)
+    {
+        var combined = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (CodeChunk chunk in chunks)
+        {
+            if (string.IsNullOrEmpty(chunk.RelativePath)) continue;
+            if (!DiRegistrationParser.IsDiRegistrationFile(chunk.RelativePath)) continue;
+            if (string.IsNullOrEmpty(chunk.Content)) continue;
+
+            foreach (KeyValuePair<string, string> kvp in DiRegistrationParser.ExtractServiceMappings(chunk.Content))
+            {
+                combined.TryAdd(kvp.Key, kvp.Value);
+            }
+        }
+
+        return combined;
+    }
+
+    /// <summary>
     /// Build a stable node ID from a chunk. Prefers QualifiedName,
     /// falls back to constructed name from namespace + parent + symbol.
     /// </summary>
@@ -540,10 +620,16 @@ public sealed class DataFlowGraphService
 
     /// <summary>
     /// Resolve a call reference to target node IDs.
-    /// Priority: QualifiedName > ReceiverType.MethodName > SymbolName lookup.
+    /// Priority: QualifiedName > ReceiverType.MethodName > ConstructorParam resolution
+    ///           > DI interface resolution > SymbolName lookup.
     /// Returns all plausible targets so interface implementations get edges.
     /// </summary>
-    private static IReadOnlyList<string> ResolveCallTargets(CodeGraph graph, CallReference call)
+    private static IReadOnlyList<string> ResolveCallTargets(
+        CodeGraph graph,
+        CallReference call,
+        string? enclosingClass,
+        Dictionary<(string, string), string> ctorParamMap,
+        Dictionary<string, string> diMap)
     {
         // Best case: fully qualified name from Roslyn
         if (!string.IsNullOrEmpty(call.QualifiedName) && graph.ContainsNode(call.QualifiedName))
@@ -555,6 +641,34 @@ public sealed class DataFlowGraphService
             string compound = $"{call.ReceiverType}.{call.MethodName}";
             IReadOnlyList<string> resolved = graph.ResolveSymbol(compound);
             if (resolved.Count > 0) return resolved;
+        }
+
+        // Try constructor parameter type resolution:
+        // If the receiver expression matches a constructor parameter, use its type.
+        if (!string.IsNullOrEmpty(call.ReceiverExpression) && !string.IsNullOrEmpty(enclosingClass))
+        {
+            // The receiver expression may be "qdrantService" or "_qdrantService" or "this._qdrantService"
+            string receiver = call.ReceiverExpression;
+            if (receiver.StartsWith("this.", StringComparison.Ordinal))
+                receiver = receiver[5..];
+            string bareReceiver = receiver.TrimStart('_');
+
+            if (ctorParamMap.TryGetValue((enclosingClass, bareReceiver), out string? paramType)
+                || ctorParamMap.TryGetValue((enclosingClass, receiver), out paramType))
+            {
+                // Direct type resolution: paramType.MethodName
+                string compound = $"{paramType}.{call.MethodName}";
+                IReadOnlyList<string> resolved = graph.ResolveSymbol(compound);
+                if (resolved.Count > 0) return resolved;
+
+                // If the param type is an interface, check the DI map for the concrete impl
+                if (diMap.TryGetValue(paramType, out string? implType))
+                {
+                    compound = $"{implType}.{call.MethodName}";
+                    resolved = graph.ResolveSymbol(compound);
+                    if (resolved.Count > 0) return resolved;
+                }
+            }
         }
 
         // Fallback: bare method name — allow small ambiguity for interface impls
@@ -767,5 +881,26 @@ public sealed class DataFlowGraphService
 
         throw new InvalidOperationException(
             $"No graph has been built for collection '{collectionName}'. Call BuildGraphAsync first.");
+    }
+
+    /// <summary>
+    /// Case-insensitive equality comparer for (className, paramName) tuple keys.
+    /// </summary>
+    private sealed class CtorParamKeyComparer : IEqualityComparer<(string, string)>
+    {
+        public static readonly CtorParamKeyComparer Instance = new();
+
+        public bool Equals((string, string) x, (string, string) y)
+        {
+            return string.Equals(x.Item1, y.Item1, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.Item2, y.Item2, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public int GetHashCode((string, string) obj)
+        {
+            return HashCode.Combine(
+                StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Item1),
+                StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Item2));
+        }
     }
 }
