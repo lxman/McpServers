@@ -280,11 +280,26 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             if (string.IsNullOrWhiteSpace(nodeContent) || nodeContent.Length < 10)
                 continue;
 
+            // Extract enriched AST metadata
+            string? parentSymbol = TreeSitterAstExtractor.ExtractParentSymbolName(node);
+            string? ns = TreeSitterAstExtractor.ExtractNamespace(node, language);
+            string? qualifiedName = TreeSitterAstExtractor.BuildQualifiedName(ns, parentSymbol, symbolName);
+            string? returnType = TreeSitterAstExtractor.ExtractReturnType(node, language);
+            string? baseType = TreeSitterAstExtractor.ExtractBaseType(node, language);
+            List<string>? implementedInterfaces = TreeSitterAstExtractor.ExtractImplementedInterfaces(node, language);
+            List<ParameterInfo>? parameters = TreeSitterAstExtractor.ExtractParameters(node, language);
+            (string? accessModifier, List<string>? modifiers) = TreeSitterAstExtractor.ExtractModifiers(node, language);
+            List<string>? attributes = TreeSitterAstExtractor.ExtractAttributes(node, language);
+            List<FieldAccess>? fieldAccesses = TreeSitterAstExtractor.ExtractFieldAccesses(node, language);
+
             // Skip if chunk exceeds max size - we'll need to split it
             if (nodeContent.Length > _options.MaxChunkSize * 2)
             {
                 // For very large chunks, create sub-chunks
-                List<CodeChunk> subChunks = SplitLargeChunk(nodeContent, filePath, relativePath, startLine, language, symbolName, chunkType);
+                List<CodeChunk> subChunks = SplitLargeChunk(
+                    nodeContent, filePath, relativePath, startLine, language,
+                    symbolName, chunkType, ns, parentSymbol, accessModifier, modifiers,
+                    baseType, implementedInterfaces, returnType, attributes);
                 chunks.AddRange(subChunks);
             }
             else
@@ -300,10 +315,20 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
                     EndLine = endLine,
                     ChunkType = chunkType,
                     SymbolName = symbolName,
-                    ParentSymbol = null, // Could be enhanced to track parent
+                    ParentSymbol = parentSymbol,
                     Language = language.ToLowerInvariant(),
                     ContentHash = ComputeHash(nodeContent),
-                    CallsOut = callsOut.Count > 0 ? callsOut : null
+                    CallsOut = callsOut.Count > 0 ? callsOut : null,
+                    Namespace = ns,
+                    QualifiedName = qualifiedName,
+                    ReturnType = returnType,
+                    BaseType = baseType,
+                    ImplementedInterfaces = implementedInterfaces,
+                    Parameters = parameters,
+                    AccessModifier = accessModifier,
+                    Modifiers = modifiers,
+                    Attributes = attributes,
+                    FieldAccesses = fieldAccesses
                 });
             }
         }
@@ -340,6 +365,30 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             int startLine = node.StartPosition.Row + 1;
             int endLine = node.EndPosition.Row + 1;
 
+            // Extract symbol name from node children
+            string? symbolName = null;
+            foreach (Node child in node.NamedChildren)
+            {
+                if (child.Type is "identifier" or "type_identifier" or "name"
+                    or "property_identifier" or "constant")
+                {
+                    symbolName = child.Text;
+                    break;
+                }
+            }
+
+            // Extract enriched AST metadata
+            string? parentSymbol = TreeSitterAstExtractor.ExtractParentSymbolName(node);
+            string? ns = TreeSitterAstExtractor.ExtractNamespace(node, language);
+            string? qualifiedName = TreeSitterAstExtractor.BuildQualifiedName(ns, parentSymbol, symbolName);
+            string? returnType = TreeSitterAstExtractor.ExtractReturnType(node, language);
+            string? baseType = TreeSitterAstExtractor.ExtractBaseType(node, language);
+            List<string>? implementedInterfaces = TreeSitterAstExtractor.ExtractImplementedInterfaces(node, language);
+            List<ParameterInfo>? parameters = TreeSitterAstExtractor.ExtractParameters(node, language);
+            (string? accessModifier, List<string>? modifiers) = TreeSitterAstExtractor.ExtractModifiers(node, language);
+            List<string>? attributes = TreeSitterAstExtractor.ExtractAttributes(node, language);
+            List<FieldAccess>? fieldAccesses = TreeSitterAstExtractor.ExtractFieldAccesses(node, language);
+
             List<CallReference> callsOut = ExtractCallsOut(node, language);
             chunks.Add(new CodeChunk
             {
@@ -350,11 +399,21 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
                 StartLine = startLine,
                 EndLine = endLine,
                 ChunkType = NormalizeNodeType(nodeType),
-                SymbolName = null,
-                ParentSymbol = null,
+                SymbolName = symbolName,
+                ParentSymbol = parentSymbol,
                 Language = language.ToLowerInvariant(),
                 ContentHash = ComputeHash(nodeContent),
-                CallsOut = callsOut.Count > 0 ? callsOut : null
+                CallsOut = callsOut.Count > 0 ? callsOut : null,
+                Namespace = ns,
+                QualifiedName = qualifiedName,
+                ReturnType = returnType,
+                BaseType = baseType,
+                ImplementedInterfaces = implementedInterfaces,
+                Parameters = parameters,
+                AccessModifier = accessModifier,
+                Modifiers = modifiers,
+                Attributes = attributes,
+                FieldAccesses = fieldAccesses
             });
         } while (cursor.GotoNextSibling());
     }
@@ -366,7 +425,15 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
         int baseStartLine,
         string language,
         string? symbolName,
-        string? chunkType)
+        string? chunkType,
+        string? ns = null,
+        string? enclosingParent = null,
+        string? accessModifier = null,
+        IReadOnlyList<string>? modifiers = null,
+        string? baseType = null,
+        IReadOnlyList<string>? implementedInterfaces = null,
+        string? returnType = null,
+        IReadOnlyList<string>? attributes = null)
     {
         var chunks = new List<CodeChunk>();
         string[] lines = content.Split('\n');
@@ -382,6 +449,8 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             string[] chunkLines = lines[startLine..endLine];
             string chunkContent = string.Join('\n', chunkLines);
 
+            string? partSymbolName = symbolName != null ? $"{symbolName} (part {partNumber})" : null;
+
             chunks.Add(new CodeChunk
             {
                 Id = Guid.NewGuid(),
@@ -391,10 +460,18 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
                 StartLine = baseStartLine + startLine,
                 EndLine = baseStartLine + endLine - 1,
                 ChunkType = $"{chunkType ?? "segment"}_part{partNumber}",
-                SymbolName = symbolName != null ? $"{symbolName} (part {partNumber})" : null,
+                SymbolName = partSymbolName,
                 ParentSymbol = symbolName,
                 Language = language.ToLowerInvariant(),
-                ContentHash = ComputeHash(chunkContent)
+                ContentHash = ComputeHash(chunkContent),
+                Namespace = ns,
+                QualifiedName = TreeSitterAstExtractor.BuildQualifiedName(ns, enclosingParent, partSymbolName),
+                AccessModifier = accessModifier,
+                Modifiers = modifiers,
+                BaseType = baseType,
+                ImplementedInterfaces = implementedInterfaces,
+                ReturnType = returnType,
+                Attributes = attributes
             });
 
             int nextStart = endLine - overlapLines;
@@ -452,13 +529,19 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
         if (callTypes.Contains(node.Type))
         {
             string? name = ExtractCallName(node);
-            if (name != null && seen.Add(name))
+            if (name != null)
             {
-                calls.Add(new CallReference
+                string? receiver = TreeSitterAstExtractor.ExtractReceiverExpression(node);
+                string dedupKey = receiver != null ? $"{receiver}.{name}" : name;
+                if (seen.Add(dedupKey))
                 {
-                    MethodName = name,
-                    Line = node.StartPosition.Row + 1
-                });
+                    calls.Add(new CallReference
+                    {
+                        MethodName = name,
+                        ReceiverExpression = receiver,
+                        Line = node.StartPosition.Row + 1
+                    });
+                }
             }
         }
 
