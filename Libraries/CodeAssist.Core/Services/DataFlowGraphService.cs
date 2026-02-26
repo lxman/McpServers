@@ -442,17 +442,18 @@ public sealed class DataFlowGraphService
             {
                 foreach (CallReference call in chunk.CallsOut)
                 {
-                    string? targetId = ResolveCallTarget(graph, call);
-                    if (targetId == null) continue;
-
-                    graph.AddEdge(new GraphEdge
+                    IReadOnlyList<string> targetIds = ResolveCallTargets(graph, call);
+                    foreach (string targetId in targetIds)
                     {
-                        SourceId = sourceId,
-                        TargetId = targetId,
-                        Kind = GraphEdgeKind.Calls,
-                        Line = call.Line,
-                        Label = call.MethodName
-                    });
+                        graph.AddEdge(new GraphEdge
+                        {
+                            SourceId = sourceId,
+                            TargetId = targetId,
+                            Kind = GraphEdgeKind.Calls,
+                            Line = call.Line,
+                            Label = call.MethodName
+                        });
+                    }
                 }
             }
 
@@ -461,17 +462,18 @@ public sealed class DataFlowGraphService
             {
                 foreach (FieldAccess access in chunk.FieldAccesses)
                 {
-                    string? targetId = ResolveFieldTarget(graph, access);
-                    if (targetId == null) continue;
-
-                    graph.AddEdge(new GraphEdge
+                    IReadOnlyList<string> targetIds = ResolveFieldTargets(graph, access);
+                    foreach (string targetId in targetIds)
                     {
-                        SourceId = sourceId,
-                        TargetId = targetId,
-                        Kind = access.Kind == FieldAccessKind.Write ? GraphEdgeKind.FieldWrite : GraphEdgeKind.FieldRead,
-                        Line = access.Line,
-                        Label = access.FieldName
-                    });
+                        graph.AddEdge(new GraphEdge
+                        {
+                            SourceId = sourceId,
+                            TargetId = targetId,
+                            Kind = access.Kind == FieldAccessKind.Write ? GraphEdgeKind.FieldWrite : GraphEdgeKind.FieldRead,
+                            Line = access.Line,
+                            Label = access.FieldName
+                        });
+                    }
                 }
             }
 
@@ -530,42 +532,50 @@ public sealed class DataFlowGraphService
     }
 
     /// <summary>
-    /// Resolve a call reference to a target node ID.
-    /// Priority: QualifiedName > ReceiverType.MethodName > SymbolName lookup.
+    /// Maximum number of ambiguous matches allowed for bare-name resolution.
+    /// Interface methods typically have 2-4 implementations; beyond this threshold
+    /// the name is too common (e.g., ToString, Add) to produce useful edges.
     /// </summary>
-    private static string? ResolveCallTarget(CodeGraph graph, CallReference call)
+    private const int MaxAmbiguousResolutions = 10;
+
+    /// <summary>
+    /// Resolve a call reference to target node IDs.
+    /// Priority: QualifiedName > ReceiverType.MethodName > SymbolName lookup.
+    /// Returns all plausible targets so interface implementations get edges.
+    /// </summary>
+    private static IReadOnlyList<string> ResolveCallTargets(CodeGraph graph, CallReference call)
     {
         // Best case: fully qualified name from Roslyn
         if (!string.IsNullOrEmpty(call.QualifiedName) && graph.ContainsNode(call.QualifiedName))
-            return call.QualifiedName;
+            return [call.QualifiedName];
 
         // Try ReceiverType.MethodName
         if (!string.IsNullOrEmpty(call.ReceiverType))
         {
             string compound = $"{call.ReceiverType}.{call.MethodName}";
             IReadOnlyList<string> resolved = graph.ResolveSymbol(compound);
-            if (resolved.Count > 0) return resolved[0];
+            if (resolved.Count > 0) return resolved;
         }
 
-        // Fallback: bare method name
+        // Fallback: bare method name — allow small ambiguity for interface impls
         IReadOnlyList<string> byName = graph.ResolveSymbol(call.MethodName);
-        return byName.Count == 1 ? byName[0] : null; // Only use if unambiguous
+        return byName.Count <= MaxAmbiguousResolutions ? byName : [];
     }
 
     /// <summary>
-    /// Resolve a field access to a target node ID.
+    /// Resolve a field access to target node IDs.
     /// </summary>
-    private static string? ResolveFieldTarget(CodeGraph graph, FieldAccess access)
+    private static IReadOnlyList<string> ResolveFieldTargets(CodeGraph graph, FieldAccess access)
     {
         if (!string.IsNullOrEmpty(access.ContainingType))
         {
             string compound = $"{access.ContainingType}.{access.FieldName}";
             IReadOnlyList<string> resolved = graph.ResolveSymbol(compound);
-            if (resolved.Count > 0) return resolved[0];
+            if (resolved.Count > 0) return resolved;
         }
 
         IReadOnlyList<string> byName = graph.ResolveSymbol(access.FieldName);
-        return byName.Count == 1 ? byName[0] : null;
+        return byName.Count <= MaxAmbiguousResolutions ? byName : [];
     }
 
     // ────────────────────────────────────────────────────────────────

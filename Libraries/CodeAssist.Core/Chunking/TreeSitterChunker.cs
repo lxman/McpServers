@@ -307,19 +307,23 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             List<string>? attributes = TreeSitterAstExtractor.ExtractAttributes(node, language);
             List<FieldAccess>? fieldAccesses = TreeSitterAstExtractor.ExtractFieldAccesses(node, language);
 
+            // Extract calls and field accesses from the full AST node before
+            // any splitting, so this data is preserved even for large chunks.
+            List<CallReference> callsOut = ExtractCallsOut(node, language);
+
             // Skip if chunk exceeds max size - we'll need to split it
             if (nodeContent.Length > _options.MaxChunkSize * 2)
             {
-                // For very large chunks, create sub-chunks
+                // For very large chunks, create sub-chunks with calls distributed by line range
                 List<CodeChunk> subChunks = SplitLargeChunk(
                     nodeContent, filePath, relativePath, startLine, language,
-                    symbolName, chunkType, ns, parentSymbol, accessModifier, modifiers,
-                    baseType, implementedInterfaces, returnType, attributes);
+                    symbolName, chunkType, callsOut, fieldAccesses, ns, parentSymbol,
+                    accessModifier, modifiers, baseType, implementedInterfaces,
+                    returnType, attributes);
                 chunks.AddRange(subChunks);
             }
             else
             {
-                List<CallReference> callsOut = ExtractCallsOut(node, language);
                 chunks.Add(new CodeChunk
                 {
                     Id = Guid.NewGuid(),
@@ -441,6 +445,8 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
         string language,
         string? symbolName,
         string? chunkType,
+        List<CallReference> allCalls,
+        IReadOnlyList<FieldAccess>? allFieldAccesses,
         string? ns = null,
         string? enclosingParent = null,
         string? accessModifier = null,
@@ -466,19 +472,33 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
 
             string? partSymbolName = symbolName != null ? $"{symbolName} (part {partNumber})" : null;
 
+            // Distribute calls to this sub-chunk based on absolute line range
+            int absStart = baseStartLine + startLine;
+            int absEnd = baseStartLine + endLine - 1;
+
+            List<CallReference>? partCalls = allCalls.Count > 0
+                ? allCalls.Where(c => c.Line >= absStart && c.Line <= absEnd).ToList()
+                : null;
+
+            List<FieldAccess>? partFieldAccesses = allFieldAccesses is { Count: > 0 }
+                ? allFieldAccesses.Where(fa => fa.Line >= absStart && fa.Line <= absEnd).ToList()
+                : null;
+
             chunks.Add(new CodeChunk
             {
                 Id = Guid.NewGuid(),
                 FilePath = filePath,
                 RelativePath = relativePath,
                 Content = chunkContent,
-                StartLine = baseStartLine + startLine,
-                EndLine = baseStartLine + endLine - 1,
+                StartLine = absStart,
+                EndLine = absEnd,
                 ChunkType = $"{chunkType ?? "segment"}_part{partNumber}",
                 SymbolName = partSymbolName,
                 ParentSymbol = symbolName,
                 Language = language.ToLowerInvariant(),
                 ContentHash = ComputeHash(chunkContent),
+                CallsOut = partCalls is { Count: > 0 } ? partCalls : null,
+                FieldAccesses = partFieldAccesses is { Count: > 0 } ? partFieldAccesses : null,
                 Namespace = ns,
                 QualifiedName = TreeSitterAstExtractor.BuildQualifiedName(ns, enclosingParent, partSymbolName),
                 AccessModifier = accessModifier,
@@ -520,12 +540,25 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             bool isContained = coveredRanges.Any(r =>
                 chunk.StartLine >= r.Start && chunk.EndLine <= r.End);
 
-            if (isContained) continue;
+            // Method/function/constructor/property chunks survive dedup even when
+            // contained within a class_part split.  They provide specific graph nodes
+            // needed for backward call resolution (e.g., tracing who calls NormalizeGlob).
+            if (isContained && !IsMethodLevelChunk(chunk.ChunkType))
+                continue;
+
             result.Add(chunk);
             coveredRanges.Add((chunk.StartLine, chunk.EndLine));
         }
 
         return result;
+    }
+
+    private static bool IsMethodLevelChunk(string chunkType)
+    {
+        return chunkType.StartsWith("method", StringComparison.Ordinal)
+            || chunkType.StartsWith("function", StringComparison.Ordinal)
+            || chunkType.StartsWith("constructor", StringComparison.Ordinal)
+            || chunkType.StartsWith("property", StringComparison.Ordinal);
     }
 
     private static List<CallReference> ExtractCallsOut(Node node, string language)
