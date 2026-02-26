@@ -46,14 +46,26 @@ public sealed class CodeGraph
         }
 
         if (!string.IsNullOrEmpty(node.SymbolName))
+            IndexSymbolName(node.SymbolName, node.Id);
+
+        // For split chunks (e.g., "class_part1"), also index by the original
+        // unsplit symbol name stored in ParentSymbol so "QdrantService" resolves
+        // to its split parts even though SymbolName is "QdrantService (part 1)".
+        if (!string.IsNullOrEmpty(node.ParentSymbol)
+            && node.ChunkType.Contains("_part", StringComparison.Ordinal))
         {
-            if (!_symbolNameToNodes.TryGetValue(node.SymbolName, out HashSet<string>? set))
-            {
-                set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                _symbolNameToNodes[node.SymbolName] = set;
-            }
-            set.Add(node.Id);
+            IndexSymbolName(node.ParentSymbol, node.Id);
         }
+    }
+
+    private void IndexSymbolName(string symbolName, string nodeId)
+    {
+        if (!_symbolNameToNodes.TryGetValue(symbolName, out HashSet<string>? set))
+        {
+            set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _symbolNameToNodes[symbolName] = set;
+        }
+        set.Add(nodeId);
     }
 
     public GraphNode? GetNode(string id)
@@ -212,6 +224,12 @@ public sealed class CodeGraph
 
         if (!string.IsNullOrEmpty(node.SymbolName))
             _symbolNameToNodes.GetValueOrDefault(node.SymbolName)?.Remove(nodeId);
+
+        if (!string.IsNullOrEmpty(node.ParentSymbol)
+            && node.ChunkType.Contains("_part", StringComparison.Ordinal))
+        {
+            _symbolNameToNodes.GetValueOrDefault(node.ParentSymbol)?.Remove(nodeId);
+        }
 
         _nodes.Remove(nodeId);
     }

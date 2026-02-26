@@ -256,24 +256,39 @@ public sealed class TreeSitterChunker(IOptions<CodeAssistOptions> options, ILogg
             string nodeContent = node.Text;
             string chunkType = captureName;
 
-            // Try to get symbol name from children
+            // Try to get symbol name via tree-sitter's "name" field first.
+            // This is more reliable than walking children, because for methods
+            // the first identifier child is often the return type (e.g., "Task"),
+            // not the method name.
             string? symbolName = null;
-            using TreeCursor cursor = node.Walk();
-            if (cursor.GotoFirstChild())
+            try
             {
-                do
+                Node? nameFieldNode = node.GetChildForField("name");
+                if (nameFieldNode != null)
+                    symbolName = nameFieldNode.Text;
+            }
+            catch
+            {
+                // Field not available for this node type
+            }
+
+            // Fallback: walk children for first identifier-like node
+            if (symbolName == null)
+            {
+                using TreeCursor cursor = node.Walk();
+                if (cursor.GotoFirstChild())
                 {
-                    Node childNode = cursor.CurrentNode;
-                    if (childNode.Type == "identifier" ||
-                        childNode.Type == "type_identifier" ||
-                        childNode.Type == "name" ||
-                        childNode.Type == "property_identifier" ||
-                        childNode.Type == "constant")
+                    do
                     {
-                        symbolName = childNode.Text;
-                        break;
-                    }
-                } while (cursor.GotoNextSibling());
+                        Node childNode = cursor.CurrentNode;
+                        if (childNode.Type is "identifier" or "type_identifier"
+                            or "name" or "property_identifier" or "constant")
+                        {
+                            symbolName = childNode.Text;
+                            break;
+                        }
+                    } while (cursor.GotoNextSibling());
+                }
             }
 
             // Skip if chunk is too small

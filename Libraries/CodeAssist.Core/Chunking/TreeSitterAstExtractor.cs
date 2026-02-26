@@ -104,12 +104,27 @@ internal static class TreeSitterAstExtractor
                 }
             }
 
-            // Go: package_clause at the source_file level
-            if (language == "go" && current.Type == "source_file")
+            // At root level, check for sibling namespace declarations that don't
+            // wrap their children (file-scoped namespaces in C#, package_clause in Go)
+            if (current.Type is "compilation_unit" or "source_file")
             {
                 foreach (Node child in current.NamedChildren)
                 {
-                    if (child.Type == "package_clause")
+                    // C#: file_scoped_namespace_declaration is a sibling, not a parent
+                    if (child.Type == "file_scoped_namespace_declaration")
+                    {
+                        Node? nameNode = SafeGetField(child, "name");
+                        if (nameNode != null) return nameNode.Text;
+
+                        foreach (Node gc in child.NamedChildren)
+                        {
+                            if (gc.Type is "identifier" or "qualified_name" or "name" or "scoped_identifier")
+                                return gc.Text;
+                        }
+                    }
+
+                    // Go: package_clause at the source_file level
+                    if (language == "go" && child.Type == "package_clause")
                     {
                         Node? nameNode = SafeGetField(child, "name");
                         if (nameNode != null) return nameNode.Text;
