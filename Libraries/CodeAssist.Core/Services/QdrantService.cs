@@ -234,6 +234,18 @@ public sealed class QdrantService
     }
 
     /// <summary>
+    /// Scroll all chunks for a given file path (used by graph rebuild).
+    /// </summary>
+    public async Task<List<SearchResult>> SearchByFilePathAsync(
+        string collectionName,
+        string relativePath,
+        CancellationToken cancellationToken = default)
+    {
+        return await ScrollWithKeywordFilterAsync(
+            collectionName, "relative_path", relativePath, cancellationToken);
+    }
+
+    /// <summary>
     /// Delete chunks by IDs.
     /// </summary>
     public async Task DeleteByIdsAsync(
@@ -648,6 +660,54 @@ public sealed class QdrantService
         }
 
         return accesses.Count > 0 ? accesses : null;
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  Scroll all chunks (used by graph builder)
+    // ────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Scroll through all chunks in a collection, paginating automatically.
+    /// Used to build the in-memory data flow graph.
+    /// </summary>
+    public async Task<List<CodeChunk>> ScrollAllChunksAsync(
+        string collectionName,
+        CancellationToken cancellationToken = default)
+    {
+        var allChunks = new List<CodeChunk>();
+
+        try
+        {
+            PointId? offset = null;
+
+            while (true)
+            {
+                ScrollResponse response = await _client.ScrollAsync(
+                    collectionName,
+                    limit: 250,
+                    offset: offset,
+                    cancellationToken: cancellationToken);
+
+                foreach (RetrievedPoint point in response.Result)
+                {
+                    allChunks.Add(BuildChunkFromPayload(point.Id.Uuid, point.Payload));
+                }
+
+                if (response.NextPageOffset == null)
+                    break;
+
+                offset = response.NextPageOffset;
+            }
+
+            _logger.LogDebug("Scrolled {Count} chunks from {Collection}", allChunks.Count, collectionName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to scroll all chunks from {Collection}", collectionName);
+            throw;
+        }
+
+        return allChunks;
     }
 
     // ────────────────────────────────────────────────────────────────

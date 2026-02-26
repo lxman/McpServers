@@ -41,6 +41,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<OllamaService>();
             services.AddSingleton<QdrantService>();
             services.AddSingleton<RepositoryIndexer>();
+            services.AddSingleton<DataFlowGraphService>();
 
             // Register L1/L2 caching services
             services.AddSingleton<HotCache>();
@@ -76,6 +77,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<OllamaService>();
             services.AddSingleton<QdrantService>();
             services.AddSingleton<RepositoryIndexer>();
+            services.AddSingleton<DataFlowGraphService>();
 
             // Register L1/L2 caching services
             services.AddSingleton<HotCache>();
