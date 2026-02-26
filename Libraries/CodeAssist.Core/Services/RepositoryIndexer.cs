@@ -379,18 +379,33 @@ public sealed class RepositoryIndexer(
 
         foreach (string pattern in includePatterns)
         {
-            matcher.AddInclude(pattern);
+            matcher.AddInclude(NormalizeGlob(pattern));
         }
 
         foreach (string pattern in excludePatterns)
         {
-            matcher.AddExclude(pattern);
+            matcher.AddExclude(NormalizeGlob(pattern));
         }
 
         PatternMatchingResult result = matcher.Execute(new DirectoryInfoWrapper(
             new DirectoryInfo(repositoryPath)));
 
         return result.Files.Select(f => f.Path).ToList();
+    }
+
+    /// <summary>
+    /// Normalize a glob pattern so simple extensions like "*.cs" match recursively.
+    /// Microsoft.Extensions.FileSystemGlobbing treats "*.cs" as root-only;
+    /// most users expect it to mean "all .cs files everywhere".
+    /// </summary>
+    private static string NormalizeGlob(string pattern)
+    {
+        // Already has a directory component — leave it alone
+        if (pattern.Contains('/') || pattern.Contains('\\') || pattern.StartsWith("**/"))
+            return pattern;
+
+        // Simple wildcard like "*.cs" or "*.py" → make recursive
+        return $"**/{pattern}";
     }
 
     private static (List<string> toAdd, List<string> toUpdate, List<string> toRemove, List<string> toSkip)

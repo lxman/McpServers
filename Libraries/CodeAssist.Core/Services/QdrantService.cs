@@ -10,10 +10,15 @@ namespace CodeAssist.Core.Services;
 
 /// <summary>
 /// Service for vector storage operations using Qdrant.
+/// Uses lazy client initialization with reconnection support.
 /// </summary>
 public sealed class QdrantService
 {
-    private readonly QdrantClient _client;
+    private QdrantClient? _client;
+    private readonly object _clientLock = new();
+    private DateTime _lastFailedAttempt = DateTime.MinValue;
+    private static readonly TimeSpan ReconnectCooldown = TimeSpan.FromSeconds(30);
+
     private readonly CodeAssistOptions _options;
     private readonly ILogger<QdrantService> _logger;
 
@@ -23,17 +28,63 @@ public sealed class QdrantService
     {
         _options = options.Value;
         _logger = logger;
+    }
 
-        var uri = new Uri(_options.QdrantUrl);
+    /// <summary>
+    /// Get or create the Qdrant client. Enforces a cooldown between failed connection attempts
+    /// to prevent thrashing when the server is genuinely down.
+    /// </summary>
+    private QdrantClient GetClient()
+    {
+        if (_client != null) return _client;
 
-        // Use port 6334 for gRPC (Qdrant's dedicated gRPC port)
-        // Port 6333 is REST API, port 6334 is gRPC
-        int grpcPort = uri.Port == 6333 ? 6334 : uri.Port;
+        lock (_clientLock)
+        {
+            if (_client != null) return _client;
 
-        _client = new QdrantClient(
-            host: uri.Host,
-            port: grpcPort,
-            https: uri.Scheme == "https");
+            TimeSpan sinceLast = DateTime.UtcNow - _lastFailedAttempt;
+            if (sinceLast < ReconnectCooldown)
+            {
+                throw new InvalidOperationException(
+                    $"Qdrant connection failed recently. Retry in {(ReconnectCooldown - sinceLast).Seconds}s, " +
+                    $"or call check_health to force a reconnection attempt.");
+            }
+
+            try
+            {
+                var uri = new Uri(_options.QdrantUrl);
+                int grpcPort = uri.Port == 6333 ? 6334 : uri.Port;
+
+                _client = new QdrantClient(
+                    host: uri.Host,
+                    port: grpcPort,
+                    https: uri.Scheme == "https");
+
+                _logger.LogInformation("Created Qdrant client for {Host}:{Port}", uri.Host, grpcPort);
+                return _client;
+            }
+            catch (Exception ex)
+            {
+                _lastFailedAttempt = DateTime.UtcNow;
+                _logger.LogError(ex, "Failed to create Qdrant client");
+                throw;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reset the connection, disposing the current client. The next operation will create a fresh client.
+    /// Called by the health check tool to recover from stale gRPC channel state.
+    /// </summary>
+    public void ResetConnection()
+    {
+        lock (_clientLock)
+        {
+            _client?.Dispose();
+            _client = null;
+            _lastFailedAttempt = DateTime.MinValue; // Clear cooldown so next attempt proceeds immediately
+            _logger.LogInformation("Qdrant connection reset — next operation will reconnect");
+        }
     }
 
     /// <summary>
@@ -43,13 +94,13 @@ public sealed class QdrantService
     {
         try
         {
-            bool exists = await _client.CollectionExistsAsync(collectionName, cancellationToken);
+            bool exists = await GetClient().CollectionExistsAsync(collectionName, cancellationToken);
 
             if (!exists)
             {
                 _logger.LogInformation("Creating collection {Collection}", collectionName);
 
-                await _client.CreateCollectionAsync(
+                await GetClient().CreateCollectionAsync(
                     collectionName,
                     new VectorParams
                     {
@@ -133,7 +184,7 @@ public sealed class QdrantService
                 }
             }).ToList();
 
-            await _client.UpsertAsync(collectionName, points, cancellationToken: cancellationToken);
+            await GetClient().UpsertAsync(collectionName, points, cancellationToken: cancellationToken);
 
             _logger.LogDebug("Upserted {Count} chunks to collection {Collection}", chunks.Count, collectionName);
         }
@@ -176,7 +227,7 @@ public sealed class QdrantService
                 };
             }
 
-            IReadOnlyList<ScoredPoint> results = await _client.SearchAsync(
+            IReadOnlyList<ScoredPoint> results = await GetClient().SearchAsync(
                 collectionName,
                 queryEmbedding,
                 limit: (ulong)limit,
@@ -222,7 +273,7 @@ public sealed class QdrantService
                 }
             };
 
-            await _client.DeleteAsync(collectionName, filter, cancellationToken: cancellationToken);
+            await GetClient().DeleteAsync(collectionName, filter, cancellationToken: cancellationToken);
 
             _logger.LogDebug("Deleted chunks for file {FilePath} from collection {Collection}", relativePath, collectionName);
         }
@@ -258,7 +309,7 @@ public sealed class QdrantService
         try
         {
             List<PointId> pointIds = ids.Select(id => new PointId { Uuid = id.ToString() }).ToList();
-            await _client.DeleteAsync(collectionName, pointIds, cancellationToken: cancellationToken);
+            await GetClient().DeleteAsync(collectionName, pointIds, cancellationToken: cancellationToken);
 
             _logger.LogDebug("Deleted {Count} chunks by ID from collection {Collection}", ids.Count, collectionName);
         }
@@ -278,10 +329,10 @@ public sealed class QdrantService
     {
         try
         {
-            bool exists = await _client.CollectionExistsAsync(collectionName, cancellationToken);
+            bool exists = await GetClient().CollectionExistsAsync(collectionName, cancellationToken);
             if (!exists) return (0, false);
 
-            CollectionInfo info = await _client.GetCollectionInfoAsync(collectionName, cancellationToken);
+            CollectionInfo info = await GetClient().GetCollectionInfoAsync(collectionName, cancellationToken);
             return (info.PointsCount, true);
         }
         catch (Exception ex)
@@ -298,10 +349,10 @@ public sealed class QdrantService
     {
         try
         {
-            bool exists = await _client.CollectionExistsAsync(collectionName, cancellationToken);
+            bool exists = await GetClient().CollectionExistsAsync(collectionName, cancellationToken);
             if (exists)
             {
-                await _client.DeleteCollectionAsync(collectionName, cancellationToken: cancellationToken);
+                await GetClient().DeleteCollectionAsync(collectionName, cancellationToken: cancellationToken);
                 _logger.LogInformation("Deleted collection {Collection}", collectionName);
             }
         }
@@ -319,7 +370,7 @@ public sealed class QdrantService
     {
         try
         {
-            IReadOnlyList<string> collections = await _client.ListCollectionsAsync(cancellationToken);
+            IReadOnlyList<string> collections = await GetClient().ListCollectionsAsync(cancellationToken);
             return collections.ToList();
         }
         catch (Exception ex)
@@ -336,7 +387,7 @@ public sealed class QdrantService
     {
         try
         {
-            return await _client.CollectionExistsAsync(collectionName, cancellationToken);
+            return await GetClient().CollectionExistsAsync(collectionName, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -356,7 +407,7 @@ public sealed class QdrantService
     {
         try
         {
-            await _client.CreatePayloadIndexAsync(
+            await GetClient().CreatePayloadIndexAsync(
                 collectionName,
                 fieldName,
                 cancellationToken: cancellationToken);
@@ -397,7 +448,7 @@ public sealed class QdrantService
             var filter = new Filter();
             filter.Should.AddRange(conditions);
 
-            ScrollResponse response = await _client.ScrollAsync(
+            ScrollResponse response = await GetClient().ScrollAsync(
                 collectionName,
                 filter: filter,
                 limit: (uint)Math.Min(symbolNames.Count * 3, 100),
@@ -442,7 +493,7 @@ public sealed class QdrantService
                 }
             };
 
-            ScrollResponse response = await _client.ScrollAsync(
+            ScrollResponse response = await GetClient().ScrollAsync(
                 collectionName,
                 filter: filter,
                 limit: 50,
@@ -682,7 +733,7 @@ public sealed class QdrantService
 
             while (true)
             {
-                ScrollResponse response = await _client.ScrollAsync(
+                ScrollResponse response = await GetClient().ScrollAsync(
                     collectionName,
                     limit: 250,
                     offset: offset,
@@ -897,7 +948,7 @@ public sealed class QdrantService
                 }
             };
 
-            ScrollResponse response = await _client.ScrollAsync(
+            ScrollResponse response = await GetClient().ScrollAsync(
                 collectionName,
                 filter: filter,
                 limit: limit,
@@ -958,7 +1009,7 @@ public sealed class QdrantService
                 return point;
             }).ToList();
 
-            await _client.UpsertAsync(collectionName, qdrantPoints, cancellationToken: cancellationToken);
+            await GetClient().UpsertAsync(collectionName, qdrantPoints, cancellationToken: cancellationToken);
 
             _logger.LogDebug("Upserted {Count} pre-computed points to collection {Collection}",
                 points.Count, collectionName);

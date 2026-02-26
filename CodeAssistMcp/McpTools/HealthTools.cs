@@ -160,8 +160,12 @@ volumes:
             List<string> collections = await qdrantService.ListCollectionsAsync();
             return (true, collections.Count, null);
         }
-        catch (Exception ex) when (ex.Message.Contains("refused") || ex.Message.Contains("connect"))
+        catch (Exception ex) when (ex.Message.Contains("refused") || ex.Message.Contains("connect") ||
+                                   ex.Message.Contains("Unavailable") || ex.Message.Contains("Retry"))
         {
+            // Reset the connection so the next operation creates a fresh gRPC client
+            qdrantService.ResetConnection();
+            logger.LogWarning("Qdrant health check failed — connection reset for next attempt");
             return (false, 0, $"Cannot connect to Qdrant at {_options.QdrantUrl}: {ex.Message}");
         }
         catch (Exception ex)
