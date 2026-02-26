@@ -33,7 +33,8 @@ try
         .WithTools<IndexTools>()
         .WithTools<SearchTools>()
         .WithTools<RepositoryTools>()
-        .WithTools<PersonalContextTools>();
+        .WithTools<PersonalContextTools>()
+        .WithTools<DataFlowTools>();
 
     IHost host = builder.Build();
     await host.RunAsync();
