@@ -58,7 +58,7 @@ public class Program
             version = "1.0.0"
         }).WithName("HealthCheck")
           .WithSummary("Health Check")
-          .WithDescription("Returns the health status of the Traffic Generator API");;
+          .WithDescription("Returns the health status of the Traffic Generator API");
 
         Console.WriteLine("Traffic Generator API starting...");
         Console.WriteLine("Health check available at: http://localhost:5000/health");

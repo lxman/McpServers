@@ -58,11 +58,13 @@ public sealed class SshConnectionManager : IDisposable
                 var profiles = JsonSerializer.Deserialize<List<SshConnectionProfile>>(json, SerializerOptions.JsonOptionsIndented);
                 if (profiles != null)
                 {
+                    // Replace in-memory state with what's on disk
+                    _profiles.Clear();
                     foreach (SshConnectionProfile profile in profiles)
                     {
                         _profiles[profile.Name] = profile;
                     }
-                    _logger.LogInformation("Loaded {Count} SSH profiles from disk", profiles.Count);
+                    _logger.LogDebug("Loaded {Count} SSH profiles from disk", profiles.Count);
                 }
             }
         }
@@ -103,6 +105,7 @@ public sealed class SshConnectionManager : IDisposable
     /// </summary>
     public IReadOnlyList<SshConnectionProfile> GetProfiles()
     {
+        LoadProfilesFromDisk();
         return _profiles.Values.ToList();
     }
 
@@ -111,6 +114,7 @@ public sealed class SshConnectionManager : IDisposable
     /// </summary>
     public SshConnectionProfile? GetProfile(string name)
     {
+        LoadProfilesFromDisk();
         return _profiles.GetValueOrDefault(name);
     }
 
@@ -129,6 +133,7 @@ public sealed class SshConnectionManager : IDisposable
     /// </summary>
     public async Task<SshConnectionInfo> ConnectAsync(string profileName, CancellationToken cancellationToken = default)
     {
+        LoadProfilesFromDisk();
         if (!_profiles.TryGetValue(profileName, out SshConnectionProfile? profile))
         {
             return new SshConnectionInfo

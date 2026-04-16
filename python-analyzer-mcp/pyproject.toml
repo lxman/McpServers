@@ -4,17 +4,17 @@ version = "1.0.0"
 description = "MCP server that exposes Python code analysis capabilities"
 requires-python = ">=3.8"
 dependencies = [
-    "mcp>=1.0.0",
-    "pylint>=3.0.0",
+    "mcp>=1.27.0",
+    "pylint>=3.3.4",
     "pyflakes>=3.1.0",
-    "mypy>=1.7.0",
+    "mypy>=1.15.0",
     "astroid>=3.0.0",
-    "black>=23.11.0",
+    "black>=25.1.0",
     "autopep8>=2.0.4",
     "radon>=6.0.1",
     "mccabe>=0.7.0",
-    "vulture>=2.10",
-    "jedi>=0.19.1",
+    "vulture>=2.14",
+    "jedi>=0.19.2",
     "typing-extensions>=4.8.0",
 ]
 
