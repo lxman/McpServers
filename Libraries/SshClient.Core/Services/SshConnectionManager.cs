@@ -142,7 +142,10 @@ public sealed class SshConnectionManager : IDisposable
                 Host = "unknown",
                 Username = "unknown",
                 IsConnected = false,
-                LastError = $"Profile '{profileName}' not found"
+                LastError = $"Profile '{profileName}' not found",
+                ErrorCode = SshRecoveryCodes.NoMatchingProfile,
+                Recoverable = true,
+                Recovery = CreateNoProfileRecoveryGuidance(profileName)
             };
         }
 
@@ -284,12 +287,38 @@ public sealed class SshConnectionManager : IDisposable
             : null;
     }
 
+    internal bool HasProfile(string profileName)
+    {
+        LoadProfilesFromDisk();
+        return _profiles.ContainsKey(profileName);
+    }
+
+    internal async Task<bool> EnsureConnectedAsync(string connectionName, CancellationToken cancellationToken = default)
+    {
+        if (_connections.TryGetValue(connectionName, out ManagedConnection? existing) && existing.SshClient.IsConnected)
+            return true;
+
+        LoadProfilesFromDisk();
+        if (!_profiles.ContainsKey(connectionName))
+            return false;
+
+        SshConnectionInfo connectionInfo = await ConnectAsync(connectionName, cancellationToken);
+        return connectionInfo.IsConnected;
+    }
+
     /// <summary>
     /// Gets or creates an SFTP client for a connection
     /// </summary>
-    internal SftpClient? GetOrCreateSftpClient(string connectionName)
+    internal async Task<SftpClient?> GetOrCreateSftpClientAsync(string connectionName, CancellationToken cancellationToken = default)
     {
-        if (!_connections.TryGetValue(connectionName, out ManagedConnection? connection))
+        if (!_connections.TryGetValue(connectionName, out ManagedConnection? connection) || !connection.SshClient.IsConnected)
+        {
+            bool connected = await EnsureConnectedAsync(connectionName, cancellationToken);
+            if (!connected || !_connections.TryGetValue(connectionName, out connection))
+                return null;
+        }
+
+        if (!connection.SshClient.IsConnected)
             return null;
 
         if (connection.SftpClient is { IsConnected: true })
@@ -346,6 +375,24 @@ public sealed class SshConnectionManager : IDisposable
         if (!string.IsNullOrEmpty(profile.Password))
             return "password";
         return "unknown";
+    }
+
+    private static SshRecoveryGuidance CreateNoProfileRecoveryGuidance(string profileName)
+    {
+        return new SshRecoveryGuidance
+        {
+            Message = $"No saved profile named '{profileName}' exists. Establish an MCP SSH connection before retrying.",
+            Steps =
+            [
+                "Call ssh_list_profiles to check for a differently named saved profile that matches the intended host or user.",
+                "If a matching profile is found, call ssh_connect_profile with that profile name.",
+                "If no matching profile exists and host, username, and authentication are known from context, call ssh_connect.",
+                "If required connection details are missing, ask the user for host, username, and authentication method instead of switching to another SSH mechanism.",
+                "After a successful ssh_connect, call ssh_save_profile when this target should be reused."
+            ],
+            Tools = ["ssh_list_profiles", "ssh_connect_profile", "ssh_connect", "ssh_save_profile"],
+            AskUserWhenMissing = ["host", "username", "privateKeyPath or password"]
+        };
     }
 
     public void Dispose()

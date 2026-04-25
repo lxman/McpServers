@@ -49,4 +49,19 @@ public record SshConnectionInfo
     /// Last error message if connection failed
     /// </summary>
     public string? LastError { get; init; }
+
+    /// <summary>
+    /// Error code/category for programmatic handling.
+    /// </summary>
+    public string? ErrorCode { get; init; }
+
+    /// <summary>
+    /// Whether the failed operation has an expected recovery path.
+    /// </summary>
+    public bool Recoverable { get; init; }
+
+    /// <summary>
+    /// Tool-call guidance for recovering from this failure.
+    /// </summary>
+    public SshRecoveryGuidance? Recovery { get; init; }
 }

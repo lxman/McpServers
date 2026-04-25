@@ -159,9 +159,94 @@ public sealed class SshConnectionTools(
                 HasKey = !string.IsNullOrEmpty(p.PrivateKeyPath),
                 HasPassword = !string.IsNullOrEmpty(p.Password),
                 p.Description
-            });
+            })
+            .ToList();
+
+        if (profiles.Count == 0)
+        {
+            return new
+            {
+                Profiles = profiles,
+                Message = "No saved SSH profiles exist.",
+                ErrorCode = SshRecoveryCodes.NoMatchingProfile,
+                Recoverable = true,
+                Recovery = new SshRecoveryGuidance
+                {
+                    Message = "Create a connection with ssh_connect, then save it with ssh_save_profile if this target should be reused.",
+                    Steps =
+                    [
+                        "If host, username, and authentication are known from context, call ssh_connect.",
+                        "If required connection details are missing, ask the user for host, username, and authentication method.",
+                        "After a successful ssh_connect, call ssh_save_profile when this target should be reused."
+                    ],
+                    Tools = ["ssh_connect", "ssh_save_profile"],
+                    AskUserWhenMissing = ["host", "username", "privateKeyPath or password"]
+                }
+            }.ToGuardedResponse(outputGuard, "ssh_list_profiles");
+        }
 
         return profiles.ToGuardedResponse(outputGuard, "ssh_list_profiles");
+    }
+
+    [McpServerTool]
+    [DisplayName("ssh_connection_help")]
+    [Description("Get recovery guidance for choosing or creating an SSH MCP connection. Use this when an SSH/SFTP operation fails due to a missing connection or missing profile.")]
+    public string ConnectionHelp(
+        [Description("Connection/profile name, host, username, or other hint from the failed operation")] string? connectionNameOrHint = null)
+    {
+        IReadOnlyList<SshConnectionInfo> connections = connectionManager.GetConnections();
+        IReadOnlyList<SshConnectionProfile> profiles = connectionManager.GetProfiles();
+        string? hint = string.IsNullOrWhiteSpace(connectionNameOrHint) ? null : connectionNameOrHint.Trim();
+
+        var matchingConnections = connections
+            .Where(c => MatchesHint(hint, c.Name, c.Host, c.Username))
+            .Select(c => new
+            {
+                c.Name,
+                c.Host,
+                c.Port,
+                c.Username,
+                c.IsConnected,
+                c.AuthMethod
+            })
+            .ToList();
+
+        var matchingProfiles = profiles
+            .Where(p => MatchesHint(hint, p.Name, p.Host, p.Username, p.Description))
+            .Select(p => new
+            {
+                p.Name,
+                p.Host,
+                p.Port,
+                p.Username,
+                HasKey = !string.IsNullOrEmpty(p.PrivateKeyPath),
+                HasPassword = !string.IsNullOrEmpty(p.Password),
+                p.Description
+            })
+            .ToList();
+
+        return new
+        {
+            Hint = hint,
+            ActiveConnectionMatches = matchingConnections,
+            SavedProfileMatches = matchingProfiles,
+            ActiveConnectionCount = connections.Count,
+            SavedProfileCount = profiles.Count,
+            Recovery = new SshRecoveryGuidance
+            {
+                Message = "Use an existing MCP SSH connection or establish one before retrying the failed SSH/SFTP operation.",
+                Steps =
+                [
+                    "If an active connection match exists, retry the original operation with that connection name.",
+                    "If a saved profile match exists, call ssh_connect_profile with that profile name, then retry the original operation.",
+                    "If no saved profile matches and host, username, and authentication are known from context, call ssh_connect.",
+                    "If required connection details are missing, ask the user for host, username, and authentication method.",
+                    "After a successful ssh_connect, call ssh_save_profile when this target should be reused."
+                ],
+                Tools = ["ssh_list_connections", "ssh_list_profiles", "ssh_connect_profile", "ssh_connect", "ssh_save_profile"],
+                AskUserWhenMissing = ["host", "username", "privateKeyPath or password"]
+            }
+        }.ToGuardedResponse(outputGuard, "ssh_connection_help");
     }
 
     [McpServerTool]
@@ -174,5 +259,16 @@ public sealed class SshConnectionTools(
         return success
             ? new { Message = $"Profile removed: {profileName}" }.ToSuccessResponse(outputGuard)
             : $"Profile '{profileName}' not found".ToErrorResponse(outputGuard);
+    }
+
+    private static bool MatchesHint(string? hint, params string?[] values)
+    {
+        if (hint is null)
+            return true;
+
+        return values.Any(value =>
+            !string.IsNullOrWhiteSpace(value)
+            && (value.Contains(hint, StringComparison.OrdinalIgnoreCase)
+                || hint.Contains(value, StringComparison.OrdinalIgnoreCase)));
     }
 }

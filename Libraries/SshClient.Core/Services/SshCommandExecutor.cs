@@ -30,12 +30,11 @@ public sealed class SshCommandExecutor(
         Renci.SshNet.SshClient? client = connectionManager.GetSshClient(connectionName);
         if (client is null || !client.IsConnected)
         {
-            return new SshCommandResult
-            {
-                Success = false,
-                ExitCode = -1,
-                StandardError = $"Connection '{connectionName}' not found or not connected"
-            };
+            bool connected = await connectionManager.EnsureConnectedAsync(connectionName, cancellationToken);
+            client = connected ? connectionManager.GetSshClient(connectionName) : null;
+
+            if (client is null || !client.IsConnected)
+                return CreateConnectionRecoveryResult(connectionName, command);
         }
 
         int timeout = timeoutSeconds ?? DefaultTimeoutSeconds;
@@ -210,5 +209,60 @@ public sealed class SshCommandExecutor(
             return $"'{arg}'";
 
         return "'" + arg.Replace("'", "'\"'\"'") + "'";
+    }
+
+    private SshCommandResult CreateConnectionRecoveryResult(string connectionName, string command)
+    {
+        bool hasProfile = connectionManager.HasProfile(connectionName);
+        string errorCode = hasProfile
+            ? SshRecoveryCodes.ConnectionNotConnected
+            : SshRecoveryCodes.NoMatchingProfile;
+
+        return new SshCommandResult
+        {
+            Success = false,
+            ExitCode = -1,
+            StandardError = hasProfile
+                ? $"Connection '{connectionName}' is not active. A matching saved profile exists, but automatic reconnect did not succeed."
+                : $"Connection '{connectionName}' is not active and no saved profile matched that name.",
+            Command = command,
+            ConnectionName = connectionName,
+            ErrorCode = errorCode,
+            Recoverable = true,
+            Recovery = CreateRecoveryGuidance(connectionName, hasProfile)
+        };
+    }
+
+    private static SshRecoveryGuidance CreateRecoveryGuidance(string connectionName, bool hasProfile)
+    {
+        if (hasProfile)
+        {
+            return new SshRecoveryGuidance
+            {
+                Message = $"Reconnect with the saved profile named '{connectionName}', then retry the original operation.",
+                Steps =
+                [
+                    "Call ssh_connect_profile with the requested connection/profile name.",
+                    "If the connection succeeds, retry the original SSH or SFTP operation.",
+                    "If reconnect fails, inspect the returned connection error before choosing another transport."
+                ],
+                Tools = ["ssh_connect_profile"]
+            };
+        }
+
+        return new SshRecoveryGuidance
+        {
+            Message = $"No active connection or saved profile matched '{connectionName}'. Establish an MCP SSH connection before retrying.",
+            Steps =
+            [
+                "Call ssh_list_profiles to check for a differently named saved profile that matches the intended host or user.",
+                "If a matching profile is found, call ssh_connect_profile with that profile name and retry the original operation.",
+                "If no matching profile exists and host, username, and authentication are known from context, call ssh_connect.",
+                "If required connection details are missing, ask the user for host, username, and authentication method instead of switching to another SSH mechanism.",
+                "After a successful ssh_connect, call ssh_save_profile when this target should be reused."
+            ],
+            Tools = ["ssh_list_profiles", "ssh_connect_profile", "ssh_connect", "ssh_save_profile"],
+            AskUserWhenMissing = ["host", "username", "privateKeyPath or password"]
+        };
     }
 }

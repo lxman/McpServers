@@ -49,4 +49,19 @@ public record SshCommandResult
     /// Original output length if truncated
     /// </summary>
     public int? OriginalOutputLength { get; init; }
+
+    /// <summary>
+    /// Error code/category for programmatic handling.
+    /// </summary>
+    public string? ErrorCode { get; init; }
+
+    /// <summary>
+    /// Whether the failed operation has an expected recovery path.
+    /// </summary>
+    public bool Recoverable { get; init; }
+
+    /// <summary>
+    /// Tool-call guidance for recovering from this failure.
+    /// </summary>
+    public SshRecoveryGuidance? Recovery { get; init; }
 }

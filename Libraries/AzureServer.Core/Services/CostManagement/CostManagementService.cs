@@ -7,8 +7,8 @@ using Azure.ResourceManager.CostManagement.Models;
 using Azure.ResourceManager.Resources;
 using AzureServer.Core.Services.Core;
 using AzureServer.Core.Services.CostManagement.Models;
-
 using Microsoft.Extensions.Logging;
+
 namespace AzureServer.Core.Services.CostManagement;
 
 /// <summary>
@@ -405,7 +405,7 @@ public class CostManagementService(
             CurrentSpend = data.CurrentSpend?.Amount ?? 0,
             ForecastedSpend = data.ForecastSpend?.Amount ?? 0,
             Currency = data.CurrentSpend?.Unit ?? "USD",
-            Notifications = data.Notifications?.Select(n => new BudgetNotification
+            Notifications = data.Notifications?.Select(n => new Models.BudgetNotification
             {
                 Name = n.Key,
                 Enabled = n.Value.IsEnabled,

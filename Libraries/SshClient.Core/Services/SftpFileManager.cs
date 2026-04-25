@@ -21,15 +21,10 @@ public sealed class SftpFileManager(
         string remotePath,
         CancellationToken cancellationToken = default)
     {
-        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = await connectionManager.GetOrCreateSftpClientAsync(connectionName, cancellationToken);
         if (sftpClient is null)
         {
-            return new SftpListResult
-            {
-                Success = false,
-                Path = remotePath,
-                Error = $"Connection '{connectionName}' not found or not connected"
-            };
+            return CreateListRecoveryResult(connectionName, remotePath);
         }
 
         try
@@ -87,16 +82,10 @@ public sealed class SftpFileManager(
         string localPath,
         CancellationToken cancellationToken = default)
     {
-        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = await connectionManager.GetOrCreateSftpClientAsync(connectionName, cancellationToken);
         if (sftpClient is null)
         {
-            return new SftpTransferResult
-            {
-                Success = false,
-                SourcePath = remotePath,
-                DestinationPath = localPath,
-                Error = $"Connection '{connectionName}' not found or not connected"
-            };
+            return CreateTransferRecoveryResult(connectionName, remotePath, localPath);
         }
 
         var stopwatch = Stopwatch.StartNew();
@@ -149,16 +138,10 @@ public sealed class SftpFileManager(
         string remotePath,
         CancellationToken cancellationToken = default)
     {
-        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = await connectionManager.GetOrCreateSftpClientAsync(connectionName, cancellationToken);
         if (sftpClient is null)
         {
-            return new SftpTransferResult
-            {
-                Success = false,
-                SourcePath = localPath,
-                DestinationPath = remotePath,
-                Error = $"Connection '{connectionName}' not found or not connected"
-            };
+            return CreateTransferRecoveryResult(connectionName, localPath, remotePath);
         }
 
         var stopwatch = Stopwatch.StartNew();
@@ -217,9 +200,9 @@ public sealed class SftpFileManager(
         int maxBytes = 1_000_000,
         CancellationToken cancellationToken = default)
     {
-        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = await connectionManager.GetOrCreateSftpClientAsync(connectionName, cancellationToken);
         if (sftpClient is null)
-            return (false, string.Empty, $"Connection '{connectionName}' not found or not connected");
+            return (false, string.Empty, CreateConnectionRecoveryMessage(connectionName));
 
         try
         {
@@ -253,9 +236,9 @@ public sealed class SftpFileManager(
         string content,
         CancellationToken cancellationToken = default)
     {
-        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = await connectionManager.GetOrCreateSftpClientAsync(connectionName, cancellationToken);
         if (sftpClient is null)
-            return (false, $"Connection '{connectionName}' not found or not connected");
+            return (false, CreateConnectionRecoveryMessage(connectionName));
 
         try
         {
@@ -279,9 +262,9 @@ public sealed class SftpFileManager(
         string remotePath,
         CancellationToken cancellationToken = default)
     {
-        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = await connectionManager.GetOrCreateSftpClientAsync(connectionName, cancellationToken);
         if (sftpClient is null)
-            return (false, $"Connection '{connectionName}' not found or not connected");
+            return (false, CreateConnectionRecoveryMessage(connectionName));
 
         try
         {
@@ -304,9 +287,9 @@ public sealed class SftpFileManager(
         string remotePath,
         CancellationToken cancellationToken = default)
     {
-        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = await connectionManager.GetOrCreateSftpClientAsync(connectionName, cancellationToken);
         if (sftpClient is null)
-            return (false, $"Connection '{connectionName}' not found or not connected");
+            return (false, CreateConnectionRecoveryMessage(connectionName));
 
         try
         {
@@ -329,9 +312,9 @@ public sealed class SftpFileManager(
         string remotePath,
         CancellationToken cancellationToken = default)
     {
-        SftpClient? sftpClient = connectionManager.GetOrCreateSftpClient(connectionName);
+        SftpClient? sftpClient = await connectionManager.GetOrCreateSftpClientAsync(connectionName, cancellationToken);
         if (sftpClient is null)
-            return (false, false, $"Connection '{connectionName}' not found or not connected");
+            return (false, false, CreateConnectionRecoveryMessage(connectionName));
 
         try
         {
@@ -376,5 +359,80 @@ public sealed class SftpFileManager(
         sb.Append(file.Attributes.OthersCanExecute ? 'x' : '-');
 
         return sb.ToString();
+    }
+
+    private SftpListResult CreateListRecoveryResult(string connectionName, string remotePath)
+    {
+        bool hasProfile = connectionManager.HasProfile(connectionName);
+        return new SftpListResult
+        {
+            Success = false,
+            Path = remotePath,
+            Error = CreateConnectionRecoveryMessage(connectionName),
+            ConnectionName = connectionName,
+            ErrorCode = hasProfile
+                ? SshRecoveryCodes.ConnectionNotConnected
+                : SshRecoveryCodes.NoMatchingProfile,
+            Recoverable = true,
+            Recovery = CreateRecoveryGuidance(connectionName, hasProfile)
+        };
+    }
+
+    private SftpTransferResult CreateTransferRecoveryResult(string connectionName, string sourcePath, string destinationPath)
+    {
+        bool hasProfile = connectionManager.HasProfile(connectionName);
+        return new SftpTransferResult
+        {
+            Success = false,
+            SourcePath = sourcePath,
+            DestinationPath = destinationPath,
+            Error = CreateConnectionRecoveryMessage(connectionName),
+            ConnectionName = connectionName,
+            ErrorCode = hasProfile
+                ? SshRecoveryCodes.ConnectionNotConnected
+                : SshRecoveryCodes.NoMatchingProfile,
+            Recoverable = true,
+            Recovery = CreateRecoveryGuidance(connectionName, hasProfile)
+        };
+    }
+
+    private string CreateConnectionRecoveryMessage(string connectionName)
+    {
+        return connectionManager.HasProfile(connectionName)
+            ? $"Connection '{connectionName}' is not active. A matching saved profile exists, but automatic reconnect did not succeed."
+            : $"Connection '{connectionName}' is not active and no saved profile matched that name.";
+    }
+
+    private static SshRecoveryGuidance CreateRecoveryGuidance(string connectionName, bool hasProfile)
+    {
+        if (hasProfile)
+        {
+            return new SshRecoveryGuidance
+            {
+                Message = $"Reconnect with the saved profile named '{connectionName}', then retry the original operation.",
+                Steps =
+                [
+                    "Call ssh_connect_profile with the requested connection/profile name.",
+                    "If the connection succeeds, retry the original SSH or SFTP operation.",
+                    "If reconnect fails, inspect the returned connection error before choosing another transport."
+                ],
+                Tools = ["ssh_connect_profile"]
+            };
+        }
+
+        return new SshRecoveryGuidance
+        {
+            Message = $"No active connection or saved profile matched '{connectionName}'. Establish an MCP SSH connection before retrying.",
+            Steps =
+            [
+                "Call ssh_list_profiles to check for a differently named saved profile that matches the intended host or user.",
+                "If a matching profile is found, call ssh_connect_profile with that profile name and retry the original operation.",
+                "If no matching profile exists and host, username, and authentication are known from context, call ssh_connect.",
+                "If required connection details are missing, ask the user for host, username, and authentication method instead of switching to another SSH mechanism.",
+                "After a successful ssh_connect, call ssh_save_profile when this target should be reused."
+            ],
+            Tools = ["ssh_list_profiles", "ssh_connect_profile", "ssh_connect", "ssh_save_profile"],
+            AskUserWhenMissing = ["host", "username", "privateKeyPath or password"]
+        };
     }
 }

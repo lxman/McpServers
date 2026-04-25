@@ -89,8 +89,15 @@ public sealed class SshCommandTools(
     {
         try
         {
-            int exitCode = await commandExecutor.ExecuteAndGetExitCodeAsync(connectionName, command);
-            return new { ExitCode = exitCode, Success = exitCode == 0 }.ToGuardedResponse(outputGuard, "ssh_check_exit_code");
+            SshCommandResult result = await commandExecutor.ExecuteAsync(
+                connectionName,
+                command,
+                maxOutputBytes: 1000);
+
+            if (result.Recoverable)
+                return result.ToGuardedResponse(outputGuard, "ssh_check_exit_code");
+
+            return new { ExitCode = result.ExitCode, Success = result.ExitCode == 0 }.ToGuardedResponse(outputGuard, "ssh_check_exit_code");
         }
         catch (Exception ex)
         {

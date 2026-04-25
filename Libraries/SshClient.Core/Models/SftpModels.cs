@@ -46,6 +46,21 @@ public record SftpTransferResult
     /// Connection name used for transfer
     /// </summary>
     public string ConnectionName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Error code/category for programmatic handling.
+    /// </summary>
+    public string? ErrorCode { get; init; }
+
+    /// <summary>
+    /// Whether the failed operation has an expected recovery path.
+    /// </summary>
+    public bool Recoverable { get; init; }
+
+    /// <summary>
+    /// Tool-call guidance for recovering from this failure.
+    /// </summary>
+    public SshRecoveryGuidance? Recovery { get; init; }
 }
 
 /// <summary>
@@ -143,4 +158,19 @@ public record SftpListResult
     /// Connection name used
     /// </summary>
     public string ConnectionName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Error code/category for programmatic handling.
+    /// </summary>
+    public string? ErrorCode { get; init; }
+
+    /// <summary>
+    /// Whether the failed operation has an expected recovery path.
+    /// </summary>
+    public bool Recoverable { get; init; }
+
+    /// <summary>
+    /// Tool-call guidance for recovering from this failure.
+    /// </summary>
+    public SshRecoveryGuidance? Recovery { get; init; }
 }
