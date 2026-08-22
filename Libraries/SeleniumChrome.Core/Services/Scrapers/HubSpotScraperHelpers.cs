@@ -113,7 +113,9 @@ public partial class HubSpotScraper
 
             var job = new EnhancedJobListing
             {
-                Title = CleanText(title),
+                // title was already verified non-null/non-whitespace above, so this only
+                // falls back if CleanText somehow strips it down to nothing
+                Title = CleanText(title) ?? title,
                 Company = "HubSpot",
                 Location = CleanText(location) ?? "Cambridge, MA",
                 Description = CleanText(description) ?? "",
@@ -121,7 +123,7 @@ public partial class HubSpotScraper
                 SourceSite = JobSite.HubSpot,
                 DatePosted = DateTime.UtcNow,
                 IsRemote = IsRemotePosition(location, description),
-                Department = CleanText(department),
+                Department = CleanText(department) ?? "",
                 JobType = jobType,
                 ExperienceLevel = experience,
                 Technologies = ExtractTechnologies(title + " " + description),
@@ -129,7 +131,7 @@ public partial class HubSpotScraper
                 ])
             };
 
-            return Task.FromResult(job);
+            return Task.FromResult<EnhancedJobListing?>(job);
         }
         catch (Exception ex)
         {

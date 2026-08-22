@@ -158,8 +158,8 @@ public class BrowserManagementTools(PlaywrightSessionManager sessionManager)
         try
         {
             PlaywrightSessionManager.SessionContext? session = sessionManager.GetSession(sessionId);
-            if (session?.Page == null)
-                return $"Session {sessionId} not found or page not available.";
+            if (session?.Page == null || session.Context == null)
+                return $"Session {sessionId} not found or page/context not available.";
 
             var clearResults = new List<object>();
             var errors = new List<string>();

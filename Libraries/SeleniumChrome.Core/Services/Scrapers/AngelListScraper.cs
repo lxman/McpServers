@@ -144,7 +144,9 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
                 try
                 {
                     // Check for AngelList-specific job content
-                    ReadOnlyCollection<IWebElement> elements = Driver.FindElements(By.CssSelector("[data-test='startup-job'], .job-card, a[href*='/j/'], a[href*='/jobs/'][href*='-at-']"));
+                    // Driver is non-null here: WaitForJobContent() is only invoked from ScrapeJobsAsync
+                    // after InitializeDriver() has run, and Driver isn't cleared until that method's finally block.
+                    ReadOnlyCollection<IWebElement> elements = Driver!.FindElements(By.CssSelector("[data-test='startup-job'], .job-card, a[href*='/j/'], a[href*='/jobs/'][href*='-at-']"));
                     if (elements.Count > 0)
                     {
                         contentFound = true;
@@ -202,7 +204,9 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
             {
                 try
                 {
-                    IWebElement closeButton = Driver.FindElement(By.CssSelector(selector));
+                    // Driver is non-null here: HandlePopups() is only invoked from ScrapeJobsAsync
+                    // after InitializeDriver() has run, and Driver isn't cleared until that method's finally block.
+                    IWebElement closeButton = Driver!.FindElement(By.CssSelector(selector));
                     if (closeButton is { Displayed: true, Enabled: true })
                     {
                         closeButton.Click();
@@ -458,7 +462,9 @@ public class AngelListScraper(ILogger<AngelListScraper> logger) : BaseJobScraper
     {
         try
         {
-            string pageSource = Driver.PageSource;
+            // Driver is non-null here: ExtractFromPageContent() is only invoked from ScrapeJobsAsync
+            // after InitializeDriver() has run, and Driver isn't cleared until that method's finally block.
+            string pageSource = Driver!.PageSource;
             Logger.LogInformation($"AngelList page source length: {pageSource.Length}");
             
             if (pageSource.Contains("Software Engineer") || 

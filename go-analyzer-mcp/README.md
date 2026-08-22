@@ -74,7 +74,7 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 
 ```bash
 go mod tidy
-go build -o go-analyzer.exe
+go build -o go-analyzer.exe ./cmd/go-analyzer
 ```
 
 ## Requirements
@@ -110,7 +110,11 @@ go-analyzer-mcp/
 │   └── symbols.go     # Symbol extraction
 ├── tools/             # MCP tool handlers
 │   └── tools.go       # Tool registration and handlers
-├── main.go            # Server entry point
+├── cmd/               # Entry points (one binary per subdirectory)
+│   ├── go-analyzer/   # stdio MCP server
+│   │   └── main.go
+│   └── http-server/   # HTTP API server (port 7300)
+│       └── main.go
 ├── go.mod             # Go module dependencies
 └── go.sum             # Dependency checksums
 ```

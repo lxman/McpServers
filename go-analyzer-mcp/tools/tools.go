@@ -153,7 +153,7 @@ func formatAnalysisResult(result *analyzer.AnalyzeCodeOutput) string {
 
 func formatSymbolsResult(result *analyzer.GetSymbolsOutput) string {
 	text := fmt.Sprintf("Found %d symbols:\n\n", result.Count)
-	
+
 	for _, sym := range result.Symbols {
 		if sym.Signature != "" {
 			text += fmt.Sprintf("%s: %s (line %d)\n", sym.Kind, sym.Signature, sym.Line)
@@ -161,7 +161,7 @@ func formatSymbolsResult(result *analyzer.GetSymbolsOutput) string {
 			text += fmt.Sprintf("%s: %s (line %d)\n", sym.Kind, sym.Name, sym.Line)
 		}
 	}
-	
+
 	return text
 }
 

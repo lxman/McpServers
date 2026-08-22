@@ -20,7 +20,6 @@ namespace DesktopCommanderMcp.McpTools;
 public class FileEditingTools(
     FileEditor fileEditor,
     EditApprovalService approvalService,
-    FileVersionService versionService,
     OutputGuard outputGuard,
     ILogger<FileEditingTools> logger)
 {

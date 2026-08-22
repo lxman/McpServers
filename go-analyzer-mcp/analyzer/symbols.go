@@ -22,13 +22,13 @@ type GetSymbolsOutput struct {
 
 // Symbol represents a symbol in Go code
 type Symbol struct {
-	Name       string `json:"name"`
-	Kind       string `json:"kind"` // "function", "type", "const", "var", "method", "struct", "interface"
-	Line       int    `json:"line"`
-	Column     int    `json:"column"`
-	Signature  string `json:"signature,omitempty"`
-	Receiver   string `json:"receiver,omitempty"` // For methods
-	TypeName   string `json:"type_name,omitempty"` // For methods, fields
+	Name      string `json:"name"`
+	Kind      string `json:"kind"` // "function", "type", "const", "var", "method", "struct", "interface"
+	Line      int    `json:"line"`
+	Column    int    `json:"column"`
+	Signature string `json:"signature,omitempty"`
+	Receiver  string `json:"receiver,omitempty"`  // For methods
+	TypeName  string `json:"type_name,omitempty"` // For methods, fields
 }
 
 // GetSymbols extracts all symbols from Go code
@@ -86,7 +86,7 @@ func GetSymbols(code, filter string) (*GetSymbolsOutput, error) {
 
 func extractFunctionSymbol(decl *ast.FuncDecl, fset *token.FileSet) Symbol {
 	pos := fset.Position(decl.Pos())
-	
+
 	sym := Symbol{
 		Name:   decl.Name.Name,
 		Kind:   "function",
@@ -141,7 +141,7 @@ func extractFunctionSymbol(decl *ast.FuncDecl, fset *token.FileSet) Symbol {
 
 func extractTypeSymbol(spec *ast.TypeSpec, fset *token.FileSet) Symbol {
 	pos := fset.Position(spec.Pos())
-	
+
 	kind := "type"
 	switch spec.Type.(type) {
 	case *ast.StructType:
@@ -160,7 +160,7 @@ func extractTypeSymbol(spec *ast.TypeSpec, fset *token.FileSet) Symbol {
 
 func extractValueSymbols(spec *ast.ValueSpec, kind string, fset *token.FileSet) []Symbol {
 	symbols := []Symbol{}
-	
+
 	for _, name := range spec.Names {
 		pos := fset.Position(name.Pos())
 		sym := Symbol{
@@ -169,13 +169,13 @@ func extractValueSymbols(spec *ast.ValueSpec, kind string, fset *token.FileSet) 
 			Line:   pos.Line,
 			Column: pos.Column,
 		}
-		
+
 		if spec.Type != nil {
 			sym.TypeName = fmt.Sprintf("%s", spec.Type)
 		}
-		
+
 		symbols = append(symbols, sym)
 	}
-	
+
 	return symbols
 }

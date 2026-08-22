@@ -9,13 +9,16 @@ namespace Mcp.Database.Core.Sql.Providers;
 /// </summary>
 public class PostgreSqlProvider : ISqlProvider
 {
+    /// <inheritdoc />
     public string ProviderName => "PostgreSQL";
 
+    /// <inheritdoc />
     public DbConnection CreateConnection(string connectionString)
     {
         return new NpgsqlConnection(connectionString);
     }
 
+    /// <inheritdoc />
     public DbCommand CreateCommand(DbConnection connection)
     {
         if (connection is not NpgsqlConnection npgsqlConnection)
@@ -24,6 +27,7 @@ public class PostgreSqlProvider : ISqlProvider
         return npgsqlConnection.CreateCommand();
     }
 
+    /// <inheritdoc />
     public async Task<bool> TestConnectionAsync(DbConnection connection)
     {
         if (connection == null)
@@ -47,6 +51,7 @@ public class PostgreSqlProvider : ISqlProvider
         }
     }
 
+    /// <inheritdoc />
     public string GetParameterPlaceholder(string parameterName)
     {
         // PostgreSQL uses $1, $2, etc., but for named parameters we'll use @ syntax
@@ -54,6 +59,7 @@ public class PostgreSqlProvider : ISqlProvider
         return $"@{parameterName}";
     }
 
+    /// <inheritdoc />
     public string BuildConnectionString(
         string server,
         string database,

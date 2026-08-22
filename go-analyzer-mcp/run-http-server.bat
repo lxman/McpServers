@@ -11,7 +11,7 @@ echo Installing swag CLI if needed...
 go install github.com/swaggo/swag/cmd/swag@latest
 echo.
 echo Generating OpenAPI documentation...
-swag init -g http_server.go -o ./docs
+swag init -g cmd/http-server/main.go -o ./docs
 echo.
 echo Starting server...
-go run http_server.go
+go run ./cmd/http-server

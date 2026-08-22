@@ -14,7 +14,6 @@ namespace DesktopCommanderMcp.McpTools;
 /// </summary>
 [McpServerToolType]
 public class FileSystemTools(
-    FileVersionService versionService,
     SecurityManager securityManager,
     AuditLogger auditLogger,
     OutputGuard outputGuard,

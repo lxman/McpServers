@@ -131,7 +131,6 @@ public class CredentialSelectionService(
             "visual-studio" => new VisualStudioCredential(),
             "environment" => new EnvironmentCredential(),
             "azure-powershell" => new AzurePowerShellCredential(),
-            "shared-token-cache" => new SharedTokenCacheCredential(),
             _ => throw new ArgumentException($"Unknown credential ID: {credentialId}")
         };
     }

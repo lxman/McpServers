@@ -179,7 +179,8 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
                                      
                          """;
 
-            var environmentResult = await session.Page.EvaluateAsync<JsonElement>(jsCode);
+            var page = session.Page ?? throw new InvalidOperationException("Session page is not available.");
+            var environmentResult = await page.EvaluateAsync<JsonElement>(jsCode);
 
             return new TestingEnvironmentInfo
             {
@@ -389,7 +390,8 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
                                        
                            """;
 
-            var contractResult = await session.Page.EvaluateAsync<JsonElement>(jsCode);
+            var page = session.Page ?? throw new InvalidOperationException("Session page is not available.");
+            var contractResult = await page.EvaluateAsync<JsonElement>(jsCode);
 
             return JsonSerializer.Deserialize<ComponentContractInfo>(contractResult.GetRawText()) ?? new ComponentContractInfo();
         }
@@ -686,7 +688,8 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
                                        
                            """;
 
-            var result = await session.Page.EvaluateAsync<bool>(jsCode);
+            var page = session.Page ?? throw new InvalidOperationException("Session page is not available.");
+            var result = await page.EvaluateAsync<bool>(jsCode);
             return result;
         }
         catch
@@ -755,7 +758,8 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
                                        
                            """;
 
-            var result = await session.Page.EvaluateAsync<JsonElement>(jsCode);
+            var page = session.Page ?? throw new InvalidOperationException("Session page is not available.");
+            var result = await page.EvaluateAsync<JsonElement>(jsCode);
 
             bool eventEmitted = result.TryGetProperty("eventEmitted", out JsonElement emitted) && emitted.GetBoolean();
             object? payload = result.TryGetProperty("payload", out JsonElement payloadElement) ? payloadElement : null;
@@ -802,7 +806,8 @@ public class AngularComponentContractTesting(PlaywrightSessionManager sessionMan
                                        
                            """;
 
-            var result = await session.Page.EvaluateAsync<JsonElement>(jsCode);
+            var page = session.Page ?? throw new InvalidOperationException("Session page is not available.");
+            var result = await page.EvaluateAsync<JsonElement>(jsCode);
 
             bool success = result.TryGetProperty("success", out JsonElement successProp) && successProp.GetBoolean();
             object? methodResult = result.TryGetProperty("result", out JsonElement resultProp) ? resultProp : null;

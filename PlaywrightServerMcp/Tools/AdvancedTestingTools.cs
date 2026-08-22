@@ -9,7 +9,7 @@ using Mcp.Common.Core;
 namespace PlaywrightServerMcp.Tools;
 
 [McpServerToolType]
-public class AdvancedTestingTools(ToolService toolService, ChromeService chromeService)
+public class AdvancedTestingTools(ToolService toolService)
 {
     [McpServerTool]
     [Description("Simulate network conditions (slow, fast, offline). See skills/playwright-mcp/tools/advanced-testing-tools.md.")]

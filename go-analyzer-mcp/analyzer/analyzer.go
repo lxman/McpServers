@@ -19,9 +19,9 @@ type AnalyzeCodeInput struct {
 
 // AnalyzeCodeOutput represents the result of code analysis
 type AnalyzeCodeOutput struct {
-	Success     bool         `json:"success"`
-	Diagnostics []Diagnostic `json:"diagnostics"`
-	ErrorCount  int          `json:"error_count"`
+	Success      bool         `json:"success"`
+	Diagnostics  []Diagnostic `json:"diagnostics"`
+	ErrorCount   int          `json:"error_count"`
 	WarningCount int          `json:"warning_count"`
 }
 

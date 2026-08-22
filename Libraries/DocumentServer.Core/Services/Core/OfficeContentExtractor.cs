@@ -285,7 +285,11 @@ public class OfficeContentExtractor : IContentExtractor
         }
 
         var metadata = new Dictionary<string, string>();
+        // OOXML0001: PackageProperties is flagged experimental by the OpenXML SDK. There is no stable
+        // replacement for reading core document properties, so the diagnostic is acknowledged here.
+        #pragma warning disable OOXML0001
         IPackageProperties coreProps = wordDoc.PackageProperties;
+        #pragma warning restore OOXML0001
 
         metadata["Title"] = coreProps.Title ?? string.Empty;
         metadata["Author"] = coreProps.Creator ?? string.Empty;

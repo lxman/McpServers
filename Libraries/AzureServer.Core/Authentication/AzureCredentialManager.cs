@@ -24,7 +24,6 @@ public class AzureCredentialManager : ICredentialManager
             ExcludeAzureCliCredential = false,
             ExcludeEnvironmentCredential = false,
             ExcludeManagedIdentityCredential = false,
-            ExcludeSharedTokenCacheCredential = false,
             ExcludeAzurePowerShellCredential = false
         };
         

@@ -243,10 +243,10 @@ public class PdfImageExtractor(
             ImageId = imageId,
             Name = $"image_{imageId}",
             PageNumber = pageNumber,
-            Width = (int)pdfImage.Bounds.Width,
-            Height = (int)pdfImage.Bounds.Height,
-            X = pdfImage.Bounds.Left,
-            Y = pdfImage.Bounds.Bottom,
+            Width = (int)pdfImage.BoundingBox.Width,
+            Height = (int)pdfImage.BoundingBox.Height,
+            X = pdfImage.BoundingBox.Left,
+            Y = pdfImage.BoundingBox.Bottom,
             SizeInBytes = pdfImage.RawBytes.Length
         };
 

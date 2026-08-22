@@ -8,6 +8,9 @@
 
     <ItemGroup>
         <PackageReference Include="Alpaca.Markets" />
+        <!-- Pinned forward: Alpaca.Markets 8.0.0-beta4 pulls MessagePack 3.1.4, which carries known
+             high-severity advisories. Direct reference forces 3.1.8 here and in EdgarMcp downstream. -->
+        <PackageReference Include="MessagePack" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.Http" />

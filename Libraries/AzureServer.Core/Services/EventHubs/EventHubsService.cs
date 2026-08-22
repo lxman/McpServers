@@ -244,7 +244,10 @@ public class EventHubsService(
             if (partitionCount.HasValue)
                 data.PartitionCount = partitionCount.Value;
             if (messageRetentionInDays.HasValue)
-                data.MessageRetentionInDays = messageRetentionInDays.Value;
+                data.RetentionDescription = new RetentionDescription
+                {
+                    RetentionTimeInHours = messageRetentionInDays.Value * 24
+                };
 
             ArmOperation<EventHubResource> operation = await ns.GetEventHubs()
                 .CreateOrUpdateAsync(WaitUntil.Completed, eventHubName, data);
@@ -530,7 +533,7 @@ public class EventHubsService(
                 PartitionId = properties.Id,
                 BeginningSequenceNumber = properties.BeginningSequenceNumber,
                 LastEnqueuedSequenceNumber = properties.LastEnqueuedSequenceNumber,
-                LastEnqueuedOffset = properties.LastEnqueuedOffset,
+                LastEnqueuedOffset = properties.LastEnqueuedOffsetString,
                 LastEnqueuedTime = properties.LastEnqueuedTime.DateTime,
                 IsEmpty = properties.IsEmpty
             };
@@ -573,7 +576,7 @@ public class EventHubsService(
             Name = eventHub.Data.Name,
             Id = eventHub.Data.Id.ToString(),
             PartitionCount = Convert.ToInt32(eventHub.Data.PartitionCount),
-            MessageRetentionInDays = eventHub.Data.MessageRetentionInDays,
+            MessageRetentionInDays = eventHub.Data.RetentionDescription?.RetentionTimeInHours / 24,
             Status = eventHub.Data.Status?.ToString(),
             PartitionIds = eventHub.Data.PartitionIds,
             CreatedAt = eventHub.Data.CreatedOn?.DateTime,
@@ -602,7 +605,7 @@ public class EventHubsService(
             Properties = partitionEvent.Data.Properties.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
             SystemProperties = partitionEvent.Data.SystemProperties.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value),
             SequenceNumber = partitionEvent.Data.SequenceNumber,
-            Offset = partitionEvent.Data.Offset,
+            Offset = partitionEvent.Data.OffsetString,
             EnqueuedTime = partitionEvent.Data.EnqueuedTime.DateTime,
             PartitionKey = partitionEvent.Data.PartitionKey,
             PartitionId = partitionEvent.Partition.PartitionId

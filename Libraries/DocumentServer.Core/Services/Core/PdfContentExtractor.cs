@@ -211,10 +211,10 @@ public class PdfContentExtractor : IContentExtractor
                     .Select(image => new Dictionary<string, object>
                     {
                         ["Index"] = imageIndex++,
-                        ["Width"] = (int)image.Bounds.Width,
-                        ["Height"] = (int)image.Bounds.Height,
-                        ["X"] = image.Bounds.Left,
-                        ["Y"] = image.Bounds.Bottom,
+                        ["Width"] = (int)image.BoundingBox.Width,
+                        ["Height"] = (int)image.BoundingBox.Height,
+                        ["X"] = image.BoundingBox.Left,
+                        ["Y"] = image.BoundingBox.Bottom,
                         ["SizeBytes"] = image.RawBytes.Length
                     })
                     .ToList();

@@ -280,7 +280,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                     overview = CreateEstimatedOverview(directory, buildConfiguration);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Fallback to estimated analysis
                 overview = CreateEstimatedOverview(directory, buildConfiguration);
@@ -675,7 +675,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 distribution.PercentageByCategory["polyfills"] = (double)distribution.PolyfillsSize / totalSize * 100;
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Log error but continue
             distribution.PercentageByCategory["error"] = 0;

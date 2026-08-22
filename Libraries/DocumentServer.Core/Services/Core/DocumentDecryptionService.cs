@@ -37,7 +37,7 @@ public class DocumentDecryptionService(ILogger<DocumentDecryptionService> logger
         }
         catch (UnsupportedEncryptionException ex)
         {
-            logger.LogError("Unsupported encryption type in stream");
+            logger.LogError(ex, "Unsupported encryption type in stream");
             throw;
         }
         catch (Exception ex)

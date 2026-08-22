@@ -26,7 +26,7 @@ func main() {
 	// Run server on stdio transport
 	ctx := context.Background()
 	transport := &mcp.StdioTransport{}
-	
+
 	log.Println("Starting Go analyzer MCP server...")
 	if err := server.Run(ctx, transport); err != nil {
 		log.Fatalf("Server error: %v", err)

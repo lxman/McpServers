@@ -11,7 +11,7 @@
 run-http-server.bat
 
 # Linux/Mac
-go run http_server.go
+go run ./cmd/http-server
 ```
 
 ## Endpoints

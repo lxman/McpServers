@@ -144,7 +144,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             {
                 try
                 {
-                    dynamic? jsCoverageJson = JsonSerializer.Serialize(coverageData.jsCoverage);
+                    dynamic? jsCoverageJson = JsonSerializer.Serialize(coverageData?.jsCoverage);
                     dynamic jsCoverageArray = JsonSerializer.Deserialize<object[]>(jsCoverageJson) ?? new object[0];
                     
                     foreach (dynamic? entry in jsCoverageArray)
@@ -168,7 +168,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                         });
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // If parsing fails, create mock data
                     jsCoverageData.Add(new
@@ -188,7 +188,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
             {
                 try
                 {
-                    dynamic? cssCoverageJson = JsonSerializer.Serialize(coverageData.cssCoverage);
+                    dynamic? cssCoverageJson = JsonSerializer.Serialize(coverageData?.cssCoverage);
                     dynamic cssCoverageArray = JsonSerializer.Deserialize<object[]>(cssCoverageJson) ?? new object[0];
                     
                     foreach (dynamic? entry in cssCoverageArray)
@@ -212,7 +212,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                         });
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // If parsing fails, create mock data
                     cssCoverageData.Add(new
@@ -489,7 +489,7 @@ public class PerformanceTestingTools(PlaywrightSessionManager sessionManager)
                     }
                 }
                 
-                if (stats.ContainsKey("domStats"))
+                if (stats != null && stats.ContainsKey("domStats"))
                 {
                     var domStats = JsonSerializer.Deserialize<Dictionary<string, object>>(
                         JsonSerializer.Serialize(stats["domStats"]));

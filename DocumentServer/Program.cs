@@ -1,3 +1,4 @@
+﻿using Scalar.AspNetCore;
 using DocumentServer.Core.Services.Analysis;
 using DocumentServer.Core.Services.Core;
 using DocumentServer.Core.Services.DocumentSearch;
@@ -17,7 +18,6 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
     });
 builder.Services.AddOpenApi();
-builder.Services.AddHttpClient();
 
 // Core Services - Singletons for performance and caching
 builder.Services.AddSingleton<PasswordManager>();
@@ -85,11 +85,11 @@ builder.Services.AddCors(options =>
 
 WebApplication app = builder.Build();
 
-// Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+// Configure the HTTP request pipeline.
+// The spec and its UI are served in every environment so that the /description discovery
+// contract works outside Development, matching the sibling analyzer servers.
+app.MapOpenApi();
+app.MapScalarApiReference("/docs");
 
 app.UseHttpsRedirection();
 app.UseCors();

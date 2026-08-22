@@ -4,6 +4,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <!-- NPOI 2.8.0 requires explicit acceptance of the OSMF EULA at build time. -->
+        <AcceptNPOIOSMFLicense>true</AcceptNPOIOSMFLicense>
     </PropertyGroup>
 
     <ItemGroup>
@@ -16,6 +18,9 @@
         <PackageReference Include="Microsoft.Extensions.Logging"  />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"  />
         <PackageReference Include="ShapeCrawler"  />
+        <!-- Pinned forward: NPOI 2.8.0 pulls System.Security.Cryptography.Xml 8.0.2, which carries known
+             high-severity advisories. Direct reference takes the central version here and in DocumentMcp. -->
+        <PackageReference Include="System.Security.Cryptography.Xml"  />
         <PackageReference Include="NPOI"  />
 
         <!-- PDF Processing -->
