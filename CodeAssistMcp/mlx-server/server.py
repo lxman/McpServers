@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 model = None
 tokenizer = None
 model_name = None
+model_id = None  # full HuggingFace id, e.g. "BAAI/bge-base-en-v1.5"
 
 
 class EmbedRequest(BaseModel):
@@ -41,7 +42,7 @@ class TagsResponse(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load model on startup."""
-    global model, tokenizer, model_name
+    global model, tokenizer, model_name, model_id
 
     model_id = app.state.model_id
     logger.info(f"Loading model: {model_id}")
@@ -80,6 +81,20 @@ async def embed(request: EmbedRequest) -> EmbedResponse:
 
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
+
+    # This server loads ONE model at startup and cannot switch. Serving a request that asked
+    # for a different model would hand back vectors from a model the caller did not ask for --
+    # embeddings from two models are not interchangeable, and nothing downstream can tell them
+    # apart because they are the same shape. Ignoring this field is how a CodeAssist index came
+    # to be labelled "nomic-embed-text" while holding bge vectors: the caller's config was wrong
+    # for months and every request still succeeded. Refusing is what makes that misconfiguration
+    # visible the first time it happens instead of never.
+    if request.model not in (model_name, model_id):
+        raise HTTPException(
+            status_code=400,
+            detail=(f"Requested model '{request.model}' but this server has '{model_name}' "
+                    f"loaded and cannot switch. Embeddings from different models are not "
+                    f"interchangeable -- correct the caller's configured model name."))
 
     # Normalize input to list
     texts = request.input if isinstance(request.input, list) else [request.input]

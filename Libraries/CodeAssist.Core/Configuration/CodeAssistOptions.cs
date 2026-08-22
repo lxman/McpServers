@@ -18,6 +18,19 @@ public sealed class CodeAssistOptions
     public string OllamaUrl { get; set; } = "http://localhost:11435";
 
     /// <summary>
+    /// True when <see cref="OllamaUrl"/> points at real Ollama rather than the MLX embedding server.
+    /// </summary>
+    /// <remarks>
+    /// The distinction is not cosmetic: Ollama can pull models on demand, the MLX server loads exactly
+    /// one at startup and cannot. Advice that does not respect that is worse than none — a health
+    /// check telling you to run "ollama pull" against an MLX server sends you after a fix that cannot
+    /// exist. Port 11434 is Ollama's default and 11435 is this project's MLX convention; this property
+    /// exists so that assumption is written down in ONE place rather than repeated as a bare port
+    /// literal at each site that needs it.
+    /// </remarks>
+    public bool IsOllamaServer => OllamaUrl.Contains(":11434", StringComparison.Ordinal);
+
+    /// <summary>
     /// Embedding model to use. Default: nomic-embed-text
     /// </summary>
     public string EmbeddingModel { get; set; } = "nomic-embed-text";

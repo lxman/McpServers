@@ -223,6 +223,14 @@ public sealed class RepositoryIndexer(
 
             // Save updated index state
             string? gitCommit = GetGitCommitSha(repositoryPath);
+
+            // Ask the server what actually produced these vectors rather than recording what we asked
+            // for. Stamping the configured name unconditionally is how an index came to claim
+            // "nomic-embed-text" while holding bge vectors — the stamp described intent, not contents,
+            // and a wrong stamp is worse than none because it invites reasoning about a rebuild that
+            // was never needed.
+            string embeddingModel =
+                await ollamaService.ResolveServerModelAsync(cancellationToken) ?? _options.EmbeddingModel;
             var newState = new IndexStateFile
             {
                 RepositoryName = repositoryName,
@@ -230,7 +238,7 @@ public sealed class RepositoryIndexer(
                 LastCommitSha = gitCommit,
                 CreatedAt = existingState?.CreatedAt ?? DateTimeOffset.UtcNow,
                 LastUpdatedAt = DateTimeOffset.UtcNow,
-                EmbeddingModel = _options.EmbeddingModel,
+                EmbeddingModel = embeddingModel,
                 CollectionName = collectionName,
                 IncludePatterns = includePatterns.ToList(),
                 ExcludePatterns = excludePatterns.ToList(),
