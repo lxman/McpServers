@@ -3,12 +3,17 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
+# TypeScript analyzer build output (tsoa-generated spec + routes, tsc output).
+# These were previously ignored only via .git/info/exclude, which is never committed.
+/typescript-analyzer-mcp/node_modules/
+/typescript-analyzer-mcp/build/
+/typescript-analyzer-mcp/dist/
 /go-analyzer-mcp/docs/*.json
 /go-analyzer-mcp/docs/*.yaml
 /go-analyzer-mcp/*.exe
+/go-analyzer-mcp/cmd/*/*.exe
 /DesktopCommanderMcp/servers.json
 .claude/
 **/job_search.md
 /.vs/McpServers.slnx
-/TrafficGenerator/TrafficGenerator.csproj.user
 /EdgarMcp/appsettings.json

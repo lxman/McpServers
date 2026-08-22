@@ -31,6 +31,7 @@
   <Project Path="CSharpAnalyzerMcp\CSharpAnalyzerMcp.csproj" />
   <Project Path="DesktopCommanderMcp\DesktopCommanderMcp.csproj" />
   <Project Path="DocumentMcp\DocumentMcp.csproj" />
+  <Project Path="DocumentServer\DocumentServer.csproj" />
   <Project Path="McpUtilitiesServer\McpUtilitiesServer.csproj" />
   <Project Path="MongoMcp\MongoMcp.csproj" />
   <Project Path="PlaywrightServerMcp\PlaywrightServerMcp.csproj" />
@@ -38,6 +39,5 @@
   <Project Path="SeleniumMcp\SeleniumMcp.csproj" />
   <Project Path="SqlMcp\SqlMcp.csproj" />
   <Project Path="SshMcp/SshMcp.csproj" />
-  <Project Path="TrafficGenerator\TrafficGenerator.csproj" />
   <Project Path="EdgarMcp\EdgarMcp.csproj" />
 </Solution>
