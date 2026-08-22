@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OpenApi;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OpenApi;
 
 namespace DocumentServer.Controllers;
 
@@ -7,23 +10,28 @@ namespace DocumentServer.Controllers;
 /// </summary>
 [ApiController]
 [Route("")]
-public class ApiDocumentationController(IHttpClientFactory httpClientFactory) : ControllerBase
+// IOpenApiDocumentProvider is registered as a keyed service; the key is the document name
+// passed to AddOpenApi(), which defaults to "v1".
+public class ApiDocumentationController(
+    [FromKeyedServices("v1")] IOpenApiDocumentProvider documentProvider) : ControllerBase
 {
     /// <summary>
     /// Get OpenAPI specification
     /// </summary>
     [HttpGet("description")]
-    public async Task<IActionResult> GetDescription()
+    public async Task<IActionResult> GetDescription(CancellationToken cancellationToken)
     {
-        // Fetch the OpenAPI document from the local endpoint
-        HttpClient client = httpClientFactory.CreateClient();
-        var baseUrl = $"{Request.Scheme}://{Request.Host}";
-        HttpResponseMessage response = await client.GetAsync($"{baseUrl}/openapi/v1.json");
+        // Generated in-process. This previously issued an HTTP request back to this same server
+        // for /openapi/v1.json, which 404'd outside Development and tripped over HTTPS redirection.
+        OpenApiDocument document = await documentProvider.GetOpenApiDocumentAsync(cancellationToken);
 
-        if (!response.IsSuccessStatusCode)
-            return StatusCode(500, new { error = "Failed to retrieve OpenAPI specification" });
-        string content = await response.Content.ReadAsStringAsync();
-        return Content(content, "application/json");
+        await using var stringWriter = new StringWriter();
+        var writer = new OpenApiJsonWriter(stringWriter);
+        // 3.1 matches what MapOpenApi() serves at /openapi/v1.json, so both endpoints
+        // describe nullability identically.
+        document.SerializeAsV31(writer);
+        await writer.FlushAsync();
 
+        return Content(stringWriter.ToString(), "application/json");
     }
 }
