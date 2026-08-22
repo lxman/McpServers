@@ -13,30 +13,30 @@ type CalculateMetricsInput struct {
 
 // CalculateMetricsOutput represents the result of metrics calculation
 type CalculateMetricsOutput struct {
-	Success              bool              `json:"success"`
-	Metrics              *CodeMetrics      `json:"metrics,omitempty"`
-	FunctionMetrics      []FunctionMetrics `json:"function_metrics,omitempty"`
-	Error                string            `json:"error,omitempty"`
+	Success         bool              `json:"success"`
+	Metrics         *CodeMetrics      `json:"metrics,omitempty"`
+	FunctionMetrics []FunctionMetrics `json:"function_metrics,omitempty"`
+	Error           string            `json:"error,omitempty"`
 }
 
 // CodeMetrics represents overall code metrics
 type CodeMetrics struct {
-	LinesOfCode          int     `json:"lines_of_code"`
-	CommentLines         int     `json:"comment_lines"`
-	BlankLines           int     `json:"blank_lines"`
-	FunctionCount        int     `json:"function_count"`
-	TypeCount            int     `json:"type_count"`
-	AverageComplexity    float64 `json:"average_complexity"`
-	MaxComplexity        int     `json:"max_complexity"`
-	TotalComplexity      int     `json:"total_complexity"`
+	LinesOfCode       int     `json:"lines_of_code"`
+	CommentLines      int     `json:"comment_lines"`
+	BlankLines        int     `json:"blank_lines"`
+	FunctionCount     int     `json:"function_count"`
+	TypeCount         int     `json:"type_count"`
+	AverageComplexity float64 `json:"average_complexity"`
+	MaxComplexity     int     `json:"max_complexity"`
+	TotalComplexity   int     `json:"total_complexity"`
 }
 
 // FunctionMetrics represents metrics for a single function
 type FunctionMetrics struct {
-	Name               string `json:"name"`
-	Line               int    `json:"line"`
+	Name                 string `json:"name"`
+	Line                 int    `json:"line"`
 	CyclomaticComplexity int    `json:"cyclomatic_complexity"`
-	LinesOfCode        int    `json:"lines_of_code"`
+	LinesOfCode          int    `json:"lines_of_code"`
 }
 
 // CalculateMetrics calculates code metrics
@@ -55,7 +55,7 @@ func CalculateMetrics(code string) (*CalculateMetricsOutput, error) {
 	// Count lines
 	lines := strings.Split(code, "\n")
 	metrics.LinesOfCode = len(lines)
-	
+
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" {
@@ -70,18 +70,18 @@ func CalculateMetrics(code string) (*CalculateMetricsOutput, error) {
 		switch decl := n.(type) {
 		case *ast.FuncDecl:
 			metrics.FunctionCount++
-			
+
 			// Calculate cyclomatic complexity for this function
 			complexity := calculateComplexity(decl)
 			metrics.TotalComplexity += complexity
-			
+
 			if complexity > metrics.MaxComplexity {
 				metrics.MaxComplexity = complexity
 			}
 
 			pos := fset.Position(decl.Pos())
 			end := fset.Position(decl.End())
-			
+
 			functionMetrics = append(functionMetrics, FunctionMetrics{
 				Name:                 decl.Name.Name,
 				Line:                 pos.Line,

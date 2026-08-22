@@ -14,9 +14,9 @@ type FormatCodeInput struct {
 
 // FormatCodeOutput represents the result of code formatting
 type FormatCodeOutput struct {
-	Success        bool   `json:"success"`
-	FormattedCode  string `json:"formatted_code,omitempty"`
-	Error          string `json:"error,omitempty"`
+	Success       bool   `json:"success"`
+	FormattedCode string `json:"formatted_code,omitempty"`
+	Error         string `json:"error,omitempty"`
 }
 
 // FormatCode formats Go code using gofmt
@@ -33,7 +33,7 @@ func FormatCode(code string) (*FormatCodeOutput, error) {
 	// Fall back to gofmt command if go/format fails
 	cmd := exec.Command("gofmt")
 	cmd.Stdin = bytes.NewReader([]byte(code))
-	
+
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -56,7 +56,7 @@ func FormatCodeWithImports(code string) (*FormatCodeOutput, error) {
 	// Try goimports if available
 	cmd := exec.Command("goimports")
 	cmd.Stdin = bytes.NewReader([]byte(code))
-	
+
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

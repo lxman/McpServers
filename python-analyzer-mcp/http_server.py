@@ -6,10 +6,11 @@ from flask_cors import CORS
 import sys
 import os
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+# src is a package: put the project root on the path, not src itself, so that the
+# relative imports inside src (e.g. tools -> ..services) resolve.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from tools import PythonTools
+from src.tools import PythonTools
 
 app = Flask(__name__)
 CORS(app)
