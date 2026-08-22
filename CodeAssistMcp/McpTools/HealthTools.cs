@@ -28,7 +28,13 @@ public class HealthTools(
         (bool isHealthy, bool modelAvailable, string? error) ollamaStatus = await CheckOllamaAsync();
         (bool isHealthy, int collectionsCount, string? error) qdrantStatus = await CheckQdrantAsync();
 
-        bool allHealthy = ollamaStatus.isHealthy && qdrantStatus.isHealthy;
+        // modelAvailable belongs in this AND: it is a functional probe (can we actually embed?), while
+        // isHealthy only says the service answered. Leaving it out let check_health report
+        // "healthy: true" for a whole session in which every single search failed with a 500, because
+        // the embedding server was up and answering /api/tags while its embed path threw. A health
+        // flag that is true when nothing works is worse than no flag — it is the one signal a caller
+        // checks before concluding the problem lies somewhere else.
+        bool allHealthy = ollamaStatus.isHealthy && ollamaStatus.modelAvailable && qdrantStatus.isHealthy;
 
         var result = new
         {
@@ -180,13 +186,24 @@ volumes:
     {
         var recommendations = new List<string>();
 
+        // Advice has to match the server actually configured. Telling someone to "ollama pull" against
+        // the MLX server sends them after a fix that cannot exist: it loads one model at startup and
+        // has no pull endpoint at all.
         if (!ollama.isHealthy)
         {
-            recommendations.Add($"Start Ollama: ollama serve");
+            recommendations.Add(_options.IsOllamaServer
+                ? "Start Ollama: ollama serve"
+                : $"Start the MLX embedding server (expected at {_options.OllamaUrl}): "
+                  + "cd CodeAssistMcp/mlx-server && .venv-embed/bin/python server.py --port 11435");
         }
         else if (!ollama.modelAvailable)
         {
-            recommendations.Add($"Pull the embedding model: ollama pull {_options.EmbeddingModel}");
+            recommendations.Add(_options.IsOllamaServer
+                ? $"Pull the embedding model: ollama pull {_options.EmbeddingModel}"
+                : $"The MLX server at {_options.OllamaUrl} is reachable but cannot embed. It serves one "
+                  + $"model and cannot pull '{_options.EmbeddingModel}' — check that the configured name "
+                  + "matches what it loaded (GET /api/tags), and check the server log for a model-load "
+                  + "or tokenizer error.");
         }
 
         if (!qdrant.isHealthy)

@@ -25,6 +25,67 @@ public sealed class OllamaService
     }
 
     /// <summary>
+    /// The model name the embedding server reported on the most recent successful call, as opposed
+    /// to <see cref="CodeAssistOptions.EmbeddingModel"/>, which is only what we ASKED for. Null until
+    /// a call has succeeded.
+    /// </summary>
+    /// <remarks>
+    /// These two can disagree, and when they do the configured value is the wrong one to believe.
+    /// The MLX embedding server loads one model at startup and used to accept any model name without
+    /// complaint, so an index was written and stamped "nomic-embed-text" while every vector in it came
+    /// from bge-base-en-v1.5. The stamp was the config's claim; the vectors were the server's fact.
+    /// Recording the fact makes that class of drift self-evident in list_indexes instead of invisible.
+    /// </remarks>
+    public string? ObservedServerModel { get; private set; }
+
+    /// <summary>
+    /// Ask the embedding server which model it actually has, instead of trusting configuration.
+    /// Cached after the first successful answer. Returns null if the server cannot be asked.
+    /// </summary>
+    /// <remarks>
+    /// The wire protocol returns the serving model on every embed response, but OllamaSharp's
+    /// <see cref="EmbedResponse"/> does not surface it (only Embeddings and timing), so the cheapest
+    /// honest source is the model listing.
+    ///
+    /// <para>A server offering exactly ONE model is the case that can silently ignore the requested
+    /// name — the MLX server loads one at startup and cannot switch — so its answer overrides
+    /// configuration. Ollama offering several routes by name, so there configuration is what actually
+    /// selected the model and stays authoritative.</para>
+    /// </remarks>
+    public async Task<string?> ResolveServerModelAsync(CancellationToken cancellationToken = default)
+    {
+        if (ObservedServerModel is not null) return ObservedServerModel;
+
+        try
+        {
+            List<OllamaSharp.Models.Model> models =
+                (await _client.ListLocalModelsAsync(cancellationToken)).ToList();
+
+            string? resolved = models.Count == 1
+                ? models[0].Name
+                : models.FirstOrDefault(m => m.Name == _options.EmbeddingModel)?.Name;
+
+            if (resolved is not { Length: > 0 }) return null;
+
+            if (resolved != _options.EmbeddingModel)
+            {
+                _logger.LogWarning(
+                    "Embedding server at {Url} serves '{Reported}' but configuration asks for "
+                    + "'{Configured}'. Indexes will record '{Reported}', since that is what produced "
+                    + "the vectors.", _options.OllamaUrl, resolved, _options.EmbeddingModel, resolved);
+            }
+
+            ObservedServerModel = resolved;
+            return ObservedServerModel;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not ask the embedding server which model it serves");
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Generate embeddings for a single text.
     /// </summary>
     public async Task<float[]> GetEmbeddingAsync(string text, CancellationToken cancellationToken = default)
@@ -122,9 +183,8 @@ public sealed class OllamaService
             return;
         }
 
-        // Only attempt pull for Ollama (port 11434)
-        // MLX and other servers don't support model pulling
-        if (_options.OllamaUrl.Contains(":11434"))
+        // Only attempt pull for Ollama — MLX and other servers don't support model pulling.
+        if (_options.IsOllamaServer)
         {
             _logger.LogInformation("Pulling model {Model}...", _options.EmbeddingModel);
 
