@@ -18,6 +18,7 @@ public class RepositoryTools(
     FileWatcherService fileWatcher,
     HotCache hotCache,
     RepositoryIndexer indexer,
+    L2PromotionService l2Promotion,
     ILogger<RepositoryTools> logger)
 {
     [McpServerTool, DisplayName("set_active_repository")]
@@ -66,6 +67,13 @@ public class RepositoryTools(
                 fileWatcher.WatchRepository(targetPath);
             }
 
+            // Register the collection too. Watching without this is the broken half-state: changed
+            // files reach the L1 cache, promotion cannot resolve where they belong, and the write is
+            // dropped — so the edits vanish at shutdown and the index goes quietly stale. SearchTools
+            // .EnsureWatching always did both; this path only ever did the first. state.CollectionName
+            // is the authoritative name the indexer actually created, so nothing is derived here.
+            l2Promotion.RegisterRepositoryCollection(targetPath, state.CollectionName);
+
             logger.LogInformation(
                 "Set active repository to {Repository} at {Path}. Stopped watching {StoppedCount} other repositories.",
                 repositoryName, targetPath, stoppedWatching.Count);
@@ -101,7 +109,11 @@ public class RepositoryTools(
                 success = true,
                 watchedRepositories = watched,
                 watchedCount = watched.Count,
-                hotCacheFileCount = hotCacheCount
+                hotCacheFileCount = hotCacheCount,
+                pendingPromotions = l2Promotion.PendingCount,
+                // Non-zero means edits were cached but never written to Qdrant — they are lost on
+                // shutdown and the index is stale for those files. Should always be 0.
+                droppedPromotions = l2Promotion.DroppedPromotionCount
             }, SerializerOptions.JsonOptionsIndented));
         }
         catch (Exception ex)

@@ -463,11 +463,9 @@ public sealed class RepositoryIndexer(
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
-    private static string SanitizeCollectionName(string name)
-    {
-        // Qdrant collection names must be alphanumeric with underscores
-        return new string(name.Select(c => char.IsLetterOrDigit(c) ? c : '_').ToArray()).ToLowerInvariant();
-    }
+    // Delegates to the shared helper so this and L2PromotionService's fallback cannot drift apart —
+    // see CollectionNaming for what happened when they did.
+    private static string SanitizeCollectionName(string name) => CollectionNaming.ForRepository(name);
 
     private static string? GetGitCommitSha(string repositoryPath)
     {
