@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using Mcp.Common.Core;
+using CodeAssist.Core.Caching;
 using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,8 @@ namespace CodeAssistMcp.McpTools;
 [McpServerToolType]
 public class IndexTools(
     RepositoryIndexer indexer,
+    FileWatcherService fileWatcher,
+    L2PromotionService l2Promotion,
     ILogger<IndexTools> logger)
 {
     [McpServerTool, DisplayName("index_repository")]
@@ -41,6 +44,23 @@ public class IndexTools(
                 repositoryName,
                 includes,
                 excludes);
+
+            // Indexing a repository implies wanting it kept current, so start watching here rather
+            // than waiting for a search to do it lazily. Watch state lives in this process and does
+            // not survive a restart, so before this the window between "server restarted" and "someone
+            // happened to search" was untracked: edits in it never reached the L1 cache at all, and an
+            // index that had just been built started going stale immediately. Armed AFTER the index
+            // completes, so the run does not race its own file events. Both calls are idempotent.
+            if (result.Success)
+            {
+                string resolvedName = repositoryName ?? Path.GetFileName(repositoryPath.TrimEnd(
+                    Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                string fullPath = Path.GetFullPath(repositoryPath);
+
+                if (!fileWatcher.IsWatching(fullPath)) fileWatcher.WatchRepository(fullPath);
+                l2Promotion.RegisterRepositoryCollection(
+                    fullPath, CollectionNaming.ForRepository(resolvedName));
+            }
 
             return JsonSerializer.Serialize(new
             {
