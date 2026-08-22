@@ -56,6 +56,17 @@ public sealed class L2PromotionService : IDisposable
     public int PendingCount => _promotionQueue.Reader.Count;
 
     /// <summary>
+    /// Files whose changes were cached in L1 but never reached Qdrant, because no collection could be
+    /// resolved for them or the resolved collection did not exist. Surfaced through
+    /// <c>get_watched_repositories</c> so this failure is a number a caller can see rather than a log
+    /// line nobody reads: a dropped promotion means an edit that disappears when the process exits,
+    /// leaving the index quietly stale with no error anywhere.
+    /// </summary>
+    public int DroppedPromotionCount => Volatile.Read(ref _droppedPromotions);
+
+    private int _droppedPromotions;
+
+    /// <summary>
     /// Register all files in a repository with a collection.
     /// </summary>
     public void RegisterRepositoryCollection(string repositoryRoot, string collectionName)
@@ -94,6 +105,7 @@ public sealed class L2PromotionService : IDisposable
         string? collectionName = GetCollectionForFile(e.CachedFile.FilePath, e.CachedFile.RepositoryRoot);
         if (collectionName == null)
         {
+            Interlocked.Increment(ref _droppedPromotions);
             _logger.LogDebug("No collection registered for {File}, skipping L2 promotion",
                 e.CachedFile.RelativePath);
             return;
@@ -166,8 +178,12 @@ public sealed class L2PromotionService : IDisposable
                 bool exists = await _qdrantService.CollectionExistsAsync(collectionName);
                 if (!exists)
                 {
-                    _logger.LogWarning("Collection {Collection} does not exist, skipping promotion",
-                        collectionName);
+                    // Every task in this group loses its write, not just one.
+                    Interlocked.Add(ref _droppedPromotions, group.Count());
+                    _logger.LogWarning(
+                        "Collection {Collection} does not exist, dropping {Count} promotion(s). The "
+                        + "affected edits are in the L1 cache only and will be lost on shutdown.",
+                        collectionName, group.Count());
                     continue;
                 }
 
@@ -256,9 +272,12 @@ public sealed class L2PromotionService : IDisposable
             return collection;
         }
 
-        // Try to derive from repository name
-        string repoName = Path.GetFileName(normalizedRoot).ToLowerInvariant();
-        return !string.IsNullOrEmpty(repoName) ? $"codeassist_{repoName}" : null;
+        // Nothing registered — derive it the SAME way the indexer named the collection. This used to
+        // guess "codeassist_{folder}", a shape the indexer never produces, so the lookup below could
+        // only ever miss and silently drop the write. Registration now happens on every path that
+        // starts watching, so this is a safety net rather than the normal route.
+        string repoName = Path.GetFileName(normalizedRoot);
+        return !string.IsNullOrEmpty(repoName) ? CollectionNaming.ForRepository(repoName) : null;
     }
 
     public void Dispose()
