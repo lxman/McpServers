@@ -1,0 +1,18 @@
+# MLX embedding server dependencies.
+#
+# mlx-embeddings must stay at >=0.1.0. Version 0.0.5 declared an unbounded
+# transformers>=4.44.0, so a routine upgrade pulled in transformers 5.x, which
+# removed PreTrainedTokenizerBase.batch_encode_plus. mlx_embeddings/utils.py
+# still called it, and every /api/embed request failed with
+#   "BertTokenizer has no attribute batch_encode_plus"
+# while /health and /api/tags kept reporting the server as fine.
+# 0.1.0 is the transformers-5 compatible release.
+mlx-embeddings>=0.1.0
+transformers>=5.0.0
+fastapi>=0.141.0
+uvicorn>=0.52.0
+
+# Install into a venv dedicated to THIS server. Do not share an environment with
+# mlx_lm.server or mlx_vlm.server: they pin different fastapi/starlette majors,
+# and the shared-venv arrangement is what allowed one service's upgrade to break
+# the other.
