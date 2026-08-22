@@ -12,7 +12,6 @@ namespace CodeAssist.Core.Caching;
 /// </summary>
 public sealed class FileWatcherService(
     HotCache hotCache,
-    ChunkerFactory chunkerFactory,
     IOptions<CodeAssistOptions> options,
     ILogger<FileWatcherService> logger)
     : IDisposable

@@ -58,7 +58,17 @@ public class NetworkingTools(
         try
         {
             logger.LogDebug("Getting virtual network {VNetName}", vnetName);
-            VirtualNetworkDto? vnet = await virtualNetworkService.GetVirtualNetworkAsync(resourceGroupName, vnetName, subscriptionId);
+
+            if (subscriptionId is null)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "subscriptionId is required"
+                }, SerializerOptions.JsonOptionsIndented);
+            }
+
+            VirtualNetworkDto? vnet = await virtualNetworkService.GetVirtualNetworkAsync(subscriptionId, resourceGroupName, vnetName);
 
             if (vnet is null)
             {
@@ -98,7 +108,17 @@ public class NetworkingTools(
         try
         {
             logger.LogDebug("Listing subnets in VNet {VNetName}", vnetName);
-            IEnumerable<SubnetDto> subnets = await subnetService.ListSubnetsAsync(resourceGroupName, vnetName, subscriptionId);
+
+            if (subscriptionId is null)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "subscriptionId is required"
+                }, SerializerOptions.JsonOptionsIndented);
+            }
+
+            IEnumerable<SubnetDto> subnets = await subnetService.ListSubnetsAsync(subscriptionId, resourceGroupName, vnetName);
 
             return JsonSerializer.Serialize(new
             {
@@ -157,7 +177,17 @@ public class NetworkingTools(
         try
         {
             logger.LogDebug("Getting network security group {NsgName}", nsgName);
-            NetworkSecurityGroupDto? nsg = await networkSecurityGroupService.GetNetworkSecurityGroupAsync(resourceGroupName, nsgName, subscriptionId);
+
+            if (subscriptionId is null)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "subscriptionId is required"
+                }, SerializerOptions.JsonOptionsIndented);
+            }
+
+            NetworkSecurityGroupDto? nsg = await networkSecurityGroupService.GetNetworkSecurityGroupAsync(subscriptionId, resourceGroupName, nsgName);
 
             if (nsg is null)
             {

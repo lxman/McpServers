@@ -3,7 +3,7 @@ using DesktopCommander.Core.Services.AdvancedFileEditing.Models;
 
 namespace DesktopCommander.Core.Services.AdvancedFileEditing;
 
-public class LineBasedEditor(DiffPatchService diffPatchService, IndentationManager indentationManager)
+public class LineBasedEditor
 {
     /// <summary>
     /// Replaces a range of lines with new content

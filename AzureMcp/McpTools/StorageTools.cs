@@ -61,6 +61,15 @@ public class StorageTools(
             logger.LogDebug("Getting storage account {AccountName}", accountName);
             StorageAccountDto? account = await storageService.GetStorageAccountAsync(subscriptionId, resourceGroupName, accountName);
 
+            if (account is null)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = $"Storage account {accountName} not found"
+                }, SerializerOptions.JsonOptionsIndented);
+            }
+
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -126,6 +135,15 @@ public class StorageTools(
         {
             logger.LogDebug("Getting container {ContainerName} in {AccountName}", containerName, accountName);
             BlobContainerDto? container = await storageService.GetContainerAsync(accountName, containerName);
+
+            if (container is null)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = $"Container {containerName} not found"
+                }, SerializerOptions.JsonOptionsIndented);
+            }
 
             return JsonSerializer.Serialize(new
             {
@@ -249,6 +267,15 @@ public class StorageTools(
         {
             logger.LogDebug("Getting properties for blob {BlobName}", blobName);
             BlobPropertiesDto? properties = await storageService.GetBlobPropertiesAsync(accountName, containerName, blobName);
+
+            if (properties is null)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = $"Blob {blobName} not found"
+                }, SerializerOptions.JsonOptionsIndented);
+            }
 
             return JsonSerializer.Serialize(new
             {

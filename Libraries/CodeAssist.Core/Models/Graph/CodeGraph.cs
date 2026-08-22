@@ -52,7 +52,7 @@ public sealed class CodeGraph
         // unsplit symbol name stored in ParentSymbol so "QdrantService" resolves
         // to its split parts even though SymbolName is "QdrantService (part 1)".
         if (!string.IsNullOrEmpty(node.ParentSymbol)
-            && node.ChunkType.Contains("_part", StringComparison.Ordinal))
+            && node.ChunkType?.Contains("_part", StringComparison.Ordinal) == true)
         {
             IndexSymbolName(node.ParentSymbol, node.Id);
         }
@@ -226,7 +226,7 @@ public sealed class CodeGraph
             _symbolNameToNodes.GetValueOrDefault(node.SymbolName)?.Remove(nodeId);
 
         if (!string.IsNullOrEmpty(node.ParentSymbol)
-            && node.ChunkType.Contains("_part", StringComparison.Ordinal))
+            && node.ChunkType?.Contains("_part", StringComparison.Ordinal) == true)
         {
             _symbolNameToNodes.GetValueOrDefault(node.ParentSymbol)?.Remove(nodeId);
         }

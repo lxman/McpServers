@@ -24,7 +24,6 @@ public class CredentialDiscoveryService(ILogger<CredentialDiscoveryService> logg
         await TryVisualStudioCredentialAsync(credentials);
         await TryEnvironmentCredentialAsync(credentials);
         await TryAzurePowerShellCredentialAsync(credentials);
-        await TrySharedTokenCacheCredentialAsync(credentials);
 
         return credentials.Where(c => c.IsValid).ToList();
     }
@@ -151,28 +150,6 @@ public class CredentialDiscoveryService(ILogger<CredentialDiscoveryService> logg
         catch (Exception ex)
         {
             logger.LogDebug("Azure PowerShell credential not available: {Error}", ex.Message);
-            info.IsValid = false;
-            info.ErrorMessage = ex.Message;
-        }
-    }
-
-    private async Task TrySharedTokenCacheCredentialAsync(List<CredentialInfo> credentials)
-    {
-        var info = new CredentialInfo
-        {
-            Id = "shared-token-cache",
-            Source = "Shared Token Cache"
-        };
-
-        try
-        {
-            var credential = new SharedTokenCacheCredential();
-            await EnrichCredentialInfoAsync(info, credential);
-            credentials.Add(info);
-        }
-        catch (Exception ex)
-        {
-            logger.LogDebug("Shared token cache credential not available: {Error}", ex.Message);
             info.IsValid = false;
             info.ErrorMessage = ex.Message;
         }

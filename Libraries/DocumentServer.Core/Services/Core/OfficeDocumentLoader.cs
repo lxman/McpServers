@@ -168,7 +168,11 @@ public class OfficeDocumentLoader : IDocumentLoader
                 else if (documentType == DocumentType.Word)
                 {
                     using WordprocessingDocument wordDoc = WordprocessingDocument.Open(decryptedStream, false);
+                    // OOXML0001: PackageProperties is flagged experimental by the OpenXML SDK. There is no stable
+                    // replacement for reading core document properties, so the diagnostic is acknowledged here.
+                    #pragma warning disable OOXML0001
                     IPackageProperties coreProps = wordDoc.PackageProperties;
+                    #pragma warning restore OOXML0001
                     
                     docInfo.Author = coreProps.Creator;
                     docInfo.Title = coreProps.Title;

@@ -3,11 +3,8 @@
 namespace DesktopCommander.Core.Services.AdvancedFileEditing;
 
 public class FileEditor(
-    LineBasedEditor lineBasedEditor,
     DiffPatchService diffPatchService,
-    IndentationManager indentationManager,
-    EditApprovalService approvalService,
-    FileVersionService versionService)
+    EditApprovalService approvalService)
 {
     private readonly HashSet<string> _backedUpFilesThisSession = [];
     

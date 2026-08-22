@@ -162,7 +162,9 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
                 try
                 {
                     // Check if any job-related content is available
-                    ReadOnlyCollection<IWebElement> elements = Driver.FindElements(By.CssSelector("a[href*='/job/'], .job-card, article"));
+                    // Driver is non-null here: WaitForJobContent() is only invoked from ScrapeJobsAsync
+                    // after InitializeDriver() has run, and Driver isn't cleared until that method's finally block.
+                    ReadOnlyCollection<IWebElement> elements = Driver!.FindElements(By.CssSelector("a[href*='/job/'], .job-card, article"));
                     if (elements.Count > 0)
                     {
                         contentFound = true;

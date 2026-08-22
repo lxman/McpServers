@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
@@ -255,7 +256,7 @@ namespace SeleniumChrome.Core.Services.Scrapers
         /// <summary>
         /// Validate if URL is a SimplifyJobs job posting
         /// </summary>
-        public static bool IsSimplifyJobsUrl(string url)
+        public static bool IsSimplifyJobsUrl([NotNullWhen(true)] string? url)
         {
             return !string.IsNullOrEmpty(url) && 
                    url.Contains("simplify.jobs/p/", StringComparison.OrdinalIgnoreCase);

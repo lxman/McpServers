@@ -220,8 +220,10 @@ public partial class StackOverflowScraper
 
             var job = new EnhancedJobListing
             {
-                Title = CleanText(title),
-                Company = CleanText(company),
+                // title was already verified non-null/non-whitespace above, and company always
+                // has a fallback value, so these only fall back if CleanText strips them to nothing
+                Title = CleanText(title) ?? title,
+                Company = CleanText(company) ?? company,
                 Location = CleanText(location) ?? "Remote",
                 Description = CleanText(description) ?? "",
                 Url = jobUrl,
@@ -236,7 +238,7 @@ public partial class StackOverflowScraper
                 ])
             };
 
-            return Task.FromResult(job);
+            return Task.FromResult<EnhancedJobListing?>(job);
         }
         catch (Exception ex)
         {

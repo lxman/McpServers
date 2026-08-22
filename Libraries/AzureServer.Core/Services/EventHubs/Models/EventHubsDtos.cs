@@ -45,7 +45,7 @@ public class EventDataDto
     public Dictionary<string, object>? Properties { get; set; }
     public Dictionary<string, object>? SystemProperties { get; set; }
     public long SequenceNumber { get; set; }
-    public long Offset { get; set; }
+    public string? Offset { get; set; }
     public DateTime EnqueuedTime { get; set; }
     public string? PartitionKey { get; set; }
     public string PartitionId { get; set; } = string.Empty;
@@ -64,7 +64,7 @@ public class PartitionPropertiesDto
     public string PartitionId { get; set; } = string.Empty;
     public long BeginningSequenceNumber { get; set; }
     public long LastEnqueuedSequenceNumber { get; set; }
-    public long LastEnqueuedOffset { get; set; }
+    public string? LastEnqueuedOffset { get; set; }
     public DateTime LastEnqueuedTime { get; set; }
     public bool IsEmpty { get; set; }
 }

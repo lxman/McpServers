@@ -75,6 +75,9 @@ public class IndexTools(
 
             foreach (string? repo in repositories)
             {
+                if (string.IsNullOrEmpty(repo))
+                    continue;
+
                 IndexState? state = await indexer.GetIndexStateAsync(repo);
                 if (state != null)
                 {

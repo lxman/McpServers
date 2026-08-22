@@ -9,13 +9,16 @@ namespace Mcp.Database.Core.Sql.Providers;
 /// </summary>
 public class SqlServerProvider : ISqlProvider
 {
+    /// <inheritdoc />
     public string ProviderName => "SqlServer";
 
+    /// <inheritdoc />
     public DbConnection CreateConnection(string connectionString)
     {
         return new SqlConnection(connectionString);
     }
 
+    /// <inheritdoc />
     public DbCommand CreateCommand(DbConnection connection)
     {
         if (connection is not SqlConnection sqlConnection)
@@ -24,6 +27,7 @@ public class SqlServerProvider : ISqlProvider
         return sqlConnection.CreateCommand();
     }
 
+    /// <inheritdoc />
     public async Task<bool> TestConnectionAsync(DbConnection connection)
     {
         if (connection == null)
@@ -47,11 +51,13 @@ public class SqlServerProvider : ISqlProvider
         }
     }
 
+    /// <inheritdoc />
     public string GetParameterPlaceholder(string parameterName)
     {
         return $"@{parameterName}";
     }
 
+    /// <inheritdoc />
     public string BuildConnectionString(
         string server,
         string database,

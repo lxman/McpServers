@@ -12,7 +12,6 @@ namespace DesktopCommanderMcp.McpTools;
 /// </summary>
 [McpServerToolType]
 public class AdvancedFileReadingTools(
-    FileVersionService versionService,
     ILogger<AdvancedFileReadingTools> logger)
 {
     [McpServerTool, DisplayName("read_range")]

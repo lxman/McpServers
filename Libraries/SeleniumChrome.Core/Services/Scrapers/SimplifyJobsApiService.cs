@@ -268,7 +268,7 @@ public class SimplifyJobsApiService(ILogger<SimplifyJobsApiService> logger) : Ba
                 JsonElement firstLocation = locationsElement.EnumerateArray().FirstOrDefault();
                 if (firstLocation.TryGetProperty("value", out JsonElement locationValue))
                 {
-                    job.Location = locationValue.GetString();
+                    job.Location = locationValue.GetString() ?? "";
                     job.IsRemote = job.Location?.Contains("Remote", StringComparison.OrdinalIgnoreCase) ?? false;
                 }
             }

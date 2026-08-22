@@ -762,7 +762,7 @@ public class ContainerService(
                 TaskId = task.Value.Id
             };
 
-            ArmOperation<ContainerRegistryRunResource> operation = await registry.Value.ScheduleRunAsync(WaitUntil.Started, runRequest);
+            Response<ContainerRegistryRunResource> operation = await registry.Value.ScheduleRunAsync(runRequest);
 
             return new BuildRunDto
             {

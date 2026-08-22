@@ -16,7 +16,6 @@ namespace DesktopCommanderMcp.McpTools;
 public class TerminalTools(
     ProcessManager processManager,
     SecurityManager securityManager,
-    AuditLogger auditLogger,
     OutputGuard outputGuard,
     ILogger<TerminalTools> logger)
 {

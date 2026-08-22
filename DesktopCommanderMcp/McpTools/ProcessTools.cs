@@ -13,7 +13,6 @@ namespace DesktopCommanderMcp.McpTools;
 /// </summary>
 [McpServerToolType]
 public class ProcessTools(
-    ProcessManager processManager,
     AuditLogger auditLogger,
     ILogger<ProcessTools> logger)
 {

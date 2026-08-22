@@ -522,8 +522,8 @@ public class EmailJobAlertService(ILogger<EmailJobAlertService> logger, IConfigu
                 "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
             httpClient.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
             
-            string html = null;
-            string workingUrl = null;
+            string? html = null;
+            string? workingUrl = null;
             
             // Try each URL format
             foreach (string url in urlsToTry)

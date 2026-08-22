@@ -16,7 +16,6 @@ namespace SeleniumMcp.McpTools;
 [McpServerToolType]
 public class ConfigurationTools(
     IEnhancedJobScrapingService scrapingService,
-    IJobSiteScraperFactory scraperFactory,
     SimplifyJobsApiService simplifyApiService,
     SmartDeduplicationService deduplicationService,
     ApplicationManagementService applicationService,
