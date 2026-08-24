@@ -784,11 +784,13 @@ internal static class TestHotCache
         // here calls it, so no request is ever made.
         IOptions<CodeAssistOptions> options = Options.Create(new CodeAssistOptions());
         var ollama = new OllamaService(options, NullLogger<OllamaService>.Instance);
-        return new HotCache(
-            ollama,
-            new ChunkerFactory(NullLoggerFactory.Instance),
-            options,
-            NullLogger<HotCache>.Instance);
+
+        // ChunkerFactory takes the two chunker implementations directly, not a logger factory.
+        var chunkers = new ChunkerFactory(
+            new TreeSitterChunker(options, NullLogger<TreeSitterChunker>.Instance),
+            new DefaultChunker(options, NullLogger<DefaultChunker>.Instance));
+
+        return new HotCache(ollama, chunkers, options, NullLogger<HotCache>.Instance);
     }
 }
 ```
@@ -1695,7 +1697,9 @@ public class IndexDuplicationRegressionTests : IAsyncLifetime
         _collection = CollectionNaming.ForRepository(_repoName);
         _qdrant = new QdrantService(options, NullLogger<QdrantService>.Instance);
         var ollama = new OllamaService(options, NullLogger<OllamaService>.Instance);
-        var chunkers = new ChunkerFactory(NullLoggerFactory.Instance);
+        var chunkers = new ChunkerFactory(
+            new TreeSitterChunker(options, NullLogger<TreeSitterChunker>.Instance),
+            new DefaultChunker(options, NullLogger<DefaultChunker>.Instance));
         var stateStore = new IndexStateStore(options, NullLogger<IndexStateStore>.Instance);
 
         // Parameter order matters: RepositoryIndexer takes ollama BEFORE qdrant.
