@@ -1256,7 +1256,7 @@ Run: `grep -n "_repositoryRoots" Libraries/CodeAssist.Core/Caching/FileWatcherSe
 - [ ] **Step 8: Verify the library builds and all tests pass**
 
 Run: `dotnet build Libraries/CodeAssist.Core/CodeAssist.Core.csproj && dotnet test Libraries/CodeAssist.Core.Tests/CodeAssist.Core.Tests.csproj`
-Expected: Build succeeded; 22 tests PASS.
+Expected: Build succeeded; 27 tests PASS.
 
 - [ ] **Step 9: Commit**
 
@@ -1605,7 +1605,7 @@ Add `using CodeAssist.Core.Services;` to both files. `TouchAsync` returns silent
 - [ ] **Step 10: Run the full suite**
 
 Run: `dotnet build Libraries/CodeAssist.Core/CodeAssist.Core.csproj && dotnet test Libraries/CodeAssist.Core.Tests/CodeAssist.Core.Tests.csproj`
-Expected: Build succeeded; 27 tests PASS.
+Expected: Build succeeded; 32 tests PASS.
 
 - [ ] **Step 11: Commit**
 
@@ -1848,7 +1848,7 @@ public class IndexDuplicationRegressionTests : IAsyncLifetime
 - [ ] **Step 4: Verify the tests skip cleanly with no services configured**
 
 Run: `dotnet test Libraries/CodeAssist.Core.Tests/CodeAssist.Core.Tests.csproj`
-Expected: 27 passed, 4 skipped, 0 failed.
+Expected: 32 passed, 4 skipped, 0 failed.
 
 - [ ] **Step 5: Run them against live services**
 
