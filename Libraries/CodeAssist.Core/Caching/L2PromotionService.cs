@@ -313,14 +313,42 @@ public sealed class L2PromotionService : IDisposable
                 latestPerFile = stillOnDisk;
                 if (latestPerFile.Count == 0) continue;
 
-                // Remove each file's previous chunks before writing its new ones. Chunk ids are freshly
-                // generated on every chunking run, so an upsert cannot overwrite the prior version by id;
-                // without this delete each save appended another complete copy of the file, which is how
-                // one method came to be returned five times at five different line ranges.
+                // Learn each file's prior point ids before writing anything. The write must come first
+                // and the delete must come after: chunk ids are freshly generated on every chunking run,
+                // so a file's new points can never collide with its old ones, and the two generations can
+                // safely coexist for the moment between the upsert and the delete. Reading the ids now,
+                // before the upsert, is required rather than incidental — once the new chunks have been
+                // written, the old and new generations are both filed under the same relative_path and
+                // are no longer distinguishable by path, so this is the last point at which "old" can be
+                // known at all.
+                //
+                // A file whose ids cannot be read is dropped from this batch entirely rather than upserted
+                // anyway: writing it without knowing what to delete would leave its old chunks behind
+                // forever, indistinguishable from the new ones. Its old chunks simply stay in place —
+                // stale, not absent.
+                var oldPointIds = new List<Guid>();
+                var toPromote = new List<PromotionTask>();
+
                 foreach (PromotionTask task in latestPerFile)
                 {
-                    await _qdrantService.DeleteByFilePathAsync(collectionName, task.CachedFile.RelativePath);
+                    try
+                    {
+                        List<Guid> ids = await _qdrantService.GetPointIdsByFilePathAsync(
+                            collectionName, task.CachedFile.RelativePath);
+                        oldPointIds.AddRange(ids);
+                        toPromote.Add(task);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex,
+                            "Failed to read existing point ids for {File} in {Collection}; skipping this "
+                            + "file's promotion. Its previously indexed chunks remain in place.",
+                            task.CachedFile.RelativePath, collectionName);
+                    }
                 }
+
+                latestPerFile = toPromote;
+                if (latestPerFile.Count == 0) continue;
 
                 // Build points for upsert
                 var points = new List<(Guid id, float[] vector, Dictionary<string, object> payload)>();
@@ -386,18 +414,37 @@ public sealed class L2PromotionService : IDisposable
                 // A promotion is an update. Without this, lastUpdated meant "last manual refresh" and
                 // anything reading it as a freshness signal was wrong.
                 await _indexStateStore.TouchAsync(collectionName, commitSha: null);
+
+                // Only now, after the write has landed, remove the superseded generation. Failure here
+                // is deliberately swallowed rather than rethrown or counted as a dropped promotion: the
+                // promotion itself succeeded, and leaving both generations present is self-healing — the
+                // next promotion of any of these files reads ids that include this leftover batch and
+                // deletes it too. Rethrowing would misreport a successful write as a lost promotion.
+                try
+                {
+                    await _qdrantService.DeleteByIdsAsync(collectionName, oldPointIds);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "Failed to remove {Count} superseded point(s) after promoting to {Collection}. "
+                        + "Both the old and new generations of the affected file(s) are now present; the "
+                        + "next promotion of any of them will clear the leftovers.",
+                        oldPointIds.Count, collectionName);
+                }
             }
             catch (Exception ex)
             {
-                // A delete can succeed and be followed by a failing upsert (or a failing delete partway
-                // through the loop above). Either way, files already deleted in this group now have no
-                // chunks in the index at all — worse than the stale-but-present state before this catch
-                // ever ran. Count them as dropped so the gap is visible instead of silent.
+                // Reaching here means the write itself never landed — the id-collection pass only reads,
+                // and the old generation is not removed until after a successful upsert (in its own
+                // try/catch below, which never rethrows). So a failure caught here leaves every file in
+                // this group exactly as it was: stale, not absent. Still counted as dropped, because the
+                // L1 edit did not reach the index and is lost if the process exits before a retry.
                 Interlocked.Add(ref _droppedPromotions, latestPerFile?.Count ?? group.Count());
                 _logger.LogError(ex,
-                    "Error promoting batch to collection {Collection}. Up to {Count} file(s) may now be "
-                    + "absent from the index rather than merely stale — their old chunks can have been "
-                    + "deleted before the write failed. They recover on the next successful save or refresh.",
+                    "Error promoting batch to collection {Collection}. Up to {Count} file(s) were not "
+                    + "written; their previously indexed chunks remain in place. They recover on the next "
+                    + "successful save or refresh.",
                     collectionName, latestPerFile?.Count ?? group.Count());
             }
         }

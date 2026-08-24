@@ -334,6 +334,75 @@ public sealed class QdrantService : IQdrantWriter
     }
 
     /// <summary>
+    /// The ids of the points currently stored for a file, without their payloads or vectors.
+    /// </summary>
+    /// <remarks>
+    /// Used to supersede a file's chunks by writing the new generation before removing the old, so a
+    /// failed write leaves the file stale rather than absent. Payload and vectors are switched off
+    /// deliberately: a file can hold hundreds of chunks and each payload carries its whole source
+    /// text, so fetching them to learn a list of GUIDs would move megabytes to no purpose.
+    /// </remarks>
+    public async Task<List<Guid>> GetPointIdsByFilePathAsync(
+        string collectionName,
+        string relativePath,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = new List<Guid>();
+
+        try
+        {
+            Filter filter = BuildRelativePathFilter(relativePath);
+            PointId? offset = null;
+
+            while (true)
+            {
+                ScrollResponse response = await GetClient().ScrollAsync(
+                    collectionName,
+                    filter: filter,
+                    limit: 1000,
+                    offset: offset,
+                    payloadSelector: false,
+                    vectorsSelector: false,
+                    cancellationToken: cancellationToken);
+
+                foreach (RetrievedPoint point in response.Result)
+                {
+                    if (Guid.TryParse(point.Id.Uuid, out Guid id))
+                    {
+                        ids.Add(id);
+                    }
+                }
+
+                // Qdrant signals the last page with a null offset. Guard the contract violation too:
+                // an offset that does not advance would otherwise spin here forever, hanging the
+                // caller rather than failing it. Mirrors ScrollWithKeywordFilterAsync's guard.
+                if (response.NextPageOffset is null) break;
+                if (offset is not null && response.NextPageOffset.Equals(offset))
+                {
+                    _logger.LogWarning(
+                        "Scroll offset did not advance while collecting point ids for {FilePath} in "
+                        + "{Collection}; stopping after {Count} id(s) to avoid looping.",
+                        relativePath, collectionName, ids.Count);
+                    break;
+                }
+
+                offset = response.NextPageOffset;
+            }
+
+            return ids;
+        }
+        catch (Exception ex)
+        {
+            // Rethrown rather than returning what was collected so far — a partial id list is
+            // indistinguishable from a complete one at the call site, and the caller must be able to
+            // tell "this file has no chunks" from "I could not find out".
+            _logger.LogError(ex,
+                "Failed to collect point ids for {FilePath} in {Collection}", relativePath, collectionName);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Get collection info.
     /// </summary>
     public async Task<(ulong pointCount, bool exists)> GetCollectionInfoAsync(
