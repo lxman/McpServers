@@ -92,5 +92,9 @@ public class IndexPathTests
         // stay visibly wrong rather than be silently rewritten into a valid-looking one.
         Assert.Equal("../a/b.cs", IndexPath.Normalize("./../a/b.cs"));
         Assert.Equal("../a/b.cs", IndexPath.Normalize(@"..\a\b.cs"));
+
+        // The interleaved case: a leading slash used to hide the "./" behind it, so the old code
+        // returned "./../a/b.cs" here. ".." must survive the extra pass the fix added.
+        Assert.Equal("../a/b.cs", IndexPath.Normalize("/./../a/b.cs"));
     }
 }
