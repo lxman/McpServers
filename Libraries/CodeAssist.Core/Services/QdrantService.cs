@@ -956,17 +956,32 @@ public sealed class QdrantService
                 }
             };
 
-            ScrollResponse response = await GetClient().ScrollAsync(
-                collectionName,
-                filter: filter,
-                limit: limit,
-                cancellationToken: cancellationToken);
+            var results = new List<SearchResult>();
+            PointId? offset = null;
 
-            return response.Result.Select(r => new SearchResult
+            // A single scroll returns at most `limit` points. Left unpaged this silently truncated
+            // every file over 100 chunks — real files in these collections run to 368 — so the graph
+            // was rebuilt from a partial view with no error anywhere.
+            while (true)
             {
-                Score = 0f,
-                Chunk = BuildChunkFromPayload(r.Id.Uuid, r.Payload)
-            }).ToList();
+                ScrollResponse response = await GetClient().ScrollAsync(
+                    collectionName,
+                    filter: filter,
+                    limit: limit,
+                    offset: offset,
+                    cancellationToken: cancellationToken);
+
+                results.AddRange(response.Result.Select(r => new SearchResult
+                {
+                    Score = 0f,
+                    Chunk = BuildChunkFromPayload(r.Id.Uuid, r.Payload)
+                }));
+
+                if (response.NextPageOffset is null) break;
+                offset = response.NextPageOffset;
+            }
+
+            return results;
         }
         catch (Exception ex)
         {
