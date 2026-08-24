@@ -17,6 +17,7 @@ public sealed class L2PromotionService : IDisposable
 {
     private readonly Channel<PromotionTask> _promotionQueue;
     private readonly IQdrantWriter _qdrantService;
+    private readonly IndexStateStore _indexStateStore;
     private readonly CodeAssistOptions _options;
     private readonly ILogger<L2PromotionService> _logger;
     private readonly CancellationTokenSource _shutdownCts = new();
@@ -27,10 +28,12 @@ public sealed class L2PromotionService : IDisposable
     public L2PromotionService(
         HotCache hotCache,
         IQdrantWriter qdrantService,
+        IndexStateStore indexStateStore,
         IOptions<CodeAssistOptions> options,
         ILogger<L2PromotionService> logger)
     {
         _qdrantService = qdrantService;
+        _indexStateStore = indexStateStore;
         _options = options.Value;
         _logger = logger;
 
@@ -351,6 +354,10 @@ public sealed class L2PromotionService : IDisposable
 
                 _logger.LogInformation("Promoted {ChunkCount} chunks from {FileCount} files to {Collection}",
                     points.Count, latestPerFile.Count, collectionName);
+
+                // A promotion is an update. Without this, lastUpdated meant "last manual refresh" and
+                // anything reading it as a freshness signal was wrong.
+                await _indexStateStore.TouchAsync(collectionName, commitSha: null);
             }
             catch (Exception ex)
             {

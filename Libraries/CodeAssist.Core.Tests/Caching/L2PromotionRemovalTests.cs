@@ -1,5 +1,6 @@
 using CodeAssist.Core.Caching;
 using CodeAssist.Core.Configuration;
+using CodeAssist.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -11,6 +12,13 @@ public class L2PromotionRemovalTests
     private static L2PromotionService MakeService(FakeQdrantWriter writer, HotCache hotCache) =>
         new(hotCache,
             writer,
+            new IndexStateStore(
+                Options.Create(new CodeAssistOptions
+                {
+                    IndexStateDirectory = Path.Combine(
+                        Path.GetTempPath(), "codeassist-test-state-" + Guid.NewGuid().ToString("N"))
+                }),
+                NullLogger<IndexStateStore>.Instance),
             Options.Create(new CodeAssistOptions { EnableL2Promotion = true }),
             NullLogger<L2PromotionService>.Instance);
 

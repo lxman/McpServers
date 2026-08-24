@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using CodeAssist.Core.Chunking;
 using CodeAssist.Core.Configuration;
 using CodeAssist.Core.Models;
@@ -20,6 +19,7 @@ public sealed class RepositoryIndexer(
     OllamaService ollamaService,
     QdrantService qdrantService,
     ChunkerFactory chunkerFactory,
+    IndexStateStore indexStateStore,
     IOptions<CodeAssistOptions> options,
     ILogger<RepositoryIndexer> logger)
 {
@@ -65,7 +65,7 @@ public sealed class RepositoryIndexer(
 
             logger.LogDebug("Loading index state...");
             // Load existing index state
-            IndexStateFile? existingState = await LoadIndexStateAsync(repositoryName, cancellationToken);
+            IndexStateFile? existingState = await indexStateStore.LoadAsync(repositoryName, cancellationToken);
             Dictionary<string, IndexedFile> existingFiles = existingState?.Files ?? new Dictionary<string, IndexedFile>();
 
             logger.LogDebug("Discovering files...");
@@ -245,7 +245,7 @@ public sealed class RepositoryIndexer(
                 Files = newFileStates.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
             };
 
-            await SaveIndexStateAsync(repositoryName, newState, cancellationToken);
+            await indexStateStore.SaveAsync(repositoryName, newState, cancellationToken);
 
             sw.Stop();
 
@@ -325,7 +325,7 @@ public sealed class RepositoryIndexer(
     /// </summary>
     public async Task<IndexState?> GetIndexStateAsync(string repositoryName, CancellationToken cancellationToken = default)
     {
-        IndexStateFile? stateFile = await LoadIndexStateAsync(repositoryName, cancellationToken);
+        IndexStateFile? stateFile = await indexStateStore.LoadAsync(repositoryName, cancellationToken);
         if (stateFile == null) return null;
 
         return new IndexState
@@ -367,11 +367,7 @@ public sealed class RepositoryIndexer(
         string collectionName = SanitizeCollectionName(repositoryName);
         await qdrantService.DeleteCollectionAsync(collectionName, cancellationToken);
 
-        string statePath = GetIndexStatePath(repositoryName);
-        if (File.Exists(statePath))
-        {
-            File.Delete(statePath);
-        }
+        indexStateStore.Delete(repositoryName);
 
         logger.LogInformation("Deleted index for repository {Repository}", repositoryName);
     }
@@ -508,47 +504,5 @@ public sealed class RepositoryIndexer(
         }
     }
 
-    private string GetIndexStatePath(string repositoryName)
-    {
-        string safeFileName = SanitizeCollectionName(repositoryName);
-        return Path.Combine(_options.IndexStateDirectory, $"{safeFileName}.json");
-    }
-
-    private async Task<IndexStateFile?> LoadIndexStateAsync(string repositoryName, CancellationToken cancellationToken)
-    {
-        string path = GetIndexStatePath(repositoryName);
-        if (!File.Exists(path)) return null;
-
-        string json = await File.ReadAllTextAsync(path, cancellationToken);
-        return JsonSerializer.Deserialize<IndexStateFile>(json);
-    }
-
-    private async Task SaveIndexStateAsync(string repositoryName, IndexStateFile state, CancellationToken cancellationToken)
-    {
-        string path = GetIndexStatePath(repositoryName);
-        string dir = Path.GetDirectoryName(path)!;
-        Directory.CreateDirectory(dir);
-
-        string json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(path, json, cancellationToken);
-    }
-
     #endregion
-
-    /// <summary>
-    /// Internal class for persisting index state to disk.
-    /// </summary>
-    private sealed class IndexStateFile
-    {
-        public required string RepositoryName { get; init; }
-        public required string RootPath { get; init; }
-        public string? LastCommitSha { get; init; }
-        public required DateTimeOffset CreatedAt { get; init; }
-        public required DateTimeOffset LastUpdatedAt { get; init; }
-        public required string EmbeddingModel { get; init; }
-        public required string CollectionName { get; init; }
-        public required List<string> IncludePatterns { get; init; }
-        public required List<string> ExcludePatterns { get; init; }
-        public required Dictionary<string, IndexedFile> Files { get; init; }
-    }
 }
