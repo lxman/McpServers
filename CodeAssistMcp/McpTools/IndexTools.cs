@@ -98,7 +98,22 @@ public class IndexTools(
                 if (string.IsNullOrEmpty(repo))
                     continue;
 
-                IndexState? state = await indexer.GetIndexStateAsync(repo);
+                IndexState? state;
+                try
+                {
+                    state = await indexer.GetIndexStateAsync(repo);
+                }
+                catch (Exception ex)
+                {
+                    // One unreadable state file must not hide every healthy index. Report this
+                    // repository as broken and keep listing the rest — the whole point of failing
+                    // loudly on a corrupt file is to make it visible, not to make discovery
+                    // impossible.
+                    logger.LogError(ex, "Failed to read index state for {Repository}", repo);
+                    indexes.Add(new { repositoryName = repo, error = ex.Message });
+                    continue;
+                }
+
                 if (state != null)
                 {
                     indexes.Add(new

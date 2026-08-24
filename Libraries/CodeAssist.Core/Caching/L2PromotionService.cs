@@ -16,21 +16,24 @@ namespace CodeAssist.Core.Caching;
 public sealed class L2PromotionService : IDisposable
 {
     private readonly Channel<PromotionTask> _promotionQueue;
-    private readonly QdrantService _qdrantService;
+    private readonly IQdrantWriter _qdrantService;
+    private readonly IndexStateStore _indexStateStore;
     private readonly CodeAssistOptions _options;
     private readonly ILogger<L2PromotionService> _logger;
     private readonly CancellationTokenSource _shutdownCts = new();
     private readonly Task _processingTask;
-    private readonly ConcurrentDictionary<string, string> _fileToCollection = new(); // filePath -> collectionName
+    private readonly ConcurrentDictionary<string, string> _fileToCollection = new(); // repositoryRoot -> collectionName
     private bool _disposed;
 
     public L2PromotionService(
         HotCache hotCache,
-        QdrantService qdrantService,
+        IQdrantWriter qdrantService,
+        IndexStateStore indexStateStore,
         IOptions<CodeAssistOptions> options,
         ILogger<L2PromotionService> logger)
     {
         _qdrantService = qdrantService;
+        _indexStateStore = indexStateStore;
         _options = options.Value;
         _logger = logger;
 
@@ -96,6 +99,91 @@ public sealed class L2PromotionService : IDisposable
         await _promotionQueue.Writer.WriteAsync(task);
         _logger.LogDebug("Queued {File} for L2 promotion to {Collection}",
             cachedFile.RelativePath, collectionName);
+    }
+
+    /// <summary>
+    /// Promote a file immediately rather than through the background queue.
+    /// </summary>
+    /// <remarks>
+    /// A test seam, not API: the queue's timing makes the delete-then-upsert ordering impossible to
+    /// observe reliably. Internal because <see cref="PromotionTask"/> is internal.
+    /// </remarks>
+    internal Task PromoteNowAsync(CachedFile cachedFile, string collectionName) =>
+        ProcessBatchAsync([
+            new PromotionTask
+            {
+                CachedFile = cachedFile,
+                CollectionName = collectionName,
+                QueuedAt = DateTime.UtcNow
+            }
+        ]);
+
+    /// <summary>
+    /// Promote several files in one batch, bypassing the background queue. Test seam.
+    /// </summary>
+    internal Task PromoteNowAsync(IReadOnlyList<CachedFile> cachedFiles, string collectionName) =>
+        ProcessBatchAsync(cachedFiles
+            .Select(f => new PromotionTask
+            {
+                CachedFile = f,
+                CollectionName = collectionName,
+                QueuedAt = DateTime.UtcNow
+            })
+            .ToList());
+
+    /// <summary>
+    /// Remove a file's chunks from L2 after it is deleted or renamed on disk.
+    /// </summary>
+    /// <remarks>
+    /// The watcher previously only evicted from L1 on delete, so a removed file's chunks stayed in Qdrant
+    /// and kept being returned by searches until someone ran a full refresh. A stale hit with no newer
+    /// copy to outrank it is worse than a duplicate.
+    ///
+    /// Unlike promotion, this does not fall through to <see cref="GetCollectionForFile"/>'s derived-name
+    /// safety net: promotion only ever adds points, so a wrong guess just lands in the wrong collection
+    /// harmlessly; a delete issued against a guessed collection could silently remove someone else's
+    /// data. Removal only proceeds when a collection was actually registered for this file or repository.
+    /// </remarks>
+    public async Task RemoveFileAsync(
+        string filePath,
+        string repositoryRoot,
+        CancellationToken cancellationToken = default)
+    {
+        // Path.GetFullPath (and the resolution below) run inside the try, not before it: the caller is
+        // fire-and-forget (_ = Task.Run(...)), so a throw outside this try becomes an unobserved task
+        // exception that is silently dropped instead of logged.
+        string? collectionName = null;
+        string? relativePath = null;
+
+        try
+        {
+            string normalizedPath = Path.GetFullPath(filePath);
+            string normalizedRoot = Path.GetFullPath(repositoryRoot);
+
+            if (!_fileToCollection.ContainsKey(normalizedPath) && !_fileToCollection.ContainsKey(normalizedRoot))
+            {
+                _logger.LogDebug("No collection registered for {File}; nothing to remove from L2", filePath);
+                return;
+            }
+
+            collectionName = GetCollectionForFile(filePath, repositoryRoot);
+            if (string.IsNullOrEmpty(collectionName))
+            {
+                _logger.LogDebug("No collection registered for {File}; nothing to remove from L2", filePath);
+                return;
+            }
+
+            relativePath = IndexPath.Normalize(Path.GetRelativePath(repositoryRoot, filePath));
+
+            if (!await _qdrantService.CollectionExistsAsync(collectionName, cancellationToken)) return;
+
+            await _qdrantService.DeleteByFilePathAsync(collectionName, relativePath, cancellationToken);
+            _logger.LogInformation("Removed {File} from collection {Collection}", relativePath, collectionName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove {File} from collection {Collection}", relativePath ?? filePath, collectionName);
+        }
     }
 
     private void OnFileReadyForPromotion(object? sender, CachePromotionEventArgs e)
@@ -171,6 +259,7 @@ public sealed class L2PromotionService : IDisposable
         foreach (IGrouping<string, PromotionTask> group in byCollection)
         {
             string collectionName = group.Key;
+            List<PromotionTask>? latestPerFile = null;
 
             try
             {
@@ -187,10 +276,56 @@ public sealed class L2PromotionService : IDisposable
                     continue;
                 }
 
+                // One task per file. A batch can legitimately carry two saves of the same file, and a
+                // single delete cannot stop the second task's chunks from landing beside the first's —
+                // each chunking run mints fresh GUIDs, so nothing overwrites anything. Last task wins:
+                // it is the most recent read of the file.
+                latestPerFile = group
+                    .GroupBy(t => t.CachedFile.RelativePath, StringComparer.Ordinal)
+                    .Select(g => g.Last())
+                    .ToList();
+
+                // A promotion queued before a delete can land after it and resurrect the file. Chunking
+                // and embedding take seconds, so this window is wide, and the result is worse than a
+                // duplicate: a stale hit with no newer copy to outrank it, surviving until a full
+                // reindex.
+                List<PromotionTask> stillOnDisk = latestPerFile
+                    .Where(t => File.Exists(t.CachedFile.FilePath))
+                    .ToList();
+
+                if (stillOnDisk.Count < latestPerFile.Count)
+                {
+                    // Deliberately not LogDebug, and deliberately not counted as a dropped promotion.
+                    // File.Exists returns false for any failure, not only for deletion — a network
+                    // share that hiccups for a moment looks identical to a file the user removed. In
+                    // that case this is a real edit discarded, living in L1 only until the process
+                    // exits, so it has to be visible at default log levels. It is not a dropped
+                    // promotion because the ordinary case really is a deleted file, and inflating that
+                    // counter would make DroppedPromotionCount mean something other than what
+                    // get_watched_repositories reports it to mean.
+                    _logger.LogInformation(
+                        "Skipping {Count} promotion(s) for file(s) no longer on disk in {Collection}. "
+                        + "Normally these were deleted after being queued; if the repository is on a "
+                        + "network path, a transient unavailability looks the same and the edit is lost.",
+                        latestPerFile.Count - stillOnDisk.Count, collectionName);
+                }
+
+                latestPerFile = stillOnDisk;
+                if (latestPerFile.Count == 0) continue;
+
+                // Remove each file's previous chunks before writing its new ones. Chunk ids are freshly
+                // generated on every chunking run, so an upsert cannot overwrite the prior version by id;
+                // without this delete each save appended another complete copy of the file, which is how
+                // one method came to be returned five times at five different line ranges.
+                foreach (PromotionTask task in latestPerFile)
+                {
+                    await _qdrantService.DeleteByFilePathAsync(collectionName, task.CachedFile.RelativePath);
+                }
+
                 // Build points for upsert
                 var points = new List<(Guid id, float[] vector, Dictionary<string, object> payload)>();
 
-                foreach (PromotionTask task in group)
+                foreach (PromotionTask task in latestPerFile)
                 {
                     for (var i = 0; i < task.CachedFile.Chunks.Count; i++)
                     {
@@ -246,11 +381,24 @@ public sealed class L2PromotionService : IDisposable
                 await _qdrantService.UpsertPointsAsync(collectionName, points);
 
                 _logger.LogInformation("Promoted {ChunkCount} chunks from {FileCount} files to {Collection}",
-                    points.Count, group.Count(), collectionName);
+                    points.Count, latestPerFile.Count, collectionName);
+
+                // A promotion is an update. Without this, lastUpdated meant "last manual refresh" and
+                // anything reading it as a freshness signal was wrong.
+                await _indexStateStore.TouchAsync(collectionName, commitSha: null);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error promoting batch to collection {Collection}", collectionName);
+                // A delete can succeed and be followed by a failing upsert (or a failing delete partway
+                // through the loop above). Either way, files already deleted in this group now have no
+                // chunks in the index at all — worse than the stale-but-present state before this catch
+                // ever ran. Count them as dropped so the gap is visible instead of silent.
+                Interlocked.Add(ref _droppedPromotions, latestPerFile?.Count ?? group.Count());
+                _logger.LogError(ex,
+                    "Error promoting batch to collection {Collection}. Up to {Count} file(s) may now be "
+                    + "absent from the index rather than merely stale — their old chunks can have been "
+                    + "deleted before the write failed. They recover on the next successful save or refresh.",
+                    collectionName, latestPerFile?.Count ?? group.Count());
             }
         }
     }

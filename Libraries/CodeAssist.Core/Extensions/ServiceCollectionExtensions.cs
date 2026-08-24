@@ -40,6 +40,8 @@ public static class ServiceCollectionExtensions
             // Register core services
             services.AddSingleton<OllamaService>();
             services.AddSingleton<QdrantService>();
+            services.AddSingleton<IQdrantWriter>(sp => sp.GetRequiredService<QdrantService>());
+            services.AddSingleton<IndexStateStore>();
             services.AddSingleton<RepositoryIndexer>();
             services.AddSingleton<DataFlowGraphService>();
 
@@ -79,6 +81,8 @@ public static class ServiceCollectionExtensions
             // Register core services
             services.AddSingleton<OllamaService>();
             services.AddSingleton<QdrantService>();
+            services.AddSingleton<IQdrantWriter>(sp => sp.GetRequiredService<QdrantService>());
+            services.AddSingleton<IndexStateStore>();
             services.AddSingleton<RepositoryIndexer>();
             services.AddSingleton<DataFlowGraphService>();
 

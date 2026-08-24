@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using CodeAssist.Core.Chunking;
 using CodeAssist.Core.Configuration;
 using CodeAssist.Core.Models;
@@ -20,6 +19,7 @@ public sealed class RepositoryIndexer(
     OllamaService ollamaService,
     QdrantService qdrantService,
     ChunkerFactory chunkerFactory,
+    IndexStateStore indexStateStore,
     IOptions<CodeAssistOptions> options,
     ILogger<RepositoryIndexer> logger)
 {
@@ -59,13 +59,13 @@ public sealed class RepositoryIndexer(
             // Ensure collection exists
             await qdrantService.EnsureCollectionAsync(collectionName, cancellationToken);
 
-            // Create payload indexes for dependency graph queries
-            await qdrantService.CreatePayloadIndexAsync(collectionName, "symbol_name", cancellationToken);
-            await qdrantService.CreatePayloadIndexAsync(collectionName, "calls_out", cancellationToken);
+            // One list, one place. Indexes were previously created here AND in EnsurePayloadIndexesAsync
+            // with different field sets, so which fields were indexed depended on which path ran.
+            await qdrantService.EnsurePayloadIndexesAsync(collectionName, cancellationToken);
 
             logger.LogDebug("Loading index state...");
             // Load existing index state
-            IndexStateFile? existingState = await LoadIndexStateAsync(repositoryName, cancellationToken);
+            IndexStateFile? existingState = await indexStateStore.LoadAsync(repositoryName, cancellationToken);
             Dictionary<string, IndexedFile> existingFiles = existingState?.Files ?? new Dictionary<string, IndexedFile>();
 
             logger.LogDebug("Discovering files...");
@@ -95,7 +95,6 @@ public sealed class RepositoryIndexer(
 
             List<string> filesToChunk = filesToAdd.Concat(filesToUpdate).ToList();
             var processedCount = 0;
-            HashSet<string> updateHashSet = filesToUpdate.ToHashSet();
 
             logger.LogInformation("Processing {Count} files in parallel...", filesToChunk.Count);
 
@@ -121,11 +120,14 @@ public sealed class RepositoryIndexer(
                         logger.LogDebug("Read {Bytes} bytes from {File}", content.Length, relativePath);
                         var fileInfo = new FileInfo(fullPath);
 
-                        // Delete existing chunks if updating (must be sequential for Qdrant)
-                        if (updateHashSet.Contains(relativePath))
-                        {
-                            await qdrantService.DeleteByFilePathAsync(collectionName, relativePath, ct);
-                        }
+                        // Delete before writing, for adds as well as updates. "Add" means absent from
+                        // the state file, which is not the same as absent from Qdrant: a file created
+                        // while the repo is watched is promoted by the watcher, which never writes a
+                        // state entry, and an interrupted run leaves chunks with no state at all. In
+                        // both cases the old chunks are still there and the fresh GUIDs cannot
+                        // overwrite them. Deleting a file that has no chunks is a no-op, and cheap now
+                        // that relative_path carries a keyword payload index.
+                        await qdrantService.DeleteByFilePathAsync(collectionName, relativePath, ct);
 
                         // Chunk the file
                         logger.LogDebug("Chunking file: {File}", relativePath);
@@ -245,7 +247,7 @@ public sealed class RepositoryIndexer(
                 Files = newFileStates.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
             };
 
-            await SaveIndexStateAsync(repositoryName, newState, cancellationToken);
+            await indexStateStore.SaveAsync(repositoryName, newState, cancellationToken);
 
             sw.Stop();
 
@@ -325,7 +327,7 @@ public sealed class RepositoryIndexer(
     /// </summary>
     public async Task<IndexState?> GetIndexStateAsync(string repositoryName, CancellationToken cancellationToken = default)
     {
-        IndexStateFile? stateFile = await LoadIndexStateAsync(repositoryName, cancellationToken);
+        IndexStateFile? stateFile = await indexStateStore.LoadAsync(repositoryName, cancellationToken);
         if (stateFile == null) return null;
 
         return new IndexState
@@ -367,18 +369,14 @@ public sealed class RepositoryIndexer(
         string collectionName = SanitizeCollectionName(repositoryName);
         await qdrantService.DeleteCollectionAsync(collectionName, cancellationToken);
 
-        string statePath = GetIndexStatePath(repositoryName);
-        if (File.Exists(statePath))
-        {
-            File.Delete(statePath);
-        }
+        indexStateStore.Delete(repositoryName);
 
         logger.LogInformation("Deleted index for repository {Repository}", repositoryName);
     }
 
-    #region Private Helpers
+    #region Helpers
 
-    private static List<string> DiscoverFiles(
+    internal static List<string> DiscoverFiles(
         string repositoryPath,
         IReadOnlyList<string> includePatterns,
         IReadOnlyList<string> excludePatterns)
@@ -398,7 +396,9 @@ public sealed class RepositoryIndexer(
         PatternMatchingResult result = matcher.Execute(new DirectoryInfoWrapper(
             new DirectoryInfo(repositoryPath)));
 
-        return result.Files.Select(f => f.Path).ToList();
+        // Normalize here rather than at the consumers: this value becomes the relative_path payload
+        // key, and it must be byte-identical to what HotCache produces for the same file.
+        return result.Files.Select(f => IndexPath.Normalize(f.Path)).ToList();
     }
 
     /// <summary>
@@ -506,47 +506,5 @@ public sealed class RepositoryIndexer(
         }
     }
 
-    private string GetIndexStatePath(string repositoryName)
-    {
-        string safeFileName = SanitizeCollectionName(repositoryName);
-        return Path.Combine(_options.IndexStateDirectory, $"{safeFileName}.json");
-    }
-
-    private async Task<IndexStateFile?> LoadIndexStateAsync(string repositoryName, CancellationToken cancellationToken)
-    {
-        string path = GetIndexStatePath(repositoryName);
-        if (!File.Exists(path)) return null;
-
-        string json = await File.ReadAllTextAsync(path, cancellationToken);
-        return JsonSerializer.Deserialize<IndexStateFile>(json);
-    }
-
-    private async Task SaveIndexStateAsync(string repositoryName, IndexStateFile state, CancellationToken cancellationToken)
-    {
-        string path = GetIndexStatePath(repositoryName);
-        string dir = Path.GetDirectoryName(path)!;
-        Directory.CreateDirectory(dir);
-
-        string json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(path, json, cancellationToken);
-    }
-
     #endregion
-
-    /// <summary>
-    /// Internal class for persisting index state to disk.
-    /// </summary>
-    private sealed class IndexStateFile
-    {
-        public required string RepositoryName { get; init; }
-        public required string RootPath { get; init; }
-        public string? LastCommitSha { get; init; }
-        public required DateTimeOffset CreatedAt { get; init; }
-        public required DateTimeOffset LastUpdatedAt { get; init; }
-        public required string EmbeddingModel { get; init; }
-        public required string CollectionName { get; init; }
-        public required List<string> IncludePatterns { get; init; }
-        public required List<string> ExcludePatterns { get; init; }
-        public required Dictionary<string, IndexedFile> Files { get; init; }
-    }
 }

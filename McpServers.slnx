@@ -1,6 +1,7 @@
 ﻿<Solution>
   <Folder Name="/Libraries/">
     <Project Path="Libraries/CodeAssist.Core/CodeAssist.Core.csproj" />
+    <Project Path="Libraries/CodeAssist.Core.Tests/CodeAssist.Core.Tests.csproj" />
     <Project Path="Libraries/SshClient.Core/SshClient.Core.csproj" />
     <Project Path="Libraries\AwsServer.Core\AwsServer.Core.csproj" />
     <Project Path="Libraries\AzureServer.Core\AzureServer.Core.csproj" />

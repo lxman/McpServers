@@ -12,8 +12,15 @@ namespace CodeAssist.Core.Services;
 /// Service for vector storage operations using Qdrant.
 /// Uses lazy client initialization with reconnection support.
 /// </summary>
-public sealed class QdrantService
+public sealed class QdrantService : IQdrantWriter
 {
+    /// <summary>
+    /// Default ceiling for the graph-query helpers. Before paging they were implicitly capped at one
+    /// scroll page; without a cap the first caller of one of these would page an entire namespace's
+    /// chunks — content included — into memory.
+    /// </summary>
+    private const int DefaultGraphQueryLimit = 1000;
+
     private QdrantClient? _client;
     private readonly object _clientLock = new();
     private DateTime _lastFailedAttempt = DateTime.MinValue;
@@ -211,20 +218,7 @@ public sealed class QdrantService
             Filter? filter = null;
             if (!string.IsNullOrEmpty(filePathFilter))
             {
-                filter = new Filter
-                {
-                    Must =
-                    {
-                        new Condition
-                        {
-                            Field = new FieldCondition
-                            {
-                                Key = "relative_path",
-                                Match = new Match { Text = filePathFilter }
-                            }
-                        }
-                    }
-                };
+                filter = BuildRelativePathFilter(filePathFilter);
             }
 
             IReadOnlyList<ScoredPoint> results = await GetClient().SearchAsync(
@@ -249,6 +243,30 @@ public sealed class QdrantService
     }
 
     /// <summary>
+    /// The one filter used for every <c>relative_path</c> lookup.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately a keyword (exact) match. The previous full-text <c>Match { Text }</c> did not fail on
+    /// the unindexed field as was first assumed — Qdrant full-scanned and matched — but it is tokenized,
+    /// so it matches far more than intended: the bare token "Editing" matched 1,963 points in a live
+    /// collection. A delete built on that can take unrelated files with it.
+    /// </remarks>
+    internal static Filter BuildRelativePathFilter(string relativePath) => new()
+    {
+        Must =
+        {
+            new Condition
+            {
+                Field = new FieldCondition
+                {
+                    Key = "relative_path",
+                    Match = new Match { Keyword = IndexPath.Normalize(relativePath) }
+                }
+            }
+        }
+    };
+
+    /// <summary>
     /// Delete chunks by file path.
     /// </summary>
     public async Task DeleteByFilePathAsync(
@@ -258,22 +276,10 @@ public sealed class QdrantService
     {
         try
         {
-            var filter = new Filter
-            {
-                Must =
-                {
-                    new Condition
-                    {
-                        Field = new FieldCondition
-                        {
-                            Key = "relative_path",
-                            Match = new Match { Text = relativePath }
-                        }
-                    }
-                }
-            };
-
-            await GetClient().DeleteAsync(collectionName, filter, cancellationToken: cancellationToken);
+            await GetClient().DeleteAsync(
+                collectionName,
+                BuildRelativePathFilter(relativePath),
+                cancellationToken: cancellationToken);
 
             _logger.LogDebug("Deleted chunks for file {FilePath} from collection {Collection}", relativePath, collectionName);
         }
@@ -287,13 +293,19 @@ public sealed class QdrantService
     /// <summary>
     /// Scroll all chunks for a given file path (used by graph rebuild).
     /// </summary>
+    /// <remarks>
+    /// Normalizes here rather than trusting callers. A keyword match on a Windows-shaped path against
+    /// forward-slash rows returns zero results rather than an error, so a caller that forgot would get
+    /// a silently empty file instead of a failure — the same quiet-mismatch failure mode this class's
+    /// delete path was fixed for.
+    /// </remarks>
     public async Task<List<SearchResult>> SearchByFilePathAsync(
         string collectionName,
         string relativePath,
         CancellationToken cancellationToken = default)
     {
         return await ScrollWithKeywordFilterAsync(
-            collectionName, "relative_path", relativePath, cancellationToken);
+            collectionName, "relative_path", IndexPath.Normalize(relativePath), cancellationToken);
     }
 
     /// <summary>
@@ -780,8 +792,11 @@ public sealed class QdrantService
             "return_type",
             "access_modifier",
             "calls_out_names",
+            "calls_out",
             "symbol_name",
-            "chunk_type"
+            "chunk_type",
+            // Without this, every delete and every per-file scroll full-scans the collection.
+            "relative_path"
         ];
 
         foreach (string field in indexFields)
@@ -803,7 +818,8 @@ public sealed class QdrantService
         CancellationToken cancellationToken = default)
     {
         return await ScrollWithKeywordFilterAsync(
-            collectionName, "implemented_interfaces", interfaceName, cancellationToken);
+            collectionName, "implemented_interfaces", interfaceName, cancellationToken,
+            maxResults: DefaultGraphQueryLimit);
     }
 
     /// <summary>
@@ -815,7 +831,8 @@ public sealed class QdrantService
         CancellationToken cancellationToken = default)
     {
         return await ScrollWithKeywordFilterAsync(
-            collectionName, "base_type", baseType, cancellationToken);
+            collectionName, "base_type", baseType, cancellationToken,
+            maxResults: DefaultGraphQueryLimit);
     }
 
     /// <summary>
@@ -827,7 +844,8 @@ public sealed class QdrantService
         CancellationToken cancellationToken = default)
     {
         return await ScrollWithKeywordFilterAsync(
-            collectionName, "return_type", typeName, cancellationToken);
+            collectionName, "return_type", typeName, cancellationToken,
+            maxResults: DefaultGraphQueryLimit);
     }
 
     /// <summary>
@@ -839,7 +857,7 @@ public sealed class QdrantService
         CancellationToken cancellationToken = default)
     {
         List<SearchResult> results = await ScrollWithKeywordFilterAsync(
-            collectionName, "qualified_name", qualifiedName, cancellationToken, limit: 1);
+            collectionName, "qualified_name", qualifiedName, cancellationToken, pageSize: 1, maxResults: 1);
         return results.Count > 0 ? results[0] : null;
     }
 
@@ -852,7 +870,8 @@ public sealed class QdrantService
         CancellationToken cancellationToken = default)
     {
         return await ScrollWithKeywordFilterAsync(
-            collectionName, "namespace", namespaceName, cancellationToken);
+            collectionName, "namespace", namespaceName, cancellationToken,
+            maxResults: DefaultGraphQueryLimit);
     }
 
     /// <summary>
@@ -929,8 +948,11 @@ public sealed class QdrantService
         string fieldKey,
         string value,
         CancellationToken cancellationToken,
-        uint limit = 100)
+        uint pageSize = 100,
+        int? maxResults = null)
     {
+        var results = new List<SearchResult>();
+
         try
         {
             var filter = new Filter
@@ -948,23 +970,57 @@ public sealed class QdrantService
                 }
             };
 
-            ScrollResponse response = await GetClient().ScrollAsync(
-                collectionName,
-                filter: filter,
-                limit: limit,
-                cancellationToken: cancellationToken);
+            PointId? offset = null;
 
-            return response.Result.Select(r => new SearchResult
+            // A single scroll returns at most `pageSize` points. Left unpaged this silently truncated
+            // every file over 100 chunks — real files in these collections run to 368 — so the graph
+            // was rebuilt from a partial view with no error anywhere.
+            while (true)
             {
-                Score = 0f,
-                Chunk = BuildChunkFromPayload(r.Id.Uuid, r.Payload)
-            }).ToList();
+                ScrollResponse response = await GetClient().ScrollAsync(
+                    collectionName,
+                    filter: filter,
+                    limit: pageSize,
+                    offset: offset,
+                    cancellationToken: cancellationToken);
+
+                results.AddRange(response.Result.Select(r => new SearchResult
+                {
+                    Score = 0f,
+                    Chunk = BuildChunkFromPayload(r.Id.Uuid, r.Payload)
+                }));
+
+                // pageSize is how many points come back per round trip; maxResults is how many the
+                // caller actually wants. Conflating the two turned a unique-key lookup into a scan of
+                // every matching point, one round trip at a time.
+                if (maxResults is not null && results.Count >= maxResults.Value)
+                {
+                    return results.Take(maxResults.Value).ToList();
+                }
+
+                // Qdrant signals the last page with a null offset. Guard the contract violation too:
+                // an offset that does not advance would otherwise spin here forever, hanging the
+                // caller rather than failing it.
+                if (response.NextPageOffset is null) break;
+                if (offset is not null && response.NextPageOffset.Equals(offset))
+                {
+                    _logger.LogWarning(
+                        "Scroll offset did not advance for {Field}={Value} in {Collection}; stopping "
+                        + "after {Count} results to avoid looping.", fieldKey, value, collectionName, results.Count);
+                    break;
+                }
+
+                offset = response.NextPageOffset;
+            }
+
+            return results;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to scroll {Field}={Value} in {Collection}",
-                fieldKey, value, collectionName);
-            return [];
+            _logger.LogError(ex,
+                "Failed to scroll {Field}={Value} in {Collection}; returning {Count} result(s) collected "
+                + "before the failure", fieldKey, value, collectionName, results.Count);
+            return results;
         }
     }
 

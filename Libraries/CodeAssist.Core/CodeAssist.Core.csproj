@@ -39,4 +39,8 @@
       </PackageReference>
     </ItemGroup>
 
+    <ItemGroup>
+        <InternalsVisibleTo Include="CodeAssist.Core.Tests" />
+    </ItemGroup>
+
 </Project>
