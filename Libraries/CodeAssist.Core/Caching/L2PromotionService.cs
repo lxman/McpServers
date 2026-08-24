@@ -22,7 +22,7 @@ public sealed class L2PromotionService : IDisposable
     private readonly ILogger<L2PromotionService> _logger;
     private readonly CancellationTokenSource _shutdownCts = new();
     private readonly Task _processingTask;
-    private readonly ConcurrentDictionary<string, string> _fileToCollection = new(); // filePath -> collectionName
+    private readonly ConcurrentDictionary<string, string> _fileToCollection = new(); // repositoryRoot -> collectionName
     private bool _disposed;
 
     public L2PromotionService(
@@ -284,6 +284,24 @@ public sealed class L2PromotionService : IDisposable
                     .GroupBy(t => t.CachedFile.RelativePath, StringComparer.Ordinal)
                     .Select(g => g.Last())
                     .ToList();
+
+                // A promotion queued before a delete can land after it and resurrect the file. Chunking
+                // and embedding take seconds, so this window is wide, and the result is worse than a
+                // duplicate: a stale hit with no newer copy to outrank it, surviving until a full
+                // reindex.
+                List<PromotionTask> stillOnDisk = latestPerFile
+                    .Where(t => File.Exists(t.CachedFile.FilePath))
+                    .ToList();
+
+                if (stillOnDisk.Count < latestPerFile.Count)
+                {
+                    _logger.LogDebug(
+                        "Skipping {Count} promotion(s) for files deleted since they were queued",
+                        latestPerFile.Count - stillOnDisk.Count);
+                }
+
+                latestPerFile = stillOnDisk;
+                if (latestPerFile.Count == 0) continue;
 
                 // Remove each file's previous chunks before writing its new ones. Chunk ids are freshly
                 // generated on every chunking run, so an upsert cannot overwrite the prior version by id;

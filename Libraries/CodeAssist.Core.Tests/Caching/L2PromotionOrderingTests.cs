@@ -8,10 +8,25 @@ using Xunit;
 
 namespace CodeAssist.Core.Tests.Caching;
 
-public class L2PromotionOrderingTests
+public class L2PromotionOrderingTests : IDisposable
 {
-    private static CachedFile MakeCachedFile(string relativePath, int chunkCount)
+    // Promotion now checks File.Exists on the cached file's path before writing, so these fixtures
+    // write real files under a temp root rather than pointing at a path like C:\repo\... that was
+    // never on disk — a fake path would make every promotion look like a deleted file and be skipped.
+    private readonly string _root =
+        Path.Combine(Path.GetTempPath(), "codeassist-l2order-" + Guid.NewGuid().ToString("N"));
+
+    public void Dispose()
     {
+        if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+    }
+
+    private CachedFile MakeCachedFile(string relativePath, int chunkCount)
+    {
+        string fullPath = Path.Combine(_root, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        File.WriteAllText(fullPath, "content");
+
         var chunks = new List<CodeChunk>();
         var embeddings = new List<float[]>();
         for (var i = 0; i < chunkCount; i++)
@@ -19,7 +34,7 @@ public class L2PromotionOrderingTests
             chunks.Add(new CodeChunk
             {
                 Id = Guid.NewGuid(),
-                FilePath = @"C:\repo\" + relativePath.Replace('/', '\\'),
+                FilePath = fullPath,
                 RelativePath = relativePath,
                 Content = $"chunk {i}",
                 StartLine = i * 10,
@@ -33,9 +48,9 @@ public class L2PromotionOrderingTests
 
         return new CachedFile
         {
-            FilePath = @"C:\repo\" + relativePath.Replace('/', '\\'),
+            FilePath = fullPath,
             RelativePath = relativePath,
-            RepositoryRoot = @"C:\repo",
+            RepositoryRoot = _root,
             Content = "content",
             ContentHash = "filehash",
             Language = "csharp",
@@ -131,5 +146,42 @@ public class L2PromotionOrderingTests
         // version beside the newer one with no way to tell them apart — the reported bug, in miniature.
         Assert.Equal(["Editing/Foo.cs"], writer.DeletedPaths);
         Assert.Equal(3, writer.UpsertedPointCount);
+    }
+
+    [Fact]
+    public async Task PromotingAFile_SkipsItWhenTheFileWasDeletedSinceBeingQueued()
+    {
+        // Chunking and embedding are network-bound and take seconds, which is time enough for a save to
+        // be queued and then the file to be deleted before the promotion drains. Without a liveness
+        // check here the drained promotion would resurrect the deleted file's chunks with no newer copy
+        // to outrank them — a stale hit that survives until a full reindex, worse than a duplicate.
+        var writer = new FakeQdrantWriter();
+        using HotCache hotCache = TestHotCache.Create();
+        using L2PromotionService service = MakeService(writer, hotCache);
+
+        CachedFile cachedFile = MakeCachedFile("Editing/Foo.cs", 2);
+        File.Delete(cachedFile.FilePath);
+
+        await service.PromoteNowAsync(cachedFile, "myrepo");
+
+        Assert.Empty(writer.DeletedPaths);
+        Assert.Equal(0, writer.UpsertedPointCount);
+    }
+
+    [Fact]
+    public async Task PromotingTwoFiles_OneDeletedSinceQueued_StillPromotesTheOtherOne()
+    {
+        var writer = new FakeQdrantWriter();
+        using HotCache hotCache = TestHotCache.Create();
+        using L2PromotionService service = MakeService(writer, hotCache);
+
+        CachedFile stillThere = MakeCachedFile("Editing/Foo.cs", 2);
+        CachedFile deleted = MakeCachedFile("Editing/Bar.cs", 2);
+        File.Delete(deleted.FilePath);
+
+        await service.PromoteNowAsync([stillThere, deleted], "myrepo");
+
+        Assert.Equal(["Editing/Foo.cs"], writer.DeletedPaths);
+        Assert.Equal(2, writer.UpsertedPointCount);
     }
 }

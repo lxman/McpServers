@@ -11,7 +11,8 @@ public sealed class RequiresLiveServicesFactAttribute : FactAttribute
 {
     public RequiresLiveServicesFactAttribute()
     {
-        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("CODEASSIST_TEST_QDRANT_URL")))
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("CODEASSIST_TEST_QDRANT_URL")) ||
+            string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("CODEASSIST_TEST_OLLAMA_URL")))
         {
             Skip = "Set CODEASSIST_TEST_QDRANT_URL and CODEASSIST_TEST_OLLAMA_URL to run live-service tests.";
         }

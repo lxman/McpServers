@@ -14,6 +14,13 @@ namespace CodeAssist.Core.Services;
 /// </summary>
 public sealed class QdrantService : IQdrantWriter
 {
+    /// <summary>
+    /// Default ceiling for the graph-query helpers. Before paging they were implicitly capped at one
+    /// scroll page; without a cap the first caller of one of these would page an entire namespace's
+    /// chunks — content included — into memory.
+    /// </summary>
+    private const int DefaultGraphQueryLimit = 1000;
+
     private QdrantClient? _client;
     private readonly object _clientLock = new();
     private DateTime _lastFailedAttempt = DateTime.MinValue;
@@ -811,7 +818,8 @@ public sealed class QdrantService : IQdrantWriter
         CancellationToken cancellationToken = default)
     {
         return await ScrollWithKeywordFilterAsync(
-            collectionName, "implemented_interfaces", interfaceName, cancellationToken);
+            collectionName, "implemented_interfaces", interfaceName, cancellationToken,
+            maxResults: DefaultGraphQueryLimit);
     }
 
     /// <summary>
@@ -823,7 +831,8 @@ public sealed class QdrantService : IQdrantWriter
         CancellationToken cancellationToken = default)
     {
         return await ScrollWithKeywordFilterAsync(
-            collectionName, "base_type", baseType, cancellationToken);
+            collectionName, "base_type", baseType, cancellationToken,
+            maxResults: DefaultGraphQueryLimit);
     }
 
     /// <summary>
@@ -835,7 +844,8 @@ public sealed class QdrantService : IQdrantWriter
         CancellationToken cancellationToken = default)
     {
         return await ScrollWithKeywordFilterAsync(
-            collectionName, "return_type", typeName, cancellationToken);
+            collectionName, "return_type", typeName, cancellationToken,
+            maxResults: DefaultGraphQueryLimit);
     }
 
     /// <summary>
@@ -860,7 +870,8 @@ public sealed class QdrantService : IQdrantWriter
         CancellationToken cancellationToken = default)
     {
         return await ScrollWithKeywordFilterAsync(
-            collectionName, "namespace", namespaceName, cancellationToken);
+            collectionName, "namespace", namespaceName, cancellationToken,
+            maxResults: DefaultGraphQueryLimit);
     }
 
     /// <summary>
@@ -940,6 +951,8 @@ public sealed class QdrantService : IQdrantWriter
         uint pageSize = 100,
         int? maxResults = null)
     {
+        var results = new List<SearchResult>();
+
         try
         {
             var filter = new Filter
@@ -957,7 +970,6 @@ public sealed class QdrantService : IQdrantWriter
                 }
             };
 
-            var results = new List<SearchResult>();
             PointId? offset = null;
 
             // A single scroll returns at most `pageSize` points. Left unpaged this silently truncated
@@ -1005,9 +1017,10 @@ public sealed class QdrantService : IQdrantWriter
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to scroll {Field}={Value} in {Collection}",
-                fieldKey, value, collectionName);
-            return [];
+            _logger.LogError(ex,
+                "Failed to scroll {Field}={Value} in {Collection}; returning {Count} result(s) collected "
+                + "before the failure", fieldKey, value, collectionName, results.Count);
+            return results;
         }
     }
 

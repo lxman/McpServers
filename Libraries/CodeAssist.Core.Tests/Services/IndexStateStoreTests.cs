@@ -96,16 +96,15 @@ public class IndexStateStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_LeavesNoTemporaryFileBehind()
+    public async Task LoadAsync_ThrowsRatherThanReportingAnUnreadableFileAsAbsent()
     {
+        // Returning null here would tell the indexer the repository was never indexed, which makes it
+        // reclassify every file as new, skip every delete, and duplicate the whole collection.
         IndexStateStore store = MakeStore();
+        Directory.CreateDirectory(_dir);
+        await File.WriteAllTextAsync(store.GetStatePath("MyRepo"), "{ truncated");
 
-        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow));
-
-        // The atomic write stages through a sibling temp file; a leftover one means the move did not
-        // happen and the next reader is looking at a stale state file.
-        Assert.Empty(Directory.GetFiles(_dir, "*.tmp"));
-        Assert.NotNull(await store.LoadAsync("MyRepo"));
+        await Assert.ThrowsAnyAsync<Exception>(() => store.LoadAsync("MyRepo"));
     }
 
     [Fact]

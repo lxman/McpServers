@@ -95,7 +95,6 @@ public sealed class RepositoryIndexer(
 
             List<string> filesToChunk = filesToAdd.Concat(filesToUpdate).ToList();
             var processedCount = 0;
-            HashSet<string> updateHashSet = filesToUpdate.ToHashSet();
 
             logger.LogInformation("Processing {Count} files in parallel...", filesToChunk.Count);
 
@@ -121,11 +120,14 @@ public sealed class RepositoryIndexer(
                         logger.LogDebug("Read {Bytes} bytes from {File}", content.Length, relativePath);
                         var fileInfo = new FileInfo(fullPath);
 
-                        // Delete existing chunks if updating (must be sequential for Qdrant)
-                        if (updateHashSet.Contains(relativePath))
-                        {
-                            await qdrantService.DeleteByFilePathAsync(collectionName, relativePath, ct);
-                        }
+                        // Delete before writing, for adds as well as updates. "Add" means absent from
+                        // the state file, which is not the same as absent from Qdrant: a file created
+                        // while the repo is watched is promoted by the watcher, which never writes a
+                        // state entry, and an interrupted run leaves chunks with no state at all. In
+                        // both cases the old chunks are still there and the fresh GUIDs cannot
+                        // overwrite them. Deleting a file that has no chunks is a no-op, and cheap now
+                        // that relative_path carries a keyword payload index.
+                        await qdrantService.DeleteByFilePathAsync(collectionName, relativePath, ct);
 
                         // Chunk the file
                         logger.LogDebug("Chunking file: {File}", relativePath);
@@ -372,7 +374,7 @@ public sealed class RepositoryIndexer(
         logger.LogInformation("Deleted index for repository {Repository}", repositoryName);
     }
 
-    #region Private Helpers
+    #region Helpers
 
     internal static List<string> DiscoverFiles(
         string repositoryPath,

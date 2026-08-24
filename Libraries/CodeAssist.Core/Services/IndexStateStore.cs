@@ -41,8 +41,12 @@ public sealed class IndexStateStore(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to read index state at {Path}", path);
-            return null;
+            // Deliberately not swallowed. "Absent" and "unreadable" must not look alike here: a caller
+            // that reads a corrupt state file as "never indexed" reclassifies every file as new, skips
+            // every delete, and writes a second complete copy of the collection while reporting
+            // success. Failing the operation is recoverable; silently duplicating it is not.
+            logger.LogError(ex, "Index state at {Path} exists but could not be read", path);
+            throw;
         }
     }
 
