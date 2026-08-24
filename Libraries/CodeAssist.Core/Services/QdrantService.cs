@@ -211,20 +211,7 @@ public sealed class QdrantService
             Filter? filter = null;
             if (!string.IsNullOrEmpty(filePathFilter))
             {
-                filter = new Filter
-                {
-                    Must =
-                    {
-                        new Condition
-                        {
-                            Field = new FieldCondition
-                            {
-                                Key = "relative_path",
-                                Match = new Match { Text = filePathFilter }
-                            }
-                        }
-                    }
-                };
+                filter = BuildRelativePathFilter(filePathFilter);
             }
 
             IReadOnlyList<ScoredPoint> results = await GetClient().SearchAsync(
@@ -249,6 +236,30 @@ public sealed class QdrantService
     }
 
     /// <summary>
+    /// The one filter used for every <c>relative_path</c> lookup.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately a keyword (exact) match. The previous full-text <c>Match { Text }</c> did not fail on
+    /// the unindexed field as was first assumed — Qdrant full-scanned and matched — but it is tokenized,
+    /// so it matches far more than intended: the bare token "Editing" matched 1,963 points in a live
+    /// collection. A delete built on that can take unrelated files with it.
+    /// </remarks>
+    internal static Filter BuildRelativePathFilter(string relativePath) => new()
+    {
+        Must =
+        {
+            new Condition
+            {
+                Field = new FieldCondition
+                {
+                    Key = "relative_path",
+                    Match = new Match { Keyword = IndexPath.Normalize(relativePath) }
+                }
+            }
+        }
+    };
+
+    /// <summary>
     /// Delete chunks by file path.
     /// </summary>
     public async Task DeleteByFilePathAsync(
@@ -258,22 +269,10 @@ public sealed class QdrantService
     {
         try
         {
-            var filter = new Filter
-            {
-                Must =
-                {
-                    new Condition
-                    {
-                        Field = new FieldCondition
-                        {
-                            Key = "relative_path",
-                            Match = new Match { Text = relativePath }
-                        }
-                    }
-                }
-            };
-
-            await GetClient().DeleteAsync(collectionName, filter, cancellationToken: cancellationToken);
+            await GetClient().DeleteAsync(
+                collectionName,
+                BuildRelativePathFilter(relativePath),
+                cancellationToken: cancellationToken);
 
             _logger.LogDebug("Deleted chunks for file {FilePath} from collection {Collection}", relativePath, collectionName);
         }
@@ -780,8 +779,11 @@ public sealed class QdrantService
             "return_type",
             "access_modifier",
             "calls_out_names",
+            "calls_out",
             "symbol_name",
-            "chunk_type"
+            "chunk_type",
+            // Without this, every delete and every per-file scroll full-scans the collection.
+            "relative_path"
         ];
 
         foreach (string field in indexFields)

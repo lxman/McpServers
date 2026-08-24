@@ -154,6 +154,10 @@ public sealed class DataFlowGraphService
         string relativePath,
         CancellationToken cancellationToken = default)
     {
+        // Graph nodes are keyed by the chunk's relative path, which is normalized at construction.
+        // A caller handing us a Windows-shaped path would remove nothing and then match nothing.
+        relativePath = IndexPath.Normalize(relativePath);
+
         if (!_graphs.TryGetValue(collectionName, out CodeGraph? graph))
         {
             _logger.LogDebug("No graph for {Collection}, skipping file rebuild", collectionName);
