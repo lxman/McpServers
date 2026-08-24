@@ -12,7 +12,7 @@ namespace CodeAssist.Core.Services;
 /// Service for vector storage operations using Qdrant.
 /// Uses lazy client initialization with reconnection support.
 /// </summary>
-public sealed class QdrantService
+public sealed class QdrantService : IQdrantWriter
 {
     private QdrantClient? _client;
     private readonly object _clientLock = new();

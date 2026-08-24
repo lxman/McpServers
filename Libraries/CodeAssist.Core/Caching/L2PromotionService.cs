@@ -16,7 +16,7 @@ namespace CodeAssist.Core.Caching;
 public sealed class L2PromotionService : IDisposable
 {
     private readonly Channel<PromotionTask> _promotionQueue;
-    private readonly QdrantService _qdrantService;
+    private readonly IQdrantWriter _qdrantService;
     private readonly CodeAssistOptions _options;
     private readonly ILogger<L2PromotionService> _logger;
     private readonly CancellationTokenSource _shutdownCts = new();
@@ -26,7 +26,7 @@ public sealed class L2PromotionService : IDisposable
 
     public L2PromotionService(
         HotCache hotCache,
-        QdrantService qdrantService,
+        IQdrantWriter qdrantService,
         IOptions<CodeAssistOptions> options,
         ILogger<L2PromotionService> logger)
     {
@@ -97,6 +97,23 @@ public sealed class L2PromotionService : IDisposable
         _logger.LogDebug("Queued {File} for L2 promotion to {Collection}",
             cachedFile.RelativePath, collectionName);
     }
+
+    /// <summary>
+    /// Promote a file immediately rather than through the background queue.
+    /// </summary>
+    /// <remarks>
+    /// A test seam, not API: the queue's timing makes the delete-then-upsert ordering impossible to
+    /// observe reliably. Internal because <see cref="PromotionTask"/> is internal.
+    /// </remarks>
+    internal Task PromoteNowAsync(CachedFile cachedFile, string collectionName) =>
+        ProcessBatchAsync([
+            new PromotionTask
+            {
+                CachedFile = cachedFile,
+                CollectionName = collectionName,
+                QueuedAt = DateTime.UtcNow
+            }
+        ]);
 
     private void OnFileReadyForPromotion(object? sender, CachePromotionEventArgs e)
     {
@@ -185,6 +202,17 @@ public sealed class L2PromotionService : IDisposable
                         + "affected edits are in the L1 cache only and will be lost on shutdown.",
                         collectionName, group.Count());
                     continue;
+                }
+
+                // Remove each file's previous chunks before writing its new ones. Chunk ids are freshly
+                // generated on every chunking run, so an upsert cannot overwrite the prior version by id;
+                // without this delete each save appended another complete copy of the file, which is how
+                // one method came to be returned five times at five different line ranges.
+                foreach (string relativePath in group
+                             .Select(t => IndexPath.Normalize(t.CachedFile.RelativePath))
+                             .Distinct())
+                {
+                    await _qdrantService.DeleteByFilePathAsync(collectionName, relativePath);
                 }
 
                 // Build points for upsert
