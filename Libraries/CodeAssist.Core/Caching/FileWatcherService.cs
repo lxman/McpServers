@@ -12,6 +12,7 @@ namespace CodeAssist.Core.Caching;
 /// </summary>
 public sealed class FileWatcherService(
     HotCache hotCache,
+    L2PromotionService l2Promotion,
     IOptions<CodeAssistOptions> options,
     ILogger<FileWatcherService> logger)
     : IDisposable
@@ -126,6 +127,7 @@ public sealed class FileWatcherService(
 
         logger.LogDebug("File deleted: {Path}", e.FullPath);
         hotCache.Remove(e.FullPath);
+        RemoveFromL2(e.FullPath);
     }
 
     private void OnFileRenamed(object sender, RenamedEventArgs e)
@@ -134,6 +136,7 @@ public sealed class FileWatcherService(
         if (!ShouldIgnoreFile(e.OldFullPath))
         {
             hotCache.Remove(e.OldFullPath);
+            RemoveFromL2(e.OldFullPath);
         }
 
         // Add new path
@@ -192,6 +195,26 @@ public sealed class FileWatcherService(
                 cts.Dispose();
             }
         }, cts.Token);
+    }
+
+    /// <summary>
+    /// Fire-and-forget removal from L2. Watcher callbacks are synchronous void handlers, so the work is
+    /// handed to the thread pool; RemoveFileAsync swallows and logs its own failures.
+    /// </summary>
+    /// <remarks>
+    /// Resolves the repository root through <see cref="GetRepositoryRoot"/> rather than reading
+    /// <c>_repositoryRoots</c> directly: that dictionary is populated lazily by
+    /// <see cref="DebouncedUpdate"/>, so a file deleted without ever having a prior change/create event
+    /// during this watcher's lifetime would have no cached entry yet. GetRepositoryRoot falls back to
+    /// matching the path against a watched root and caches the result, the same resolution the change
+    /// path relies on, so delete-only files still resolve.
+    /// </remarks>
+    private void RemoveFromL2(string filePath)
+    {
+        string? repositoryRoot = GetRepositoryRoot(filePath);
+        if (repositoryRoot == null) return;
+
+        _ = Task.Run(() => l2Promotion.RemoveFileAsync(filePath, repositoryRoot));
     }
 
     private string? GetRepositoryRoot(string filePath)

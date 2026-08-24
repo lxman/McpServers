@@ -128,6 +128,55 @@ public sealed class L2PromotionService : IDisposable
             })
             .ToList());
 
+    /// <summary>
+    /// Remove a file's chunks from L2 after it is deleted or renamed on disk.
+    /// </summary>
+    /// <remarks>
+    /// The watcher previously only evicted from L1 on delete, so a removed file's chunks stayed in Qdrant
+    /// and kept being returned by searches until someone ran a full refresh. A stale hit with no newer
+    /// copy to outrank it is worse than a duplicate.
+    ///
+    /// Unlike promotion, this does not fall through to <see cref="GetCollectionForFile"/>'s derived-name
+    /// safety net: promotion only ever adds points, so a wrong guess just lands in the wrong collection
+    /// harmlessly; a delete issued against a guessed collection could silently remove someone else's
+    /// data. Removal only proceeds when a collection was actually registered for this file or repository.
+    /// </remarks>
+    public async Task RemoveFileAsync(
+        string filePath,
+        string repositoryRoot,
+        CancellationToken cancellationToken = default)
+    {
+        string normalizedPath = Path.GetFullPath(filePath);
+        string normalizedRoot = Path.GetFullPath(repositoryRoot);
+
+        if (!_fileToCollection.ContainsKey(normalizedPath) && !_fileToCollection.ContainsKey(normalizedRoot))
+        {
+            _logger.LogDebug("No collection registered for {File}; nothing to remove from L2", filePath);
+            return;
+        }
+
+        string? collectionName = GetCollectionForFile(filePath, repositoryRoot);
+        if (string.IsNullOrEmpty(collectionName))
+        {
+            _logger.LogDebug("No collection registered for {File}; nothing to remove from L2", filePath);
+            return;
+        }
+
+        string relativePath = IndexPath.Normalize(Path.GetRelativePath(repositoryRoot, filePath));
+
+        try
+        {
+            if (!await _qdrantService.CollectionExistsAsync(collectionName, cancellationToken)) return;
+
+            await _qdrantService.DeleteByFilePathAsync(collectionName, relativePath, cancellationToken);
+            _logger.LogInformation("Removed {File} from collection {Collection}", relativePath, collectionName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove {File} from collection {Collection}", relativePath, collectionName);
+        }
+    }
+
     private void OnFileReadyForPromotion(object? sender, CachePromotionEventArgs e)
     {
         if (!_options.EnableL2Promotion) return;
