@@ -32,7 +32,7 @@ public static class IndexPath
 
         string normalized = relativePath.Replace('\\', '/');
 
-        if (normalized.StartsWith("./", StringComparison.Ordinal))
+        while (normalized.StartsWith("./", StringComparison.Ordinal))
         {
             normalized = normalized[2..];
         }

@@ -169,15 +169,29 @@ public sealed class DataFlowGraphService
 
         try
         {
-            // Remove old nodes for this file
-            graph.RemoveNodesByFile(relativePath);
-
-            // Fetch fresh chunks for this file from Qdrant
-            List<SearchResult> results = await _qdrant.SearchByFilePathAsync(
-                collectionName, relativePath, cancellationToken);
+            // Fetch before mutating. Removing first and then failing to fetch would leave the file's
+            // nodes deleted with nothing to replace them, turning a transient Qdrant error into a
+            // silently incomplete graph.
+            List<SearchResult> results;
+            try
+            {
+                results = await _qdrant.SearchByFilePathAsync(collectionName, relativePath, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to fetch chunks for {File} in {Collection}; leaving the graph unchanged",
+                    relativePath, collectionName);
+                return;
+            }
 
             List<CodeChunk> chunks = results.Select(r => r.Chunk).ToList();
 
+            graph.RemoveNodesByFile(relativePath);
             BuildNodesFromChunks(graph, chunks);
             BuildEdgesFromChunks(graph, chunks);
 
