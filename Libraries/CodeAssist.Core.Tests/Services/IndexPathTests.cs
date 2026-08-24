@@ -73,4 +73,28 @@ public class IndexPathTests
         // nullable-enabled caller an unwarned NRE somewhere downstream instead of failing here.
         Assert.Throws<ArgumentNullException>(() => IndexPath.Normalize(null!));
     }
+
+    [Fact]
+    public void Normalize_StripsInterleavedSeparatorAndCurrentDirectoryPrefixes()
+    {
+        // The ordering bug: a leading slash used to hide the "./" behind it from the strip that
+        // would have removed it.
+        Assert.Equal("a/b.cs", IndexPath.Normalize("/./a/b.cs"));
+        Assert.Equal("a/b.cs", IndexPath.Normalize(@"\.\a\b.cs"));
+        Assert.Equal("a/b.cs", IndexPath.Normalize("/././a/b.cs"));
+        Assert.Equal("a/b.cs", IndexPath.Normalize(".//./a/b.cs"));
+    }
+
+    [Fact]
+    public void Normalize_LeavesParentDirectorySegmentsAlone()
+    {
+        // ".." is not a prefix this method is allowed to eat — a path that escapes the root should
+        // stay visibly wrong rather than be silently rewritten into a valid-looking one.
+        Assert.Equal("../a/b.cs", IndexPath.Normalize("./../a/b.cs"));
+        Assert.Equal("../a/b.cs", IndexPath.Normalize(@"..\a\b.cs"));
+
+        // The interleaved case: a leading slash used to hide the "./" behind it, so the old code
+        // returned "./../a/b.cs" here. ".." must survive the extra pass the fix added.
+        Assert.Equal("../a/b.cs", IndexPath.Normalize("/./../a/b.cs"));
+    }
 }

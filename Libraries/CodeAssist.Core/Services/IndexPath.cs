@@ -32,11 +32,27 @@ public static class IndexPath
 
         string normalized = relativePath.Replace('\\', '/');
 
-        while (normalized.StartsWith("./", StringComparison.Ordinal))
+        // Alternate until neither applies. Doing each once, in a fixed order, left "/./a" as "./a" —
+        // the "./" strip ran first, saw a leading slash and did nothing, and the trim afterwards had
+        // no reason to look again. Prefixes can interleave, so the only way the documented
+        // postcondition actually holds is to keep going until the string stops changing.
+        while (true)
         {
-            normalized = normalized[2..];
+            if (normalized.StartsWith('/'))
+            {
+                normalized = normalized.TrimStart('/');
+                continue;
+            }
+
+            if (normalized.StartsWith("./", StringComparison.Ordinal))
+            {
+                normalized = normalized[2..];
+                continue;
+            }
+
+            break;
         }
 
-        return normalized.TrimStart('/');
+        return normalized;
     }
 }
