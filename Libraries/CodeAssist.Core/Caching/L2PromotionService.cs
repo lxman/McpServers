@@ -295,9 +295,19 @@ public sealed class L2PromotionService : IDisposable
 
                 if (stillOnDisk.Count < latestPerFile.Count)
                 {
-                    _logger.LogDebug(
-                        "Skipping {Count} promotion(s) for files deleted since they were queued",
-                        latestPerFile.Count - stillOnDisk.Count);
+                    // Deliberately not LogDebug, and deliberately not counted as a dropped promotion.
+                    // File.Exists returns false for any failure, not only for deletion — a network
+                    // share that hiccups for a moment looks identical to a file the user removed. In
+                    // that case this is a real edit discarded, living in L1 only until the process
+                    // exits, so it has to be visible at default log levels. It is not a dropped
+                    // promotion because the ordinary case really is a deleted file, and inflating that
+                    // counter would make DroppedPromotionCount mean something other than what
+                    // get_watched_repositories reports it to mean.
+                    _logger.LogInformation(
+                        "Skipping {Count} promotion(s) for file(s) no longer on disk in {Collection}. "
+                        + "Normally these were deleted after being queued; if the repository is on a "
+                        + "network path, a transient unavailability looks the same and the edit is lost.",
+                        latestPerFile.Count - stillOnDisk.Count, collectionName);
                 }
 
                 latestPerFile = stillOnDisk;
