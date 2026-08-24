@@ -54,7 +54,7 @@ public sealed class IndexStateStore(
         await _writeLock.WaitAsync(cancellationToken);
         try
         {
-            await File.WriteAllTextAsync(path, JsonSerializer.Serialize(state, SerializerOptions), cancellationToken);
+            await WriteAtomicAsync(path, JsonSerializer.Serialize(state, SerializerOptions), cancellationToken);
         }
         finally
         {
@@ -84,7 +84,7 @@ public sealed class IndexStateStore(
                 LastCommitSha = commitSha ?? state.LastCommitSha
             };
 
-            await File.WriteAllTextAsync(path, JsonSerializer.Serialize(updated, SerializerOptions), cancellationToken);
+            await WriteAtomicAsync(path, JsonSerializer.Serialize(updated, SerializerOptions), cancellationToken);
         }
         catch (Exception ex)
         {
@@ -96,9 +96,36 @@ public sealed class IndexStateStore(
         }
     }
 
+    /// <summary>
+    /// Write the file so a reader sees either the whole previous version or the whole new one.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="File.WriteAllTextAsync(string, string?, CancellationToken)"/> truncates before it
+    /// writes, so anything that interrupts it — a crash, a kill, a full disk — leaves a permanently
+    /// truncated state file rather than a briefly inconsistent one. These files run to megabytes, so
+    /// that window is not theoretical, and a lost state file costs a full reindex. Writing to a
+    /// sibling temp file and moving it into place makes the swap atomic on the same volume, which
+    /// also removes the torn-read window for callers that read without taking the write lock.
+    /// </remarks>
+    private static async Task WriteAtomicAsync(string path, string contents, CancellationToken cancellationToken)
+    {
+        string tempPath = path + ".tmp";
+
+        await File.WriteAllTextAsync(tempPath, contents, cancellationToken);
+        File.Move(tempPath, path, overwrite: true);
+    }
+
     public void Delete(string repositoryName)
     {
         string path = GetStatePath(repositoryName);
-        if (File.Exists(path)) File.Delete(path);
+
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to delete index state at {Path}", path);
+        }
     }
 }

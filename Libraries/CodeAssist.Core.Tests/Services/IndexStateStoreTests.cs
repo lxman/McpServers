@@ -94,4 +94,25 @@ public class IndexStateStoreTests : IDisposable
 
         Assert.Null(await store.LoadAsync("neverindexed"));
     }
+
+    [Fact]
+    public async Task SaveAsync_LeavesNoTemporaryFileBehind()
+    {
+        IndexStateStore store = MakeStore();
+
+        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow));
+
+        // The atomic write stages through a sibling temp file; a leftover one means the move did not
+        // happen and the next reader is looking at a stale state file.
+        Assert.Empty(Directory.GetFiles(_dir, "*.tmp"));
+        Assert.NotNull(await store.LoadAsync("MyRepo"));
+    }
+
+    [Fact]
+    public void Delete_DoesNotThrowWhenTheStateFileIsAbsent()
+    {
+        IndexStateStore store = MakeStore();
+
+        store.Delete("neverindexed");
+    }
 }
