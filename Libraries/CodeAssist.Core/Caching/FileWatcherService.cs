@@ -228,12 +228,31 @@ public sealed class FileWatcherService(
         // Find which watcher this file belongs to
         foreach ((string root, FileSystemWatcher _) in _watchers)
         {
-            if (!filePath.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!IsUnderRoot(filePath, root)) continue;
             _repositoryRoots[filePath] = root; // Cache for future lookups
             return root;
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// True when <paramref name="filePath"/> actually sits inside <paramref name="root"/>.
+    /// </summary>
+    /// <remarks>
+    /// A bare StartsWith treats "C:\src\repo2\Foo.cs" as living under the watched root "C:\src\repo",
+    /// resolving the file to the wrong repository. That used to cost only a stale cache read; it now
+    /// decides which collection a delete is issued against, and a file resolved to the wrong root has
+    /// its real chunks left behind forever. The match has to land on a directory boundary.
+    /// </remarks>
+    internal static bool IsUnderRoot(string filePath, string root)
+    {
+        if (!filePath.StartsWith(root, StringComparison.OrdinalIgnoreCase)) return false;
+        if (filePath.Length == root.Length) return true;
+        if (root.EndsWith(Path.DirectorySeparatorChar) || root.EndsWith(Path.AltDirectorySeparatorChar)) return true;
+
+        char boundary = filePath[root.Length];
+        return boundary == Path.DirectorySeparatorChar || boundary == Path.AltDirectorySeparatorChar;
     }
 
     private bool ShouldIgnoreFile(string filePath)
@@ -254,7 +273,7 @@ public sealed class FileWatcherService(
         string relativePath = filePath;
         foreach ((string root, FileSystemWatcher _) in _watchers)
         {
-            if (!filePath.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!IsUnderRoot(filePath, root)) continue;
             relativePath = Path.GetRelativePath(root, filePath);
             break;
         }

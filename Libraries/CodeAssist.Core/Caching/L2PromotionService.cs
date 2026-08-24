@@ -146,26 +146,32 @@ public sealed class L2PromotionService : IDisposable
         string repositoryRoot,
         CancellationToken cancellationToken = default)
     {
-        string normalizedPath = Path.GetFullPath(filePath);
-        string normalizedRoot = Path.GetFullPath(repositoryRoot);
-
-        if (!_fileToCollection.ContainsKey(normalizedPath) && !_fileToCollection.ContainsKey(normalizedRoot))
-        {
-            _logger.LogDebug("No collection registered for {File}; nothing to remove from L2", filePath);
-            return;
-        }
-
-        string? collectionName = GetCollectionForFile(filePath, repositoryRoot);
-        if (string.IsNullOrEmpty(collectionName))
-        {
-            _logger.LogDebug("No collection registered for {File}; nothing to remove from L2", filePath);
-            return;
-        }
-
-        string relativePath = IndexPath.Normalize(Path.GetRelativePath(repositoryRoot, filePath));
+        // Path.GetFullPath (and the resolution below) run inside the try, not before it: the caller is
+        // fire-and-forget (_ = Task.Run(...)), so a throw outside this try becomes an unobserved task
+        // exception that is silently dropped instead of logged.
+        string? collectionName = null;
+        string? relativePath = null;
 
         try
         {
+            string normalizedPath = Path.GetFullPath(filePath);
+            string normalizedRoot = Path.GetFullPath(repositoryRoot);
+
+            if (!_fileToCollection.ContainsKey(normalizedPath) && !_fileToCollection.ContainsKey(normalizedRoot))
+            {
+                _logger.LogDebug("No collection registered for {File}; nothing to remove from L2", filePath);
+                return;
+            }
+
+            collectionName = GetCollectionForFile(filePath, repositoryRoot);
+            if (string.IsNullOrEmpty(collectionName))
+            {
+                _logger.LogDebug("No collection registered for {File}; nothing to remove from L2", filePath);
+                return;
+            }
+
+            relativePath = IndexPath.Normalize(Path.GetRelativePath(repositoryRoot, filePath));
+
             if (!await _qdrantService.CollectionExistsAsync(collectionName, cancellationToken)) return;
 
             await _qdrantService.DeleteByFilePathAsync(collectionName, relativePath, cancellationToken);
@@ -173,7 +179,7 @@ public sealed class L2PromotionService : IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to remove {File} from collection {Collection}", relativePath, collectionName);
+            _logger.LogError(ex, "Failed to remove {File} from collection {Collection}", relativePath ?? filePath, collectionName);
         }
     }
 
