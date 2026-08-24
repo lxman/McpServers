@@ -847,7 +847,7 @@ public sealed class QdrantService
         CancellationToken cancellationToken = default)
     {
         List<SearchResult> results = await ScrollWithKeywordFilterAsync(
-            collectionName, "qualified_name", qualifiedName, cancellationToken, limit: 1);
+            collectionName, "qualified_name", qualifiedName, cancellationToken, maxResults: 1);
         return results.Count > 0 ? results[0] : null;
     }
 
@@ -937,7 +937,8 @@ public sealed class QdrantService
         string fieldKey,
         string value,
         CancellationToken cancellationToken,
-        uint limit = 100)
+        uint pageSize = 100,
+        int? maxResults = null)
     {
         try
         {
@@ -967,7 +968,7 @@ public sealed class QdrantService
                 ScrollResponse response = await GetClient().ScrollAsync(
                     collectionName,
                     filter: filter,
-                    limit: limit,
+                    limit: pageSize,
                     offset: offset,
                     cancellationToken: cancellationToken);
 
@@ -977,7 +978,26 @@ public sealed class QdrantService
                     Chunk = BuildChunkFromPayload(r.Id.Uuid, r.Payload)
                 }));
 
+                // pageSize is how many points come back per round trip; maxResults is how many the
+                // caller actually wants. Conflating the two turned a unique-key lookup into a scan of
+                // every matching point, one round trip at a time.
+                if (maxResults is not null && results.Count >= maxResults.Value)
+                {
+                    return results.Take(maxResults.Value).ToList();
+                }
+
+                // Qdrant signals the last page with a null offset. Guard the contract violation too:
+                // an offset that does not advance would otherwise spin here forever, hanging the
+                // caller rather than failing it.
                 if (response.NextPageOffset is null) break;
+                if (offset is not null && response.NextPageOffset.Equals(offset))
+                {
+                    _logger.LogWarning(
+                        "Scroll offset did not advance for {Field}={Value} in {Collection}; stopping "
+                        + "after {Count} results to avoid looping.", fieldKey, value, collectionName, results.Count);
+                    break;
+                }
+
                 offset = response.NextPageOffset;
             }
 
