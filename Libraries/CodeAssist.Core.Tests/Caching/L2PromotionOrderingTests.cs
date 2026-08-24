@@ -78,6 +78,10 @@ public class L2PromotionOrderingTests : IDisposable
     public async Task PromotingAFile_WritesNewChunksBeforeRemovingOldOnes()
     {
         var writer = new FakeQdrantWriter();
+        // The fake now mirrors production and skips the "deleteIds:" log entry entirely for an empty
+        // id list, so at least one prior point must be seeded or there is nothing here to prove the
+        // ordering of.
+        writer.ExistingPointIds["Editing/Foo.cs"] = [Guid.NewGuid()];
         using HotCache hotCache = TestHotCache.Create();
         using L2PromotionService service = MakeService(writer, hotCache);
 
@@ -111,6 +115,28 @@ public class L2PromotionOrderingTests : IDisposable
 
         Assert.Equal(oldIds, writer.DeletedIds);
         Assert.DoesNotContain(writer.DeletedIds, id => newIds.Contains(id));
+    }
+
+    [Fact]
+    public async Task PromotingTwoFiles_RemovesBothFilesOldPointsInOneCall()
+    {
+        // The accumulation the reorder introduced: every file's superseded ids collapse into a single
+        // delete for the batch. Nothing else covers this with real ids — the sibling two-file test
+        // leaves both id sets empty, so AddRange never runs with anything in it.
+        var writer = new FakeQdrantWriter();
+        using HotCache hotCache = TestHotCache.Create();
+        using L2PromotionService service = MakeService(writer, hotCache);
+
+        var fooOld = new[] { Guid.NewGuid(), Guid.NewGuid() };
+        var barOld = new[] { Guid.NewGuid() };
+        writer.ExistingPointIds["Editing/Foo.cs"] = fooOld.ToList();
+        writer.ExistingPointIds["Editing/Bar.cs"] = barOld.ToList();
+
+        await service.PromoteNowAsync(
+            [MakeCachedFile("Editing/Foo.cs", 2), MakeCachedFile("Editing/Bar.cs", 2)], "myrepo");
+
+        Assert.Equal(1, writer.Calls.Count(c => c.StartsWith("deleteIds:", StringComparison.Ordinal)));
+        Assert.Equal(fooOld.Concat(barOld).OrderBy(g => g), writer.DeletedIds.OrderBy(g => g));
     }
 
     [Fact]

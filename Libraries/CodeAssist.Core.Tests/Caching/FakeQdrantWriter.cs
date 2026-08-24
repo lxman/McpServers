@@ -52,6 +52,11 @@ internal sealed class FakeQdrantWriter : IQdrantWriter
 
     public Task DeleteByIdsAsync(string collectionName, IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default)
     {
+        // Mirrors QdrantService.DeleteByIdsAsync's own short-circuit: an empty id list issues no
+        // round trip in production, so the fake must not record a call for one either — otherwise
+        // the call log would mean something different in tests than it does for real.
+        if (ids.Count == 0) return Task.CompletedTask;
+
         Calls.Add($"deleteIds:{ids.Count}");
 
         if (ThrowOnDeleteIds)
