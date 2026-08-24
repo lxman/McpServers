@@ -105,7 +105,7 @@ public sealed class HotCache : IDisposable
             }
 
             string content = await File.ReadAllTextAsync(filePath, cancellationToken);
-            string relativePath = Path.GetRelativePath(repositoryRoot, filePath);
+            string relativePath = ComputeRelativePath(repositoryRoot, filePath);
             string language = ChunkerFactory.GetLanguage(filePath);
 
             // Check if content actually changed
@@ -332,6 +332,17 @@ public sealed class HotCache : IDisposable
 
     private static string NormalizePath(string path) =>
         Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar);
+
+    /// <summary>
+    /// The watcher's relative path, in the same canonical form the full indexer produces.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Path.GetRelativePath"/> returns backslashes on Windows. Left unnormalized, the watcher
+    /// wrote a different <c>relative_path</c> key than the indexer for the very same file, so neither
+    /// could delete the other's rows and every edit left a complete stale copy behind.
+    /// </remarks>
+    internal static string ComputeRelativePath(string repositoryRoot, string filePath) =>
+        IndexPath.Normalize(Path.GetRelativePath(repositoryRoot, filePath));
 
     private static string ComputeHash(string content)
     {

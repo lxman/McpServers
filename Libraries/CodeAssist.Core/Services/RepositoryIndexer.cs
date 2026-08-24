@@ -378,7 +378,7 @@ public sealed class RepositoryIndexer(
 
     #region Private Helpers
 
-    private static List<string> DiscoverFiles(
+    internal static List<string> DiscoverFiles(
         string repositoryPath,
         IReadOnlyList<string> includePatterns,
         IReadOnlyList<string> excludePatterns)
@@ -398,7 +398,9 @@ public sealed class RepositoryIndexer(
         PatternMatchingResult result = matcher.Execute(new DirectoryInfoWrapper(
             new DirectoryInfo(repositoryPath)));
 
-        return result.Files.Select(f => f.Path).ToList();
+        // Normalize here rather than at the consumers: this value becomes the relative_path payload
+        // key, and it must be byte-identical to what HotCache produces for the same file.
+        return result.Files.Select(f => IndexPath.Normalize(f.Path)).ToList();
     }
 
     /// <summary>
