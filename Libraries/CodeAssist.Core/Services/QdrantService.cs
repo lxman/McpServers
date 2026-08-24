@@ -847,7 +847,7 @@ public sealed class QdrantService
         CancellationToken cancellationToken = default)
     {
         List<SearchResult> results = await ScrollWithKeywordFilterAsync(
-            collectionName, "qualified_name", qualifiedName, cancellationToken, maxResults: 1);
+            collectionName, "qualified_name", qualifiedName, cancellationToken, pageSize: 1, maxResults: 1);
         return results.Count > 0 ? results[0] : null;
     }
 
@@ -960,7 +960,7 @@ public sealed class QdrantService
             var results = new List<SearchResult>();
             PointId? offset = null;
 
-            // A single scroll returns at most `limit` points. Left unpaged this silently truncated
+            // A single scroll returns at most `pageSize` points. Left unpaged this silently truncated
             // every file over 100 chunks — real files in these collections run to 368 — so the graph
             // was rebuilt from a partial view with no error anywhere.
             while (true)
