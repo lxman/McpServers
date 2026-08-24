@@ -19,6 +19,7 @@
 - **Never lowercase a path.** Casing is significant on Linux and Qdrant keyword matching is case-sensitive.
 - Qdrant keyword match idiom in this codebase is `Match { Keyword = value }`. Full-text is `Match { Text = value }`. See `ScrollWithKeywordFilterAsync` for the established pattern.
 - Do not run `delete_index` / `index_repository` against any real collection as part of this work. The one-off reindex is a separate follow-up, after these fixes ship.
+- **Every test file needs an explicit `using Xunit;`.** Verified during Task 1: xunit.v3 3.2.2 does not contribute a global using for `Xunit`, and the project's generated `GlobalUsings.g.cs` carries only the standard SDK set. Without it, `Fact`, `Theory`, `InlineData`, `Assert`, and `IAsyncLifetime` do not resolve.
 
 ## Verified findings this plan is built on
 
@@ -264,6 +265,7 @@ Create `Libraries/CodeAssist.Core.Tests/Services/DiscoverFilesTests.cs`:
 
 ```csharp
 using CodeAssist.Core.Services;
+using Xunit;
 
 namespace CodeAssist.Core.Tests.Services;
 
@@ -308,6 +310,7 @@ Create `Libraries/CodeAssist.Core.Tests/Caching/HotCacheRelativePathTests.cs`:
 
 ```csharp
 using CodeAssist.Core.Caching;
+using Xunit;
 
 namespace CodeAssist.Core.Tests.Caching;
 
@@ -437,6 +440,7 @@ Create `Libraries/CodeAssist.Core.Tests/Services/RelativePathFilterTests.cs`:
 ```csharp
 using CodeAssist.Core.Services;
 using Qdrant.Client.Grpc;
+using Xunit;
 
 namespace CodeAssist.Core.Tests.Services;
 
@@ -793,6 +797,7 @@ using CodeAssist.Core.Configuration;
 using CodeAssist.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Xunit;
 
 namespace CodeAssist.Core.Tests.Caching;
 
@@ -1052,6 +1057,7 @@ using CodeAssist.Core.Caching;
 using CodeAssist.Core.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Xunit;
 
 namespace CodeAssist.Core.Tests.Caching;
 
@@ -1248,6 +1254,7 @@ using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Xunit;
 
 namespace CodeAssist.Core.Tests.Services;
 
@@ -1586,6 +1593,8 @@ The spec is explicit that this must run through **both** writers, because they d
 Create `Libraries/CodeAssist.Core.Tests/Integration/RequiresLiveServicesFactAttribute.cs`:
 
 ```csharp
+using Xunit;
+
 namespace CodeAssist.Core.Tests.Integration;
 
 /// <summary>
@@ -1630,6 +1639,7 @@ using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Xunit;
 
 namespace CodeAssist.Core.Tests.Integration;
 
