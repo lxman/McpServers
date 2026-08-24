@@ -26,7 +26,9 @@ public static class IndexPath
     /// </summary>
     public static string Normalize(string relativePath)
     {
-        if (string.IsNullOrEmpty(relativePath)) return relativePath;
+        ArgumentNullException.ThrowIfNull(relativePath);
+
+        if (relativePath.Length == 0) return relativePath;
 
         string normalized = relativePath.Replace('\\', '/');
 
