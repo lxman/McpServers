@@ -992,17 +992,47 @@ and the constructor parameter:
 Then in `ProcessBatchAsync`, immediately after the `CollectionExistsAsync` guard block and **before** the `var points = new List<...>();` line, insert:
 
 ```csharp
+                // One task per file. A batch can legitimately carry two saves of the same file, and a
+                // single delete cannot stop the second task's chunks from landing beside the first's —
+                // each chunking run mints fresh GUIDs, so nothing overwrites anything. Last task wins:
+                // it is the most recent read of the file. LINQ's GroupBy yields elements within a group
+                // in source order, so Last() is genuinely the newest queued task.
+                latestPerFile = group
+                    .GroupBy(t => t.CachedFile.RelativePath, StringComparer.Ordinal)
+                    .Select(g => g.Last())
+                    .ToList();
+
                 // Remove each file's previous chunks before writing its new ones. Chunk ids are freshly
                 // generated on every chunking run, so an upsert cannot overwrite the prior version by id;
                 // without this delete each save appended another complete copy of the file, which is how
                 // one method came to be returned five times at five different line ranges.
-                foreach (string relativePath in group
-                             .Select(t => IndexPath.Normalize(t.CachedFile.RelativePath))
-                             .Distinct())
+                foreach (PromotionTask task in latestPerFile)
                 {
-                    await _qdrantService.DeleteByFilePathAsync(collectionName, relativePath);
+                    await _qdrantService.DeleteByFilePathAsync(collectionName, task.CachedFile.RelativePath);
                 }
 ```
+
+Declare `List<PromotionTask>? latestPerFile = null;` immediately before the `try`, so the `catch` can
+report how many files were affected. Change the upsert loop's header from `foreach (PromotionTask task
+in group)` to `foreach (PromotionTask task in latestPerFile)` — both sides must see the same collapsed
+set, or the delete dedupes while the write does not. Group on `RelativePath` directly rather than
+re-normalizing: it is normalized at construction, and `DeleteByFilePathAsync` normalizes again
+internally, so a third call here is the consumption-site normalization `IndexPath`'s own remarks warn
+against.
+
+Then make a failed batch visible rather than silent. In the group's existing `catch (Exception ex)`:
+
+```csharp
+                // A delete can succeed and be followed by a failing upsert (or a failing delete partway
+                // through the loop above). Either way, files already deleted in this group now have no
+                // chunks in the index at all — worse than the stale-but-present state before this catch
+                // ever ran. Count them as dropped so the gap is visible instead of silent.
+                Interlocked.Add(ref _droppedPromotions, latestPerFile?.Count ?? group.Count());
+```
+
+and reword its log to say the affected files may now be absent rather than merely stale, recovering on
+the next successful save or refresh. The `?? group.Count()` fallback is load-bearing:
+`CollectionExistsAsync` rethrows, so the `catch` is reachable before `latestPerFile` is ever assigned.
 
 - [ ] **Step 10: Add the test seam**
 
@@ -1030,7 +1060,7 @@ Still in `L2PromotionService`, add next to `QueuePromotionAsync`:
 - [ ] **Step 11: Run the tests to verify they pass**
 
 Run: `dotnet test Libraries/CodeAssist.Core.Tests/CodeAssist.Core.Tests.csproj`
-Expected: PASS, 19 tests.
+Expected: PASS, 20 tests.
 
 - [ ] **Step 12: Commit**
 
@@ -1226,7 +1256,7 @@ Run: `grep -n "_repositoryRoots" Libraries/CodeAssist.Core/Caching/FileWatcherSe
 - [ ] **Step 8: Verify the library builds and all tests pass**
 
 Run: `dotnet build Libraries/CodeAssist.Core/CodeAssist.Core.csproj && dotnet test Libraries/CodeAssist.Core.Tests/CodeAssist.Core.Tests.csproj`
-Expected: Build succeeded; 21 tests PASS.
+Expected: Build succeeded; 22 tests PASS.
 
 - [ ] **Step 9: Commit**
 
@@ -1575,7 +1605,7 @@ Add `using CodeAssist.Core.Services;` to both files. `TouchAsync` returns silent
 - [ ] **Step 10: Run the full suite**
 
 Run: `dotnet build Libraries/CodeAssist.Core/CodeAssist.Core.csproj && dotnet test Libraries/CodeAssist.Core.Tests/CodeAssist.Core.Tests.csproj`
-Expected: Build succeeded; 26 tests PASS.
+Expected: Build succeeded; 27 tests PASS.
 
 - [ ] **Step 11: Commit**
 
@@ -1818,7 +1848,7 @@ public class IndexDuplicationRegressionTests : IAsyncLifetime
 - [ ] **Step 4: Verify the tests skip cleanly with no services configured**
 
 Run: `dotnet test Libraries/CodeAssist.Core.Tests/CodeAssist.Core.Tests.csproj`
-Expected: 26 passed, 4 skipped, 0 failed.
+Expected: 27 passed, 4 skipped, 0 failed.
 
 - [ ] **Step 5: Run them against live services**
 
