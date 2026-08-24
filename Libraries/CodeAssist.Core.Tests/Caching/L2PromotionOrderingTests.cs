@@ -106,4 +106,22 @@ public class L2PromotionOrderingTests
         Assert.Empty(writer.DeletedPaths);
         Assert.Equal(0, writer.UpsertedPointCount);
     }
+
+    [Fact]
+    public async Task TwoSavesOfOneFileInOneBatch_WriteOnlyTheLatestChunks()
+    {
+        var writer = new FakeQdrantWriter();
+        using HotCache hotCache = TestHotCache.Create();
+        using L2PromotionService service = MakeService(writer, hotCache);
+
+        CachedFile first = MakeCachedFile("Editing/Foo.cs", 2);
+        CachedFile second = MakeCachedFile("Editing/Foo.cs", 3);
+
+        await service.PromoteNowAsync([first, second], "myrepo");
+
+        // One delete, and only the newer chunk set written. Writing both would leave the older
+        // version beside the newer one with no way to tell them apart — the reported bug, in miniature.
+        Assert.Equal(["Editing/Foo.cs"], writer.DeletedPaths);
+        Assert.Equal(3, writer.UpsertedPointCount);
+    }
 }

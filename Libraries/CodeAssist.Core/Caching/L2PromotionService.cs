@@ -115,6 +115,19 @@ public sealed class L2PromotionService : IDisposable
             }
         ]);
 
+    /// <summary>
+    /// Promote several files in one batch, bypassing the background queue. Test seam.
+    /// </summary>
+    internal Task PromoteNowAsync(IReadOnlyList<CachedFile> cachedFiles, string collectionName) =>
+        ProcessBatchAsync(cachedFiles
+            .Select(f => new PromotionTask
+            {
+                CachedFile = f,
+                CollectionName = collectionName,
+                QueuedAt = DateTime.UtcNow
+            })
+            .ToList());
+
     private void OnFileReadyForPromotion(object? sender, CachePromotionEventArgs e)
     {
         if (!_options.EnableL2Promotion) return;
@@ -188,6 +201,7 @@ public sealed class L2PromotionService : IDisposable
         foreach (IGrouping<string, PromotionTask> group in byCollection)
         {
             string collectionName = group.Key;
+            List<PromotionTask>? latestPerFile = null;
 
             try
             {
@@ -204,21 +218,28 @@ public sealed class L2PromotionService : IDisposable
                     continue;
                 }
 
+                // One task per file. A batch can legitimately carry two saves of the same file, and a
+                // single delete cannot stop the second task's chunks from landing beside the first's —
+                // each chunking run mints fresh GUIDs, so nothing overwrites anything. Last task wins:
+                // it is the most recent read of the file.
+                latestPerFile = group
+                    .GroupBy(t => t.CachedFile.RelativePath, StringComparer.Ordinal)
+                    .Select(g => g.Last())
+                    .ToList();
+
                 // Remove each file's previous chunks before writing its new ones. Chunk ids are freshly
                 // generated on every chunking run, so an upsert cannot overwrite the prior version by id;
                 // without this delete each save appended another complete copy of the file, which is how
                 // one method came to be returned five times at five different line ranges.
-                foreach (string relativePath in group
-                             .Select(t => IndexPath.Normalize(t.CachedFile.RelativePath))
-                             .Distinct())
+                foreach (PromotionTask task in latestPerFile)
                 {
-                    await _qdrantService.DeleteByFilePathAsync(collectionName, relativePath);
+                    await _qdrantService.DeleteByFilePathAsync(collectionName, task.CachedFile.RelativePath);
                 }
 
                 // Build points for upsert
                 var points = new List<(Guid id, float[] vector, Dictionary<string, object> payload)>();
 
-                foreach (PromotionTask task in group)
+                foreach (PromotionTask task in latestPerFile)
                 {
                     for (var i = 0; i < task.CachedFile.Chunks.Count; i++)
                     {
@@ -274,11 +295,20 @@ public sealed class L2PromotionService : IDisposable
                 await _qdrantService.UpsertPointsAsync(collectionName, points);
 
                 _logger.LogInformation("Promoted {ChunkCount} chunks from {FileCount} files to {Collection}",
-                    points.Count, group.Count(), collectionName);
+                    points.Count, latestPerFile.Count, collectionName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error promoting batch to collection {Collection}", collectionName);
+                // A delete can succeed and be followed by a failing upsert (or a failing delete partway
+                // through the loop above). Either way, files already deleted in this group now have no
+                // chunks in the index at all — worse than the stale-but-present state before this catch
+                // ever ran. Count them as dropped so the gap is visible instead of silent.
+                Interlocked.Add(ref _droppedPromotions, latestPerFile?.Count ?? group.Count());
+                _logger.LogError(ex,
+                    "Error promoting batch to collection {Collection}. Up to {Count} file(s) may now be "
+                    + "absent from the index rather than merely stale — their old chunks can have been "
+                    + "deleted before the write failed. They recover on the next successful save or refresh.",
+                    collectionName, latestPerFile?.Count ?? group.Count());
             }
         }
     }
