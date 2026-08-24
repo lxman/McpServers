@@ -1593,7 +1593,7 @@ The spec is explicit that this must run through **both** writers, because they d
 - Create: `Libraries/CodeAssist.Core.Tests/Integration/IndexDuplicationRegressionTests.cs`
 
 **Interfaces:**
-- Consumes: everything from Tasks 1-7.
+- Consumes: everything from Tasks 1-7. The fourth test covers Task 4's paging fix, which has no unit coverage of its own.
 - Produces: nothing consumed by other tasks.
 
 - [ ] **Step 1: Write the skip attribute**
@@ -1640,6 +1640,7 @@ The test below is written against exactly these. If the grep disagrees, the grep
 Create `Libraries/CodeAssist.Core.Tests/Integration/IndexDuplicationRegressionTests.cs`:
 
 ```csharp
+using System.Text;
 using CodeAssist.Core.Caching;
 using CodeAssist.Core.Chunking;
 using CodeAssist.Core.Configuration;
@@ -1777,6 +1778,34 @@ public class IndexDuplicationRegressionTests : IAsyncLifetime
         Assert.Equal("Src/Widget.cs", cached.RelativePath);
         Assert.All(cached.Chunks, c => Assert.Equal("Src/Widget.cs", c.RelativePath));
     }
+
+    [RequiresLiveServicesFact]
+    public async Task AFileWithMoreThanOnePageOfChunks_IsReadBackInFull()
+    {
+        // Covers Task 4. A scroll returns at most 100 points per page, and files well past that exist
+        // in real collections — NetworkingDtos.cs holds 368 — so an unpaged read silently truncated
+        // them and the graph was rebuilt from a partial file with no error anywhere.
+        var wide = new StringBuilder("namespace Sample;\npublic class Wide\n{\n");
+        for (var i = 0; i < 150; i++)
+        {
+            wide.AppendLine($"    public int Method{i}() {{ return {i}; }}");
+        }
+
+        wide.AppendLine("}");
+
+        Directory.CreateDirectory(Path.Combine(_repoRoot, "Wide"));
+        await File.WriteAllTextAsync(Path.Combine(_repoRoot, "Wide", "Wide.cs"), wide.ToString());
+
+        await _indexer.IndexRepositoryAsync(_repoRoot, _repoName, ["*.cs"], []);
+
+        int count = await ChunkCountForAsync("Wide/Wide.cs");
+
+        Assert.True(
+            count > 100,
+            $"expected more than one page of chunks, got {count} — either the scroll is still "
+            + "truncating at 100, or the chunker produced fewer than 100 chunks and this test no "
+            + "longer proves anything");
+    }
 }
 ```
 
@@ -1785,7 +1814,7 @@ public class IndexDuplicationRegressionTests : IAsyncLifetime
 - [ ] **Step 4: Verify the tests skip cleanly with no services configured**
 
 Run: `dotnet test Libraries/CodeAssist.Core.Tests/CodeAssist.Core.Tests.csproj`
-Expected: 26 passed, 3 skipped, 0 failed.
+Expected: 26 passed, 4 skipped, 0 failed.
 
 - [ ] **Step 5: Run them against live services**
 
@@ -1795,7 +1824,7 @@ CODEASSIST_TEST_OLLAMA_URL=http://192.168.0.170:11435 \
 dotnet test Libraries/CodeAssist.Core.Tests/CodeAssist.Core.Tests.csproj --filter IndexDuplicationRegressionTests
 ```
 
-Expected: 3 PASS. These tests create and drop their own throwaway collection; they never touch `pdflibrary`, `pellucid`, or `mcpservers`.
+Expected: 4 PASS. These tests create and drop their own throwaway collection; they never touch `pdflibrary`, `pellucid`, or `mcpservers`.
 
 - [ ] **Step 6: Confirm the test actually catches the bug**
 
