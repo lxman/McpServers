@@ -169,12 +169,18 @@ public class IndexPathTests
         Assert.Equal("PdfLibrary/Editing/Foo.cs", IndexPath.Normalize(@"PdfLibrary\Editing\Foo.cs"));
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData(null)]
-    public void Normalize_PassesThroughEmptyInput(string? input)
+    [Fact]
+    public void Normalize_PassesThroughEmptyInput()
     {
-        Assert.Equal(input, IndexPath.Normalize(input!));
+        Assert.Equal("", IndexPath.Normalize(""));
+    }
+
+    [Fact]
+    public void Normalize_ThrowsOnNullInput()
+    {
+        // The signature promises non-nullable in and out. Returning null for null input would hand a
+        // nullable-enabled caller an unwarned NRE somewhere downstream instead of failing here.
+        Assert.Throws<ArgumentNullException>(() => IndexPath.Normalize(null!));
     }
 }
 ```
@@ -217,7 +223,9 @@ public static class IndexPath
     /// </summary>
     public static string Normalize(string relativePath)
     {
-        if (string.IsNullOrEmpty(relativePath)) return relativePath;
+        ArgumentNullException.ThrowIfNull(relativePath);
+
+        if (relativePath.Length == 0) return relativePath;
 
         string normalized = relativePath.Replace('\\', '/');
 
