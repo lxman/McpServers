@@ -92,6 +92,7 @@ public class IndexTools(
         {
             List<string?> repositories = await indexer.ListIndexedRepositoriesAsync();
             var indexes = new List<object>();
+            var unreadable = new List<object>();
 
             foreach (string? repo in repositories)
             {
@@ -110,7 +111,7 @@ public class IndexTools(
                     // loudly on a corrupt file is to make it visible, not to make discovery
                     // impossible.
                     logger.LogError(ex, "Failed to read index state for {Repository}", repo);
-                    indexes.Add(new { repositoryName = repo, error = ex.Message });
+                    unreadable.Add(new { repositoryName = repo, error = ex.Message });
                     continue;
                 }
 
@@ -133,7 +134,9 @@ public class IndexTools(
             {
                 success = true,
                 count = indexes.Count,
-                indexes
+                indexes,
+                unreadableCount = unreadable.Count,
+                unreadable
             }, SerializerOptions.JsonOptionsIndented);
         }
         catch (Exception ex)

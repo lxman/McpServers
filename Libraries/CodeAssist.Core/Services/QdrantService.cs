@@ -17,9 +17,10 @@ public sealed class QdrantService : IQdrantWriter
     /// <summary>
     /// Default ceiling for the graph-query helpers. Before paging they were implicitly capped at one
     /// scroll page; without a cap the first caller of one of these would page an entire namespace's
-    /// chunks — content included — into memory.
+    /// chunks — content included — into memory. Public so a caller can compare its result count
+    /// against it: getting back exactly this many results means the cap was hit and more may exist.
     /// </summary>
-    private const int DefaultGraphQueryLimit = 1000;
+    public const int DefaultGraphQueryLimit = 1000;
 
     private QdrantClient? _client;
     private readonly object _clientLock = new();
@@ -815,11 +816,12 @@ public sealed class QdrantService : IQdrantWriter
     public async Task<List<SearchResult>> FindImplementationsOfAsync(
         string collectionName,
         string interfaceName,
+        int? maxResults = null,
         CancellationToken cancellationToken = default)
     {
         return await ScrollWithKeywordFilterAsync(
             collectionName, "implemented_interfaces", interfaceName, cancellationToken,
-            maxResults: DefaultGraphQueryLimit);
+            maxResults: maxResults ?? DefaultGraphQueryLimit);
     }
 
     /// <summary>
@@ -828,11 +830,12 @@ public sealed class QdrantService : IQdrantWriter
     public async Task<List<SearchResult>> FindSubclassesOfAsync(
         string collectionName,
         string baseType,
+        int? maxResults = null,
         CancellationToken cancellationToken = default)
     {
         return await ScrollWithKeywordFilterAsync(
             collectionName, "base_type", baseType, cancellationToken,
-            maxResults: DefaultGraphQueryLimit);
+            maxResults: maxResults ?? DefaultGraphQueryLimit);
     }
 
     /// <summary>
@@ -841,11 +844,12 @@ public sealed class QdrantService : IQdrantWriter
     public async Task<List<SearchResult>> FindMethodsByReturnTypeAsync(
         string collectionName,
         string typeName,
+        int? maxResults = null,
         CancellationToken cancellationToken = default)
     {
         return await ScrollWithKeywordFilterAsync(
             collectionName, "return_type", typeName, cancellationToken,
-            maxResults: DefaultGraphQueryLimit);
+            maxResults: maxResults ?? DefaultGraphQueryLimit);
     }
 
     /// <summary>
@@ -867,11 +871,12 @@ public sealed class QdrantService : IQdrantWriter
     public async Task<List<SearchResult>> FindByNamespaceAsync(
         string collectionName,
         string namespaceName,
+        int? maxResults = null,
         CancellationToken cancellationToken = default)
     {
         return await ScrollWithKeywordFilterAsync(
             collectionName, "namespace", namespaceName, cancellationToken,
-            maxResults: DefaultGraphQueryLimit);
+            maxResults: maxResults ?? DefaultGraphQueryLimit);
     }
 
     /// <summary>
@@ -995,6 +1000,14 @@ public sealed class QdrantService : IQdrantWriter
                 // every matching point, one round trip at a time.
                 if (maxResults is not null && results.Count >= maxResults.Value)
                 {
+                    if (response.NextPageOffset is not null)
+                    {
+                        _logger.LogWarning(
+                            "Reached the {Max}-result cap for {Field}={Value} in {Collection}; more "
+                            + "matches exist and are not being returned",
+                            maxResults.Value, fieldKey, value, collectionName);
+                    }
+
                     return results.Take(maxResults.Value).ToList();
                 }
 
@@ -1017,10 +1030,15 @@ public sealed class QdrantService : IQdrantWriter
         }
         catch (Exception ex)
         {
+            // Deliberately rethrown rather than returning what was collected. A partial page set is
+            // indistinguishable from a complete one at the call site, so a transient failure on page
+            // four of ten would quietly become "this file has 300 chunks" — the same silent-truncation
+            // failure the paging loop above exists to remove. An empty result must mean "no chunks".
             _logger.LogError(ex,
-                "Failed to scroll {Field}={Value} in {Collection}; returning {Count} result(s) collected "
-                + "before the failure", fieldKey, value, collectionName, results.Count);
-            return results;
+                "Failed to scroll {Field}={Value} in {Collection} after {Count} result(s); "
+                + "discarding the partial set rather than returning it as complete",
+                fieldKey, value, collectionName, results.Count);
+            throw;
         }
     }
 

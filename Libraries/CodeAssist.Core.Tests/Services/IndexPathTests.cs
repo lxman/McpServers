@@ -54,6 +54,13 @@ public class IndexPathTests
     }
 
     [Fact]
+    public void Normalize_StripsRepeatedCurrentDirectoryPrefixes()
+    {
+        Assert.Equal("a/b.cs", IndexPath.Normalize("././a/b.cs"));
+        Assert.Equal("a/b.cs", IndexPath.Normalize(@".\.\a\b.cs"));
+    }
+
+    [Fact]
     public void Normalize_PassesThroughEmptyInput()
     {
         Assert.Equal("", IndexPath.Normalize(""));
