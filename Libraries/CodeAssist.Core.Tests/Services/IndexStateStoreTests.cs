@@ -115,4 +115,37 @@ public class IndexStateStoreTests : IDisposable
 
         store.Delete("neverindexed");
     }
+
+    [Fact]
+    public async Task Delete_SwallowsTheFailureWhenTheFileCannotBeDeleted()
+    {
+        // The real scenario the try/catch exists for: something else holds the file open, so
+        // File.Delete throws. Before the guard this escaped into a caller with no catch. An absent
+        // file never exercised this — the old code's File.Exists check already short-circuited that.
+        IndexStateStore store = MakeStore();
+        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow));
+
+        using (File.Open(store.GetStatePath("MyRepo"), FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            store.Delete("MyRepo");
+        }
+    }
+
+    [Fact]
+    public async Task SaveAsync_RecoversFromATemporaryFileLeftByAnEarlierCrash()
+    {
+        // A process killed between the temp write and the move leaves a stale .tmp behind. The next
+        // save has to reclaim it rather than trip over it, or one crash poisons every later write.
+        IndexStateStore store = MakeStore();
+        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow.AddDays(-1)));
+
+        await File.WriteAllTextAsync(store.GetStatePath("MyRepo") + ".tmp", "{ this is not valid json");
+
+        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow));
+
+        IndexStateFile? loaded = await store.LoadAsync("MyRepo");
+        Assert.NotNull(loaded);
+        Assert.Equal("aaaa111", loaded.LastCommitSha);
+        Assert.Empty(Directory.GetFiles(_dir, "*.tmp"));
+    }
 }
