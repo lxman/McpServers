@@ -286,13 +286,19 @@ public sealed class QdrantService
     /// <summary>
     /// Scroll all chunks for a given file path (used by graph rebuild).
     /// </summary>
+    /// <remarks>
+    /// Normalizes here rather than trusting callers. A keyword match on a Windows-shaped path against
+    /// forward-slash rows returns zero results rather than an error, so a caller that forgot would get
+    /// a silently empty file instead of a failure — the same quiet-mismatch failure mode this class's
+    /// delete path was fixed for.
+    /// </remarks>
     public async Task<List<SearchResult>> SearchByFilePathAsync(
         string collectionName,
         string relativePath,
         CancellationToken cancellationToken = default)
     {
         return await ScrollWithKeywordFilterAsync(
-            collectionName, "relative_path", relativePath, cancellationToken);
+            collectionName, "relative_path", IndexPath.Normalize(relativePath), cancellationToken);
     }
 
     /// <summary>
