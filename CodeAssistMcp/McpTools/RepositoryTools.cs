@@ -4,6 +4,7 @@ using Mcp.Common.Core;
 using CodeAssist.Core.Caching;
 using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
+using CodeAssistMcp.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -20,6 +21,7 @@ public class RepositoryTools(
     RepositoryIndexer indexer,
     L2PromotionService l2Promotion,
     ActiveRepositoryStore activeRepositoryStore,
+    RepositoryWatcherStartupService watcherStartup,
     ILogger<RepositoryTools> logger)
 {
     [McpServerTool, DisplayName("set_active_repository")]
@@ -43,6 +45,7 @@ public class RepositoryTools(
 
             string targetPath = state.RootPath;
             IReadOnlyList<string> currentlyWatched = fileWatcher.GetWatchedRepositories();
+            bool wasWatchingTarget = fileWatcher.IsWatching(targetPath);
             var stoppedWatching = new List<string>();
             var clearedCaches = new List<string>();
 
@@ -71,6 +74,8 @@ public class RepositoryTools(
             // .EnsureWatching always did both; this path only ever did the first. state.CollectionName
             // is the authoritative name the indexer actually created, so nothing is derived here.
             l2Promotion.RegisterRepositoryCollection(targetPath, state.CollectionName);
+            if (!wasWatchingTarget)
+                watcherStartup.RequestReconciliation(state, "set-active");
             bool restartStateSaved = activeRepositoryStore.TrySave(state.RepositoryName);
 
             logger.LogInformation(

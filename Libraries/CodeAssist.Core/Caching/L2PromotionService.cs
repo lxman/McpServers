@@ -18,6 +18,7 @@ public sealed class L2PromotionService : IDisposable
     private readonly Channel<PromotionTask> _promotionQueue;
     private readonly IQdrantWriter _qdrantService;
     private readonly IndexStateStore _indexStateStore;
+    private readonly CollectionWriteCoordinator _writeCoordinator;
     private readonly CodeAssistOptions _options;
     private readonly ILogger<L2PromotionService> _logger;
     private readonly CancellationTokenSource _shutdownCts = new();
@@ -33,12 +34,14 @@ public sealed class L2PromotionService : IDisposable
         HotCache hotCache,
         IQdrantWriter qdrantService,
         IndexStateStore indexStateStore,
+        CollectionWriteCoordinator writeCoordinator,
         IOptions<CodeAssistOptions> options,
         ILogger<L2PromotionService> logger)
     {
         _hotCache = hotCache;
         _qdrantService = qdrantService;
         _indexStateStore = indexStateStore;
+        _writeCoordinator = writeCoordinator;
         _options = options.Value;
         _logger = logger;
 
@@ -181,6 +184,9 @@ public sealed class L2PromotionService : IDisposable
 
             relativePath = IndexPath.Normalize(Path.GetRelativePath(repositoryRoot, filePath));
 
+            await using IAsyncDisposable writeLease =
+                await _writeCoordinator.AcquireAsync(collectionName, cancellationToken);
+
             if (!await _qdrantService.CollectionExistsAsync(collectionName, cancellationToken)) return;
 
             await _qdrantService.DeleteByFilePathAsync(collectionName, relativePath, cancellationToken);
@@ -297,6 +303,9 @@ public sealed class L2PromotionService : IDisposable
 
             try
             {
+                await using IAsyncDisposable writeLease =
+                    await _writeCoordinator.AcquireAsync(collectionName);
+
                 // Ensure collection exists
                 bool exists = await _qdrantService.CollectionExistsAsync(collectionName);
                 if (!exists)

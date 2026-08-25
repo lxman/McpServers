@@ -26,6 +26,12 @@ public sealed class FileWatcherService(
     private bool _disposed;
 
     /// <summary>
+    /// Raised when FileSystemWatcher reports that events may have been lost and the repository must
+    /// be reconciled against its persisted manifest.
+    /// </summary>
+    public event EventHandler<RepositoryReconciliationRequestedEventArgs>? ReconciliationRequested;
+
+    /// <summary>
     /// Start watching a repository for file changes.
     /// </summary>
     public void WatchRepository(
@@ -157,7 +163,22 @@ public sealed class FileWatcherService(
 
     private void OnWatcherError(object sender, ErrorEventArgs e)
     {
-        logger.LogError(e.GetException(), "File watcher error");
+        string? repositoryRoot = (sender as FileSystemWatcher)?.Path;
+        Exception exception = e.GetException();
+        logger.LogError(exception, "File watcher error for {RepositoryRoot}; requesting reconciliation",
+            repositoryRoot ?? "(unknown)");
+
+        if (string.IsNullOrEmpty(repositoryRoot)) return;
+        try
+        {
+            ReconciliationRequested?.Invoke(this,
+                new RepositoryReconciliationRequestedEventArgs(repositoryRoot, exception));
+        }
+        catch (Exception handlerException)
+        {
+            logger.LogError(handlerException,
+                "A watcher reconciliation handler failed for {RepositoryRoot}", repositoryRoot);
+        }
     }
 
     private void DebouncedUpdate(string filePath)
@@ -304,6 +325,10 @@ public sealed class FileWatcherService(
         logger.LogInformation("FileWatcherService disposed");
     }
 }
+
+public sealed record RepositoryReconciliationRequestedEventArgs(
+    string RepositoryRoot,
+    Exception WatcherException);
 
 internal sealed class WatchPatternMatcher
 {

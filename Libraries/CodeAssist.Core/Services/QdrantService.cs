@@ -670,7 +670,11 @@ public sealed class QdrantService : IQdrantWriter, ISemanticSearchBackend
         ScrollResponse response = await GetClient().ScrollAsync(
             collectionName,
             filter: filter,
-            limit: (uint)Math.Min(qualifiedNames.Count * 3, 100),
+            // A single logical method can be split into considerably more than three indexed
+            // fragments. Fetch the complete bounded match set so dependency consolidation does
+            // not start halfway through a large method merely because Qdrant returned later parts
+            // first. The caller already caps the consolidated dependency list.
+            limit: 100,
             cancellationToken: cancellationToken);
 
         var requestedNames = qualifiedNames.ToHashSet(StringComparer.OrdinalIgnoreCase);

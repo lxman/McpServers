@@ -26,7 +26,8 @@ try
 
     // Register CodeAssist services
     builder.Services.AddCodeAssistServices(builder.Configuration);
-    builder.Services.AddHostedService<RepositoryWatcherStartupService>();
+    builder.Services.AddSingleton<RepositoryWatcherStartupService>();
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<RepositoryWatcherStartupService>());
 
     // Configure MCP server with STDIO transport
     builder.Services.AddMcpServer()

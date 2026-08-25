@@ -20,6 +20,7 @@ public sealed class RepositoryIndexer(
     QdrantService qdrantService,
     ChunkerFactory chunkerFactory,
     IndexStateStore indexStateStore,
+    CollectionWriteCoordinator writeCoordinator,
     IOptions<CodeAssistOptions> options,
     ILogger<RepositoryIndexer> logger)
 {
@@ -43,6 +44,9 @@ public sealed class RepositoryIndexer(
         repositoryPath = Path.GetFullPath(repositoryPath);
         repositoryName ??= Path.GetFileName(repositoryPath);
         string collectionName = SanitizeCollectionName(repositoryName);
+
+        await using IAsyncDisposable writeLease =
+            await writeCoordinator.AcquireAsync(collectionName, cancellationToken);
 
         includePatterns ??= _options.DefaultIncludePatterns;
         excludePatterns ??= _options.DefaultExcludePatterns;

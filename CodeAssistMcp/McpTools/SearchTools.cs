@@ -5,6 +5,7 @@ using Mcp.Common.Core;
 using CodeAssist.Core.Caching;
 using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
+using CodeAssistMcp.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -23,6 +24,7 @@ public class SearchTools(
     FileWatcherService fileWatcher,
     L2PromotionService l2Promotion,
     ActiveRepositoryStore activeRepositoryStore,
+    RepositoryWatcherStartupService watcherStartup,
     ILogger<SearchTools> logger)
 {
     /// <summary>
@@ -37,6 +39,7 @@ public class SearchTools(
 
         if (!wasWatching)
         {
+            watcherStartup.RequestReconciliation(state, "watch-start");
             logger.LogInformation("Started watching repository at {Path} for L1 cache updates", state.RootPath);
         }
     }
@@ -124,6 +127,8 @@ public class SearchTools(
                 l2HitCount = response.L2HitCount,
                 hotFilesSearched = response.HotFilesSearched,
                 candidateCount = response.CandidateCount,
+                dependencySeedCount = response.DependencySeedCount,
+                reconciliation = watcherStartup.GetStatus(state.RootPath),
                 results,
                 dependencies
             }, SerializerOptions.JsonOptionsIndented);
@@ -194,6 +199,7 @@ public class SearchTools(
                 duration = response.Duration.ToString(),
                 l1HitCount = response.L1HitCount,
                 l2HitCount = response.L2HitCount,
+                reconciliation = watcherStartup.GetStatus(state.RootPath),
                 results
             }, SerializerOptions.JsonOptionsIndented);
         }
@@ -315,6 +321,7 @@ public class SearchTools(
                 semanticCandidateCount = response.Results.Count,
                 l1HitCount = response.L1HitCount,
                 l2HitCount = response.L2HitCount,
+                reconciliation = watcherStartup.GetStatus(state.RootPath),
                 results
             }, SerializerOptions.JsonOptionsIndented);
         }
@@ -414,6 +421,7 @@ public class SearchTools(
                 duration = response.Duration.ToString(),
                 l1HitCount = response.L1HitCount,
                 l2HitCount = response.L2HitCount,
+                reconciliation = watcherStartup.GetStatus(state.RootPath),
                 codeAreas = areas
             }, SerializerOptions.JsonOptionsIndented);
         }

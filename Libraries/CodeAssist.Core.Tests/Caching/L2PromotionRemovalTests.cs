@@ -19,6 +19,7 @@ public class L2PromotionRemovalTests
                         Path.GetTempPath(), "codeassist-test-state-" + Guid.NewGuid().ToString("N"))
                 }),
                 NullLogger<IndexStateStore>.Instance),
+            new CollectionWriteCoordinator(),
             Options.Create(new CodeAssistOptions { EnableL2Promotion = true }),
             NullLogger<L2PromotionService>.Instance);
 

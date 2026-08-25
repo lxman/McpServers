@@ -42,6 +42,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<ISemanticSearchBackend>(sp => sp.GetRequiredService<QdrantService>());
             services.AddSingleton<IndexStateStore>();
             services.AddSingleton<ActiveRepositoryStore>();
+            services.AddSingleton<CollectionWriteCoordinator>();
             services.AddSingleton<RepositoryIndexer>();
             services.AddSingleton<DataFlowGraphService>();
 
@@ -88,6 +89,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<ISemanticSearchBackend>(sp => sp.GetRequiredService<QdrantService>());
             services.AddSingleton<IndexStateStore>();
             services.AddSingleton<ActiveRepositoryStore>();
+            services.AddSingleton<CollectionWriteCoordinator>();
             services.AddSingleton<RepositoryIndexer>();
             services.AddSingleton<DataFlowGraphService>();
 

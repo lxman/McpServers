@@ -61,7 +61,10 @@ public class L2PromotionOrderingTests : IDisposable
         };
     }
 
-    private static L2PromotionService MakeService(FakeQdrantWriter writer, HotCache hotCache) =>
+    private static L2PromotionService MakeService(
+        FakeQdrantWriter writer,
+        HotCache hotCache,
+        CollectionWriteCoordinator? writeCoordinator = null) =>
         new(hotCache,
             writer,
             new IndexStateStore(
@@ -71,6 +74,7 @@ public class L2PromotionOrderingTests : IDisposable
                         Path.GetTempPath(), "codeassist-test-state-" + Guid.NewGuid().ToString("N"))
                 }),
                 NullLogger<IndexStateStore>.Instance),
+            writeCoordinator ?? new CollectionWriteCoordinator(),
             Options.Create(new CodeAssistOptions { EnableL2Promotion = true }),
             NullLogger<L2PromotionService>.Instance);
 
@@ -88,6 +92,7 @@ public class L2PromotionOrderingTests : IDisposable
                         Path.GetTempPath(), "codeassist-test-state-" + Guid.NewGuid().ToString("N"))
                 }),
                 NullLogger<IndexStateStore>.Instance),
+            new CollectionWriteCoordinator(),
             Options.Create(new CodeAssistOptions
             {
                 EnableL2Promotion = true,
@@ -134,6 +139,25 @@ public class L2PromotionOrderingTests : IDisposable
 
         Assert.Equal(5, writer.UpsertedPointCount);
         Assert.Equal(0, service.PendingCount);
+    }
+
+    [Fact]
+    public async Task Promotion_WaitsForAnIndexerHoldingTheCollectionLease()
+    {
+        var writer = new FakeQdrantWriter();
+        var coordinator = new CollectionWriteCoordinator();
+        using HotCache hotCache = TestHotCache.Create();
+        using L2PromotionService service = MakeService(writer, hotCache, coordinator);
+        IAsyncDisposable indexLease = await coordinator.AcquireAsync(
+            "myrepo", TestContext.Current.CancellationToken);
+
+        Task promotion = service.PromoteNowAsync(MakeCachedFile("Editing/Foo.cs", 2), "myrepo");
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+        Assert.Equal(0, writer.UpsertedPointCount);
+
+        await indexLease.DisposeAsync();
+        await promotion;
+        Assert.Equal(2, writer.UpsertedPointCount);
     }
 
     [Fact]

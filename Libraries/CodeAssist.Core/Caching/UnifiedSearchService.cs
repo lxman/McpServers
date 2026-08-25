@@ -68,9 +68,20 @@ public sealed class UnifiedSearchService(
 
         // Expand dependencies if requested
         List<UnifiedSearchHit>? dependencyResults = null;
+        var dependencySeedCount = 0;
         if (includeDependencies && mergedResults.Count > 0)
         {
-            dependencyResults = await ExpandDependenciesAsync(collectionName, mergedResults, cancellationToken);
+            // Search results are deliberately diversified, so lower-ranked hits often represent
+            // different concepts or files. Expanding every one made a focused query return the call
+            // graph of unrelated secondary matches. The top-ranked hit is the dependency seed; the
+            // dedicated trace tool remains available when callers want a broader graph traversal.
+            List<UnifiedSearchHit> dependencySeeds = mergedResults.Take(1).ToList();
+            dependencySeedCount = dependencySeeds.Count;
+            dependencyResults = await ExpandDependenciesAsync(
+                collectionName,
+                dependencySeeds,
+                mergedResults.Select(hit => hit.Chunk.Id).ToHashSet(),
+                cancellationToken);
         }
 
         stopwatch.Stop();
@@ -84,6 +95,7 @@ public sealed class UnifiedSearchService(
             L2HitCount = l2Results.Count,
             TotalResultCount = mergedResults.Count,
             CandidateCount = mergedCandidates.Count,
+            DependencySeedCount = dependencySeedCount,
             Duration = stopwatch.Elapsed,
             HotFilesSearched = hotCache.CountForRepository(repositoryRoot)
         };
@@ -224,22 +236,22 @@ public sealed class UnifiedSearchService(
 
     private async Task<List<UnifiedSearchHit>> ExpandDependenciesAsync(
         string collectionName,
-        List<UnifiedSearchHit> primaryHits,
+        List<UnifiedSearchHit> dependencySeeds,
+        HashSet<Guid> allPrimaryIds,
         CancellationToken cancellationToken)
     {
-        var primaryIds = primaryHits.Select(hit => hit.Chunk.Id).ToHashSet();
         var dependencyIds = new HashSet<Guid>();
         var dependencies = new List<UnifiedSearchHit>();
 
-        List<string> qualifiedNames = BuildQualifiedCalleeNames(primaryHits);
+        List<string> qualifiedNames = BuildQualifiedCalleeNames(dependencySeeds);
         if (qualifiedNames.Count > 0)
         {
             List<SearchResult> qualifiedCallees = await qdrantService.SearchByQualifiedNamesAsync(
                 collectionName, qualifiedNames, cancellationToken);
-            AddDependencies(qualifiedCallees, "callee", primaryIds, dependencyIds, dependencies);
+            AddDependencies(qualifiedCallees, "callee", allPrimaryIds, dependencyIds, dependencies);
         }
 
-        foreach (UnifiedSearchHit primary in primaryHits.Where(hit =>
+        foreach (UnifiedSearchHit primary in dependencySeeds.Where(hit =>
                      !string.IsNullOrEmpty(hit.Chunk.SymbolName)
                      && !string.IsNullOrEmpty(hit.Chunk.QualifiedName)))
         {
@@ -253,10 +265,10 @@ public sealed class UnifiedSearchService(
                     && call.QualifiedName is { Length: > 0 } callName
                     && SearchResultDiversifier.RemovePartSuffix(callName)
                         .Equals(qualifiedName, StringComparison.OrdinalIgnoreCase)) == true);
-            AddDependencies(verifiedCallers, "caller", primaryIds, dependencyIds, dependencies);
+            AddDependencies(verifiedCallers, "caller", allPrimaryIds, dependencyIds, dependencies);
         }
 
-        return dependencies.Take(50).ToList();
+        return ConsolidateDependencyFragments(dependencies).Take(50).ToList();
     }
 
     internal static List<string> BuildQualifiedCalleeNames(IEnumerable<UnifiedSearchHit> primaryHits)
@@ -295,6 +307,111 @@ public sealed class UnifiedSearchService(
             : null;
     }
 
+    internal static List<UnifiedSearchHit> ConsolidateDependencyFragments(
+        IEnumerable<UnifiedSearchHit> dependencies)
+    {
+        List<UnifiedSearchHit> source = dependencies.ToList();
+        Dictionary<string, List<UnifiedSearchHit>> partGroups = source
+            .Where(hit => SearchResultDiversifier.BaseChunkType(hit.Chunk.ChunkType)
+                          != hit.Chunk.ChunkType)
+            .GroupBy(LogicalDependencyKey, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        var emittedGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var consolidated = new List<UnifiedSearchHit>(source.Count);
+        foreach (UnifiedSearchHit hit in source)
+        {
+            if (SearchResultDiversifier.BaseChunkType(hit.Chunk.ChunkType) == hit.Chunk.ChunkType)
+            {
+                consolidated.Add(hit);
+                continue;
+            }
+
+            string key = LogicalDependencyKey(hit);
+            if (!emittedGroups.Add(key)) continue;
+            consolidated.Add(CombineDependencyParts(partGroups[key]));
+        }
+
+        return consolidated;
+    }
+
+    private static string LogicalDependencyKey(UnifiedSearchHit hit)
+    {
+        CodeChunk chunk = hit.Chunk;
+        string symbol = chunk.QualifiedName is { Length: > 0 } qualifiedName
+            ? SearchResultDiversifier.RemovePartSuffix(qualifiedName)
+            : $"{chunk.RelativePath}|{SearchResultDiversifier.RemovePartSuffix(
+                chunk.SymbolName ?? chunk.ParentSymbol ?? chunk.Id.ToString())}";
+        return $"{hit.DependencyType}|{symbol}";
+    }
+
+    private static UnifiedSearchHit CombineDependencyParts(List<UnifiedSearchHit> parts)
+    {
+        List<UnifiedSearchHit> ordered = parts
+            .OrderBy(hit => hit.Chunk.StartLine)
+            .ThenBy(hit => hit.Chunk.EndLine)
+            .ToList();
+        UnifiedSearchHit first = ordered[0];
+        string? canonicalQualifiedName = first.Chunk.QualifiedName is { Length: > 0 } qualifiedName
+            ? SearchResultDiversifier.RemovePartSuffix(qualifiedName)
+            : null;
+        string? containingSymbol = canonicalQualifiedName is null
+            ? first.Chunk.ParentSymbol
+            : ContainingSymbol(canonicalQualifiedName);
+
+        CodeChunk combinedChunk = first.Chunk with
+        {
+            StartLine = ordered.Min(hit => hit.Chunk.StartLine),
+            EndLine = ordered.Max(hit => hit.Chunk.EndLine),
+            ChunkType = SearchResultDiversifier.BaseChunkType(first.Chunk.ChunkType),
+            SymbolName = first.Chunk.SymbolName is { Length: > 0 } symbolName
+                ? SearchResultDiversifier.RemovePartSuffix(symbolName)
+                : first.Chunk.SymbolName,
+            ParentSymbol = containingSymbol,
+            QualifiedName = canonicalQualifiedName,
+            Content = MergePartContent(ordered.Select(hit => hit.Chunk)),
+            CallsOut = ordered
+                .SelectMany(hit => hit.Chunk.CallsOut ?? [])
+                .Distinct()
+                .OrderBy(call => call.Line)
+                .ToList()
+        };
+
+        return new UnifiedSearchHit
+        {
+            Chunk = combinedChunk,
+            Score = ordered.Max(hit => hit.Score),
+            Source = SearchSource.DependencyGraph,
+            IsFresh = ordered.Any(hit => hit.IsFresh),
+            CachedAt = ordered.Max(hit => hit.CachedAt),
+            DependencyType = first.DependencyType
+        };
+    }
+
+    private static string? ContainingSymbol(string qualifiedName)
+    {
+        int memberSeparator = qualifiedName.LastIndexOf('.');
+        if (memberSeparator <= 0) return null;
+        string containingName = qualifiedName[..memberSeparator];
+        int typeSeparator = containingName.LastIndexOf('.');
+        return typeSeparator >= 0 ? containingName[(typeSeparator + 1)..] : containingName;
+    }
+
+    private static string MergePartContent(IEnumerable<CodeChunk> chunks)
+    {
+        var mergedLines = new List<string>();
+        int? lastEndLine = null;
+        foreach (CodeChunk chunk in chunks)
+        {
+            string[] lines = chunk.Content.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+            int overlap = lastEndLine is null ? 0 : Math.Max(0, lastEndLine.Value - chunk.StartLine + 1);
+            mergedLines.AddRange(lines.Skip(Math.Min(overlap, lines.Length)));
+            lastEndLine = Math.Max(lastEndLine ?? chunk.EndLine, chunk.EndLine);
+        }
+
+        return string.Join(Environment.NewLine, mergedLines);
+    }
+
     private static void AddDependencies(
         IEnumerable<SearchResult> results,
         string dependencyType,
@@ -330,6 +447,7 @@ public class UnifiedSearchResult
     public required int L2HitCount { get; init; }
     public required int TotalResultCount { get; init; }
     public required int CandidateCount { get; init; }
+    public required int DependencySeedCount { get; init; }
     public required TimeSpan Duration { get; init; }
     public required int HotFilesSearched { get; init; }
 }

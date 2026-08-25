@@ -4,6 +4,7 @@ using Mcp.Common.Core;
 using CodeAssist.Core.Caching;
 using CodeAssist.Core.Models;
 using CodeAssist.Core.Services;
+using CodeAssistMcp.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -19,6 +20,7 @@ public class IndexTools(
     FileWatcherService fileWatcher,
     L2PromotionService l2Promotion,
     ActiveRepositoryStore activeRepositoryStore,
+    RepositoryWatcherStartupService watcherStartup,
     ILogger<IndexTools> logger)
 {
     [McpServerTool, DisplayName("index_repository")]
@@ -188,6 +190,7 @@ public class IndexTools(
                 payloadIndexCheckError = ex.Message;
                 logger.LogWarning(ex, "Could not verify payload indexes for {Repository}", repositoryName);
             }
+            RepositoryReconciliationStatus? reconciliation = watcherStartup.GetStatus(state.RootPath);
 
             return JsonSerializer.Serialize(new
             {
@@ -216,6 +219,7 @@ public class IndexTools(
                     : missingPayloadIndexes is null ? (bool?)null : false,
                 missingPayloadIndexes,
                 payloadIndexCheckError,
+                reconciliation,
                 lastCommitSha = state.LastCommitSha,
                 includePatterns = state.IncludePatterns,
                 excludePatterns = state.ExcludePatterns

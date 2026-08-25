@@ -10,9 +10,10 @@ Updated 2026-08-25.
 
 ## Current working-tree state
 
-The uncommitted changes improve CodeAssist graph correctness, search quality, MCP response size,
-and index freshness reporting. Inspect them with `git diff` and `git status --short` before doing
-more work. No Release artifacts were changed.
+The uncommitted changes add repository reconciliation, per-collection writer coordination, quieter
+dependency expansion, and complete split-dependency consolidation. Inspect them with `git diff` and
+`git status --short` before doing more work. The Release artifacts were rebuilt after explicit
+approval and the final restart was verified live.
 
 Implemented behavior:
 
@@ -177,3 +178,40 @@ restart repository. `set_active_repository("McpServers")` then started its watch
 selection call, `get_watched_repositories` reported the `McpServers` path already watched,
 `restartRepository: "McpServers"`, zero pending promotions, and zero dropped promotions. Startup
 restoration is therefore verified end to end. The accompanying health check remained fully green.
+
+## Reconciliation and dependency-noise follow-up deployed
+
+The usefulness review after deployment found that watcher restoration only protected future edits:
+files created while the server was stopped were still absent until a manual refresh. It also found
+that dependency-expanded search returned split fragments of one method separately and expanded the
+call graphs of unrelated lower-ranked semantic hits.
+
+The working tree now addresses both findings in Debug:
+
+- Every newly started watcher (startup restoration, first search, or `set_active_repository`) queues
+  a deduplicated background incremental reconciliation. A `FileSystemWatcher` error queues the same
+  repair path, covering buffer overflow and other potentially lost event ranges.
+- `get_index_status` and search responses expose reconciliation state (`queued`, `running`,
+  `succeeded`, `partial`, `failed`, or `cancelled`) with timestamps and failure details, so searches
+  made before catch-up completes no longer look silently authoritative.
+- Repository indexing, watcher promotion, and watcher deletion share a per-collection write lease.
+  This prevents reconciliation and a concurrently captured edit from both snapshotting the same old
+  point generation and leaving duplicate new generations behind.
+- Search dependency expansion now uses only the highest-ranked result as its seed. Split dependency
+  chunks are merged into one logical method with canonical symbol/type metadata, merged line ranges,
+  overlap-free content, and deduplicated calls.
+
+Debug verification: `CodeAssistMcp` builds with 0 warnings and 0 errors. The core suite reports 129
+total tests, 125 passed, and the same 4 opt-in live-service tests skipped.
+
+The follow-up was deployed to Release after explicit approval on 2026-08-25. Live verification found
+one final boundary condition: qualified dependency lookup requested only three stored records per
+logical method, so a method with more split chunks could be consolidated from an incomplete set.
+The lookup now uses its bounded 100-record ceiling, after which the full suite passed again and the
+final Release build completed with 0 warnings and 0 errors.
+
+After the final restart, startup reconciliation reached `succeeded`, processed the changed file, and
+reported no failures. Exact lookup finds `ActiveRepositoryStore` without a manual refresh. A live
+dependency-expanded `ProcessPromotionQueueAsync` search uses one seed and returns exactly one
+`ProcessBatchAsync` callee covering lines 290-500, including the method signature and closing brace,
+with no unrelated `MiClient` dependency.

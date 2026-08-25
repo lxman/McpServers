@@ -64,9 +64,10 @@ public class IndexDuplicationRegressionTests : IAsyncLifetime
         var stateStore = new IndexStateStore(options, NullLogger<IndexStateStore>.Instance);
 
         // Parameter order matters: RepositoryIndexer takes ollama BEFORE qdrant.
-        _indexer = new RepositoryIndexer(ollama, _qdrant, chunkers, stateStore, options, NullLogger<RepositoryIndexer>.Instance);
+        var writeCoordinator = new CollectionWriteCoordinator();
+        _indexer = new RepositoryIndexer(ollama, _qdrant, chunkers, stateStore, writeCoordinator, options, NullLogger<RepositoryIndexer>.Instance);
         _hotCache = new HotCache(ollama, chunkers, options, NullLogger<HotCache>.Instance);
-        _promotion = new L2PromotionService(_hotCache, _qdrant, stateStore, options, NullLogger<L2PromotionService>.Instance);
+        _promotion = new L2PromotionService(_hotCache, _qdrant, stateStore, writeCoordinator, options, NullLogger<L2PromotionService>.Instance);
 
         return ValueTask.CompletedTask;
     }
