@@ -148,9 +148,11 @@ public sealed class IndexStateStore(
             IndexStateFile? state = JsonSerializer.Deserialize<IndexStateFile>(json);
             if (state is null) return;
 
+            DateTimeOffset promotedAt = DateTimeOffset.UtcNow;
             IndexStateFile updated = state with
             {
-                LastUpdatedAt = DateTimeOffset.UtcNow,
+                LastUpdatedAt = promotedAt,
+                LastPromotionAt = promotedAt,
                 LastCommitSha = commitSha ?? state.LastCommitSha
             };
 

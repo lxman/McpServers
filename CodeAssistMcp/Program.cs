@@ -1,5 +1,6 @@
 using CodeAssist.Core.Extensions;
 using CodeAssistMcp.McpTools;
+using CodeAssistMcp.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -25,6 +26,7 @@ try
 
     // Register CodeAssist services
     builder.Services.AddCodeAssistServices(builder.Configuration);
+    builder.Services.AddHostedService<RepositoryWatcherStartupService>();
 
     // Configure MCP server with STDIO transport
     builder.Services.AddMcpServer()

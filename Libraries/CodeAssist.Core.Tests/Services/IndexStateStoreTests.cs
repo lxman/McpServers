@@ -28,6 +28,7 @@ public class IndexStateStoreTests : IDisposable
         LastCommitSha = "aaaa111",
         CreatedAt = DateTimeOffset.UtcNow.AddDays(-2),
         LastUpdatedAt = lastUpdated,
+        LastFullIndexAt = lastUpdated,
         EmbeddingModel = "bge-base-en-v1.5",
         VectorDimension = 768,
         CollectionName = "myrepo",
@@ -72,6 +73,8 @@ public class IndexStateStoreTests : IDisposable
         Assert.NotNull(loaded);
         Assert.True(loaded.LastUpdatedAt > stale,
             "a promotion is an update and must advance lastUpdated. " + log.WarningReport);
+        Assert.True(loaded.LastPromotionAt > stale);
+        Assert.Equal(stale, loaded.LastFullIndexAt);
     }
 
     [Fact]

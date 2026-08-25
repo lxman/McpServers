@@ -34,9 +34,11 @@ public class DataFlowTools(
     /// <summary>
     /// Resolves a repository name to its IndexState, returning a JSON error string if not found.
     /// </summary>
-    private async Task<(IndexState? state, string? error)> ResolveRepository(string repositoryName)
+    private async Task<(IndexState? state, string? error)> ResolveRepository(
+        string repositoryName,
+        CancellationToken cancellationToken)
     {
-        IndexState? state = await indexer.GetIndexStateAsync(repositoryName);
+        IndexState? state = await indexer.GetIndexStateAsync(repositoryName, cancellationToken);
         if (state != null) return (state, null);
 
         string error = JsonSerializer.Serialize(new
@@ -54,36 +56,92 @@ public class DataFlowTools(
         string repositoryName,
         string startSymbol,
         string direction = "forward",
-        int maxDepth = 5)
+        int maxDepth = 5,
+        int limit = 200,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            (IndexState? state, string? error) = await ResolveRepository(repositoryName);
+            (IndexState? state, string? error) = await ResolveRepository(repositoryName, cancellationToken);
             if (state == null) return error!;
 
             logger.LogDebug("Tracing data flow {Direction} from {Symbol} in {Repository}",
                 direction, startSymbol, repositoryName);
 
-            await EnsureGraphAsync(state.CollectionName, CancellationToken.None);
+            CodeGraph graph = await EnsureGraphAsync(state.CollectionName, cancellationToken);
 
+            IReadOnlyList<string> resolvedIds = graph.ResolveSymbol(startSymbol);
+            if (resolvedIds.Count == 0)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    repositoryName,
+                    startSymbol,
+                    found = false,
+                    message = $"No symbol found matching '{startSymbol}'."
+                }, SerializerOptions.JsonOptionsIndented);
+            }
+
+            if (resolvedIds.Count > 1)
+                return SerializeAmbiguousSymbol(repositoryName, startSymbol, resolvedIds, graph);
+
+            int depthLimit = Math.Clamp(maxDepth, 1, 10);
+            int resultLimit = ClampLimit(limit, 500);
             FlowTraceResult result = direction.ToLowerInvariant() switch
             {
-                "forward" => graphService.TraceForward(state.CollectionName, startSymbol, maxDepth),
-                "backward" => graphService.TraceBackward(state.CollectionName, startSymbol, maxDepth),
-                "both" => graphService.TraceFullFlow(state.CollectionName, startSymbol, maxDepth),
+                "forward" => graphService.TraceForward(
+                    state.CollectionName, startSymbol, depthLimit, resultLimit),
+                "backward" => graphService.TraceBackward(
+                    state.CollectionName, startSymbol, depthLimit, resultLimit),
+                "both" => graphService.TraceFullFlow(
+                    state.CollectionName, startSymbol, depthLimit, resultLimit),
                 _ => throw new ArgumentException($"Invalid direction '{direction}'. Use 'forward', 'backward', or 'both'.")
             };
+            GraphNode? root = graph.GetNode(resolvedIds[0]);
+            var returnedNodeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (root != null)
+                returnedNodeIds.Add(root.Id);
+
+            var selectedSteps = new List<FlowStep>();
+            IEnumerable<FlowStep> orderedSteps = result.StepsByDepth
+                .SelectMany(kvp => kvp.Value)
+                .OrderBy(step => Math.Abs(step.Depth))
+                .ThenBy(step => step.Depth);
+            foreach (FlowStep step in orderedSteps)
+            {
+                if (returnedNodeIds.Count >= resultLimit) break;
+                if (!returnedNodeIds.Add(step.Node.Id)) continue;
+                selectedSteps.Add(step);
+            }
+
+            var limitedSteps = selectedSteps
+                .GroupBy(step => step.Depth)
+                .ToDictionary(group => group.Key, group => group.ToList());
+            List<GraphEdge> limitedEdges = result.AllEdges
+                .Where(edge => returnedNodeIds.Contains(edge.SourceId)
+                    && returnedNodeIds.Contains(edge.TargetId))
+                .Distinct()
+                .ToList();
+            int returnedNodes = returnedNodeIds.Count;
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 repositoryName,
+                found = true,
                 startSymbol = result.StartSymbol,
+                start = root == null ? null : FormatNodeSummary(root),
                 direction = result.Direction,
                 maxDepth = result.MaxDepth,
                 totalNodes = result.AllNodes.Count,
                 totalEdges = result.AllEdges.Count,
-                stepsByDepth = result.StepsByDepth.ToDictionary(
+                returnedNodes,
+                returnedEdges = limitedEdges.Count,
+                truncated = result.TraversalTruncated
+                    || result.AllNodes.Count > returnedNodes
+                    || result.AllEdges.Count > limitedEdges.Count,
+                stepsByDepth = limitedSteps.ToDictionary(
                     kvp => kvp.Key,
                     kvp => kvp.Value.Select(s => new
                     {
@@ -97,8 +155,12 @@ public class DataFlowTools(
                         edgeLabel = s.IncomingEdge?.Label,
                         depth = s.Depth
                     }).ToList()),
-                edges = result.AllEdges.Select(FormatEdge).ToList()
+                edges = limitedEdges.Select(FormatEdge).ToList()
             }, SerializerOptions.JsonOptionsIndented);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -111,16 +173,18 @@ public class DataFlowTools(
     [Description("Get the full inheritance and implementation hierarchy for a type. Shows base classes (upward) and subclasses/implementors (downward). Useful for understanding class hierarchies and interface implementations.")]
     public async Task<string> GetTypeHierarchy(
         string repositoryName,
-        string typeName)
+        string typeName,
+        int limit = 200,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            (IndexState? state, string? error) = await ResolveRepository(repositoryName);
+            (IndexState? state, string? error) = await ResolveRepository(repositoryName, cancellationToken);
             if (state == null) return error!;
 
             logger.LogDebug("Getting type hierarchy for {Type} in {Repository}", typeName, repositoryName);
 
-            CodeGraph graph = await EnsureGraphAsync(state.CollectionName, CancellationToken.None);
+            CodeGraph graph = await EnsureGraphAsync(state.CollectionName, cancellationToken);
 
             IReadOnlyList<string> resolvedIds = graph.ResolveSymbol(typeName);
             if (resolvedIds.Count == 0)
@@ -134,6 +198,9 @@ public class DataFlowTools(
                     message = $"No type found matching '{typeName}'."
                 }, SerializerOptions.JsonOptionsIndented);
             }
+
+            if (resolvedIds.Count > 1)
+                return SerializeAmbiguousSymbol(repositoryName, typeName, resolvedIds, graph);
 
             string typeId = resolvedIds[0];
             GraphNode? typeNode = graph.GetNode(typeId);
@@ -184,6 +251,19 @@ public class DataFlowTools(
                 .Select(n => FormatNodeSummary(n!))
                 .ToList();
 
+            int resultLimit = ClampLimit(limit, 500);
+            int totalRelationships = baseChain.Count + implementedInterfaces.Count
+                + subclasses.Count + implementors.Count;
+            List<object> returnedBaseClasses = baseChain.Take(resultLimit).ToList();
+            int remaining = resultLimit - returnedBaseClasses.Count;
+            List<object> returnedInterfaces = implementedInterfaces.Take(remaining).ToList();
+            remaining -= returnedInterfaces.Count;
+            List<object> returnedSubclasses = subclasses.Take(remaining).ToList();
+            remaining -= returnedSubclasses.Count;
+            List<object> returnedImplementors = implementors.Take(remaining).ToList();
+            int returned = returnedBaseClasses.Count + returnedInterfaces.Count
+                + returnedSubclasses.Count + returnedImplementors.Count;
+
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -191,11 +271,18 @@ public class DataFlowTools(
                 typeName,
                 found = true,
                 type = typeNode != null ? FormatNodeSummary(typeNode) : null,
-                baseClasses = baseChain,
-                implementedInterfaces,
-                subclasses,
-                implementors
+                relationshipCount = totalRelationships,
+                returned,
+                truncated = totalRelationships > returned,
+                baseClasses = returnedBaseClasses,
+                implementedInterfaces = returnedInterfaces,
+                subclasses = returnedSubclasses,
+                implementors = returnedImplementors
             }, SerializerOptions.JsonOptionsIndented);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -208,16 +295,18 @@ public class DataFlowTools(
     [Description("Find all concrete implementations of an interface or abstract class. Returns the types that implement the given interface or extend the given abstract class, with file locations.")]
     public async Task<string> FindImplementations(
         string repositoryName,
-        string interfaceName)
+        string interfaceName,
+        int limit = 200,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            (IndexState? state, string? error) = await ResolveRepository(repositoryName);
+            (IndexState? state, string? error) = await ResolveRepository(repositoryName, cancellationToken);
             if (state == null) return error!;
 
             logger.LogDebug("Finding implementations of {Interface} in {Repository}", interfaceName, repositoryName);
 
-            CodeGraph graph = await EnsureGraphAsync(state.CollectionName, CancellationToken.None);
+            CodeGraph graph = await EnsureGraphAsync(state.CollectionName, cancellationToken);
 
             IReadOnlyList<string> resolvedIds = graph.ResolveSymbol(interfaceName);
             if (resolvedIds.Count == 0)
@@ -233,7 +322,10 @@ public class DataFlowTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            // Collect implementors and subclasses across all resolved IDs
+            if (resolvedIds.Count > 1)
+                return SerializeAmbiguousSymbol(repositoryName, interfaceName, resolvedIds, graph);
+
+            // Collect implementors and subclasses for the resolved type.
             var implementations = new List<object>();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -280,6 +372,7 @@ public class DataFlowTools(
                 }
             }
 
+            int resultLimit = ClampLimit(limit, 500);
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -287,8 +380,14 @@ public class DataFlowTools(
                 interfaceName,
                 found = true,
                 count = implementations.Count,
-                implementations
+                returned = Math.Min(implementations.Count, resultLimit),
+                truncated = implementations.Count > resultLimit,
+                implementations = implementations.Take(resultLimit)
             }, SerializerOptions.JsonOptionsIndented);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -302,26 +401,54 @@ public class DataFlowTools(
     public async Task<string> ImpactAnalysis(
         string repositoryName,
         string symbolName,
-        int maxDepth = 5)
+        int maxDepth = 5,
+        int limit = 200,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            (IndexState? state, string? error) = await ResolveRepository(repositoryName);
+            (IndexState? state, string? error) = await ResolveRepository(repositoryName, cancellationToken);
             if (state == null) return error!;
 
             logger.LogDebug("Analyzing impact of {Symbol} in {Repository}", symbolName, repositoryName);
 
-            await EnsureGraphAsync(state.CollectionName, CancellationToken.None);
+            CodeGraph graph = await EnsureGraphAsync(state.CollectionName, cancellationToken);
 
-            ImpactResult result = graphService.AnalyzeImpact(state.CollectionName, symbolName, maxDepth);
+            IReadOnlyList<string> resolvedIds = graph.ResolveSymbol(symbolName);
+            if (resolvedIds.Count == 0)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    repositoryName,
+                    symbolName,
+                    found = false,
+                    message = $"No symbol found matching '{symbolName}'."
+                }, SerializerOptions.JsonOptionsIndented);
+            }
+
+            if (resolvedIds.Count > 1)
+                return SerializeAmbiguousSymbol(repositoryName, symbolName, resolvedIds, graph);
+
+            int resultLimit = ClampLimit(limit, 500);
+            ImpactResult result = graphService.AnalyzeImpact(
+                state.CollectionName, symbolName, Math.Clamp(maxDepth, 1, 10), resultLimit);
+            List<ImpactedNode> direct = result.DirectlyAffected.Take(resultLimit).ToList();
+            int remaining = resultLimit - direct.Count;
+            List<ImpactedNode> transitive = result.TransitivelyAffected.Take(remaining).ToList();
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 repositoryName,
+                found = true,
                 sourceSymbol = result.SourceSymbol,
+                source = FormatNodeSummary(graph.GetNode(resolvedIds[0])!),
                 totalAffected = result.TotalAffectedCount,
-                directlyAffected = result.DirectlyAffected.Select(n => new
+                returned = direct.Count + transitive.Count,
+                truncated = result.TraversalTruncated
+                    || result.TotalAffectedCount > direct.Count + transitive.Count,
+                directlyAffected = direct.Select(n => new
                 {
                     symbol = n.Node.SymbolName,
                     qualifiedName = n.Node.QualifiedName,
@@ -332,7 +459,7 @@ public class DataFlowTools(
                     relationship = n.Relationship.ToString(),
                     distance = n.Distance
                 }).ToList(),
-                transitivelyAffected = result.TransitivelyAffected.Select(n => new
+                transitivelyAffected = transitive.Select(n => new
                 {
                     symbol = n.Node.SymbolName,
                     qualifiedName = n.Node.QualifiedName,
@@ -345,6 +472,10 @@ public class DataFlowTools(
                 }).ToList()
             }, SerializerOptions.JsonOptionsIndented);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error analyzing impact of {Symbol} in {Repository}", symbolName, repositoryName);
@@ -354,18 +485,31 @@ public class DataFlowTools(
 
     [McpServerTool, DisplayName("get_system_overview")]
     [Description("Get a high-level overview of the system's architecture. Shows components (namespaces), their sizes, dependencies between them, cross-component edges, and entry points. Great for understanding the overall structure of a codebase.")]
-    public async Task<string> GetSystemOverview(string repositoryName)
+    public async Task<string> GetSystemOverview(
+        string repositoryName,
+        int maxComponents = 10,
+        int maxEntryPoints = 10,
+        bool includeTests = false,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            (IndexState? state, string? error) = await ResolveRepository(repositoryName);
+            (IndexState? state, string? error) = await ResolveRepository(repositoryName, cancellationToken);
             if (state == null) return error!;
 
             logger.LogDebug("Getting system overview for {Repository}", repositoryName);
 
-            await EnsureGraphAsync(state.CollectionName, CancellationToken.None);
+            await EnsureGraphAsync(state.CollectionName, cancellationToken);
 
             SystemOverview overview = graphService.GetSystemOverview(state.CollectionName);
+            int componentLimit = ClampLimit(maxComponents, 100);
+            int entryPointLimit = ClampLimit(maxEntryPoints, 200);
+            List<ComponentSummary> components = overview.Components
+                .Where(component => includeTests || !IsTestNamespace(component.Namespace))
+                .ToList();
+            List<GraphNode> entryPoints = overview.EntryPoints
+                .Where(node => includeTests || !IsTestNode(node))
+                .ToList();
 
             return JsonSerializer.Serialize(new
             {
@@ -374,7 +518,9 @@ public class DataFlowTools(
                 totalNodes = overview.TotalNodes,
                 totalEdges = overview.TotalEdges,
                 componentCount = overview.Components.Count,
-                components = overview.Components.Select(c => new
+                eligibleComponentCount = components.Count,
+                componentsReturned = Math.Min(components.Count, componentLimit),
+                components = components.Take(componentLimit).Select(c => new
                 {
                     @namespace = c.Namespace,
                     classCount = c.ClassCount,
@@ -383,12 +529,22 @@ public class DataFlowTools(
                     publicSymbolCount = c.PublicSymbols.Count,
                     incomingEdges = c.IncomingEdgeCount,
                     outgoingEdges = c.OutgoingEdgeCount,
-                    dependsOn = c.DependsOn,
-                    dependedOnBy = c.DependedOnBy
+                    dependsOnCount = c.DependsOn.Count,
+                    dependsOn = c.DependsOn.Take(10),
+                    dependedOnByCount = c.DependedOnBy.Count,
+                    dependedOnBy = c.DependedOnBy.Take(10)
                 }).ToList(),
                 crossComponentEdgeCount = overview.CrossComponentEdges.Count,
-                entryPoints = overview.EntryPoints.Select(FormatNodeSummary).ToList()
+                entryPointCount = overview.EntryPoints.Count,
+                eligibleEntryPointCount = entryPoints.Count,
+                entryPointsReturned = Math.Min(entryPoints.Count, entryPointLimit),
+                entryPoints = entryPoints.Take(entryPointLimit).Select(FormatNodeSummary).ToList(),
+                truncated = components.Count > componentLimit || entryPoints.Count > entryPointLimit
             }, SerializerOptions.JsonOptionsIndented);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -401,18 +557,21 @@ public class DataFlowTools(
     [Description("Get detailed information about a specific component (namespace). Shows class count, method count, public symbols, and dependency relationships with other components.")]
     public async Task<string> GetComponentDetail(
         string repositoryName,
-        string componentName)
+        string componentName,
+        int maxPublicSymbols = 50,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            (IndexState? state, string? error) = await ResolveRepository(repositoryName);
+            (IndexState? state, string? error) = await ResolveRepository(repositoryName, cancellationToken);
             if (state == null) return error!;
 
             logger.LogDebug("Getting component detail for {Component} in {Repository}", componentName, repositoryName);
 
-            await EnsureGraphAsync(state.CollectionName, CancellationToken.None);
+            await EnsureGraphAsync(state.CollectionName, cancellationToken);
 
             ComponentSummary component = graphService.GetComponentDetail(state.CollectionName, componentName);
+            int symbolLimit = ClampLimit(maxPublicSymbols, 200);
 
             return JsonSerializer.Serialize(new
             {
@@ -424,13 +583,21 @@ public class DataFlowTools(
                     classCount = component.ClassCount,
                     methodCount = component.MethodCount,
                     propertyCount = component.PropertyCount,
-                    publicSymbols = component.PublicSymbols,
+                    publicSymbolCount = component.PublicSymbols.Count,
+                    publicSymbols = component.PublicSymbols.Take(symbolLimit),
                     incomingEdges = component.IncomingEdgeCount,
                     outgoingEdges = component.OutgoingEdgeCount,
-                    dependsOn = component.DependsOn,
-                    dependedOnBy = component.DependedOnBy
+                    dependsOnCount = component.DependsOn.Count,
+                    dependsOn = component.DependsOn.Take(50),
+                    dependedOnByCount = component.DependedOnBy.Count,
+                    dependedOnBy = component.DependedOnBy.Take(50),
+                    truncated = component.PublicSymbols.Count > symbolLimit
                 }
             }, SerializerOptions.JsonOptionsIndented);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -441,25 +608,42 @@ public class DataFlowTools(
 
     [McpServerTool, DisplayName("find_entry_points")]
     [Description("Find entry points in the codebase — public methods and classes with no incoming call edges. These are typically API controllers, event handlers, Main methods, or other top-level entry points into the system.")]
-    public async Task<string> FindEntryPoints(string repositoryName)
+    public async Task<string> FindEntryPoints(
+        string repositoryName,
+        int limit = 50,
+        string? namespaceFilter = null,
+        bool includeTests = false,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            (IndexState? state, string? error) = await ResolveRepository(repositoryName);
+            (IndexState? state, string? error) = await ResolveRepository(repositoryName, cancellationToken);
             if (state == null) return error!;
 
             logger.LogDebug("Finding entry points in {Repository}", repositoryName);
 
-            await EnsureGraphAsync(state.CollectionName, CancellationToken.None);
+            await EnsureGraphAsync(state.CollectionName, cancellationToken);
 
             List<GraphNode> entryPoints = graphService.FindEntryPoints(state.CollectionName);
+            IEnumerable<GraphNode> filtered = entryPoints.Where(node => includeTests || !IsTestNode(node));
+            if (!string.IsNullOrWhiteSpace(namespaceFilter))
+            {
+                filtered = filtered.Where(node =>
+                    node.Namespace?.StartsWith(namespaceFilter, StringComparison.OrdinalIgnoreCase) == true);
+            }
+
+            List<GraphNode> matching = filtered.ToList();
+            int resultLimit = ClampLimit(limit, 200);
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 repositoryName,
-                count = entryPoints.Count,
-                entryPoints = entryPoints.Select(n => new
+                namespaceFilter,
+                count = matching.Count,
+                returned = Math.Min(matching.Count, resultLimit),
+                truncated = matching.Count > resultLimit,
+                entryPoints = matching.Take(resultLimit).Select(n => new
                 {
                     symbol = n.SymbolName,
                     qualifiedName = n.QualifiedName,
@@ -472,6 +656,10 @@ public class DataFlowTools(
                 }).ToList()
             }, SerializerOptions.JsonOptionsIndented);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error finding entry points in {Repository}", repositoryName);
@@ -481,31 +669,41 @@ public class DataFlowTools(
 
     [McpServerTool, DisplayName("detect_cycles")]
     [Description("Detect circular dependencies in the call graph. Returns all cycles found, where each cycle is the sequence of symbols forming the loop. Useful for identifying problematic circular dependencies that should be refactored.")]
-    public async Task<string> DetectCycles(string repositoryName)
+    public async Task<string> DetectCycles(
+        string repositoryName,
+        int limit = 50,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            (IndexState? state, string? error) = await ResolveRepository(repositoryName);
+            (IndexState? state, string? error) = await ResolveRepository(repositoryName, cancellationToken);
             if (state == null) return error!;
 
             logger.LogDebug("Detecting cycles in {Repository}", repositoryName);
 
-            await EnsureGraphAsync(state.CollectionName, CancellationToken.None);
+            await EnsureGraphAsync(state.CollectionName, cancellationToken);
 
             List<List<string>> cycles = graphService.DetectCycles(state.CollectionName);
+            int resultLimit = ClampLimit(limit, 200);
 
             return JsonSerializer.Serialize(new
             {
                 success = true,
                 repositoryName,
                 cycleCount = cycles.Count,
-                cycles = cycles.Select((cycle, index) => new
+                returned = Math.Min(cycles.Count, resultLimit),
+                truncated = cycles.Count > resultLimit,
+                cycles = cycles.Take(resultLimit).Select((cycle, index) => new
                 {
                     cycleNumber = index + 1,
                     length = cycle.Count - 1, // Last element repeats the first
                     symbols = cycle
                 }).ToList()
             }, SerializerOptions.JsonOptionsIndented);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -516,17 +714,21 @@ public class DataFlowTools(
 
     [McpServerTool, DisplayName("get_solution_structure")]
     [Description("Get the project-level structure of a solution. Shows all projects, their references (project and NuGet package), target frameworks, solution folder groupings, and which namespaces belong to each project. Requires the repository to be indexed first.")]
-    public async Task<string> GetSolutionStructure(string repositoryName)
+    public async Task<string> GetSolutionStructure(
+        string repositoryName,
+        int maxProjects = 50,
+        bool includePackageReferences = false,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            (IndexState? state, string? error) = await ResolveRepository(repositoryName);
+            (IndexState? state, string? error) = await ResolveRepository(repositoryName, cancellationToken);
             if (state == null) return error!;
 
             logger.LogDebug("Getting solution structure for {Repository}", repositoryName);
 
             // Ensure graph is built so namespace linking works
-            await EnsureGraphAsync(state.CollectionName, CancellationToken.None);
+            await EnsureGraphAsync(state.CollectionName, cancellationToken);
 
             // Check cache first, then analyze
             SolutionStructure? structure = graphService.GetSolutionStructure(state.CollectionName)
@@ -543,6 +745,8 @@ public class DataFlowTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
+            int projectLimit = ClampLimit(maxProjects, 200);
+
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -553,8 +757,9 @@ public class DataFlowTools(
                     name = structure.Name,
                     filePath = structure.FilePath,
                     projectCount = structure.Projects.Count,
+                    projectsReturned = Math.Min(structure.Projects.Count, projectLimit),
                     folderCount = structure.Folders.Count,
-                    projects = structure.Projects.Select(p => new
+                    projects = structure.Projects.Take(projectLimit).Select(p => new
                     {
                         name = p.Name,
                         relativePath = p.RelativePath,
@@ -562,20 +767,28 @@ public class DataFlowTools(
                         targetFramework = p.TargetFramework,
                         outputType = p.OutputType ?? "Library",
                         projectReferences = p.ProjectReferences,
-                        packageReferences = p.PackageReferences.Select(pkg => new
-                        {
-                            name = pkg.Name,
-                            version = pkg.Version
-                        }).ToList(),
-                        namespaces = p.Namespaces ?? []
+                        packageReferenceCount = p.PackageReferences.Count,
+                        packageReferences = includePackageReferences
+                            ? p.PackageReferences.Take(50).Select(pkg => new
+                            {
+                                name = pkg.Name,
+                                version = pkg.Version
+                            }).ToList()
+                            : null,
+                        namespaces = (p.Namespaces ?? []).Take(50)
                     }).ToList(),
                     folders = structure.Folders.Select(f => new
                     {
                         name = f.Name,
                         projects = f.ProjectNames
-                    }).ToList()
+                    }).ToList(),
+                    truncated = structure.Projects.Count > projectLimit
                 }
             }, SerializerOptions.JsonOptionsIndented);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -585,6 +798,38 @@ public class DataFlowTools(
     }
 
     // ── Formatting helpers ──────────────────────────────────────────
+
+    private static int ClampLimit(int value, int maximum) => Math.Clamp(value, 1, maximum);
+
+    private static bool IsTestNode(GraphNode node) =>
+        IsTestNamespace(node.Namespace)
+        || node.FilePath is { Length: > 0 } filePath && IndexPath.IsTestPath(filePath);
+
+    private static bool IsTestNamespace(string? value) => value?
+        .Split('.', StringSplitOptions.RemoveEmptyEntries)
+        .Any(segment => segment.Equals("Test", StringComparison.OrdinalIgnoreCase)
+            || segment.Equals("Tests", StringComparison.OrdinalIgnoreCase)) == true;
+
+    private static string SerializeAmbiguousSymbol(
+        string repositoryName,
+        string requestedSymbol,
+        IReadOnlyList<string> resolvedIds,
+        CodeGraph graph)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            success = false,
+            repositoryName,
+            requestedSymbol,
+            ambiguous = true,
+            message = "The symbol name is ambiguous. Retry with one of the qualified names.",
+            matches = resolvedIds.Take(50)
+                .Select(graph.GetNode)
+                .Where(node => node != null)
+                .Select(node => FormatNodeSummary(node!))
+                .ToList()
+        }, SerializerOptions.JsonOptionsIndented);
+    }
 
     private static object FormatNodeSummary(GraphNode node) => new
     {

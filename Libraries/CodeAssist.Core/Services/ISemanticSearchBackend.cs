@@ -17,6 +17,11 @@ public interface ISemanticSearchBackend
         IReadOnlyList<string> symbolNames,
         CancellationToken cancellationToken = default);
 
+    Task<List<SearchResult>> SearchByQualifiedNamesAsync(
+        string collectionName,
+        IReadOnlyList<string> qualifiedNames,
+        CancellationToken cancellationToken = default);
+
     Task<List<SearchResult>> SearchCallersOfAsync(
         string collectionName,
         string symbolName,

@@ -11,6 +11,7 @@ public sealed class FlowTraceResult
     public required Dictionary<int, List<FlowStep>> StepsByDepth { get; init; }
     public required List<GraphNode> AllNodes { get; init; }
     public required List<GraphEdge> AllEdges { get; init; }
+    public bool TraversalTruncated { get; init; }
 }
 
 /// <summary>

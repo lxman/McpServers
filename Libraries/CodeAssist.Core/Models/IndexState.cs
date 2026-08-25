@@ -31,6 +31,23 @@ public sealed record IndexState
     public required DateTimeOffset LastUpdatedAt { get; init; }
 
     /// <summary>
+    /// When a full or incremental repository refresh last updated the manifest, counts, and commit SHA.
+    /// Null for legacy state files until their next refresh.
+    /// </summary>
+    public DateTimeOffset? LastFullIndexAt { get; init; }
+
+    /// <summary>
+    /// When file-watcher changes were last promoted into the vector collection.
+    /// </summary>
+    public DateTimeOffset? LastPromotionAt { get; init; }
+
+    /// <summary>
+    /// Files that failed during the most recent manual index or refresh attempt.
+    /// An empty list means the attempt completed fully.
+    /// </summary>
+    public IReadOnlyList<string> LastIndexFailedFiles { get; init; } = [];
+
+    /// <summary>
     /// Total number of files indexed.
     /// </summary>
     public required int FileCount { get; init; }

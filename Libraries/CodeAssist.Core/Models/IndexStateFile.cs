@@ -14,6 +14,9 @@ public sealed record IndexStateFile
     public string? LastCommitSha { get; init; }
     public required DateTimeOffset CreatedAt { get; init; }
     public required DateTimeOffset LastUpdatedAt { get; init; }
+    public DateTimeOffset? LastFullIndexAt { get; init; }
+    public DateTimeOffset? LastPromotionAt { get; init; }
+    public IReadOnlyList<string> LastIndexFailedFiles { get; init; } = [];
     public required string EmbeddingModel { get; init; }
     public int? VectorDimension { get; init; }
     public required string CollectionName { get; init; }

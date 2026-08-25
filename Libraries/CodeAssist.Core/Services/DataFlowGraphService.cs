@@ -54,9 +54,7 @@ public sealed class DataFlowGraphService
 
                 List<CodeChunk> chunks = await _qdrant.ScrollAllChunksAsync(collectionName, cancellationToken);
 
-                var graph = new CodeGraph();
-                BuildNodesFromChunks(graph, chunks);
-                BuildEdgesFromChunks(graph, chunks);
+                CodeGraph graph = BuildGraphFromChunks(chunks);
 
                 if (!_graphs.TryStore(collectionName, version, graph))
                 {
@@ -237,31 +235,58 @@ public sealed class DataFlowGraphService
     /// <summary>
     /// Trace data flow forward from a symbol: what does it call, what data does it pass?
     /// </summary>
-    public FlowTraceResult TraceForward(string collectionName, string symbolId, int maxDepth = 5)
+    public FlowTraceResult TraceForward(
+        string collectionName,
+        string symbolId,
+        int maxDepth = 5,
+        int maxNodes = int.MaxValue)
     {
-        return TraceFlow(collectionName, symbolId, maxDepth, forward: true);
+        return TraceFlow(collectionName, symbolId, maxDepth, forward: true, maxNodes);
     }
 
     /// <summary>
     /// Trace data flow backward from a symbol: who calls it and with what data?
     /// </summary>
-    public FlowTraceResult TraceBackward(string collectionName, string symbolId, int maxDepth = 5)
+    public FlowTraceResult TraceBackward(
+        string collectionName,
+        string symbolId,
+        int maxDepth = 5,
+        int maxNodes = int.MaxValue)
     {
-        return TraceFlow(collectionName, symbolId, maxDepth, forward: false);
+        return TraceFlow(collectionName, symbolId, maxDepth, forward: false, maxNodes);
     }
 
     /// <summary>
     /// Trace data flow in both directions from a symbol.
     /// </summary>
-    public FlowTraceResult TraceFullFlow(string collectionName, string symbolId, int maxDepth = 5)
+    public FlowTraceResult TraceFullFlow(
+        string collectionName,
+        string symbolId,
+        int maxDepth = 5,
+        int maxNodes = int.MaxValue)
     {
-        FlowTraceResult forward = TraceFlow(collectionName, symbolId, maxDepth, forward: true);
-        FlowTraceResult backward = TraceFlow(collectionName, symbolId, maxDepth, forward: false);
+        FlowTraceResult forward = TraceFlow(collectionName, symbolId, maxDepth, forward: true, maxNodes);
+        FlowTraceResult backward = TraceFlow(collectionName, symbolId, maxDepth, forward: false, maxNodes);
+
+        return MergeFullFlowTraces(symbolId, maxDepth, forward, backward);
+    }
+
+    internal static FlowTraceResult MergeFullFlowTraces(
+        string symbolId,
+        int maxDepth,
+        FlowTraceResult forward,
+        FlowTraceResult backward)
+    {
 
         // Merge results
         var allNodes = new Dictionary<string, GraphNode>(StringComparer.OrdinalIgnoreCase);
         var allEdges = new List<GraphEdge>();
         var stepsByDepth = new Dictionary<int, List<FlowStep>>();
+
+        // Each one-way trace includes the root in AllNodes. Seed from those complete node sets
+        // rather than only from steps, which exclude the root by design.
+        foreach (GraphNode node in backward.AllNodes.Concat(forward.AllNodes))
+            allNodes.TryAdd(node.Id, node);
 
         // Backward steps get negative depth
         foreach ((int depth, List<FlowStep> steps) in backward.StepsByDepth)
@@ -289,7 +314,8 @@ public sealed class DataFlowGraphService
             MaxDepth = maxDepth,
             StepsByDepth = stepsByDepth,
             AllNodes = allNodes.Values.ToList(),
-            AllEdges = allEdges
+            AllEdges = allEdges.Distinct().ToList(),
+            TraversalTruncated = forward.TraversalTruncated || backward.TraversalTruncated
         };
     }
 
@@ -297,7 +323,11 @@ public sealed class DataFlowGraphService
     /// Analyze the impact of changing a symbol: what else is affected?
     /// Traces backward (who calls this?) and forward through inheritance/implementation.
     /// </summary>
-    public ImpactResult AnalyzeImpact(string collectionName, string symbolId, int maxDepth = 5)
+    public ImpactResult AnalyzeImpact(
+        string collectionName,
+        string symbolId,
+        int maxDepth = 5,
+        int maxNodes = int.MaxValue)
     {
         CodeGraph graph = GetGraphOrThrow(collectionName);
         IReadOnlyList<string> resolvedIds = graph.ResolveSymbol(symbolId);
@@ -315,6 +345,8 @@ public sealed class DataFlowGraphService
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { startId };
         var directlyAffected = new List<ImpactedNode>();
         var transitivelyAffected = new List<ImpactedNode>();
+        bool traversalTruncated = false;
+        maxNodes = Math.Max(1, maxNodes);
 
         // BFS backward through callers + forward through overrides/implementations
         var queue = new Queue<(string nodeId, int distance)>();
@@ -327,7 +359,15 @@ public sealed class DataFlowGraphService
             // Callers (backward through Calls edges)
             foreach (GraphEdge inEdge in graph.GetIncomingEdges(currentId))
             {
-                if (!visited.Add(inEdge.SourceId)) continue;
+                if (visited.Contains(inEdge.SourceId)) continue;
+                if (directlyAffected.Count + transitivelyAffected.Count >= maxNodes)
+                {
+                    traversalTruncated = true;
+                    queue.Clear();
+                    break;
+                }
+
+                visited.Add(inEdge.SourceId);
                 GraphNode? node = graph.GetNode(inEdge.SourceId);
                 if (node == null) continue;
 
@@ -348,39 +388,14 @@ public sealed class DataFlowGraphService
                     queue.Enqueue((inEdge.SourceId, newDistance));
             }
 
-            // Subclasses / implementors (forward through Inherits/Implements edges targeting us)
-            foreach (GraphEdge inEdge in graph.GetIncomingEdges(currentId))
-            {
-                if (inEdge.Kind is not (GraphEdgeKind.Inherits or GraphEdgeKind.Implements))
-                    continue;
-                if (!visited.Add(inEdge.SourceId)) continue;
-
-                GraphNode? node = graph.GetNode(inEdge.SourceId);
-                if (node == null) continue;
-
-                int newDistance = distance + 1;
-                var impacted = new ImpactedNode
-                {
-                    Node = node,
-                    Relationship = inEdge.Kind,
-                    Distance = newDistance
-                };
-
-                if (newDistance == 1)
-                    directlyAffected.Add(impacted);
-                else
-                    transitivelyAffected.Add(impacted);
-
-                if (newDistance < maxDepth)
-                    queue.Enqueue((inEdge.SourceId, newDistance));
-            }
         }
 
         return new ImpactResult
         {
             SourceSymbol = symbolId,
             DirectlyAffected = directlyAffected,
-            TransitivelyAffected = transitivelyAffected
+            TransitivelyAffected = transitivelyAffected,
+            TraversalTruncated = traversalTruncated
         };
     }
 
@@ -519,30 +534,52 @@ public sealed class DataFlowGraphService
     //  Private: Graph construction helpers
     // ────────────────────────────────────────────────────────────────
 
+    internal static CodeGraph BuildGraphFromChunks(List<CodeChunk> chunks)
+    {
+        var graph = new CodeGraph();
+        BuildNodesFromChunks(graph, chunks);
+        BuildEdgesFromChunks(graph, chunks);
+        return graph;
+    }
+
     private static void BuildNodesFromChunks(CodeGraph graph, List<CodeChunk> chunks)
     {
-        foreach (CodeChunk chunk in chunks)
+        IEnumerable<IGrouping<string, CodeChunk>> symbolGroups = chunks
+            .Select(chunk => (Id: BuildNodeId(chunk), Chunk: chunk))
+            .Where(item => !string.IsNullOrEmpty(item.Id))
+            .GroupBy(item => item.Id, item => item.Chunk, StringComparer.OrdinalIgnoreCase);
+
+        foreach (IGrouping<string, CodeChunk> group in symbolGroups)
         {
-            string nodeId = BuildNodeId(chunk);
-            if (string.IsNullOrEmpty(nodeId)) continue;
+            List<CodeChunk> symbolChunks = group.ToList();
+            CodeChunk representative = symbolChunks
+                .OrderBy(chunk => chunk.StartLine)
+                .ThenBy(chunk => chunk.EndLine)
+                .First();
 
             var node = new GraphNode
             {
-                Id = nodeId,
-                ChunkId = chunk.Id,
-                SymbolName = chunk.SymbolName ?? "",
-                QualifiedName = chunk.QualifiedName,
-                Namespace = chunk.Namespace,
-                ChunkType = chunk.ChunkType,
-                FilePath = chunk.RelativePath,
-                StartLine = chunk.StartLine,
-                EndLine = chunk.EndLine,
-                ParentSymbol = chunk.ParentSymbol,
-                ReturnType = chunk.ReturnType,
-                BaseType = chunk.BaseType,
-                ImplementedInterfaces = chunk.ImplementedInterfaces,
-                AccessModifier = chunk.AccessModifier,
-                Modifiers = chunk.Modifiers
+                Id = group.Key,
+                ChunkId = representative.Id,
+                SymbolName = GetCanonicalSymbolName(representative) ?? "",
+                QualifiedName = group.Key,
+                Namespace = representative.Namespace,
+                ChunkType = GetCanonicalChunkType(representative.ChunkType),
+                FilePath = representative.RelativePath,
+                StartLine = symbolChunks.Min(chunk => chunk.StartLine),
+                EndLine = symbolChunks.Max(chunk => chunk.EndLine),
+                ParentSymbol = GetCanonicalParentSymbol(representative),
+                ReturnType = symbolChunks.Select(chunk => chunk.ReturnType).FirstOrDefault(value => !string.IsNullOrEmpty(value)),
+                BaseType = symbolChunks.Select(chunk => chunk.BaseType).FirstOrDefault(value => !string.IsNullOrEmpty(value)),
+                ImplementedInterfaces = symbolChunks
+                    .SelectMany(chunk => chunk.ImplementedInterfaces ?? [])
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                AccessModifier = symbolChunks.Select(chunk => chunk.AccessModifier).FirstOrDefault(value => !string.IsNullOrEmpty(value)),
+                Modifiers = symbolChunks
+                    .SelectMany(chunk => chunk.Modifiers ?? [])
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList()
             };
 
             graph.AddNode(node);
@@ -560,19 +597,30 @@ public sealed class DataFlowGraphService
         // from Program.cs / ServiceCollectionExtensions.cs files.
         Dictionary<string, string> diMap = BuildDiServiceMap(chunks);
 
+        Dictionary<string, List<CodeChunk>> callableChunksByFile = chunks
+            .Where(chunk => IsCallableChunk(chunk.ChunkType))
+            .GroupBy(chunk => chunk.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+
         foreach (CodeChunk chunk in chunks)
         {
             string sourceId = BuildNodeId(chunk);
             if (string.IsNullOrEmpty(sourceId)) continue;
 
             // Determine the enclosing class for receiver type lookups
-            string? enclosingClass = chunk.ParentSymbol ?? chunk.SymbolName;
+            string? enclosingClass = GetEnclosingTypeName(chunk);
 
             // Calls edges
             if (chunk.CallsOut is { Count: > 0 })
             {
                 foreach (CallReference call in chunk.CallsOut)
                 {
+                    if (!IsCallableChunk(chunk.ChunkType)
+                        && HasNarrowerCallableOwner(callableChunksByFile, chunk, call.Line))
+                    {
+                        continue;
+                    }
+
                     IReadOnlyList<string> targetIds = ResolveCallTargets(
                         graph, call, enclosingClass, ctorParamMap, diMap);
                     foreach (string targetId in targetIds)
@@ -594,6 +642,12 @@ public sealed class DataFlowGraphService
             {
                 foreach (FieldAccess access in chunk.FieldAccesses)
                 {
+                    if (!IsCallableChunk(chunk.ChunkType)
+                        && HasNarrowerCallableOwner(callableChunksByFile, chunk, access.Line))
+                    {
+                        continue;
+                    }
+
                     IReadOnlyList<string> targetIds = ResolveFieldTargets(graph, access);
                     foreach (string targetId in targetIds)
                     {
@@ -613,7 +667,7 @@ public sealed class DataFlowGraphService
             if (!string.IsNullOrEmpty(chunk.BaseType))
             {
                 IReadOnlyList<string> baseIds = graph.ResolveSymbol(chunk.BaseType);
-                if (baseIds.Count > 0)
+                if (baseIds.Count == 1)
                 {
                     graph.AddEdge(new GraphEdge
                     {
@@ -631,7 +685,7 @@ public sealed class DataFlowGraphService
                 foreach (string iface in chunk.ImplementedInterfaces)
                 {
                     IReadOnlyList<string> ifaceIds = graph.ResolveSymbol(iface);
-                    if (ifaceIds.Count > 0)
+                    if (ifaceIds.Count == 1)
                     {
                         graph.AddEdge(new GraphEdge
                         {
@@ -719,28 +773,98 @@ public sealed class DataFlowGraphService
     private static string BuildNodeId(CodeChunk chunk)
     {
         if (!string.IsNullOrEmpty(chunk.QualifiedName))
-            return chunk.QualifiedName;
+            return RemovePartSuffix(chunk.QualifiedName);
 
         var parts = new List<string>();
         if (!string.IsNullOrEmpty(chunk.Namespace)) parts.Add(chunk.Namespace);
-        if (!string.IsNullOrEmpty(chunk.ParentSymbol)) parts.Add(chunk.ParentSymbol);
-        if (!string.IsNullOrEmpty(chunk.SymbolName)) parts.Add(chunk.SymbolName);
+        string? parent = GetCanonicalParentSymbol(chunk);
+        string? symbol = GetCanonicalSymbolName(chunk);
+        if (!string.IsNullOrEmpty(parent)) parts.Add(parent);
+        if (!string.IsNullOrEmpty(symbol)) parts.Add(symbol);
 
         return parts.Count > 0 ? string.Join(".", parts) : "";
     }
 
-    /// <summary>
-    /// Maximum number of ambiguous matches allowed for bare-name resolution.
-    /// Interface methods typically have 2-4 implementations; beyond this threshold
-    /// the name is too common (e.g., ToString, Add) to produce useful edges.
-    /// </summary>
-    private const int MaxAmbiguousResolutions = 10;
+    private static string? GetCanonicalSymbolName(CodeChunk chunk)
+    {
+        if (string.IsNullOrEmpty(chunk.SymbolName)) return null;
+        return RemovePartSuffix(chunk.SymbolName);
+    }
+
+    private static string GetCanonicalChunkType(string chunkType)
+    {
+        int partIndex = chunkType.LastIndexOf("_part", StringComparison.Ordinal);
+        if (partIndex < 0) return chunkType;
+
+        ReadOnlySpan<char> suffix = chunkType.AsSpan(partIndex + 5);
+        return !suffix.IsEmpty && suffix.IndexOfAnyExceptInRange('0', '9') < 0
+            ? chunkType[..partIndex]
+            : chunkType;
+    }
+
+    private static string RemovePartSuffix(string value)
+    {
+        const string marker = " (part ";
+        int markerIndex = value.LastIndexOf(marker, StringComparison.Ordinal);
+        if (markerIndex < 0 || value[^1] != ')') return value;
+
+        ReadOnlySpan<char> partNumber = value.AsSpan(markerIndex + marker.Length, value.Length - markerIndex - marker.Length - 1);
+        return !partNumber.IsEmpty && partNumber.IndexOfAnyExceptInRange('0', '9') < 0
+            ? value[..markerIndex]
+            : value;
+    }
+
+    private static string? GetCanonicalParentSymbol(CodeChunk chunk)
+    {
+        string canonicalType = GetCanonicalChunkType(chunk.ChunkType);
+        if (canonicalType is "class" or "record" or "struct" or "interface" or "enum")
+            return chunk.ChunkType == canonicalType ? chunk.ParentSymbol : null;
+
+        if (chunk.ChunkType == canonicalType)
+            return chunk.ParentSymbol;
+
+        string canonicalQualifiedName = !string.IsNullOrEmpty(chunk.QualifiedName)
+            ? RemovePartSuffix(chunk.QualifiedName)
+            : "";
+        int lastDot = canonicalQualifiedName.LastIndexOf('.');
+        if (lastDot < 0) return null;
+
+        string containingName = canonicalQualifiedName[..lastDot];
+        int containingDot = containingName.LastIndexOf('.');
+        return containingDot >= 0 ? containingName[(containingDot + 1)..] : containingName;
+    }
+
+    private static string? GetEnclosingTypeName(CodeChunk chunk)
+    {
+        string canonicalType = GetCanonicalChunkType(chunk.ChunkType);
+        return canonicalType is "class" or "record" or "struct" or "interface" or "enum"
+            ? GetCanonicalSymbolName(chunk)
+            : GetCanonicalParentSymbol(chunk);
+    }
+
+    private static bool IsCallableChunk(string chunkType)
+    {
+        string canonicalType = GetCanonicalChunkType(chunkType);
+        return canonicalType is "method" or "function" or "constructor" or "property";
+    }
+
+    private static bool HasNarrowerCallableOwner(
+        Dictionary<string, List<CodeChunk>> callableChunksByFile,
+        CodeChunk source,
+        int line)
+    {
+        return callableChunksByFile.TryGetValue(source.RelativePath, out List<CodeChunk>? candidates)
+            && candidates.Any(candidate =>
+                candidate.StartLine <= line
+                && candidate.EndLine >= line
+                && candidate.EndLine - candidate.StartLine < source.EndLine - source.StartLine);
+    }
 
     /// <summary>
     /// Resolve a call reference to target node IDs.
     /// Priority: QualifiedName > ReceiverType.MethodName > ConstructorParam resolution
     ///           > DI interface resolution > SymbolName lookup.
-    /// Returns all plausible targets so interface implementations get edges.
+    /// Ambiguous bare names remain unresolved rather than creating false edges.
     /// </summary>
     private static IReadOnlyList<string> ResolveCallTargets(
         CodeGraph graph,
@@ -758,7 +882,14 @@ public sealed class DataFlowGraphService
         {
             string compound = $"{call.ReceiverType}.{call.MethodName}";
             IReadOnlyList<string> resolved = graph.ResolveSymbol(compound);
-            if (resolved.Count > 0) return resolved;
+            if (resolved.Count == 1) return resolved;
+        }
+
+        // Unqualified calls usually target another member on the enclosing type.
+        if (string.IsNullOrEmpty(call.ReceiverExpression) && !string.IsNullOrEmpty(enclosingClass))
+        {
+            IReadOnlyList<string> resolved = graph.ResolveSymbol($"{enclosingClass}.{call.MethodName}");
+            if (resolved.Count == 1) return resolved;
         }
 
         // Try constructor parameter type resolution:
@@ -777,21 +908,21 @@ public sealed class DataFlowGraphService
                 // Direct type resolution: paramType.MethodName
                 string compound = $"{paramType}.{call.MethodName}";
                 IReadOnlyList<string> resolved = graph.ResolveSymbol(compound);
-                if (resolved.Count > 0) return resolved;
+                if (resolved.Count == 1) return resolved;
 
                 // If the param type is an interface, check the DI map for the concrete impl
                 if (diMap.TryGetValue(paramType, out string? implType))
                 {
                     compound = $"{implType}.{call.MethodName}";
                     resolved = graph.ResolveSymbol(compound);
-                    if (resolved.Count > 0) return resolved;
+                    if (resolved.Count == 1) return resolved;
                 }
             }
         }
 
-        // Fallback: bare method name — allow small ambiguity for interface impls
-        IReadOnlyList<string> byName = graph.ResolveSymbol(call.MethodName);
-        return byName.Count <= MaxAmbiguousResolutions ? byName : [];
+        // Repository-wide bare-name matching is not type resolution. Even a currently unique
+        // method name can belong to an unrelated type, so leave it unresolved.
+        return [];
     }
 
     /// <summary>
@@ -803,18 +934,24 @@ public sealed class DataFlowGraphService
         {
             string compound = $"{access.ContainingType}.{access.FieldName}";
             IReadOnlyList<string> resolved = graph.ResolveSymbol(compound);
-            if (resolved.Count > 0) return resolved;
+            if (resolved.Count == 1) return resolved;
         }
 
-        IReadOnlyList<string> byName = graph.ResolveSymbol(access.FieldName);
-        return byName.Count <= MaxAmbiguousResolutions ? byName : [];
+        // A field/property name without a resolved containing type is not a stable identity.
+        // Even a repository-wide unique name can belong to an unrelated type.
+        return [];
     }
 
     // ────────────────────────────────────────────────────────────────
     //  Private: Traversal helpers
     // ────────────────────────────────────────────────────────────────
 
-    private FlowTraceResult TraceFlow(string collectionName, string symbolId, int maxDepth, bool forward)
+    private FlowTraceResult TraceFlow(
+        string collectionName,
+        string symbolId,
+        int maxDepth,
+        bool forward,
+        int maxNodes)
     {
         CodeGraph graph = GetGraphOrThrow(collectionName);
 
@@ -837,6 +974,8 @@ public sealed class DataFlowGraphService
         var stepsByDepth = new Dictionary<int, List<FlowStep>>();
         var allNodes = new Dictionary<string, GraphNode>(StringComparer.OrdinalIgnoreCase);
         var allEdges = new List<GraphEdge>();
+        bool traversalTruncated = false;
+        maxNodes = Math.Max(1, maxNodes);
 
         // Add root node
         GraphNode? rootNode = graph.GetNode(startId);
@@ -846,7 +985,9 @@ public sealed class DataFlowGraphService
         // BFS
         var frontier = new List<string> { startId };
 
-        for (int depth = 1; depth <= maxDepth && frontier.Count > 0; depth++)
+        for (int depth = 1;
+             depth <= maxDepth && frontier.Count > 0 && !traversalTruncated;
+             depth++)
         {
             var stepsAtDepth = new List<FlowStep>();
             var nextFrontier = new List<string>();
@@ -860,7 +1001,14 @@ public sealed class DataFlowGraphService
                 foreach (GraphEdge edge in edges)
                 {
                     string neighborId = forward ? edge.TargetId : edge.SourceId;
-                    if (!visited.Add(neighborId)) continue;
+                    if (visited.Contains(neighborId)) continue;
+                    if (allNodes.Count >= maxNodes)
+                    {
+                        traversalTruncated = true;
+                        break;
+                    }
+
+                    visited.Add(neighborId);
 
                     GraphNode? neighbor = graph.GetNode(neighborId);
                     if (neighbor == null) continue;
@@ -892,7 +1040,8 @@ public sealed class DataFlowGraphService
             MaxDepth = maxDepth,
             StepsByDepth = stepsByDepth,
             AllNodes = allNodes.Values.ToList(),
-            AllEdges = allEdges
+            AllEdges = allEdges,
+            TraversalTruncated = traversalTruncated
         };
     }
 

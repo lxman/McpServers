@@ -33,25 +33,38 @@ public sealed class UnifiedSearchService(
         int limit = 10,
         float minScore = 0.5f,
         bool includeDependencies = false,
+        Func<CodeChunk, bool>? resultFilter = null,
         CancellationToken cancellationToken = default)
     {
         var stopwatch = Stopwatch.StartNew();
+        int requestedLimit = Math.Clamp(limit, 1, 100);
+        int candidateLimit = resultFilter == null
+            ? Math.Min(requestedLimit * 3, 100)
+            : Math.Min(Math.Max(requestedLimit * 20, 100), 500);
 
         // Generate query embedding once
         float[] queryEmbedding = await embeddingService.GetEmbeddingAsync(query, cancellationToken);
 
         // Search L1 (hot cache) - always fresh
         List<UnifiedSearchHit> l1Results = SearchL1(
-            queryEmbedding, repositoryRoot, limit, minScore, cancellationToken);
+            queryEmbedding, repositoryRoot, candidateLimit, minScore, cancellationToken);
 
         // Search L2 (Qdrant) - full codebase
         Task<List<UnifiedSearchHit>> l2Task = SearchL2Async(
-            qdrantService, collectionName, queryEmbedding, limit, minScore, cancellationToken);
+            qdrantService, collectionName, queryEmbedding, candidateLimit, minScore, cancellationToken);
 
         List<UnifiedSearchHit> l2Results = await l2Task;
 
+        if (resultFilter != null)
+        {
+            l1Results = l1Results.Where(hit => resultFilter(hit.Chunk)).ToList();
+            l2Results = l2Results.Where(hit => resultFilter(hit.Chunk)).ToList();
+        }
+
         // Merge results with L1 priority
-        List<UnifiedSearchHit> mergedResults = MergeResults(l1Results, l2Results, limit);
+        List<UnifiedSearchHit> mergedCandidates = MergeResults(
+            l1Results, l2Results, candidateLimit, hotCache.Get);
+        List<UnifiedSearchHit> mergedResults = SearchResultDiversifier.Diversify(mergedCandidates, requestedLimit);
 
         // Expand dependencies if requested
         List<UnifiedSearchHit>? dependencyResults = null;
@@ -70,6 +83,7 @@ public sealed class UnifiedSearchService(
             L1HitCount = l1Results.Count,
             L2HitCount = l2Results.Count,
             TotalResultCount = mergedResults.Count,
+            CandidateCount = mergedCandidates.Count,
             Duration = stopwatch.Elapsed,
             HotFilesSearched = hotCache.CountForRepository(repositoryRoot)
         };
@@ -140,16 +154,12 @@ public sealed class UnifiedSearchService(
         }).ToList();
     }
 
-    private List<UnifiedSearchHit> MergeResults(
+    internal static List<UnifiedSearchHit> MergeResults(
         List<UnifiedSearchHit> l1Results,
         List<UnifiedSearchHit> l2Results,
-        int limit)
+        int limit,
+        Func<string, CachedFile?> hotCacheLookup)
     {
-        // Build set of hot file paths for quick lookup
-        var hotFilePaths = new HashSet<string>(
-            l1Results.Select(r => r.Chunk.FilePath),
-            StringComparer.OrdinalIgnoreCase);
-
         var merged = new List<UnifiedSearchHit>();
 
         // Add all L1 results (always fresh)
@@ -158,12 +168,18 @@ public sealed class UnifiedSearchService(
         // Add L2 results, but replace content for hot files
         foreach (UnifiedSearchHit l2Hit in l2Results)
         {
-            // Skip if we already have this file from L1 (L1 has fresher content)
-            if (hotFilePaths.Contains(l2Hit.Chunk.FilePath))
+            // The cache itself, rather than the set of L1 results, is authoritative for whether a
+            // file is hot. A changed file may have no L1 hit for this query while its stale L2
+            // content still scores highly. Returning that payload would violate the freshness
+            // guarantee precisely when a rename or deletion removes the matching text.
+            CachedFile? cachedFile = string.IsNullOrWhiteSpace(l2Hit.Chunk.FilePath)
+                ? null
+                : hotCacheLookup(l2Hit.Chunk.FilePath);
+            if (cachedFile != null)
             {
                 // Check if this specific chunk is already in results
                 UnifiedSearchHit? existingChunk = merged.FirstOrDefault(m =>
-                    m.Chunk.FilePath == l2Hit.Chunk.FilePath &&
+                    m.Chunk.FilePath.Equals(l2Hit.Chunk.FilePath, StringComparison.OrdinalIgnoreCase) &&
                     m.Chunk.StartLine == l2Hit.Chunk.StartLine);
 
                 if (existingChunk != null)
@@ -174,26 +190,25 @@ public sealed class UnifiedSearchService(
 
                 // File is hot but this chunk isn't in L1 results
                 // Try to get fresh content from hot cache
-                CachedFile? cachedFile = hotCache.Get(l2Hit.Chunk.FilePath);
-                if (cachedFile != null)
-                {
-                    // Find matching chunk in cached file
-                    CodeChunk? freshChunk = cachedFile.Chunks.FirstOrDefault(c =>
-                        c.StartLine == l2Hit.Chunk.StartLine);
+                CodeChunk? freshChunk = cachedFile.Chunks.FirstOrDefault(c =>
+                    c.StartLine == l2Hit.Chunk.StartLine);
 
-                    if (freshChunk != null)
+                if (freshChunk != null)
+                {
+                    merged.Add(new UnifiedSearchHit
                     {
-                        merged.Add(new UnifiedSearchHit
-                        {
-                            Chunk = freshChunk,
-                            Score = l2Hit.Score,
-                            Source = SearchSource.L2WithL1Content, // L2 score, L1 content
-                            IsFresh = true,
-                            CachedAt = cachedFile.CachedAt
-                        });
-                        continue;
-                    }
+                        Chunk = freshChunk,
+                        Score = l2Hit.Score,
+                        Source = SearchSource.L2WithL1Content,
+                        IsFresh = true,
+                        CachedAt = cachedFile.CachedAt
+                    });
                 }
+
+                // If the old location no longer maps to a current chunk, the symbol/content was
+                // removed or moved. Drop the stale hit; L1 remains responsible for discovering its
+                // replacement under the new content and line layout.
+                continue;
             }
 
             // Add L2 result as-is
@@ -212,71 +227,93 @@ public sealed class UnifiedSearchService(
         List<UnifiedSearchHit> primaryHits,
         CancellationToken cancellationToken)
     {
-        // Collect all calls_out from primary hits (callees to look up)
-            var calleeNames = new HashSet<string>(StringComparer.Ordinal);
-            // Collect all symbol names from primary hits (to find callers of)
-            var primarySymbols = new HashSet<string>(StringComparer.Ordinal);
-            var primaryIds = new HashSet<Guid>();
+        var primaryIds = primaryHits.Select(hit => hit.Chunk.Id).ToHashSet();
+        var dependencyIds = new HashSet<Guid>();
+        var dependencies = new List<UnifiedSearchHit>();
 
-            foreach (UnifiedSearchHit hit in primaryHits)
+        List<string> qualifiedNames = BuildQualifiedCalleeNames(primaryHits);
+        if (qualifiedNames.Count > 0)
+        {
+            List<SearchResult> qualifiedCallees = await qdrantService.SearchByQualifiedNamesAsync(
+                collectionName, qualifiedNames, cancellationToken);
+            AddDependencies(qualifiedCallees, "callee", primaryIds, dependencyIds, dependencies);
+        }
+
+        foreach (UnifiedSearchHit primary in primaryHits.Where(hit =>
+                     !string.IsNullOrEmpty(hit.Chunk.SymbolName)
+                     && !string.IsNullOrEmpty(hit.Chunk.QualifiedName)))
+        {
+            string symbol = SearchResultDiversifier.RemovePartSuffix(primary.Chunk.SymbolName!);
+            string qualifiedName = SearchResultDiversifier.RemovePartSuffix(primary.Chunk.QualifiedName!);
+            List<SearchResult> callers = await qdrantService.SearchCallersOfAsync(
+                collectionName, symbol, cancellationToken);
+            IEnumerable<SearchResult> verifiedCallers = callers.Where(result =>
+                result.Chunk.CallsOut?.Any(call =>
+                    call.MethodName.Equals(symbol, StringComparison.Ordinal)
+                    && call.QualifiedName is { Length: > 0 } callName
+                    && SearchResultDiversifier.RemovePartSuffix(callName)
+                        .Equals(qualifiedName, StringComparison.OrdinalIgnoreCase)) == true);
+            AddDependencies(verifiedCallers, "caller", primaryIds, dependencyIds, dependencies);
+        }
+
+        return dependencies.Take(50).ToList();
+    }
+
+    internal static List<string> BuildQualifiedCalleeNames(IEnumerable<UnifiedSearchHit> primaryHits)
+    {
+        return primaryHits
+            .SelectMany(hit => (hit.Chunk.CallsOut ?? [])
+                .Select(call => ResolveQualifiedCalleeName(hit.Chunk, call)))
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name!)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static string? ResolveQualifiedCalleeName(CodeChunk source, CallReference call)
+    {
+        if (call.QualifiedName is { Length: > 0 })
+            return SearchResultDiversifier.RemovePartSuffix(call.QualifiedName);
+
+        if (call.ReceiverType is { Length: > 0 })
+            return $"{call.ReceiverType}.{call.MethodName}";
+
+        // Match the graph builder's conservative rule: only a genuinely unqualified call may be
+        // inferred as another member on the enclosing type. Requiring ParentSymbol avoids treating
+        // calls collected on a class/file aggregate as if its qualified name were a callable.
+        if (!string.IsNullOrEmpty(call.ReceiverExpression)
+            || string.IsNullOrEmpty(source.ParentSymbol)
+            || source.QualifiedName is not { Length: > 0 } sourceQualifiedName)
+        {
+            return null;
+        }
+
+        string canonicalSource = SearchResultDiversifier.RemovePartSuffix(sourceQualifiedName);
+        int memberSeparator = canonicalSource.LastIndexOf('.');
+        return memberSeparator > 0
+            ? $"{canonicalSource[..memberSeparator]}.{call.MethodName}"
+            : null;
+    }
+
+    private static void AddDependencies(
+        IEnumerable<SearchResult> results,
+        string dependencyType,
+        HashSet<Guid> primaryIds,
+        HashSet<Guid> dependencyIds,
+        List<UnifiedSearchHit> dependencies)
+    {
+        foreach (SearchResult result in results)
+        {
+            if (primaryIds.Contains(result.Chunk.Id) || !dependencyIds.Add(result.Chunk.Id)) continue;
+            dependencies.Add(new UnifiedSearchHit
             {
-                primaryIds.Add(hit.Chunk.Id);
-
-                if (hit.Chunk.CallsOut is { Count: > 0 })
-                {
-                    foreach (CallReference call in hit.Chunk.CallsOut)
-                        calleeNames.Add(call.MethodName);
-                }
-
-                if (!string.IsNullOrEmpty(hit.Chunk.SymbolName))
-                    primarySymbols.Add(hit.Chunk.SymbolName);
-            }
-
-            var depResults = new List<UnifiedSearchHit>();
-
-            // Find callee definitions (chunks whose symbol_name matches a calls_out entry)
-            if (calleeNames.Count > 0)
-            {
-                List<SearchResult> callees = await qdrantService.SearchBySymbolNamesAsync(
-                    collectionName, calleeNames.ToList(), cancellationToken);
-
-                foreach (SearchResult r in callees)
-                {
-                    if (primaryIds.Contains(r.Chunk.Id)) continue;
-                    depResults.Add(new UnifiedSearchHit
-                    {
-                        Chunk = r.Chunk,
-                        Score = r.Score,
-                        Source = SearchSource.DependencyGraph,
-                        IsFresh = false,
-                        DependencyType = "callee"
-                    });
-                }
-            }
-
-            // Find callers (chunks whose calls_out contains a primary symbol)
-            foreach (string symbol in primarySymbols)
-            {
-                List<SearchResult> callers = await qdrantService.SearchCallersOfAsync(
-                    collectionName, symbol, cancellationToken);
-
-                foreach (SearchResult r in callers)
-                {
-                    if (primaryIds.Contains(r.Chunk.Id)) continue;
-                    // Avoid duplicates in dependency results
-                    if (depResults.Any(d => d.Chunk.Id == r.Chunk.Id)) continue;
-                    depResults.Add(new UnifiedSearchHit
-                    {
-                        Chunk = r.Chunk,
-                        Score = r.Score,
-                        Source = SearchSource.DependencyGraph,
-                        IsFresh = false,
-                        DependencyType = "caller"
-                    });
-                }
-            }
-
-        return depResults;
+                Chunk = result.Chunk,
+                Score = result.Score,
+                Source = SearchSource.DependencyGraph,
+                IsFresh = false,
+                DependencyType = dependencyType
+            });
+        }
     }
 
 }
@@ -292,6 +329,7 @@ public class UnifiedSearchResult
     public required int L1HitCount { get; init; }
     public required int L2HitCount { get; init; }
     public required int TotalResultCount { get; init; }
+    public required int CandidateCount { get; init; }
     public required TimeSpan Duration { get; init; }
     public required int HotFilesSearched { get; init; }
 }

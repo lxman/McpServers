@@ -78,12 +78,13 @@ public sealed class RepositoryIndexer(
             logger.LogDebug("Discovering files...");
             // Discover files to index
             List<string> filesToProcess = DiscoverFiles(repositoryPath, includePatterns, excludePatterns);
+            cancellationToken.ThrowIfCancellationRequested();
 
             logger.LogInformation("Found {Count} files to process", filesToProcess.Count);
 
             // Categorize files
             (List<string> filesToAdd, List<string> filesToUpdate, List<string> filesToRemove, List<string> filesToSkip) =
-                CategorizeFiles(filesToProcess, existingFiles, repositoryPath);
+                CategorizeFiles(filesToProcess, existingFiles, repositoryPath, cancellationToken);
 
             logger.LogInformation(
                 "Files to add: {Add}, update: {Update}, remove: {Remove}, skip: {Skip}",
@@ -146,23 +147,18 @@ public sealed class RepositoryIndexer(
                             .ToList();
                         replacedChunkIds[relativePath] = oldIds;
 
-                        if (chunks.Count > 0)
+                        foreach (CodeChunk chunk in chunks)
                         {
-                            foreach (CodeChunk chunk in chunks)
-                            {
-                                allChunks.Add(chunk);
-                            }
-
-                            newFileStates[relativePath] = new IndexedFile
-                            {
-                                RelativePath = relativePath,
-                                ContentHash = ComputeFileHash(content),
-                                LastModified = fileInfo.LastWriteTimeUtc,
-                                IndexedAt = DateTimeOffset.UtcNow,
-                                ChunkCount = chunks.Count,
-                                ChunkIds = chunks.Select(c => c.Id).ToList()
-                            };
+                            allChunks.Add(chunk);
                         }
+
+                        // A successfully processed file belongs in the manifest even when its
+                        // chunker returns no searchable content (for example an empty or
+                        // declaration-free file). Omitting it makes every later refresh classify it
+                        // as newly added again. For an updated file, the empty state also records
+                        // that its previous points were deliberately retired.
+                        newFileStates[relativePath] = CreateIndexedFileState(
+                            relativePath, content, fileInfo.LastWriteTimeUtc, chunks);
 
                         activeFiles.TryRemove(relativePath, out _);
                         int count = Interlocked.Increment(ref processedCount);
@@ -179,6 +175,11 @@ public sealed class RepositoryIndexer(
                             logger.LogInformation("Chunked {Count}/{Total} ({Chunks} chunks, {Rate:F0}/sec){Stuck}",
                                 count, filesToChunk.Count, allChunks.Count, count / chunkSw.Elapsed.TotalSeconds, stuckInfo);
                         }
+                    }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                    {
+                        activeFiles.TryRemove(relativePath, out _);
+                        throw;
                     }
                     catch (Exception ex)
                     {
@@ -254,13 +255,17 @@ public sealed class RepositoryIndexer(
             // Save updated index state
             string? gitCommit = GetGitCommitSha(repositoryPath);
 
+            DateTimeOffset indexedAt = DateTimeOffset.UtcNow;
             var newState = new IndexStateFile
             {
                 RepositoryName = repositoryName,
                 RootPath = repositoryPath,
-                LastCommitSha = gitCommit,
+                LastCommitSha = failedFiles.Count == 0 ? gitCommit : existingState?.LastCommitSha,
                 CreatedAt = existingState?.CreatedAt ?? DateTimeOffset.UtcNow,
-                LastUpdatedAt = DateTimeOffset.UtcNow,
+                LastUpdatedAt = indexedAt,
+                LastFullIndexAt = ResolveLastFullIndexAt(existingState, indexedAt, failedFiles.Count),
+                LastPromotionAt = existingState?.LastPromotionAt,
+                LastIndexFailedFiles = failedFiles.ToList(),
                 EmbeddingModel = embeddingModel,
                 VectorDimension = dimensionProbe.Length,
                 CollectionName = collectionName,
@@ -291,6 +296,11 @@ public sealed class RepositoryIndexer(
                 sw.Elapsed, filesToAdd.Count, filesToUpdate.Count, filesToRemove.Count, totalChunks);
 
             return result;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.LogInformation("Indexing cancelled for repository {Repository}", repositoryName);
+            throw;
         }
         catch (Exception ex)
         {
@@ -359,6 +369,9 @@ public sealed class RepositoryIndexer(
             LastCommitSha = stateFile.LastCommitSha,
             CreatedAt = stateFile.CreatedAt,
             LastUpdatedAt = stateFile.LastUpdatedAt,
+            LastFullIndexAt = stateFile.LastFullIndexAt,
+            LastPromotionAt = stateFile.LastPromotionAt,
+            LastIndexFailedFiles = stateFile.LastIndexFailedFiles,
             FileCount = stateFile.Files.Count,
             ChunkCount = stateFile.Files.Values.Sum(f => f.ChunkCount),
             EmbeddingModel = stateFile.EmbeddingModel,
@@ -427,6 +440,31 @@ public sealed class RepositoryIndexer(
                 $"Index '{existingState.RepositoryName}' contains {indexedDimension}-dimension vectors, "
                 + $"but the embedding service now returns {actualDimension}. Delete and rebuild the index.");
         }
+    }
+
+    internal static DateTimeOffset? ResolveLastFullIndexAt(
+        IndexStateFile? existingState,
+        DateTimeOffset indexedAt,
+        int failedFileCount)
+    {
+        return failedFileCount == 0 ? indexedAt : existingState?.LastFullIndexAt;
+    }
+
+    internal static IndexedFile CreateIndexedFileState(
+        string relativePath,
+        string content,
+        DateTime lastModified,
+        IReadOnlyList<CodeChunk> chunks)
+    {
+        return new IndexedFile
+        {
+            RelativePath = relativePath,
+            ContentHash = ComputeFileHash(content),
+            LastModified = lastModified,
+            IndexedAt = DateTimeOffset.UtcNow,
+            ChunkCount = chunks.Count,
+            ChunkIds = chunks.Select(chunk => chunk.Id).ToList()
+        };
     }
 
     internal static async Task StoreBeforeRetiringAsync(
@@ -505,7 +543,8 @@ public sealed class RepositoryIndexer(
         CategorizeFiles(
             List<string> currentFiles,
             Dictionary<string, IndexedFile> existingFiles,
-            string repositoryPath)
+            string repositoryPath,
+            CancellationToken cancellationToken = default)
     {
         var toAdd = new List<string>();
         var toUpdate = new List<string>();
@@ -514,6 +553,7 @@ public sealed class RepositoryIndexer(
 
         foreach (string relativePath in currentFiles)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string fullPath = Path.Combine(repositoryPath, relativePath);
 
             if (!existingFiles.TryGetValue(relativePath, out IndexedFile? existingFile))
@@ -536,7 +576,11 @@ public sealed class RepositoryIndexer(
 
         // Files that exist in index but not on disk
         List<string> toRemove = existingFiles.Keys
-            .Where(f => !currentFileSet.Contains(f))
+            .Where(f =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return !currentFileSet.Contains(f);
+            })
             .ToList();
 
         return (toAdd, toUpdate, toRemove, toSkip);

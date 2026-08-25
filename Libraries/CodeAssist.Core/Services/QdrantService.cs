@@ -1,4 +1,5 @@
 using CodeAssist.Core.Configuration;
+using CodeAssist.Core.Caching;
 using CodeAssist.Core.Models;
 using Google.Protobuf.Collections;
 using Microsoft.Extensions.Logging;
@@ -119,8 +120,10 @@ public sealed class QdrantService : IQdrantWriter, ISemanticSearchBackend
                     },
                     cancellationToken: cancellationToken);
 
-                await EnsurePayloadIndexesAsync(collectionName, cancellationToken);
             }
+
+            // Also applies schema additions to existing collections during the next refresh.
+            await EnsurePayloadIndexesAsync(collectionName, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -160,6 +163,9 @@ public sealed class QdrantService : IQdrantWriter, ISemanticSearchBackend
                     ["end_line"] = chunk.EndLine,
                     ["chunk_type"] = chunk.ChunkType,
                     ["symbol_name"] = chunk.SymbolName ?? "",
+                    ["canonical_symbol_name"] = chunk.SymbolName is { Length: > 0 } symbolName
+                        ? SearchResultDiversifier.RemovePartSuffix(symbolName)
+                        : "",
                     ["parent_symbol"] = chunk.ParentSymbol ?? "",
                     ["language"] = chunk.Language,
                     ["content_hash"] = chunk.ContentHash,
@@ -185,6 +191,9 @@ public sealed class QdrantService : IQdrantWriter, ISemanticSearchBackend
                         : new Value { ListValue = new ListValue() },
                     ["namespace"] = chunk.Namespace ?? "",
                     ["qualified_name"] = chunk.QualifiedName ?? "",
+                    ["canonical_qualified_name"] = chunk.QualifiedName is { Length: > 0 } qualifiedName
+                        ? SearchResultDiversifier.RemovePartSuffix(qualifiedName)
+                        : "",
                     ["parameters"] = chunk.Parameters is { Count: > 0 }
                         ? new Value { ListValue = BuildParameterList(chunk.Parameters) }
                         : new Value { ListValue = new ListValue() },
@@ -533,9 +542,12 @@ public sealed class QdrantService : IQdrantWriter, ISemanticSearchBackend
         }
         catch (Exception ex)
         {
-            // Non-fatal — index may already exist or field type mismatch
-            _logger.LogWarning(ex, "Failed to create payload index on {Field} in {Collection} (may already exist)",
+            // EnsurePayloadIndexesAsync only calls this for fields Qdrant reports as missing, so an
+            // error here is not an ignorable "may already exist" condition. Filtering and exact
+            // deletes depend on these indexes and indexing must not report success without them.
+            _logger.LogError(ex, "Failed to create required payload index on {Field} in {Collection}",
                 fieldName, collectionName);
+            throw;
         }
     }
 
@@ -552,36 +564,149 @@ public sealed class QdrantService : IQdrantWriter, ISemanticSearchBackend
 
         try
         {
-            // Build OR filter: symbol_name matches any of the given names
-            var conditions = symbolNames.Select(name => new Condition
+            var conditions = symbolNames.SelectMany(name => new[]
             {
-                Field = new FieldCondition
+                new Condition
                 {
-                    Key = "symbol_name",
-                    Match = new Match { Keyword = name }
+                    Field = new FieldCondition
+                    {
+                        Key = "symbol_name",
+                        Match = new Match { Keyword = name }
+                    }
+                },
+                new Condition
+                {
+                    Field = new FieldCondition
+                    {
+                        Key = "canonical_symbol_name",
+                        Match = new Match { Keyword = name }
+                    }
                 }
             }).ToList();
 
             var filter = new Filter();
             filter.Should.AddRange(conditions);
 
+            uint resultLimit = (uint)Math.Min(Math.Max(symbolNames.Count * 10, 100), 500);
             ScrollResponse response = await GetClient().ScrollAsync(
                 collectionName,
                 filter: filter,
-                limit: (uint)Math.Min(symbolNames.Count * 3, 100),
+                limit: resultLimit,
                 cancellationToken: cancellationToken);
 
-            return response.Result.Select(r => new SearchResult
+            var requestedNames = symbolNames.ToHashSet(StringComparer.Ordinal);
+            List<SearchResult> exactResults = response.Result
+                .Select(r => new SearchResult
+                {
+                    Score = 0f, // Not vector-scored
+                    Chunk = BuildChunkFromPayload(r.Id.Uuid, r.Payload)
+                })
+                .ToList();
+
+            // Legacy fallback for split chunks indexed before canonical_symbol_name existed.
+            // Keep this separate from the primary query: parent_symbol also identifies every
+            // ordinary member's containing type and would otherwise flood class-name lookups.
+            var legacyFilter = new Filter();
+            legacyFilter.Should.AddRange(symbolNames.Select(name => new Condition
             {
-                Score = 0f, // Not vector-scored
-                Chunk = BuildChunkFromPayload(r.Id.Uuid, r.Payload)
-            }).ToList();
+                Field = new FieldCondition
+                {
+                    Key = "parent_symbol",
+                    Match = new Match { Keyword = name }
+                }
+            }));
+            ScrollResponse legacyResponse = await GetClient().ScrollAsync(
+                collectionName,
+                filter: legacyFilter,
+                limit: 500,
+                cancellationToken: cancellationToken);
+
+            List<SearchResult> legacyResults = legacyResponse.Result
+                .Select(r => new SearchResult
+                {
+                    Score = 0f,
+                    Chunk = BuildChunkFromPayload(r.Id.Uuid, r.Payload)
+                })
+                .ToList();
+
+            return MergeRequestedSymbolMatches(exactResults, legacyResults, requestedNames);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to search by symbol names in {Collection}", collectionName);
             throw;
         }
+    }
+
+    public async Task<List<SearchResult>> SearchByQualifiedNamesAsync(
+        string collectionName,
+        IReadOnlyList<string> qualifiedNames,
+        CancellationToken cancellationToken = default)
+    {
+        if (qualifiedNames.Count == 0) return [];
+
+        var conditions = qualifiedNames.SelectMany(name => new[]
+        {
+            new Condition
+            {
+                Field = new FieldCondition
+                {
+                    Key = "qualified_name",
+                    Match = new Match { Keyword = name }
+                }
+            },
+            new Condition
+            {
+                Field = new FieldCondition
+                {
+                    Key = "canonical_qualified_name",
+                    Match = new Match { Keyword = name }
+                }
+            }
+        }).ToList();
+        var filter = new Filter();
+        filter.Should.AddRange(conditions);
+
+        ScrollResponse response = await GetClient().ScrollAsync(
+            collectionName,
+            filter: filter,
+            limit: (uint)Math.Min(qualifiedNames.Count * 3, 100),
+            cancellationToken: cancellationToken);
+
+        var requestedNames = qualifiedNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        List<SearchResult> exactResults = response.Result.Select(result => new SearchResult
+        {
+            Score = 0f,
+            Chunk = BuildChunkFromPayload(result.Id.Uuid, result.Payload)
+        }).Where(result => MatchesRequestedQualifiedName(result.Chunk, requestedNames)).ToList();
+
+        HashSet<string> matchedNames = exactResults
+            .Select(result => GetCanonicalQualifiedName(result.Chunk))
+            .Where(name => name != null)
+            .Select(name => name!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        List<string> missingNames = qualifiedNames
+            .Where(name => !matchedNames.Contains(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (missingNames.Count == 0)
+            return exactResults;
+
+        // Legacy split chunks have a suffixed qualified_name and no canonical field. Resolve their
+        // base symbols through the legacy-aware symbol path, then verify the full canonical name so
+        // same-named members on unrelated types cannot leak into dependency expansion.
+        List<string> fallbackSymbols = missingNames
+            .Select(name => name[(name.LastIndexOf('.') + 1)..])
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        List<SearchResult> legacyCandidates = await SearchBySymbolNamesAsync(
+            collectionName, fallbackSymbols, cancellationToken);
+
+        return exactResults
+            .Concat(legacyCandidates.Where(result =>
+                MatchesRequestedQualifiedName(result.Chunk, requestedNames)))
+            .DistinctBy(result => result.Chunk.Id)
+            .ToList();
     }
 
     /// <summary>
@@ -886,29 +1011,96 @@ public sealed class QdrantService : IQdrantWriter, ISemanticSearchBackend
     /// Create payload indexes on all enriched fields for efficient graph queries.
     /// Idempotent — safe to call on existing collections.
     /// </summary>
+    public static IReadOnlyList<string> RequiredPayloadIndexFields { get; } =
+    [
+        "qualified_name",
+        "canonical_qualified_name",
+        "base_type",
+        "implemented_interfaces",
+        "namespace",
+        "return_type",
+        "access_modifier",
+        "calls_out_names",
+        "symbol_name",
+        "canonical_symbol_name",
+        "parent_symbol",
+        "chunk_type",
+        // Without this, every delete and every per-file scroll full-scans the collection.
+        "relative_path"
+    ];
+
     public async Task EnsurePayloadIndexesAsync(string collectionName, CancellationToken cancellationToken = default)
     {
-        string[] indexFields =
-        [
-            "qualified_name",
-            "base_type",
-            "implemented_interfaces",
-            "namespace",
-            "return_type",
-            "access_modifier",
-            "calls_out_names",
-            "calls_out",
-            "symbol_name",
-            "chunk_type",
-            // Without this, every delete and every per-file scroll full-scans the collection.
-            "relative_path"
-        ];
-
-        foreach (string field in indexFields)
+        List<string> missingFields = await GetMissingPayloadIndexesAsync(collectionName, cancellationToken);
+        foreach (string field in missingFields)
         {
             await CreatePayloadIndexAsync(collectionName, field, cancellationToken);
         }
+
+        List<string> stillMissing = await GetMissingPayloadIndexesAsync(collectionName, cancellationToken);
+        if (stillMissing.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Collection '{collectionName}' is missing required payload indexes: "
+                + string.Join(", ", stillMissing));
+        }
     }
+
+    public async Task<List<string>> GetMissingPayloadIndexesAsync(
+        string collectionName,
+        CancellationToken cancellationToken = default)
+    {
+        bool exists = await GetClient().CollectionExistsAsync(collectionName, cancellationToken);
+        if (!exists) return RequiredPayloadIndexFields.ToList();
+
+        CollectionInfo info = await GetClient().GetCollectionInfoAsync(collectionName, cancellationToken);
+        return FindMissingPayloadIndexes(info.PayloadSchema.Keys);
+    }
+
+    internal static List<string> FindMissingPayloadIndexes(IEnumerable<string> indexedFields)
+    {
+        HashSet<string> existing = indexedFields.ToHashSet(StringComparer.Ordinal);
+        return RequiredPayloadIndexFields.Where(field => !existing.Contains(field)).ToList();
+    }
+
+    internal static bool MatchesRequestedSymbol(CodeChunk chunk, IReadOnlySet<string> requestedNames)
+    {
+        if (chunk.SymbolName is not { Length: > 0 } symbolName)
+            return false;
+
+        string canonicalName = SearchResultDiversifier.RemovePartSuffix(symbolName);
+        if (requestedNames.Contains(canonicalName))
+            return true;
+
+        return SearchResultDiversifier.BaseChunkType(chunk.ChunkType) != chunk.ChunkType
+            && chunk.ParentSymbol is { Length: > 0 } parentSymbol
+            && requestedNames.Contains(parentSymbol);
+    }
+
+    internal static List<SearchResult> MergeRequestedSymbolMatches(
+        IEnumerable<SearchResult> exactResults,
+        IEnumerable<SearchResult> legacyResults,
+        IReadOnlySet<string> requestedNames)
+    {
+        return exactResults
+            .Concat(legacyResults)
+            .Where(result => MatchesRequestedSymbol(result.Chunk, requestedNames))
+            .DistinctBy(result => result.Chunk.Id)
+            .ToList();
+    }
+
+    internal static bool MatchesRequestedQualifiedName(
+        CodeChunk chunk,
+        IReadOnlySet<string> requestedNames)
+    {
+        string? canonicalName = GetCanonicalQualifiedName(chunk);
+        return canonicalName != null && requestedNames.Contains(canonicalName);
+    }
+
+    private static string? GetCanonicalQualifiedName(CodeChunk chunk) =>
+        chunk.QualifiedName is { Length: > 0 } qualifiedName
+            ? SearchResultDiversifier.RemovePartSuffix(qualifiedName)
+            : null;
 
     // ────────────────────────────────────────────────────────────────
     //  4c — Graph Query Methods

@@ -403,6 +403,9 @@ public sealed class L2PromotionService : IDisposable
                             ["end_line"] = chunk.EndLine,
                             ["chunk_type"] = chunk.ChunkType ?? "unknown",
                             ["symbol_name"] = chunk.SymbolName ?? "",
+                            ["canonical_symbol_name"] = chunk.SymbolName is { Length: > 0 } symbolName
+                                ? SearchResultDiversifier.RemovePartSuffix(symbolName)
+                                : "",
                             ["parent_symbol"] = chunk.ParentSymbol ?? "",
                             ["language"] = chunk.Language,
                             ["content_hash"] = chunk.ContentHash,
@@ -426,6 +429,9 @@ public sealed class L2PromotionService : IDisposable
                                 : new Value { ListValue = new ListValue() },
                             ["namespace"] = chunk.Namespace ?? "",
                             ["qualified_name"] = chunk.QualifiedName ?? "",
+                            ["canonical_qualified_name"] = chunk.QualifiedName is { Length: > 0 } qualifiedName
+                                ? SearchResultDiversifier.RemovePartSuffix(qualifiedName)
+                                : "",
                             ["parameters"] = chunk.Parameters is { Count: > 0 }
                                 ? new Value { ListValue = QdrantService.BuildParameterList(chunk.Parameters) }
                                 : new Value { ListValue = new ListValue() },

@@ -97,4 +97,23 @@ public class IndexPathTests
         // returned "./../a/b.cs" here. ".." must survive the extra pass the fix added.
         Assert.Equal("../a/b.cs", IndexPath.Normalize("/./../a/b.cs"));
     }
+
+    [Theory]
+    [InlineData("Tests/WorkerTests.cs")]
+    [InlineData("test/WorkerTests.cs")]
+    [InlineData("src/Product.Tests/WorkerTests.cs")]
+    [InlineData(@"Tests\WorkerTests.cs")]
+    public void IsTestPath_RecognizesConventionalTestDirectories(string path)
+    {
+        Assert.True(IndexPath.IsTestPath(path));
+    }
+
+    [Theory]
+    [InlineData("src/Contest/Worker.cs")]
+    [InlineData("src/Tests.cs")]
+    [InlineData("src/Product/Worker.cs")]
+    public void IsTestPath_DoesNotClassifyProductionPaths(string path)
+    {
+        Assert.False(IndexPath.IsTestPath(path));
+    }
 }

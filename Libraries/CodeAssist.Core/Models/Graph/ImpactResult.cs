@@ -9,6 +9,7 @@ public sealed class ImpactResult
     public required List<ImpactedNode> DirectlyAffected { get; init; }
     public required List<ImpactedNode> TransitivelyAffected { get; init; }
     public int TotalAffectedCount => DirectlyAffected.Count + TransitivelyAffected.Count;
+    public bool TraversalTruncated { get; init; }
 }
 
 /// <summary>

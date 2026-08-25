@@ -55,4 +55,27 @@ public static class IndexPath
 
         return normalized;
     }
+
+    /// <summary>
+    /// Returns whether a file path is located beneath a conventional test directory.
+    /// </summary>
+    public static bool IsTestPath(string filePath)
+    {
+        ArgumentNullException.ThrowIfNull(filePath);
+
+        string[] segments = Normalize(filePath)
+            .Split('/', StringSplitOptions.RemoveEmptyEntries);
+        for (var i = 0; i < segments.Length - 1; i++)
+        {
+            string segment = segments[i];
+            if (segment.Equals("test", StringComparison.OrdinalIgnoreCase)
+                || segment.Equals("tests", StringComparison.OrdinalIgnoreCase)
+                || segment.EndsWith(".Tests", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

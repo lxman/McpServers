@@ -40,6 +40,11 @@ public class UnifiedSearchFailureTests
             IReadOnlyList<string> symbolNames,
             CancellationToken cancellationToken = default) => Task.FromResult<List<SearchResult>>([]);
 
+        public Task<List<SearchResult>> SearchByQualifiedNamesAsync(
+            string collectionName,
+            IReadOnlyList<string> qualifiedNames,
+            CancellationToken cancellationToken = default) => Task.FromResult<List<SearchResult>>([]);
+
         public Task<List<SearchResult>> SearchCallersOfAsync(
             string collectionName,
             string symbolName,

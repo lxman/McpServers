@@ -15,8 +15,10 @@ namespace CodeAssistMcp.McpTools;
 [McpServerToolType]
 public class IndexTools(
     RepositoryIndexer indexer,
+    QdrantService qdrantService,
     FileWatcherService fileWatcher,
     L2PromotionService l2Promotion,
+    ActiveRepositoryStore activeRepositoryStore,
     ILogger<IndexTools> logger)
 {
     [McpServerTool, DisplayName("index_repository")]
@@ -25,7 +27,8 @@ public class IndexTools(
         string repositoryPath,
         string? repositoryName = null,
         string? includePatterns = null,
-        string? excludePatterns = null)
+        string? excludePatterns = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -43,14 +46,13 @@ public class IndexTools(
                 repositoryPath,
                 repositoryName,
                 includes,
-                excludes);
+                excludes,
+                cancellationToken);
 
             // Indexing a repository implies wanting it kept current, so start watching here rather
-            // than waiting for a search to do it lazily. Watch state lives in this process and does
-            // not survive a restart, so before this the window between "server restarted" and "someone
-            // happened to search" was untracked: edits in it never reached the L1 cache at all, and an
-            // index that had just been built started going stale immediately. Armed AFTER the index
-            // completes, so the run does not race its own file events. Both calls are idempotent.
+            // than waiting for a search to do it lazily. Persisting the repository name lets the host
+            // restore this watcher after a restart. Armed AFTER the index completes, so the run does
+            // not race its own file events. All three calls are idempotent.
             if (result.Success)
             {
                 string resolvedName = repositoryName ?? Path.GetFileName(repositoryPath.TrimEnd(
@@ -60,6 +62,7 @@ public class IndexTools(
                 fileWatcher.WatchRepository(fullPath, includes, excludes);
                 l2Promotion.RegisterRepositoryCollection(
                     fullPath, CollectionNaming.ForRepository(resolvedName));
+                activeRepositoryStore.TrySave(resolvedName);
             }
 
             return JsonSerializer.Serialize(new
@@ -76,6 +79,10 @@ public class IndexTools(
                 failedFiles = result.FailedFiles,
                 error = result.ErrorMessage
             }, SerializerOptions.JsonOptionsIndented);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -124,6 +131,11 @@ public class IndexTools(
                         fileCount = state.FileCount,
                         chunkCount = state.ChunkCount,
                         lastUpdated = state.LastUpdatedAt,
+                        lastFullIndexAt = state.LastFullIndexAt,
+                        lastPromotionAt = state.LastPromotionAt,
+                        manifestIsLegacy = state.LastFullIndexAt == null,
+                        lastIndexComplete = state.LastIndexFailedFiles.Count == 0,
+                        lastIndexFailedFiles = state.LastIndexFailedFiles,
                         embeddingModel = state.EmbeddingModel,
                         vectorDimension = state.VectorDimension,
                         lastCommitSha = state.LastCommitSha
@@ -164,6 +176,19 @@ public class IndexTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
+            List<string>? missingPayloadIndexes = null;
+            string? payloadIndexCheckError = null;
+            try
+            {
+                missingPayloadIndexes = await qdrantService.GetMissingPayloadIndexesAsync(
+                    state.CollectionName);
+            }
+            catch (Exception ex)
+            {
+                payloadIndexCheckError = ex.Message;
+                logger.LogWarning(ex, "Could not verify payload indexes for {Repository}", repositoryName);
+            }
+
             return JsonSerializer.Serialize(new
             {
                 success = true,
@@ -173,9 +198,24 @@ public class IndexTools(
                 chunkCount = state.ChunkCount,
                 createdAt = state.CreatedAt,
                 lastUpdatedAt = state.LastUpdatedAt,
+                lastFullIndexAt = state.LastFullIndexAt,
+                lastPromotionAt = state.LastPromotionAt,
+                manifestIsLegacy = state.LastFullIndexAt == null,
+                lastIndexComplete = state.LastIndexFailedFiles.Count == 0,
+                lastIndexFailedFiles = state.LastIndexFailedFiles,
+                manifestNote = state.LastIndexFailedFiles.Count > 0
+                    ? "The latest refresh was partial. lastFullIndexAt and commit SHA remain at the most recent complete refresh; see lastIndexFailedFiles."
+                    : state.LastFullIndexAt == null
+                        ? "Counts and commit SHA predate freshness tracking; refresh the index to establish their timestamp."
+                        : "File count, chunk count, and commit SHA are current as of lastFullIndexAt; watcher changes are current as of lastPromotionAt.",
                 embeddingModel = state.EmbeddingModel,
                 vectorDimension = state.VectorDimension,
                 collectionName = state.CollectionName,
+                payloadIndexesReady = missingPayloadIndexes is { Count: 0 }
+                    ? true
+                    : missingPayloadIndexes is null ? (bool?)null : false,
+                missingPayloadIndexes,
+                payloadIndexCheckError,
                 lastCommitSha = state.LastCommitSha,
                 includePatterns = state.IncludePatterns,
                 excludePatterns = state.ExcludePatterns
@@ -213,11 +253,13 @@ public class IndexTools(
 
     [McpServerTool, DisplayName("refresh_index")]
     [Description("Refresh an existing repository index by detecting and processing changed files. This is faster than a full re-index as it only processes files that have changed since the last index.")]
-    public async Task<string> RefreshIndex(string repositoryName)
+    public async Task<string> RefreshIndex(
+        string repositoryName,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            IndexState? state = await indexer.GetIndexStateAsync(repositoryName);
+            IndexState? state = await indexer.GetIndexStateAsync(repositoryName, cancellationToken);
 
             if (state == null)
             {
@@ -235,11 +277,21 @@ public class IndexTools(
                 state.RootPath,
                 repositoryName,
                 state.IncludePatterns,
-                state.ExcludePatterns);
+                state.ExcludePatterns,
+                cancellationToken);
+
+            if (result.Success)
+            {
+                fileWatcher.WatchRepository(
+                    state.RootPath, state.IncludePatterns, state.ExcludePatterns);
+                l2Promotion.RegisterRepositoryCollection(state.RootPath, state.CollectionName);
+                activeRepositoryStore.TrySave(state.RepositoryName);
+            }
 
             return JsonSerializer.Serialize(new
             {
                 success = result.Success,
+                complete = result.Success && result.FailedFiles.Count == 0,
                 repositoryName,
                 filesProcessed = result.FilesProcessed,
                 filesAdded = result.FilesAdded,
@@ -248,8 +300,13 @@ public class IndexTools(
                 filesSkipped = result.FilesSkipped,
                 totalChunks = result.TotalChunks,
                 duration = result.Duration.ToString(),
+                failedFiles = result.FailedFiles,
                 error = result.ErrorMessage
             }, SerializerOptions.JsonOptionsIndented);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

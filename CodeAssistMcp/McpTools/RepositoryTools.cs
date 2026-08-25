@@ -19,6 +19,7 @@ public class RepositoryTools(
     HotCache hotCache,
     RepositoryIndexer indexer,
     L2PromotionService l2Promotion,
+    ActiveRepositoryStore activeRepositoryStore,
     ILogger<RepositoryTools> logger)
 {
     [McpServerTool, DisplayName("set_active_repository")]
@@ -70,6 +71,7 @@ public class RepositoryTools(
             // .EnsureWatching always did both; this path only ever did the first. state.CollectionName
             // is the authoritative name the indexer actually created, so nothing is derived here.
             l2Promotion.RegisterRepositoryCollection(targetPath, state.CollectionName);
+            bool restartStateSaved = activeRepositoryStore.TrySave(state.RepositoryName);
 
             logger.LogInformation(
                 "Set active repository to {Repository} at {Path}. Stopped watching {StoppedCount} other repositories.",
@@ -82,6 +84,7 @@ public class RepositoryTools(
                 activePath = targetPath,
                 stoppedWatching,
                 clearedCaches,
+                restartStateSaved,
                 message = $"Now watching '{repositoryName}' exclusively"
             }, SerializerOptions.JsonOptionsIndented);
         }
@@ -100,6 +103,7 @@ public class RepositoryTools(
         {
             IReadOnlyList<string> watched = fileWatcher.GetWatchedRepositories();
             int hotCacheCount = hotCache.Count;
+            string? restartRepository = activeRepositoryStore.TryLoad();
 
             return Task.FromResult(JsonSerializer.Serialize(new
             {
@@ -108,6 +112,7 @@ public class RepositoryTools(
                 watchedCount = watched.Count,
                 hotCacheFileCount = hotCacheCount,
                 pendingPromotions = l2Promotion.PendingCount,
+                restartRepository,
                 // Non-zero means edits were cached but never written to Qdrant — they are lost on
                 // shutdown and the index is stale for those files. Should always be 0.
                 droppedPromotions = l2Promotion.DroppedPromotionCount
@@ -140,6 +145,8 @@ public class RepositoryTools(
                 cacheCleared = true;
             }
 
+            bool restartStateCleared = activeRepositoryStore.TryClear();
+
             logger.LogInformation(
                 "Stopped watching {Count} repositories. Cache cleared: {CacheCleared}",
                 watched.Count, cacheCleared);
@@ -150,6 +157,7 @@ public class RepositoryTools(
                 stoppedWatching = watched,
                 stoppedCount = watched.Count,
                 cacheCleared,
+                restartStateCleared,
                 message = watched.Count > 0
                     ? $"Stopped watching {watched.Count} repositories"
                     : "No repositories were being watched"

@@ -41,6 +41,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IQdrantWriter>(sp => sp.GetRequiredService<QdrantService>());
             services.AddSingleton<ISemanticSearchBackend>(sp => sp.GetRequiredService<QdrantService>());
             services.AddSingleton<IndexStateStore>();
+            services.AddSingleton<ActiveRepositoryStore>();
             services.AddSingleton<RepositoryIndexer>();
             services.AddSingleton<DataFlowGraphService>();
 
@@ -86,6 +87,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IQdrantWriter>(sp => sp.GetRequiredService<QdrantService>());
             services.AddSingleton<ISemanticSearchBackend>(sp => sp.GetRequiredService<QdrantService>());
             services.AddSingleton<IndexStateStore>();
+            services.AddSingleton<ActiveRepositoryStore>();
             services.AddSingleton<RepositoryIndexer>();
             services.AddSingleton<DataFlowGraphService>();
 

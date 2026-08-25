@@ -48,6 +48,9 @@ public sealed class CodeGraph
         if (!string.IsNullOrEmpty(node.SymbolName))
             IndexSymbolName(node.SymbolName, node.Id);
 
+        if (!string.IsNullOrEmpty(node.ParentSymbol) && !string.IsNullOrEmpty(node.SymbolName))
+            IndexSymbolName($"{node.ParentSymbol}.{node.SymbolName}", node.Id);
+
         // For split chunks (e.g., "class_part1"), also index by the original
         // unsplit symbol name stored in ParentSymbol so "QdrantService" resolves
         // to its split parts even though SymbolName is "QdrantService (part 1)".
@@ -92,6 +95,16 @@ public sealed class CodeGraph
             outList = [];
             _outgoing[edge.SourceId] = outList;
         }
+
+        if (outList.Any(existing =>
+                existing.TargetId.Equals(edge.TargetId, StringComparison.OrdinalIgnoreCase)
+                && existing.Kind == edge.Kind
+                && existing.Line == edge.Line
+                && string.Equals(existing.Label, edge.Label, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
         outList.Add(edge);
 
         if (!_incoming.TryGetValue(edge.TargetId, out List<GraphEdge>? inList))
@@ -224,6 +237,9 @@ public sealed class CodeGraph
 
         if (!string.IsNullOrEmpty(node.SymbolName))
             _symbolNameToNodes.GetValueOrDefault(node.SymbolName)?.Remove(nodeId);
+
+        if (!string.IsNullOrEmpty(node.ParentSymbol) && !string.IsNullOrEmpty(node.SymbolName))
+            _symbolNameToNodes.GetValueOrDefault($"{node.ParentSymbol}.{node.SymbolName}")?.Remove(nodeId);
 
         if (!string.IsNullOrEmpty(node.ParentSymbol)
             && node.ChunkType?.Contains("_part", StringComparison.Ordinal) == true)
