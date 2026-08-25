@@ -23,6 +23,12 @@ public sealed class IndexStateStore(
     ILogger<IndexStateStore> logger)
 {
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
+
+    // Backoff between attempts at the move below. This is insurance against a holder outside this
+    // process, which nothing here has actually demonstrated -- the in-process reader that did cause
+    // the failure is handled by LoadAsync taking the write lock, not by retrying. A short ladder
+    // clears a transient holder; anything still holding after roughly a second is not transient.
+    private static readonly int[] MoveRetryDelaysMs = [20, 50, 100, 200, 400];
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private readonly CodeAssistOptions _options = options.Value;
 
@@ -32,10 +38,18 @@ public sealed class IndexStateStore(
     public async Task<IndexStateFile?> LoadAsync(string repositoryName, CancellationToken cancellationToken = default)
     {
         string path = GetStatePath(repositoryName);
-        if (!File.Exists(path)) return null;
 
+        // Reads take the write lock too. Windows will not move a file onto a name that a reader
+        // holds open: measured over twenty rounds, a concurrent read broke the write every single
+        // time, and the same loop with no reader broke none. A lock-free read here is therefore not a
+        // passive observer, it is the thing that fails the write -- in this process, a background
+        // TouchAsync losing to a get_index_status call, with nothing external involved. Serialising
+        // costs a status call the tail of an in-flight write, which is milliseconds.
+        await _writeLock.WaitAsync(cancellationToken);
         try
         {
+            if (!File.Exists(path)) return null;
+
             string json = await File.ReadAllTextAsync(path, cancellationToken);
             return JsonSerializer.Deserialize<IndexStateFile>(json);
         }
@@ -47,6 +61,10 @@ public sealed class IndexStateStore(
             // success. Failing the operation is recoverable; silently duplicating it is not.
             logger.LogError(ex, "Index state at {Path} exists but could not be read", path);
             throw;
+        }
+        finally
+        {
+            _writeLock.Release();
         }
     }
 
@@ -108,15 +126,45 @@ public sealed class IndexStateStore(
     /// writes, so anything that interrupts it — a crash, a kill, a full disk — leaves a permanently
     /// truncated state file rather than a briefly inconsistent one. These files run to megabytes, so
     /// that window is not theoretical, and a lost state file costs a full reindex. Writing to a
-    /// sibling temp file and moving it into place makes the swap atomic on the same volume, which
-    /// also removes the torn-read window for callers that read without taking the write lock.
+    /// sibling temp file and moving it into place makes the swap atomic on the same volume.
+    ///
+    /// <para>The move cannot survive a reader holding the destination — measured over twenty rounds it
+    /// failed every time against one, under every share mode, and <see cref="File.Replace(string,string,string)"/>
+    /// is worse rather than better, failing roughly a third of the time entirely unopposed. That is
+    /// why <see cref="LoadAsync"/> takes the write lock instead of relying on share flags.</para>
+    ///
+    /// <para>The retry below is for a holder outside this process, which is plausible but was never
+    /// observed here. It matters because <see cref="SaveAsync"/> does not swallow and is the last step
+    /// of an index run whose chunks are already in Qdrant, so a lock clearing in milliseconds would
+    /// otherwise discard fifteen minutes of work. Note the failure is
+    /// <see cref="UnauthorizedAccessException"/>, not the <see cref="IOException"/> the name suggests.
+    /// Exhausting the attempts still throws — that is a real failure, and <see cref="TouchAsync"/>'s
+    /// catch remains the last resort for the stamp it can afford to lose.</para>
     /// </remarks>
-    private static async Task WriteAtomicAsync(string path, string contents, CancellationToken cancellationToken)
+    private async Task WriteAtomicAsync(string path, string contents, CancellationToken cancellationToken)
     {
         string tempPath = path + ".tmp";
 
         await File.WriteAllTextAsync(tempPath, contents, cancellationToken);
-        File.Move(tempPath, path, overwrite: true);
+
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                File.Move(tempPath, path, overwrite: true);
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+                                       && attempt < MoveRetryDelaysMs.Length)
+            {
+                logger.LogWarning(ex,
+                    "Could not move index state into place at {Path} (attempt {Attempt} of {Total}); "
+                    + "retrying in {Delay}ms",
+                    path, attempt + 1, MoveRetryDelaysMs.Length + 1, MoveRetryDelaysMs[attempt]);
+
+                await Task.Delay(MoveRetryDelaysMs[attempt], cancellationToken);
+            }
+        }
     }
 
     public void Delete(string repositoryName)
