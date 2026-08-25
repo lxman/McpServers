@@ -103,7 +103,9 @@ public sealed class OllamaService
                 throw new InvalidOperationException("Ollama returned no embeddings");
             }
 
-            return response.Embeddings[0];
+            float[] embedding = response.Embeddings[0];
+            ValidateEmbeddingDimension(embedding, _options.VectorDimension);
+            return embedding;
         }
         catch (Exception ex)
         {
@@ -138,7 +140,13 @@ public sealed class OllamaService
                     $"Ollama returned {response.Embeddings.Count} embeddings but expected {texts.Count}");
             }
 
-            return response.Embeddings.ToArray();
+            float[][] embeddings = response.Embeddings.ToArray();
+            foreach (float[] embedding in embeddings)
+            {
+                ValidateEmbeddingDimension(embedding, _options.VectorDimension);
+            }
+
+            return embeddings;
         }
         catch (Exception ex)
         {
@@ -210,4 +218,13 @@ public sealed class OllamaService
     /// Get the vector dimension for the configured embedding model.
     /// </summary>
     public int GetVectorDimension() => _options.VectorDimension;
+
+    internal static void ValidateEmbeddingDimension(float[] embedding, int expectedDimension)
+    {
+        if (embedding.Length == expectedDimension) return;
+
+        throw new InvalidOperationException(
+            $"Embedding service returned {embedding.Length}-dimension vectors, but VectorDimension "
+            + $"is configured as {expectedDimension}. Correct the configuration before indexing or searching.");
+    }
 }

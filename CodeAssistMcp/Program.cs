@@ -42,6 +42,7 @@ try
 catch (Exception ex)
 {
     Log.Fatal(ex, "CodeAssist MCP server terminated unexpectedly");
+    Environment.ExitCode = 1;
 }
 finally
 {

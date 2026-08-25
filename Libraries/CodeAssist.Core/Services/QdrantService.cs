@@ -12,8 +12,10 @@ namespace CodeAssist.Core.Services;
 /// Service for vector storage operations using Qdrant.
 /// Uses lazy client initialization with reconnection support.
 /// </summary>
-public sealed class QdrantService : IQdrantWriter
+public sealed class QdrantService : IQdrantWriter, ISemanticSearchBackend
 {
+    public event Action<string>? CollectionChanged;
+
     /// <summary>
     /// Default ceiling for the graph-query helpers. Before paging they were implicitly capped at one
     /// scroll page; without a cap the first caller of one of these would page an entire namespace's
@@ -193,6 +195,7 @@ public sealed class QdrantService : IQdrantWriter
             }).ToList();
 
             await GetClient().UpsertAsync(collectionName, points, cancellationToken: cancellationToken);
+            NotifyCollectionChanged(collectionName);
 
             _logger.LogDebug("Upserted {Count} chunks to collection {Collection}", chunks.Count, collectionName);
         }
@@ -281,12 +284,42 @@ public sealed class QdrantService : IQdrantWriter
                 collectionName,
                 BuildRelativePathFilter(relativePath),
                 cancellationToken: cancellationToken);
+            NotifyCollectionChanged(collectionName);
 
             _logger.LogDebug("Deleted chunks for file {FilePath} from collection {Collection}", relativePath, collectionName);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete chunks for file {FilePath} from collection {Collection}", relativePath, collectionName);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Delete a known set of points after their replacements have been stored.
+    /// </summary>
+    public async Task DeletePointsAsync(
+        string collectionName,
+        IReadOnlyList<Guid> pointIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (pointIds.Count == 0) return;
+
+        try
+        {
+            await GetClient().DeleteAsync(
+                collectionName,
+                pointIds,
+                cancellationToken: cancellationToken);
+            NotifyCollectionChanged(collectionName);
+
+            _logger.LogDebug("Deleted {Count} points from collection {Collection}",
+                pointIds.Count, collectionName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete {Count} points from collection {Collection}",
+                pointIds.Count, collectionName);
             throw;
         }
     }
@@ -437,6 +470,8 @@ public sealed class QdrantService : IQdrantWriter
                 await GetClient().DeleteCollectionAsync(collectionName, cancellationToken: cancellationToken);
                 _logger.LogInformation("Deleted collection {Collection}", collectionName);
             }
+
+            NotifyCollectionChanged(collectionName);
         }
         catch (Exception ex)
         {
@@ -545,7 +580,7 @@ public sealed class QdrantService : IQdrantWriter
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to search by symbol names in {Collection}", collectionName);
-            return [];
+            throw;
         }
     }
 
@@ -591,7 +626,7 @@ public sealed class QdrantService : IQdrantWriter
         {
             _logger.LogError(ex, "Failed to search callers of {Symbol} in {Collection}",
                 symbolName, collectionName);
-            return [];
+            throw;
         }
     }
 
@@ -1153,6 +1188,7 @@ public sealed class QdrantService : IQdrantWriter
             }).ToList();
 
             await GetClient().UpsertAsync(collectionName, qdrantPoints, cancellationToken: cancellationToken);
+            NotifyCollectionChanged(collectionName);
 
             _logger.LogDebug("Upserted {Count} pre-computed points to collection {Collection}",
                 points.Count, collectionName);
@@ -1162,6 +1198,19 @@ public sealed class QdrantService : IQdrantWriter
             _logger.LogError(ex, "Failed to upsert {Count} points to collection {Collection}",
                 points.Count, collectionName);
             throw;
+        }
+    }
+
+    private void NotifyCollectionChanged(string collectionName)
+    {
+        try
+        {
+            CollectionChanged?.Invoke(collectionName);
+        }
+        catch (Exception ex)
+        {
+            // Cache invalidation must never turn a completed Qdrant write into a reported write failure.
+            _logger.LogError(ex, "A collection-change observer failed for {Collection}", collectionName);
         }
     }
 }

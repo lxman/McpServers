@@ -57,7 +57,7 @@ public class IndexTools(
                     Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
                 string fullPath = Path.GetFullPath(repositoryPath);
 
-                if (!fileWatcher.IsWatching(fullPath)) fileWatcher.WatchRepository(fullPath);
+                fileWatcher.WatchRepository(fullPath, includes, excludes);
                 l2Promotion.RegisterRepositoryCollection(
                     fullPath, CollectionNaming.ForRepository(resolvedName));
             }
@@ -125,6 +125,7 @@ public class IndexTools(
                         chunkCount = state.ChunkCount,
                         lastUpdated = state.LastUpdatedAt,
                         embeddingModel = state.EmbeddingModel,
+                        vectorDimension = state.VectorDimension,
                         lastCommitSha = state.LastCommitSha
                     });
                 }
@@ -173,6 +174,7 @@ public class IndexTools(
                 createdAt = state.CreatedAt,
                 lastUpdatedAt = state.LastUpdatedAt,
                 embeddingModel = state.EmbeddingModel,
+                vectorDimension = state.VectorDimension,
                 collectionName = state.CollectionName,
                 lastCommitSha = state.LastCommitSha,
                 includePatterns = state.IncludePatterns,

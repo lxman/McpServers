@@ -21,9 +21,13 @@ public sealed class L2PromotionService : IDisposable
     private readonly CodeAssistOptions _options;
     private readonly ILogger<L2PromotionService> _logger;
     private readonly CancellationTokenSource _shutdownCts = new();
+    private readonly CancellationTokenSource _delayCts = new();
     private readonly Task _processingTask;
+    private readonly HotCache _hotCache;
     private readonly ConcurrentDictionary<string, string> _fileToCollection = new(); // repositoryRoot -> collectionName
     private bool _disposed;
+    private int _stopping;
+    private int _pendingEventEnqueues;
 
     public L2PromotionService(
         HotCache hotCache,
@@ -32,16 +36,18 @@ public sealed class L2PromotionService : IDisposable
         IOptions<CodeAssistOptions> options,
         ILogger<L2PromotionService> logger)
     {
+        _hotCache = hotCache;
         _qdrantService = qdrantService;
         _indexStateStore = indexStateStore;
         _options = options.Value;
         _logger = logger;
 
-        // Bounded channel to prevent memory issues
+        // Backpressure preserves every accepted edit while still bounding memory.
         _promotionQueue = Channel.CreateBounded<PromotionTask>(
-            new BoundedChannelOptions(1000)
+            new BoundedChannelOptions(Math.Max(1, _options.L2PromotionQueueCapacity))
             {
-                FullMode = BoundedChannelFullMode.DropOldest
+                FullMode = BoundedChannelFullMode.Wait,
+                SingleReader = true
             });
 
         // Subscribe to hot cache promotion events
@@ -96,7 +102,7 @@ public sealed class L2PromotionService : IDisposable
             QueuedAt = DateTime.UtcNow
         };
 
-        await _promotionQueue.Writer.WriteAsync(task);
+        await _promotionQueue.Writer.WriteAsync(task, _shutdownCts.Token);
         _logger.LogDebug("Queued {File} for L2 promotion to {Collection}",
             cachedFile.RelativePath, collectionName);
     }
@@ -186,7 +192,7 @@ public sealed class L2PromotionService : IDisposable
         }
     }
 
-    private void OnFileReadyForPromotion(object? sender, CachePromotionEventArgs e)
+    private async void OnFileReadyForPromotion(object? sender, CachePromotionEventArgs e)
     {
         if (!_options.EnableL2Promotion) return;
 
@@ -206,8 +212,27 @@ public sealed class L2PromotionService : IDisposable
             QueuedAt = DateTime.UtcNow
         };
 
-        // Non-blocking write - drops if queue is full
-        _promotionQueue.Writer.TryWrite(task);
+        if (Volatile.Read(ref _stopping) != 0)
+        {
+            Interlocked.Increment(ref _droppedPromotions);
+            return;
+        }
+
+        Interlocked.Increment(ref _pendingEventEnqueues);
+        try
+        {
+            await _promotionQueue.Writer.WriteAsync(task, _shutdownCts.Token);
+        }
+        catch (Exception ex) when (ex is ChannelClosedException or OperationCanceledException)
+        {
+            Interlocked.Increment(ref _droppedPromotions);
+            _logger.LogWarning("Promotion for {File} was rejected while the service was stopping",
+                e.CachedFile.RelativePath);
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _pendingEventEnqueues);
+        }
     }
 
     private async Task ProcessPromotionQueueAsync()
@@ -216,10 +241,10 @@ public sealed class L2PromotionService : IDisposable
 
         try
         {
-            while (!_shutdownCts.Token.IsCancellationRequested)
+            while (await _promotionQueue.Reader.WaitToReadAsync(_shutdownCts.Token))
             {
                 // Wait for first item
-                PromotionTask firstTask = await _promotionQueue.Reader.ReadAsync(_shutdownCts.Token);
+                if (!_promotionQueue.Reader.TryRead(out PromotionTask? firstTask)) continue;
                 batch.Add(firstTask);
 
                 // Collect more items up to batch size (non-blocking)
@@ -233,8 +258,17 @@ public sealed class L2PromotionService : IDisposable
                 await ProcessBatchAsync(batch);
                 batch.Clear();
 
-                // Delay between batches
-                await Task.Delay(_options.L2PromotionDelay, _shutdownCts.Token);
+                if (Volatile.Read(ref _stopping) == 0)
+                {
+                    try
+                    {
+                        await Task.Delay(_options.L2PromotionDelay, _delayCts.Token);
+                    }
+                    catch (OperationCanceledException) when (Volatile.Read(ref _stopping) != 0)
+                    {
+                        // Shutdown skips throttling so accepted work can drain promptly.
+                    }
+                }
             }
         }
         catch (OperationCanceledException)
@@ -480,18 +514,31 @@ public sealed class L2PromotionService : IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        _shutdownCts.Cancel();
+        Interlocked.Exchange(ref _stopping, 1);
+        _hotCache.FileReadyForPromotion -= OnFileReadyForPromotion;
+        _delayCts.Cancel();
+
+        // Event handlers may already be waiting for channel capacity. Keep the reader alive until
+        // they have either enqueued or observed shutdown, then close the writer and drain the queue.
+        var spinner = new SpinWait();
+        while (Volatile.Read(ref _pendingEventEnqueues) != 0)
+        {
+            spinner.SpinOnce();
+        }
+
+        _promotionQueue.Writer.TryComplete();
 
         try
         {
-            _processingTask.Wait(TimeSpan.FromSeconds(5));
+            _processingTask.GetAwaiter().GetResult();
         }
-        catch (AggregateException)
+        catch (OperationCanceledException)
         {
             // Expected on cancellation
         }
 
-        _promotionQueue.Writer.Complete();
+        _shutdownCts.Cancel();
+        _delayCts.Dispose();
         _shutdownCts.Dispose();
 
         _logger.LogInformation("L2PromotionService disposed");

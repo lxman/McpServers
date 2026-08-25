@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Xunit;
 
 namespace CodeAssist.Core.Tests.Integration;
@@ -9,7 +10,10 @@ namespace CodeAssist.Core.Tests.Integration;
 /// </summary>
 public sealed class RequiresLiveServicesFactAttribute : FactAttribute
 {
-    public RequiresLiveServicesFactAttribute()
+    public RequiresLiveServicesFactAttribute(
+        [CallerFilePath] string? sourceFilePath = null,
+        [CallerLineNumber] int sourceLineNumber = -1)
+        : base(sourceFilePath, sourceLineNumber)
     {
         if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("CODEASSIST_TEST_QDRANT_URL")) ||
             string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("CODEASSIST_TEST_OLLAMA_URL")))

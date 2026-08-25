@@ -24,13 +24,15 @@ public class SearchTools(
     /// <summary>
     /// Ensures the repository is being watched for file changes.
     /// </summary>
-    private void EnsureWatching(string rootPath, string collectionName)
+    private void EnsureWatching(IndexState state)
     {
-        if (!fileWatcher.IsWatching(rootPath))
+        bool wasWatching = fileWatcher.IsWatching(state.RootPath);
+        fileWatcher.WatchRepository(state.RootPath, state.IncludePatterns, state.ExcludePatterns);
+        l2Promotion.RegisterRepositoryCollection(state.RootPath, state.CollectionName);
+
+        if (!wasWatching)
         {
-            fileWatcher.WatchRepository(rootPath);
-            l2Promotion.RegisterRepositoryCollection(rootPath, collectionName);
-            logger.LogInformation("Started watching repository at {Path} for L1 cache updates", rootPath);
+            logger.LogInformation("Started watching repository at {Path} for L1 cache updates", state.RootPath);
         }
     }
 
@@ -58,10 +60,10 @@ public class SearchTools(
             }
 
             // Ensure we're watching this repository for L1 cache updates
-            EnsureWatching(state.RootPath, state.CollectionName);
+            EnsureWatching(state);
 
             UnifiedSearchResult response = await unifiedSearch.SearchAsync(
-                query, state.CollectionName, limit, minScore, includeDependencies);
+                query, state.CollectionName, state.RootPath, limit, minScore, includeDependencies);
 
             var results = response.Results.Select(FormatHit).ToList();
 
@@ -141,9 +143,10 @@ public class SearchTools(
                 }, SerializerOptions.JsonOptionsIndented);
             }
 
-            EnsureWatching(state.RootPath, state.CollectionName);
+            EnsureWatching(state);
 
-            UnifiedSearchResult response = await unifiedSearch.SearchAsync(codeSnippet, state.CollectionName, limit, minScore);
+            UnifiedSearchResult response = await unifiedSearch.SearchAsync(
+                codeSnippet, state.CollectionName, state.RootPath, limit, minScore);
 
             var results = response.Results.Select(FormatHit).ToList();
 
@@ -192,9 +195,10 @@ public class SearchTools(
 
             logger.LogDebug("Searching {Repository} for symbol: {Symbol}", repositoryName, symbolName);
 
-            EnsureWatching(state.RootPath, state.CollectionName);
+            EnsureWatching(state);
 
-            UnifiedSearchResult response = await unifiedSearch.SearchAsync(query, state.CollectionName, limit * 2, 0.3f);
+            UnifiedSearchResult response = await unifiedSearch.SearchAsync(
+                query, state.CollectionName, state.RootPath, limit * 2, 0.3f);
 
             // Filter results to those containing the symbol name
             var results = response.Results
@@ -257,9 +261,10 @@ public class SearchTools(
 
             logger.LogDebug("Explaining code area for '{Concept}' in {Repository}", concept, repositoryName);
 
-            EnsureWatching(state.RootPath, state.CollectionName);
+            EnsureWatching(state);
 
-            UnifiedSearchResult response = await unifiedSearch.SearchAsync(concept, state.CollectionName, limit, 0.4f);
+            UnifiedSearchResult response = await unifiedSearch.SearchAsync(
+                concept, state.CollectionName, state.RootPath, limit, 0.4f);
 
             var areas = response.Results.Select(r => new
             {

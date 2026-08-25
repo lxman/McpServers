@@ -51,7 +51,9 @@ public sealed class IndexStateStore(
             if (!File.Exists(path)) return null;
 
             string json = await File.ReadAllTextAsync(path, cancellationToken);
-            return JsonSerializer.Deserialize<IndexStateFile>(json);
+            IndexStateFile? state = JsonSerializer.Deserialize<IndexStateFile>(json);
+            ValidateRepositoryName(repositoryName, state);
+            return state;
         }
         catch (Exception ex)
         {
@@ -68,14 +70,60 @@ public sealed class IndexStateStore(
         }
     }
 
+    public async Task<List<string>> ListRepositoryNamesAsync(CancellationToken cancellationToken = default)
+    {
+        if (!Directory.Exists(_options.IndexStateDirectory)) return [];
+
+        await _writeLock.WaitAsync(cancellationToken);
+        try
+        {
+            var names = new List<string>();
+            foreach (string path in Directory.GetFiles(_options.IndexStateDirectory, "*.json"))
+            {
+                try
+                {
+                    string json = await File.ReadAllTextAsync(path, cancellationToken);
+                    IndexStateFile? state = JsonSerializer.Deserialize<IndexStateFile>(json);
+                    names.Add(state?.RepositoryName ?? Path.GetFileNameWithoutExtension(path));
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    // Keep corrupt files visible to list_indexes, which will attempt to load this
+                    // fallback name and report the detailed read error without hiding healthy indexes.
+                    logger.LogError(ex, "Could not read repository identity from {Path}", path);
+                    names.Add(Path.GetFileNameWithoutExtension(path));
+                }
+            }
+
+            return names;
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
     public async Task SaveAsync(string repositoryName, IndexStateFile state, CancellationToken cancellationToken = default)
     {
         string path = GetStatePath(repositoryName);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
+        ValidateRepositoryName(repositoryName, state);
+
         await _writeLock.WaitAsync(cancellationToken);
         try
         {
+            if (File.Exists(path))
+            {
+                string existingJson = await File.ReadAllTextAsync(path, cancellationToken);
+                IndexStateFile? existingState = JsonSerializer.Deserialize<IndexStateFile>(existingJson);
+                ValidateRepositoryName(repositoryName, existingState);
+            }
+
             await WriteAtomicAsync(path, JsonSerializer.Serialize(state, SerializerOptions), cancellationToken);
         }
         finally
@@ -173,11 +221,32 @@ public sealed class IndexStateStore(
 
         try
         {
-            if (File.Exists(path)) File.Delete(path);
+            if (!File.Exists(path)) return;
+
+            IndexStateFile? state = JsonSerializer.Deserialize<IndexStateFile>(File.ReadAllText(path));
+            ValidateRepositoryName(repositoryName, state);
+            File.Delete(path);
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to delete index state at {Path}", path);
         }
+    }
+
+    internal static void ValidateRepositoryName(string requestedName, IndexStateFile? state)
+    {
+        if (state is null || string.Equals(
+                requestedName, state.RepositoryName, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Repository name '{requestedName}' maps to the same collection and state file as "
+            + $"existing repository '{state.RepositoryName}'. Choose a distinct repository name.");
     }
 }

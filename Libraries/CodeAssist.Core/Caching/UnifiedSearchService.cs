@@ -15,7 +15,7 @@ namespace CodeAssist.Core.Caching;
 /// </summary>
 public sealed class UnifiedSearchService(
     HotCache hotCache,
-    QdrantService qdrantService,
+    ISemanticSearchBackend qdrantService,
     OllamaService embeddingService,
     IOptions<CodeAssistOptions> options,
     ILogger<UnifiedSearchService> logger)
@@ -29,6 +29,7 @@ public sealed class UnifiedSearchService(
     public async Task<UnifiedSearchResult> SearchAsync(
         string query,
         string collectionName,
+        string repositoryRoot,
         int limit = 10,
         float minScore = 0.5f,
         bool includeDependencies = false,
@@ -40,14 +41,13 @@ public sealed class UnifiedSearchService(
         float[] queryEmbedding = await embeddingService.GetEmbeddingAsync(query, cancellationToken);
 
         // Search L1 (hot cache) - always fresh
-        Task<List<UnifiedSearchHit>> l1Task = SearchL1Async(queryEmbedding, limit, minScore, cancellationToken);
+        List<UnifiedSearchHit> l1Results = SearchL1(
+            queryEmbedding, repositoryRoot, limit, minScore, cancellationToken);
 
         // Search L2 (Qdrant) - full codebase
-        Task<List<UnifiedSearchHit>> l2Task = SearchL2Async(collectionName, queryEmbedding, limit, minScore, cancellationToken);
+        Task<List<UnifiedSearchHit>> l2Task = SearchL2Async(
+            qdrantService, collectionName, queryEmbedding, limit, minScore, cancellationToken);
 
-        await Task.WhenAll(l1Task, l2Task);
-
-        List<UnifiedSearchHit> l1Results = await l1Task;
         List<UnifiedSearchHit> l2Results = await l2Task;
 
         // Merge results with L1 priority
@@ -71,7 +71,7 @@ public sealed class UnifiedSearchService(
             L2HitCount = l2Results.Count,
             TotalResultCount = mergedResults.Count,
             Duration = stopwatch.Elapsed,
-            HotFilesSearched = hotCache.Count
+            HotFilesSearched = hotCache.CountForRepository(repositoryRoot)
         };
 
         logger.LogDebug(
@@ -82,78 +82,62 @@ public sealed class UnifiedSearchService(
         return result;
     }
 
-    private async Task<List<UnifiedSearchHit>> SearchL1Async(
+    private List<UnifiedSearchHit> SearchL1(
         float[] queryEmbedding,
+        string repositoryRoot,
         int limit,
         float minScore,
         CancellationToken cancellationToken)
     {
         try
         {
-            List<HotCacheSearchResult> l1Results = await hotCache.SearchAsync(
-                "", // Query embedding already computed, pass empty string
+            List<HotCacheSearchResult> l1Results = hotCache.Search(
+                queryEmbedding,
+                repositoryRoot,
                 limit,
                 minScore,
                 cancellationToken);
 
-            // Re-score using the provided embedding
-            var results = new List<UnifiedSearchHit>();
-
-            foreach (HotCacheSearchResult r in l1Results)
+            return l1Results.Select(r => new UnifiedSearchHit
             {
-                float score = CosineSimilarity(queryEmbedding, r.Embedding);
-                if (score >= minScore)
-                {
-                    results.Add(new UnifiedSearchHit
-                    {
-                        Chunk = r.Chunk,
-                        Score = score,
-                        Source = SearchSource.L1HotCache,
-                        IsFresh = true,
-                        CachedAt = r.CachedFile.CachedAt
-                    });
-                }
-            }
-
-            return results.OrderByDescending(r => r.Score).Take(limit).ToList();
+                Chunk = r.Chunk,
+                Score = r.Score,
+                Source = SearchSource.L1HotCache,
+                IsFresh = true,
+                CachedAt = r.CachedFile.CachedAt
+            }).ToList();
         }
         catch (Exception ex)
         {
+            if (ex is OperationCanceledException) throw;
             logger.LogWarning(ex, "L1 search failed, continuing with L2 only");
             return [];
         }
     }
 
-    private async Task<List<UnifiedSearchHit>> SearchL2Async(
+    internal static async Task<List<UnifiedSearchHit>> SearchL2Async(
+        ISemanticSearchBackend qdrantService,
         string collectionName,
         float[] queryEmbedding,
         int limit,
         float minScore,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            List<SearchResult> l2Results = await qdrantService.SearchAsync(
-                collectionName,
-                queryEmbedding,
-                limit,
-                minScore,
-                cancellationToken: cancellationToken);
+        List<SearchResult> l2Results = await qdrantService.SearchAsync(
+            collectionName,
+            queryEmbedding,
+            limit,
+            minScore,
+            cancellationToken: cancellationToken);
 
-            return l2Results.Select(r => new UnifiedSearchHit
-            {
-                Chunk = r.Chunk,
-                Score = r.Score,
-                Source = SearchSource.L2Qdrant,
-                IsFresh = false, // Will be updated if file is in hot cache
-                CachedAt = null
-            }).ToList();
-        }
-        catch (Exception ex)
+        return l2Results.Select(r => new UnifiedSearchHit
         {
-            logger.LogWarning(ex, "L2 search failed for collection {Collection}", collectionName);
-            return [];
-        }
+            Chunk = r.Chunk,
+            Score = r.Score,
+            Source = SearchSource.L2Qdrant,
+            IsFresh = false,
+            CachedAt = null
+        }).ToList();
     }
 
     private List<UnifiedSearchHit> MergeResults(
@@ -228,9 +212,7 @@ public sealed class UnifiedSearchService(
         List<UnifiedSearchHit> primaryHits,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            // Collect all calls_out from primary hits (callees to look up)
+        // Collect all calls_out from primary hits (callees to look up)
             var calleeNames = new HashSet<string>(StringComparer.Ordinal);
             // Collect all symbol names from primary hits (to find callers of)
             var primarySymbols = new HashSet<string>(StringComparer.Ordinal);
@@ -294,33 +276,9 @@ public sealed class UnifiedSearchService(
                 }
             }
 
-            return depResults;
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to expand dependencies for search results");
-            return [];
-        }
+        return depResults;
     }
 
-    private static float CosineSimilarity(float[] a, float[] b)
-    {
-        if (a.Length != b.Length) return 0;
-
-        float dotProduct = 0;
-        float normA = 0;
-        float normB = 0;
-
-        for (var i = 0; i < a.Length; i++)
-        {
-            dotProduct += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
-        }
-
-        float denominator = MathF.Sqrt(normA) * MathF.Sqrt(normB);
-        return denominator == 0 ? 0 : dotProduct / denominator;
-    }
 }
 
 /// <summary>

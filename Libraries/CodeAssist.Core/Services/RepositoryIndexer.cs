@@ -55,18 +55,25 @@ public sealed class RepositoryIndexer(
             // Ensure embedding model is available
             await ollamaService.EnsureModelAvailableAsync(cancellationToken);
 
+            logger.LogDebug("Loading index state...");
+            // Load existing index state
+            IndexStateFile? existingState = await indexStateStore.LoadAsync(repositoryName, cancellationToken);
+            ValidateRepositoryRoot(existingState, repositoryPath);
+            Dictionary<string, IndexedFile> existingFiles = existingState?.Files ?? new Dictionary<string, IndexedFile>();
+
+            string embeddingModel =
+                await ollamaService.ResolveServerModelAsync(cancellationToken) ?? _options.EmbeddingModel;
+            float[] dimensionProbe = await ollamaService.GetEmbeddingAsync("codeassist dimension probe", cancellationToken);
+            ValidateEmbeddingCompatibility(existingState, embeddingModel, dimensionProbe.Length, _options.VectorDimension);
+
             logger.LogDebug("Ensuring collection exists...");
-            // Ensure collection exists
+            // Ensure collection exists only after compatibility checks. A failed check must not mutate
+            // an existing index or create a collection that cannot accept the server's vectors.
             await qdrantService.EnsureCollectionAsync(collectionName, cancellationToken);
 
             // One list, one place. Indexes were previously created here AND in EnsurePayloadIndexesAsync
             // with different field sets, so which fields were indexed depended on which path ran.
             await qdrantService.EnsurePayloadIndexesAsync(collectionName, cancellationToken);
-
-            logger.LogDebug("Loading index state...");
-            // Load existing index state
-            IndexStateFile? existingState = await indexStateStore.LoadAsync(repositoryName, cancellationToken);
-            Dictionary<string, IndexedFile> existingFiles = existingState?.Files ?? new Dictionary<string, IndexedFile>();
 
             logger.LogDebug("Discovering files...");
             // Discover files to index
@@ -91,6 +98,7 @@ public sealed class RepositoryIndexer(
             // Process new and updated files in parallel
             var allChunks = new ConcurrentBag<CodeChunk>();
             var newFileStates = new ConcurrentDictionary<string, IndexedFile>();
+            var replacedChunkIds = new ConcurrentDictionary<string, IReadOnlyList<Guid>>();
             var failedFilesBag = new ConcurrentBag<string>();
 
             List<string> filesToChunk = filesToAdd.Concat(filesToUpdate).ToList();
@@ -120,21 +128,23 @@ public sealed class RepositoryIndexer(
                         logger.LogDebug("Read {Bytes} bytes from {File}", content.Length, relativePath);
                         var fileInfo = new FileInfo(fullPath);
 
-                        // Delete before writing, for adds as well as updates. "Add" means absent from
-                        // the state file, which is not the same as absent from Qdrant: a file created
-                        // while the repo is watched is promoted by the watcher, which never writes a
-                        // state entry, and an interrupted run leaves chunks with no state at all. In
-                        // both cases the old chunks are still there and the fresh GUIDs cannot
-                        // overwrite them. Deleting a file that has no chunks is a no-op, and cheap now
-                        // that relative_path carries a keyword payload index.
-                        await qdrantService.DeleteByFilePathAsync(collectionName, relativePath, ct);
-
                         // Chunk the file
                         logger.LogDebug("Chunking file: {File}", relativePath);
                         string language = ChunkerFactory.GetLanguage(fullPath);
                         ICodeChunker chunker = chunkerFactory.GetChunker(fullPath);
                         IReadOnlyList<CodeChunk> chunks = chunker.ChunkCode(content, fullPath, relativePath, language);
                         logger.LogDebug("Created {Count} chunks for {File}", chunks.Count, relativePath);
+
+                        // Snapshot exactly what existed before this replacement. Deleting by file path
+                        // before chunking made a transient read, chunking, or embedding failure erase the
+                        // last usable version. Deleting by file path after the upsert would erase the new
+                        // points too, so retire only this snapshot once every replacement is stored.
+                        List<Guid> oldIds = (await qdrantService.SearchByFilePathAsync(
+                                collectionName, relativePath, cancellationToken: ct))
+                            .Select(result => result.Chunk.Id)
+                            .Distinct()
+                            .ToList();
+                        replacedChunkIds[relativePath] = oldIds;
 
                         if (chunks.Count > 0)
                         {
@@ -192,28 +202,36 @@ public sealed class RepositoryIndexer(
             logger.LogInformation("Embedding {ChunkCount} chunks in {BatchCount} batches...",
                 chunkList.Count, totalBatches);
 
-            var embedSw = Stopwatch.StartNew();
-            for (var i = 0; i < chunkList.Count; i += EmbeddingBatchSize)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                List<CodeChunk> batch = chunkList.Skip(i).Take(EmbeddingBatchSize).ToList();
-                List<string> texts = batch.Select(c => c.Content).ToList();
-
-                int batchNum = i / EmbeddingBatchSize + 1;
-                if (batchNum % 5 == 0 || batchNum == totalBatches)
+            await StoreBeforeRetiringAsync(
+                async ct =>
                 {
-                    int embeddedSoFar = i + batch.Count;
-                    double rate = embeddedSoFar / embedSw.Elapsed.TotalSeconds;
-                    logger.LogInformation("Embedding batch {BatchNum}/{TotalBatches} ({Rate:F0} chunks/sec)",
-                        batchNum, totalBatches, rate);
-                }
+                    var embedSw = Stopwatch.StartNew();
+                    for (var i = 0; i < chunkList.Count; i += EmbeddingBatchSize)
+                    {
+                        ct.ThrowIfCancellationRequested();
 
-                float[][] embeddings = await ollamaService.GetEmbeddingsAsync(texts, cancellationToken);
-                await qdrantService.UpsertChunksAsync(collectionName, batch, embeddings, cancellationToken);
+                        List<CodeChunk> batch = chunkList.Skip(i).Take(EmbeddingBatchSize).ToList();
+                        List<string> texts = batch.Select(c => c.Content).ToList();
 
-                totalChunks += batch.Count;
-            }
+                        int batchNum = i / EmbeddingBatchSize + 1;
+                        if (batchNum % 5 == 0 || batchNum == totalBatches)
+                        {
+                            int embeddedSoFar = i + batch.Count;
+                            double rate = embeddedSoFar / embedSw.Elapsed.TotalSeconds;
+                            logger.LogInformation(
+                                "Embedding batch {BatchNum}/{TotalBatches} ({Rate:F0} chunks/sec)",
+                                batchNum, totalBatches, rate);
+                        }
+
+                        float[][] embeddings = await ollamaService.GetEmbeddingsAsync(texts, ct);
+                        await qdrantService.UpsertChunksAsync(collectionName, batch, embeddings, ct);
+
+                        totalChunks += batch.Count;
+                    }
+                },
+                replacedChunkIds.Values,
+                (oldIds, ct) => qdrantService.DeletePointsAsync(collectionName, oldIds, ct),
+                cancellationToken);
 
             // Preserve unchanged file states
             foreach (string relativePath in filesToSkip)
@@ -223,16 +241,19 @@ public sealed class RepositoryIndexer(
                 totalChunks += existingFile.ChunkCount;
             }
 
+
+            // A failed update keeps both its old Qdrant points and its state entry. Omitting the state
+            // entry would misreport the index and turn the next retry into an apparent add.
+            foreach (string relativePath in failedFiles)
+            {
+                if (!existingFiles.TryGetValue(relativePath, out IndexedFile? existingFile)) continue;
+                newFileStates[relativePath] = existingFile;
+                totalChunks += existingFile.ChunkCount;
+            }
+
             // Save updated index state
             string? gitCommit = GetGitCommitSha(repositoryPath);
 
-            // Ask the server what actually produced these vectors rather than recording what we asked
-            // for. Stamping the configured name unconditionally is how an index came to claim
-            // "nomic-embed-text" while holding bge vectors — the stamp described intent, not contents,
-            // and a wrong stamp is worse than none because it invites reasoning about a rebuild that
-            // was never needed.
-            string embeddingModel =
-                await ollamaService.ResolveServerModelAsync(cancellationToken) ?? _options.EmbeddingModel;
             var newState = new IndexStateFile
             {
                 RepositoryName = repositoryName,
@@ -241,6 +262,7 @@ public sealed class RepositoryIndexer(
                 CreatedAt = existingState?.CreatedAt ?? DateTimeOffset.UtcNow,
                 LastUpdatedAt = DateTimeOffset.UtcNow,
                 EmbeddingModel = embeddingModel,
+                VectorDimension = dimensionProbe.Length,
                 CollectionName = collectionName,
                 IncludePatterns = includePatterns.ToList(),
                 ExcludePatterns = excludePatterns.ToList(),
@@ -340,6 +362,7 @@ public sealed class RepositoryIndexer(
             FileCount = stateFile.Files.Count,
             ChunkCount = stateFile.Files.Values.Sum(f => f.ChunkCount),
             EmbeddingModel = stateFile.EmbeddingModel,
+            VectorDimension = stateFile.VectorDimension,
             CollectionName = stateFile.CollectionName,
             IncludePatterns = stateFile.IncludePatterns,
             ExcludePatterns = stateFile.ExcludePatterns
@@ -351,14 +374,9 @@ public sealed class RepositoryIndexer(
     /// </summary>
     public async Task<List<string?>> ListIndexedRepositoriesAsync(CancellationToken cancellationToken = default)
     {
-        string stateDir = _options.IndexStateDirectory;
-        if (!Directory.Exists(stateDir))
-        {
-            return [];
-        }
-
-        string[] files = Directory.GetFiles(stateDir, "*.json");
-        return files.Select(Path.GetFileNameWithoutExtension).ToList();
+        return (await indexStateStore.ListRepositoryNamesAsync(cancellationToken))
+            .Select(name => (string?)name)
+            .ToList();
     }
 
     /// <summary>
@@ -366,6 +384,10 @@ public sealed class RepositoryIndexer(
     /// </summary>
     public async Task DeleteIndexAsync(string repositoryName, CancellationToken cancellationToken = default)
     {
+        // Loading first validates that a differently punctuated name did not collide with this state
+        // file. The collection must not be deleted until its identity is known.
+        await indexStateStore.LoadAsync(repositoryName, cancellationToken);
+
         string collectionName = SanitizeCollectionName(repositoryName);
         await qdrantService.DeleteCollectionAsync(collectionName, cancellationToken);
 
@@ -375,6 +397,69 @@ public sealed class RepositoryIndexer(
     }
 
     #region Helpers
+
+    internal static void ValidateEmbeddingCompatibility(
+        IndexStateFile? existingState,
+        string currentModel,
+        int actualDimension,
+        int configuredDimension)
+    {
+        if (actualDimension != configuredDimension)
+        {
+            throw new InvalidOperationException(
+                $"Embedding service returned {actualDimension}-dimension vectors, but VectorDimension "
+                + $"is configured as {configuredDimension}. Correct the configuration before indexing.");
+        }
+
+        if (existingState is null) return;
+
+        if (!string.Equals(existingState.EmbeddingModel, currentModel, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Index '{existingState.RepositoryName}' contains vectors from embedding model "
+                + $"'{existingState.EmbeddingModel}', but the server now reports '{currentModel}'. "
+                + "Delete and rebuild the index before using the new model.");
+        }
+
+        if (existingState.VectorDimension is int indexedDimension && indexedDimension != actualDimension)
+        {
+            throw new InvalidOperationException(
+                $"Index '{existingState.RepositoryName}' contains {indexedDimension}-dimension vectors, "
+                + $"but the embedding service now returns {actualDimension}. Delete and rebuild the index.");
+        }
+    }
+
+    internal static async Task StoreBeforeRetiringAsync(
+        Func<CancellationToken, Task> storeReplacements,
+        IEnumerable<IReadOnlyList<Guid>> replacedPointIds,
+        Func<IReadOnlyList<Guid>, CancellationToken, Task> retirePoints,
+        CancellationToken cancellationToken = default)
+    {
+        await storeReplacements(cancellationToken);
+
+        // If storage throws, this loop is never reached and the previous searchable version remains.
+        foreach (IReadOnlyList<Guid> pointIds in replacedPointIds)
+        {
+            await retirePoints(pointIds, cancellationToken);
+        }
+    }
+
+    internal static void ValidateRepositoryRoot(IndexStateFile? existingState, string repositoryPath)
+    {
+        if (existingState is null) return;
+
+        string existingRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(existingState.RootPath));
+        string requestedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(repositoryPath));
+        StringComparison comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        if (string.Equals(existingRoot, requestedRoot, comparison)) return;
+
+        throw new InvalidOperationException(
+            $"Repository name '{existingState.RepositoryName}' is already assigned to '{existingRoot}' "
+            + $"and cannot also index '{requestedRoot}'. Choose a distinct repository name.");
+    }
 
     internal static List<string> DiscoverFiles(
         string repositoryPath,

@@ -62,10 +62,7 @@ public class RepositoryTools(
             }
 
             // Start watching the target repository if not already
-            if (!fileWatcher.IsWatching(targetPath))
-            {
-                fileWatcher.WatchRepository(targetPath);
-            }
+            fileWatcher.WatchRepository(targetPath, state.IncludePatterns, state.ExcludePatterns);
 
             // Register the collection too. Watching without this is the broken half-state: changed
             // files reach the L1 cache, promotion cannot resolve where they belong, and the write is

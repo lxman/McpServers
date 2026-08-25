@@ -167,6 +167,11 @@ public sealed class CodeAssistOptions
     public int L2PromotionBatchSize { get; set; } = 10;
 
     /// <summary>
+    /// Maximum number of promotions waiting for the background writer.
+    /// </summary>
+    public int L2PromotionQueueCapacity { get; set; } = 1000;
+
+    /// <summary>
     /// Delay between L2 promotion batches.
     /// </summary>
     public TimeSpan L2PromotionDelay { get; set; } = TimeSpan.FromSeconds(5);

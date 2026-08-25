@@ -74,6 +74,68 @@ public class L2PromotionOrderingTests : IDisposable
             Options.Create(new CodeAssistOptions { EnableL2Promotion = true }),
             NullLogger<L2PromotionService>.Instance);
 
+    private static L2PromotionService MakeQueuedService(
+        FakeQdrantWriter writer,
+        HotCache hotCache,
+        int capacity,
+        TimeSpan delay) =>
+        new(hotCache,
+            writer,
+            new IndexStateStore(
+                Options.Create(new CodeAssistOptions
+                {
+                    IndexStateDirectory = Path.Combine(
+                        Path.GetTempPath(), "codeassist-test-state-" + Guid.NewGuid().ToString("N"))
+                }),
+                NullLogger<IndexStateStore>.Instance),
+            Options.Create(new CodeAssistOptions
+            {
+                EnableL2Promotion = true,
+                L2PromotionBatchSize = 1,
+                L2PromotionQueueCapacity = capacity,
+                L2PromotionDelay = delay
+            }),
+            NullLogger<L2PromotionService>.Instance);
+
+    [Fact]
+    public async Task QueuePromotionAsync_AppliesBackpressureWithoutDroppingOldestWork()
+    {
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var writer = new FakeQdrantWriter { UpsertGate = gate };
+        using HotCache hotCache = TestHotCache.Create();
+        L2PromotionService service = MakeQueuedService(writer, hotCache, capacity: 2, TimeSpan.Zero);
+
+        Task[] enqueues = Enumerable.Range(0, 5)
+            .Select(i => service.QueuePromotionAsync(MakeCachedFile($"Queue/File{i}.cs", 1), "myrepo"))
+            .ToArray();
+
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        gate.SetResult();
+        await Task.WhenAll(enqueues);
+        service.Dispose();
+
+        Assert.Equal(5, writer.UpsertedPointCount);
+        Assert.Equal(0, service.DroppedPromotionCount);
+    }
+
+    [Fact]
+    public async Task Dispose_DrainsAcceptedPromotionsAndSkipsTheBatchDelay()
+    {
+        var writer = new FakeQdrantWriter();
+        using HotCache hotCache = TestHotCache.Create();
+        L2PromotionService service = MakeQueuedService(writer, hotCache, capacity: 10, TimeSpan.FromHours(1));
+
+        for (var i = 0; i < 5; i++)
+        {
+            await service.QueuePromotionAsync(MakeCachedFile($"Shutdown/File{i}.cs", 1), "myrepo");
+        }
+
+        service.Dispose();
+
+        Assert.Equal(5, writer.UpsertedPointCount);
+        Assert.Equal(0, service.PendingCount);
+    }
+
     [Fact]
     public async Task PromotingAFile_WritesNewChunksBeforeRemovingOldOnes()
     {

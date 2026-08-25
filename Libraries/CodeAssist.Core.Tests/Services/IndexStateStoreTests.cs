@@ -29,6 +29,7 @@ public class IndexStateStoreTests : IDisposable
         CreatedAt = DateTimeOffset.UtcNow.AddDays(-2),
         LastUpdatedAt = lastUpdated,
         EmbeddingModel = "bge-base-en-v1.5",
+        VectorDimension = 768,
         CollectionName = "myrepo",
         IncludePatterns = ["*.cs"],
         ExcludePatterns = [],
@@ -40,12 +41,14 @@ public class IndexStateStoreTests : IDisposable
     {
         IndexStateStore store = MakeStore();
 
-        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow.AddHours(-1)));
-        IndexStateFile? loaded = await store.LoadAsync("MyRepo");
+        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow.AddHours(-1)),
+            TestContext.Current.CancellationToken);
+        IndexStateFile? loaded = await store.LoadAsync("MyRepo", TestContext.Current.CancellationToken);
 
         Assert.NotNull(loaded);
         Assert.Equal("myrepo", loaded.CollectionName);
         Assert.Equal("aaaa111", loaded.LastCommitSha);
+        Assert.Equal(768, loaded.VectorDimension);
     }
 
     [Fact]
@@ -60,11 +63,12 @@ public class IndexStateStoreTests : IDisposable
         var log = new RecordingLogger();
         IndexStateStore store = MakeStore(log);
         DateTimeOffset stale = DateTimeOffset.UtcNow.AddDays(-2);
-        await store.SaveAsync("MyRepo", MakeState(stale));
+        await store.SaveAsync("MyRepo", MakeState(stale), TestContext.Current.CancellationToken);
 
-        await store.TouchAsync("myrepo", commitSha: null);
+        await store.TouchAsync("myrepo", commitSha: null,
+            cancellationToken: TestContext.Current.CancellationToken);
 
-        IndexStateFile? loaded = await store.LoadAsync("MyRepo");
+        IndexStateFile? loaded = await store.LoadAsync("MyRepo", TestContext.Current.CancellationToken);
         Assert.NotNull(loaded);
         Assert.True(loaded.LastUpdatedAt > stale,
             "a promotion is an update and must advance lastUpdated. " + log.WarningReport);
@@ -74,11 +78,13 @@ public class IndexStateStoreTests : IDisposable
     public async Task TouchAsync_UpdatesCommitShaWhenGiven()
     {
         IndexStateStore store = MakeStore();
-        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow.AddDays(-2)));
+        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow.AddDays(-2)),
+            TestContext.Current.CancellationToken);
 
-        await store.TouchAsync("myrepo", commitSha: "bbbb222");
+        await store.TouchAsync("myrepo", commitSha: "bbbb222",
+            cancellationToken: TestContext.Current.CancellationToken);
 
-        IndexStateFile? loaded = await store.LoadAsync("MyRepo");
+        IndexStateFile? loaded = await store.LoadAsync("MyRepo", TestContext.Current.CancellationToken);
         Assert.Equal("bbbb222", loaded!.LastCommitSha);
     }
 
@@ -86,11 +92,13 @@ public class IndexStateStoreTests : IDisposable
     public async Task TouchAsync_LeavesCommitShaAloneWhenNotGiven()
     {
         IndexStateStore store = MakeStore();
-        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow.AddDays(-2)));
+        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow.AddDays(-2)),
+            TestContext.Current.CancellationToken);
 
-        await store.TouchAsync("myrepo", commitSha: null);
+        await store.TouchAsync("myrepo", commitSha: null,
+            cancellationToken: TestContext.Current.CancellationToken);
 
-        IndexStateFile? loaded = await store.LoadAsync("MyRepo");
+        IndexStateFile? loaded = await store.LoadAsync("MyRepo", TestContext.Current.CancellationToken);
         Assert.Equal("aaaa111", loaded!.LastCommitSha);
     }
 
@@ -99,9 +107,10 @@ public class IndexStateStoreTests : IDisposable
     {
         IndexStateStore store = MakeStore();
 
-        await store.TouchAsync("neverindexed", commitSha: null);
+        await store.TouchAsync("neverindexed", commitSha: null,
+            cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.Null(await store.LoadAsync("neverindexed"));
+        Assert.Null(await store.LoadAsync("neverindexed", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -111,9 +120,53 @@ public class IndexStateStoreTests : IDisposable
         // reclassify every file as new, skip every delete, and duplicate the whole collection.
         IndexStateStore store = MakeStore();
         Directory.CreateDirectory(_dir);
-        await File.WriteAllTextAsync(store.GetStatePath("MyRepo"), "{ truncated");
+        await File.WriteAllTextAsync(store.GetStatePath("MyRepo"), "{ truncated",
+            TestContext.Current.CancellationToken);
 
-        await Assert.ThrowsAnyAsync<Exception>(() => store.LoadAsync("MyRepo"));
+        await Assert.ThrowsAnyAsync<Exception>(() =>
+            store.LoadAsync("MyRepo", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task LoadAsync_RejectsARepositoryNameThatSanitizesToAnExistingName()
+    {
+        IndexStateStore store = MakeStore();
+        await store.SaveAsync("My-Repo", MakeState(DateTimeOffset.UtcNow) with
+        {
+            RepositoryName = "My-Repo"
+        }, TestContext.Current.CancellationToken);
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            store.LoadAsync("My_Repo", TestContext.Current.CancellationToken));
+
+        Assert.Contains("same collection and state file", exception.Message);
+    }
+
+    [Fact]
+    public async Task Delete_RejectsARepositoryNameThatSanitizesToAnExistingName()
+    {
+        IndexStateStore store = MakeStore();
+        await store.SaveAsync("My-Repo", MakeState(DateTimeOffset.UtcNow) with
+        {
+            RepositoryName = "My-Repo"
+        }, TestContext.Current.CancellationToken);
+
+        Assert.Throws<InvalidOperationException>(() => store.Delete("My_Repo"));
+        Assert.True(File.Exists(store.GetStatePath("My-Repo")));
+    }
+
+    [Fact]
+    public async Task ListRepositoryNamesAsync_ReturnsStoredNamesInsteadOfSanitizedFileNames()
+    {
+        IndexStateStore store = MakeStore();
+        await store.SaveAsync("My-Repo", MakeState(DateTimeOffset.UtcNow) with
+        {
+            RepositoryName = "My-Repo"
+        }, TestContext.Current.CancellationToken);
+
+        List<string> names = await store.ListRepositoryNamesAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["My-Repo"], names);
     }
 
     [Fact]
@@ -131,7 +184,8 @@ public class IndexStateStoreTests : IDisposable
         // File.Delete throws. Before the guard this escaped into a caller with no catch. An absent
         // file never exercised this — the old code's File.Exists check already short-circuited that.
         IndexStateStore store = MakeStore();
-        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow));
+        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow),
+            TestContext.Current.CancellationToken);
 
         using (File.Open(store.GetStatePath("MyRepo"), FileMode.Open, FileAccess.Read, FileShare.Read))
         {
@@ -145,13 +199,16 @@ public class IndexStateStoreTests : IDisposable
         // A process killed between the temp write and the move leaves a stale .tmp behind. The next
         // save has to reclaim it rather than trip over it, or one crash poisons every later write.
         IndexStateStore store = MakeStore();
-        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow.AddDays(-1)));
+        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow.AddDays(-1)),
+            TestContext.Current.CancellationToken);
 
-        await File.WriteAllTextAsync(store.GetStatePath("MyRepo") + ".tmp", "{ this is not valid json");
+        await File.WriteAllTextAsync(store.GetStatePath("MyRepo") + ".tmp", "{ this is not valid json",
+            TestContext.Current.CancellationToken);
 
-        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow));
+        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow),
+            TestContext.Current.CancellationToken);
 
-        IndexStateFile? loaded = await store.LoadAsync("MyRepo");
+        IndexStateFile? loaded = await store.LoadAsync("MyRepo", TestContext.Current.CancellationToken);
         Assert.NotNull(loaded);
         Assert.Equal("aaaa111", loaded.LastCommitSha);
         Assert.Empty(Directory.GetFiles(_dir, "*.tmp"));
@@ -172,16 +229,20 @@ public class IndexStateStoreTests : IDisposable
         var log = new RecordingLogger();
         IndexStateStore store = MakeStore(log);
         string path = store.GetStatePath("MyRepo");
-        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow.AddDays(-1)));
+        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow.AddDays(-1)),
+            TestContext.Current.CancellationToken);
 
         FileStream blocker = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        Task save = store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow) with { LastCommitSha = "cccc333" });
-        await Task.WhenAny(log.FirstWarning, save, Task.Delay(TimeSpan.FromSeconds(30)));
+        Task save = store.SaveAsync("MyRepo",
+            MakeState(DateTimeOffset.UtcNow) with { LastCommitSha = "cccc333" },
+            TestContext.Current.CancellationToken);
+        await Task.WhenAny(log.FirstWarning, save,
+            Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
         blocker.Dispose();
 
         await save;
 
-        IndexStateFile? loaded = await store.LoadAsync("MyRepo");
+        IndexStateFile? loaded = await store.LoadAsync("MyRepo", TestContext.Current.CancellationToken);
         Assert.Equal("cccc333", loaded!.LastCommitSha);
     }
 
@@ -189,13 +250,16 @@ public class IndexStateStoreTests : IDisposable
     public async Task SaveAsync_GivesUpRatherThanRetryingForeverWhenTheHandleIsNeverReleased()
     {
         IndexStateStore store = MakeStore();
-        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow.AddDays(-1)));
+        await store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow.AddDays(-1)),
+            TestContext.Current.CancellationToken);
 
         using FileStream blocker =
             File.Open(store.GetStatePath("MyRepo"), FileMode.Open, FileAccess.Read, FileShare.Read);
 
-        Task save = store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow));
-        Task finished = await Task.WhenAny(save, Task.Delay(TimeSpan.FromSeconds(30)));
+        Task save = store.SaveAsync("MyRepo", MakeState(DateTimeOffset.UtcNow),
+            TestContext.Current.CancellationToken);
+        Task finished = await Task.WhenAny(save,
+            Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
 
         Assert.Same(save, finished);
         Exception ex = await Assert.ThrowsAnyAsync<Exception>(() => save);
@@ -221,19 +285,21 @@ public class IndexStateStoreTests : IDisposable
         IndexStateFile Padded(string sha) =>
             MakeState(DateTimeOffset.UtcNow) with { LastCommitSha = sha, RootPath = new string('x', 4_000_000) };
 
-        await store.SaveAsync("MyRepo", Padded("aaaa111"));
+        await store.SaveAsync("MyRepo", Padded("aaaa111"), TestContext.Current.CancellationToken);
 
         for (var round = 0; round < 20; round++)
         {
-            Task<IndexStateFile?> read = store.LoadAsync("MyRepo");
-            Task save = store.SaveAsync("MyRepo", Padded($"sha{round:0000}"));
+            Task<IndexStateFile?> read = store.LoadAsync("MyRepo", TestContext.Current.CancellationToken);
+            Task save = store.SaveAsync("MyRepo", Padded($"sha{round:0000}"),
+                TestContext.Current.CancellationToken);
             await Task.WhenAll(read, save);
 
             Assert.NotNull(await read);
         }
 
         Assert.True(log.Warnings.Count == 0, "a concurrent read blocked a write: " + log.WarningReport);
-        Assert.Equal("sha0019", (await store.LoadAsync("MyRepo"))!.LastCommitSha);
+        Assert.Equal("sha0019",
+            (await store.LoadAsync("MyRepo", TestContext.Current.CancellationToken))!.LastCommitSha);
     }
 
     /// <summary>

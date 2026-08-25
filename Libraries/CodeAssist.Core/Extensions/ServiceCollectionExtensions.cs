@@ -6,6 +6,7 @@ using CodeAssist.Core.Configuration;
 using CodeAssist.Core.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace CodeAssist.Core.Extensions;
 
@@ -21,16 +22,13 @@ public static class ServiceCollectionExtensions
         /// </summary>
         public IServiceCollection AddCodeAssistServices(IConfiguration? configuration = null)
         {
-            // Register configuration
+            OptionsBuilder<CodeAssistOptions> optionsBuilder = services.AddOptions<CodeAssistOptions>();
             if (configuration != null)
             {
-                services.Configure<CodeAssistOptions>(
-                    configuration.GetSection(CodeAssistOptions.SectionName));
+                optionsBuilder.Bind(configuration.GetSection(CodeAssistOptions.SectionName));
             }
-            else
-            {
-                services.Configure<CodeAssistOptions>(_ => { });
-            }
+            services.AddSingleton<IValidateOptions<CodeAssistOptions>, CodeAssistOptionsValidator>();
+            optionsBuilder.ValidateOnStart();
 
             // Register chunkers - TreeSitterChunker for AST-based chunking, DefaultChunker as fallback
             services.AddSingleton<TreeSitterChunker>();
@@ -41,6 +39,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<OllamaService>();
             services.AddSingleton<QdrantService>();
             services.AddSingleton<IQdrantWriter>(sp => sp.GetRequiredService<QdrantService>());
+            services.AddSingleton<ISemanticSearchBackend>(sp => sp.GetRequiredService<QdrantService>());
             services.AddSingleton<IndexStateStore>();
             services.AddSingleton<RepositoryIndexer>();
             services.AddSingleton<DataFlowGraphService>();
@@ -71,7 +70,10 @@ public static class ServiceCollectionExtensions
         /// </summary>
         public IServiceCollection AddCodeAssistServices(Action<CodeAssistOptions> configureOptions)
         {
-            services.Configure(configureOptions);
+            services.AddSingleton<IValidateOptions<CodeAssistOptions>, CodeAssistOptionsValidator>();
+            services.AddOptions<CodeAssistOptions>()
+                .Configure(configureOptions)
+                .ValidateOnStart();
 
             // Register chunkers - TreeSitterChunker for AST-based chunking, DefaultChunker as fallback
             services.AddSingleton<TreeSitterChunker>();
@@ -82,6 +84,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<OllamaService>();
             services.AddSingleton<QdrantService>();
             services.AddSingleton<IQdrantWriter>(sp => sp.GetRequiredService<QdrantService>());
+            services.AddSingleton<ISemanticSearchBackend>(sp => sp.GetRequiredService<QdrantService>());
             services.AddSingleton<IndexStateStore>();
             services.AddSingleton<RepositoryIndexer>();
             services.AddSingleton<DataFlowGraphService>();

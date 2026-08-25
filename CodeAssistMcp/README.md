@@ -90,15 +90,18 @@ colima start
 
 ## Configuration
 
-The server uses these default settings (configurable via appsettings.json):
+The library has these built-in defaults. `appsettings.json` can override them for a deployment; the
+checked-in server configuration currently selects `bge-base-en-v1.5` with 768-dimensional vectors.
+Configuration is validated when the host starts.
 
 | Setting | Default | Description |
 | ------- | ------- | ----------- |
 | `OllamaUrl` | `http://localhost:11435` | Embedding server API (MLX or Ollama) |
 | `QdrantUrl` | `http://localhost:6333` | Qdrant API endpoint |
-| `EmbeddingModel` | `nomic-embed-text` | Model name (for display) |
+| `EmbeddingModel` | `nomic-embed-text` | Model requested from the embedding service and recorded with the index |
 | `VectorDimension` | `768` | Embedding vector size |
 | `MaxChunkSize` | `2000` | Maximum characters per code chunk |
+| `L2PromotionQueueCapacity` | `1000` | Maximum pending background promotions before producers wait |
 
 ## Performance
 

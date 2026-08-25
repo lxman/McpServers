@@ -181,27 +181,51 @@ public sealed class HotCache : IDisposable
     }
 
     /// <summary>
-    /// Search the hot cache using semantic similarity.
+    /// Search one repository's hot cache entries using a pre-computed query embedding.
     /// Returns chunks from hot files that match the query.
     /// </summary>
-    public async Task<List<HotCacheSearchResult>> SearchAsync(
-        string query,
+    public List<HotCacheSearchResult> Search(
+        float[] queryEmbedding,
+        string repositoryRoot,
         int limit = 10,
         float minScore = 0.5f,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(queryEmbedding);
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryRoot);
+
         if (_cache.IsEmpty)
         {
             return [];
         }
 
-        // Get query embedding
-        float[] queryEmbedding = await _embeddingService.GetEmbeddingAsync(query, cancellationToken);
+        return SearchCachedFiles(
+            _cache.Values, queryEmbedding, repositoryRoot, limit, minScore, cancellationToken);
+    }
 
+    internal static List<HotCacheSearchResult> SearchCachedFiles(
+        IEnumerable<CachedFile> cachedFiles,
+        float[] queryEmbedding,
+        string repositoryRoot,
+        int limit,
+        float minScore,
+        CancellationToken cancellationToken = default)
+    {
         var results = new List<HotCacheSearchResult>();
+        string normalizedRoot = NormalizePath(repositoryRoot);
 
-        foreach ((string _, CachedFile cachedFile) in _cache)
+        foreach (CachedFile cachedFile in cachedFiles)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!string.Equals(
+                    NormalizePath(cachedFile.RepositoryRoot),
+                    normalizedRoot,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             for (var i = 0; i < cachedFile.Chunks.Count; i++)
             {
                 CodeChunk chunk = cachedFile.Chunks[i];
@@ -226,6 +250,20 @@ public sealed class HotCache : IDisposable
             .OrderByDescending(r => r.Score)
             .Take(limit)
             .ToList();
+    }
+
+    /// <summary>
+    /// Number of hot files belonging to one repository.
+    /// </summary>
+    public int CountForRepository(string repositoryRoot)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryRoot);
+        string normalizedRoot = NormalizePath(repositoryRoot);
+
+        return _cache.Values.Count(cachedFile => string.Equals(
+            NormalizePath(cachedFile.RepositoryRoot),
+            normalizedRoot,
+            StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

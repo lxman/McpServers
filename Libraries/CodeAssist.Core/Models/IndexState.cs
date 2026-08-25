@@ -46,6 +46,11 @@ public sealed record IndexState
     public required string EmbeddingModel { get; init; }
 
     /// <summary>
+    /// Dimension of the vectors stored in the index, when recorded by the indexer.
+    /// </summary>
+    public int? VectorDimension { get; init; }
+
+    /// <summary>
     /// Qdrant collection name for this repository.
     /// </summary>
     public required string CollectionName { get; init; }

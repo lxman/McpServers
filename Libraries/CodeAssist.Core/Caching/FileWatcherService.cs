@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
-using CodeAssist.Core.Chunking;
 using CodeAssist.Core.Configuration;
+using CodeAssist.Core.Services;
+using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -18,6 +19,7 @@ public sealed class FileWatcherService(
     : IDisposable
 {
     private readonly ConcurrentDictionary<string, FileSystemWatcher> _watchers = new();
+    private readonly ConcurrentDictionary<string, WatchPatternMatcher> _watchPatterns = new();
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _debounceTokens = new();
     private readonly ConcurrentDictionary<string, string> _repositoryRoots = new(); // filePath -> repoRoot
     private readonly CodeAssistOptions _options = options.Value;
@@ -26,7 +28,10 @@ public sealed class FileWatcherService(
     /// <summary>
     /// Start watching a repository for file changes.
     /// </summary>
-    public void WatchRepository(string repositoryRoot, IEnumerable<string>? includePatterns = null)
+    public void WatchRepository(
+        string repositoryRoot,
+        IEnumerable<string>? includePatterns = null,
+        IEnumerable<string>? excludePatterns = null)
     {
         if (!_options.EnableFileWatcher)
         {
@@ -35,10 +40,13 @@ public sealed class FileWatcherService(
         }
 
         string normalizedRoot = Path.GetFullPath(repositoryRoot);
+        _watchPatterns[normalizedRoot] = new WatchPatternMatcher(
+            includePatterns ?? _options.DefaultIncludePatterns,
+            excludePatterns ?? _options.DefaultExcludePatterns);
 
         if (_watchers.ContainsKey(normalizedRoot))
         {
-            logger.LogDebug("Already watching repository: {Root}", normalizedRoot);
+            logger.LogDebug("Updated watch patterns for repository: {Root}", normalizedRoot);
             return;
         }
 
@@ -80,6 +88,8 @@ public sealed class FileWatcherService(
             watcher.Dispose();
             logger.LogInformation("Stopped watching repository: {Root}", normalizedRoot);
         }
+
+        _watchPatterns.TryRemove(normalizedRoot, out _);
 
         // Clear hot cache entries for this repository
         hotCache.ClearRepository(repositoryRoot);
@@ -261,42 +271,14 @@ public sealed class FileWatcherService(
         if (Directory.Exists(filePath))
             return true;
 
-        // Check if file type is supported
-        string extension = Path.GetExtension(filePath);
-        if (string.IsNullOrEmpty(extension))
-            return true;
-
-        if (!ChunkerFactory.IsSupportedExtension(extension))
-            return true;
-
-        // Check against exclude patterns
-        string relativePath = filePath;
-        foreach ((string root, FileSystemWatcher _) in _watchers)
+        foreach ((string root, WatchPatternMatcher patterns) in _watchPatterns)
         {
             if (!IsUnderRoot(filePath, root)) continue;
-            relativePath = Path.GetRelativePath(root, filePath);
-            break;
+            string relativePath = IndexPath.Normalize(Path.GetRelativePath(root, filePath));
+            return !patterns.IsMatch(relativePath);
         }
 
-        return _options.DefaultExcludePatterns.Any(pattern => MatchesPattern(relativePath, pattern));
-    }
-
-    private static bool MatchesPattern(string path, string pattern)
-    {
-        // Simple glob matching for common patterns
-        string normalizedPath = path.Replace('\\', '/');
-        string normalizedPattern = pattern.Replace('\\', '/');
-
-        if (!normalizedPattern.StartsWith("**/")) return normalizedPath.EndsWith(normalizedPattern.TrimStart('*'));
-        string suffix = normalizedPattern[3..];
-        if (!suffix.EndsWith("/**")) return normalizedPath.EndsWith(suffix.TrimStart('*'));
-        // Pattern like "**/bin/**" - check if path contains the directory
-        string dir = suffix[..^3];
-        return normalizedPath.Contains($"/{dir}/") ||
-               normalizedPath.StartsWith($"{dir}/") ||
-               normalizedPath.EndsWith($"/{dir}");
-        // Pattern like "**/*.min.js" - check suffix
-
+        return true;
     }
 
     public void Dispose()
@@ -310,6 +292,7 @@ public sealed class FileWatcherService(
             watcher.Dispose();
         }
         _watchers.Clear();
+        _watchPatterns.Clear();
 
         foreach ((string _, CancellationTokenSource cts) in _debounceTokens)
         {
@@ -319,5 +302,33 @@ public sealed class FileWatcherService(
         _debounceTokens.Clear();
 
         logger.LogInformation("FileWatcherService disposed");
+    }
+}
+
+internal sealed class WatchPatternMatcher
+{
+    private readonly Matcher _matcher = new();
+
+    public WatchPatternMatcher(IEnumerable<string> includePatterns, IEnumerable<string> excludePatterns)
+    {
+        foreach (string pattern in includePatterns)
+        {
+            _matcher.AddInclude(Normalize(pattern));
+        }
+
+        foreach (string pattern in excludePatterns)
+        {
+            _matcher.AddExclude(Normalize(pattern));
+        }
+    }
+
+    public bool IsMatch(string relativePath) => _matcher.Match(IndexPath.Normalize(relativePath)).HasMatches;
+
+    private static string Normalize(string pattern)
+    {
+        pattern = pattern.Replace('\\', '/');
+        return pattern.Contains('/') || pattern.StartsWith("**/", StringComparison.Ordinal)
+            ? pattern
+            : $"**/{pattern}";
     }
 }

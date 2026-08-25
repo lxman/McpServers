@@ -21,6 +21,7 @@ internal sealed class FakeQdrantWriter : IQdrantWriter
     public bool ThrowOnUpsert { get; set; }
     public bool ThrowOnDeleteIds { get; set; }
     public bool ThrowOnGetIds { get; set; }
+    public TaskCompletionSource? UpsertGate { get; set; }
 
     public Task<bool> CollectionExistsAsync(string collectionName, CancellationToken cancellationToken = default)
     {
@@ -68,7 +69,7 @@ internal sealed class FakeQdrantWriter : IQdrantWriter
         return Task.CompletedTask;
     }
 
-    public Task UpsertPointsAsync(
+    public async Task UpsertPointsAsync(
         string collectionName,
         IReadOnlyList<(Guid id, float[] vector, Dictionary<string, object> payload)> points,
         CancellationToken cancellationToken = default)
@@ -80,7 +81,11 @@ internal sealed class FakeQdrantWriter : IQdrantWriter
             throw new InvalidOperationException("Simulated failure upserting points");
         }
 
+        if (UpsertGate is not null)
+        {
+            await UpsertGate.Task.WaitAsync(cancellationToken);
+        }
+
         UpsertedPointCount += points.Count;
-        return Task.CompletedTask;
     }
 }

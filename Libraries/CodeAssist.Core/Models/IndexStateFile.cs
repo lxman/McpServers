@@ -15,6 +15,7 @@ public sealed record IndexStateFile
     public required DateTimeOffset CreatedAt { get; init; }
     public required DateTimeOffset LastUpdatedAt { get; init; }
     public required string EmbeddingModel { get; init; }
+    public int? VectorDimension { get; init; }
     public required string CollectionName { get; init; }
     public required List<string> IncludePatterns { get; init; }
     public required List<string> ExcludePatterns { get; init; }

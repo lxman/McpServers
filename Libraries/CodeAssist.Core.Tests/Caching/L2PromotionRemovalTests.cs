@@ -32,7 +32,8 @@ public class L2PromotionRemovalTests
         string root = Path.Combine(Path.GetTempPath(), "myrepo");
         service.RegisterRepositoryCollection(root, "myrepo");
 
-        await service.RemoveFileAsync(Path.Combine(root, "Editing", "Gone.cs"), root);
+        await service.RemoveFileAsync(Path.Combine(root, "Editing", "Gone.cs"), root,
+            TestContext.Current.CancellationToken);
 
         Assert.Equal(["Editing/Gone.cs"], writer.DeletedPaths);
     }
@@ -46,7 +47,8 @@ public class L2PromotionRemovalTests
 
         string root = Path.Combine(Path.GetTempPath(), "unregistered");
 
-        await service.RemoveFileAsync(Path.Combine(root, "Editing", "Gone.cs"), root);
+        await service.RemoveFileAsync(Path.Combine(root, "Editing", "Gone.cs"), root,
+            TestContext.Current.CancellationToken);
 
         Assert.Empty(writer.DeletedPaths);
     }

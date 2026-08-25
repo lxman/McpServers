@@ -16,7 +16,7 @@ public sealed class DataFlowGraphService
     private readonly QdrantService _qdrant;
     private readonly SolutionAnalyzer _solutionAnalyzer;
     private readonly ILogger<DataFlowGraphService> _logger;
-    private readonly ConcurrentDictionary<string, CodeGraph> _graphs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly VersionedCache<CodeGraph> _graphs = new();
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _buildLocks = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, SolutionStructure> _solutions = new(StringComparer.OrdinalIgnoreCase);
 
@@ -28,6 +28,7 @@ public sealed class DataFlowGraphService
         _qdrant = qdrant;
         _solutionAnalyzer = solutionAnalyzer;
         _logger = logger;
+        _qdrant.CollectionChanged += InvalidateCollection;
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -46,21 +47,31 @@ public sealed class DataFlowGraphService
 
         try
         {
-            _logger.LogInformation("Building data flow graph for {Collection}", collectionName);
+            while (true)
+            {
+                long version = _graphs.CaptureVersion(collectionName);
+                _logger.LogInformation("Building data flow graph for {Collection}", collectionName);
 
-            List<CodeChunk> chunks = await _qdrant.ScrollAllChunksAsync(collectionName, cancellationToken);
+                List<CodeChunk> chunks = await _qdrant.ScrollAllChunksAsync(collectionName, cancellationToken);
 
-            var graph = new CodeGraph();
-            BuildNodesFromChunks(graph, chunks);
-            BuildEdgesFromChunks(graph, chunks);
+                var graph = new CodeGraph();
+                BuildNodesFromChunks(graph, chunks);
+                BuildEdgesFromChunks(graph, chunks);
 
-            _graphs[collectionName] = graph;
+                if (!_graphs.TryStore(collectionName, version, graph))
+                {
+                    _logger.LogInformation(
+                        "Collection {Collection} changed while its graph was building; rebuilding",
+                        collectionName);
+                    continue;
+                }
 
-            _logger.LogInformation(
-                "Built graph for {Collection}: {Nodes} nodes, {Edges} edges",
-                collectionName, graph.NodeCount, graph.EdgeCount);
+                _logger.LogInformation(
+                    "Built graph for {Collection}: {Nodes} nodes, {Edges} edges",
+                    collectionName, graph.NodeCount, graph.EdgeCount);
 
-            return graph;
+                return graph;
+            }
         }
         finally
         {
@@ -84,7 +95,7 @@ public sealed class DataFlowGraphService
         if (structure == null) return null;
 
         // Link namespaces to projects using file paths from the code graph
-        if (_graphs.TryGetValue(collectionName, out CodeGraph? graph))
+        if (_graphs.TryGet(collectionName, out CodeGraph graph))
         {
             LinkNamespacesToProjects(graph, structure);
         }
@@ -158,7 +169,7 @@ public sealed class DataFlowGraphService
         // A caller handing us a Windows-shaped path would remove nothing and then match nothing.
         relativePath = IndexPath.Normalize(relativePath);
 
-        if (!_graphs.TryGetValue(collectionName, out CodeGraph? graph))
+        if (!_graphs.TryGet(collectionName, out CodeGraph graph))
         {
             _logger.LogDebug("No graph for {Collection}, skipping file rebuild", collectionName);
             return;
@@ -209,7 +220,14 @@ public sealed class DataFlowGraphService
     /// </summary>
     public CodeGraph? GetGraph(string collectionName)
     {
-        return _graphs.GetValueOrDefault(collectionName);
+        return _graphs.Get(collectionName);
+    }
+
+    private void InvalidateCollection(string collectionName)
+    {
+        _graphs.Invalidate(collectionName);
+        _solutions.TryRemove(collectionName, out _);
+        _logger.LogDebug("Invalidated graph caches for changed collection {Collection}", collectionName);
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -976,7 +994,7 @@ public sealed class DataFlowGraphService
 
     private CodeGraph GetGraphOrThrow(string collectionName)
     {
-        if (_graphs.TryGetValue(collectionName, out CodeGraph? graph))
+        if (_graphs.TryGet(collectionName, out CodeGraph graph))
             return graph;
 
         throw new InvalidOperationException(
