@@ -1,4 +1,5 @@
 using McpGateway.Configuration;
+using McpGateway.Routing;
 using McpGateway.Security;
 using McpGateway.Supervision;
 using Microsoft.AspNetCore.Builder;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using SerilogFileWriter;
+using Yarp.ReverseProxy.Forwarder;
 
 namespace McpGateway;
 
@@ -29,7 +31,9 @@ public static class GatewayApp
         RepoRoot = repoRoot
     };
 
-    public static WebApplication Build(GatewayBuildOptions options)
+    public static WebApplication Build(
+        GatewayBuildOptions options,
+        Action<IServiceCollection>? configureServices = null)
     {
         Log.Logger = McpLoggingExtensions.SetupMcpLogging(Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -54,6 +58,11 @@ public static class GatewayApp
             token,
             sp.GetRequiredService<ILogger<BackendSupervisor>>()));
 
+        builder.Services.AddHttpForwarder();
+        builder.Services.AddSingleton<McpForwarder>();
+
+        configureServices?.Invoke(builder.Services);
+
         WebApplication app = builder.Build();
 
         app.UseMiddleware<BearerAuthMiddleware>(token);
@@ -68,6 +77,12 @@ public static class GatewayApp
                     pair.Value.OverlapAllowed,
                     pair.Value.EagerStart
                 })));
+
+        app.MapPost("/{server}/mcp", (HttpContext ctx, McpForwarder fwd, string server) =>
+            fwd.ForwardAsync(ctx, server, "/mcp"));
+
+        app.MapGet("/{server}/health", (HttpContext ctx, McpForwarder fwd, string server) =>
+            fwd.ForwardAsync(ctx, server, "/health"));
 
         return app;
     }

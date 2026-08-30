@@ -1,0 +1,87 @@
+using System.Net;
+using McpGateway.Configuration;
+using McpGateway.Supervision;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using Yarp.ReverseProxy.Forwarder;
+
+namespace McpGateway.Routing;
+
+public sealed class McpForwarder(
+    IHttpForwarder forwarder,
+    BackendSupervisor supervisor,
+    ManifestStore manifest,
+    ILogger<McpForwarder> logger)
+{
+    // Long timeout: a streamable-HTTP POST response can be a text/event-stream the handler holds
+    // open, and YARP must not cut it short.
+    private readonly HttpMessageInvoker _invoker = new(new SocketsHttpHandler
+    {
+        UseProxy = false,
+        AllowAutoRedirect = false,
+        AutomaticDecompression = DecompressionMethods.None,
+        ActivityHeadersPropagator = null,
+        ConnectTimeout = TimeSpan.FromSeconds(15)
+    });
+
+    private static readonly ForwarderRequestConfig RequestConfig = new()
+    {
+        ActivityTimeout = TimeSpan.FromMinutes(10)
+    };
+
+    public async Task ForwardAsync(HttpContext context, string server, string suffix)
+    {
+        if (!manifest.TryGet(server, out ServerEntry? entry))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            await context.Response.WriteAsync($"No server named '{server}'.");
+            return;
+        }
+
+        var key = new BackendKey(server, ClientIdentity.ResolvePoolKey(context, entry!));
+
+        BackendInstance instance;
+        try
+        {
+            instance = await supervisor.GetOrStartAsync(key, context.RequestAborted);
+        }
+        catch (BackendStartupException ex)
+        {
+            logger.LogError(ex, "Could not start {Key}", key);
+
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            await context.Response.WriteAsync(
+                ex.LogTail.Length == 0 ? ex.Message : $"{ex.Message}\n\n{ex.LogTail}");
+            return;
+        }
+
+        using IDisposable lease = instance.BeginRequest();
+
+        // Rewrite /{server}/mcp to /mcp — backends don't know they're behind a gateway.
+        var transformer = new PathTransformer(suffix);
+
+        ForwarderError error = await forwarder.SendAsync(
+            context, instance.DestinationPrefix, _invoker, RequestConfig, transformer);
+
+        if (error != ForwarderError.None)
+        {
+            logger.LogWarning("Forwarding to {Key} failed with {Error}", key, error);
+        }
+    }
+
+    private sealed class PathTransformer(string suffix) : HttpTransformer
+    {
+        public override async ValueTask TransformRequestAsync(
+            HttpContext context,
+            HttpRequestMessage request,
+            string destinationPrefix,
+            CancellationToken cancellationToken)
+        {
+            await base.TransformRequestAsync(
+                context, request, destinationPrefix, cancellationToken);
+
+            request.RequestUri = new Uri(destinationPrefix.TrimEnd('/') + suffix);
+            request.Headers.Host = null;
+        }
+    }
+}
