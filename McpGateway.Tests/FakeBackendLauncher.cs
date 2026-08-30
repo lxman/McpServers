@@ -26,7 +26,12 @@ public sealed class FakeBackendLauncher : IBackendLauncher
     /// <summary>Set to make /health return 500, simulating a backend that starts unhealthy.</summary>
     public bool Unhealthy { get; set; }
 
-    /// <summary>Slows a start so a test can act while one is still in flight.</summary>
+    /// <summary>
+    /// Delays the port file so a test can act while a start is genuinely in flight. It must delay
+    /// the port file rather than Start itself: Start runs synchronously inside Lazy.Value on the
+    /// caller's thread, so a sleep here would be spent before GetOrStartAsync ever returns a Task,
+    /// leaving nothing in flight to cancel into.
+    /// </summary>
     public TimeSpan StartDelay { get; set; } = TimeSpan.Zero;
 
     public int StartCount { get; private set; }
@@ -34,8 +39,6 @@ public sealed class FakeBackendLauncher : IBackendLauncher
     public IBackendHandle Start(BackendLaunchRequest request)
     {
         StartCount++;
-
-        if (StartDelay > TimeSpan.Zero) Thread.Sleep(StartDelay);
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -60,7 +63,22 @@ public sealed class FakeBackendLauncher : IBackendLauncher
 
         if (!SuppressPortFile)
         {
-            PortFile.WriteAsync(request.PortFilePath, port, pid).GetAwaiter().GetResult();
+            if (StartDelay > TimeSpan.Zero)
+            {
+                // Write it late and asynchronously, so the supervisor sits in WaitForPortFileAsync
+                // for the duration -- a real in-flight window a test can cancel or stop into.
+                TimeSpan delay = StartDelay;
+                string path = request.PortFilePath;
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(delay);
+                    await PortFile.WriteAsync(path, port, pid);
+                });
+            }
+            else
+            {
+                PortFile.WriteAsync(request.PortFilePath, port, pid).GetAwaiter().GetResult();
+            }
         }
 
         return new FakeHandle(app, pid);
