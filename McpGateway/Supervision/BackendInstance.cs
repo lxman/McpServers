@@ -5,7 +5,8 @@ public sealed class BackendInstance(
     string version,
     int port,
     IBackendHandle handle,
-    string shutdownToken)
+    string shutdownToken,
+    TimeProvider time)
 {
     private readonly object _gate = new();
     private TaskCompletionSource _drained = CreateDrainedSource(signalled: true);
@@ -16,7 +17,7 @@ public sealed class BackendInstance(
     public int Port { get; } = port;
     public IBackendHandle Handle { get; } = handle;
     public string DestinationPrefix { get; } = $"http://127.0.0.1:{port}";
-    public DateTimeOffset LastUsedAt { get; private set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset LastUsedAt { get; private set; } = time.GetUtcNow();
 
     public int InFlight => Volatile.Read(ref _inFlight);
 
@@ -26,7 +27,7 @@ public sealed class BackendInstance(
         lock (_gate)
         {
             if (_inFlight++ == 0) _drained = CreateDrainedSource(signalled: false);
-            LastUsedAt = DateTimeOffset.UtcNow;
+            LastUsedAt = time.GetUtcNow();
         }
 
         return new Lease(this);
@@ -66,7 +67,7 @@ public sealed class BackendInstance(
         lock (_gate)
         {
             if (--_inFlight == 0) _drained.TrySetResult();
-            LastUsedAt = DateTimeOffset.UtcNow;
+            LastUsedAt = time.GetUtcNow();
         }
     }
 

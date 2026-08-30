@@ -11,8 +11,10 @@ public sealed class BackendSupervisor(
     HealthProbe healthProbe,
     GatewayBuildOptions options,
     string shutdownToken,
-    ILogger<BackendSupervisor> logger) : IAsyncDisposable
+    ILogger<BackendSupervisor> logger,
+    TimeProvider? time = null) : IAsyncDisposable
 {
+    private readonly TimeProvider _time = time ?? TimeProvider.System;
     private readonly ConcurrentDictionary<BackendKey, Lazy<Task<BackendInstance>>> _pool = new();
 
     public IReadOnlyCollection<BackendInstance> All => _pool.Values
@@ -122,6 +124,26 @@ public sealed class BackendSupervisor(
         await instance.StopAsync(cancellationToken);
     }
 
+    /// <summary>Drops backends whose process has gone. The next request starts a fresh one.</summary>
+    public async Task<int> EvictExitedAsync(CancellationToken cancellationToken)
+    {
+        var evicted = 0;
+
+        foreach (BackendInstance instance in All)
+        {
+            if (!instance.Handle.HasExited) continue;
+
+            logger.LogWarning(
+                "{Key} exited unexpectedly (pid {Pid}); it will restart on the next request",
+                instance.Key, instance.Handle.ProcessId);
+
+            await StopAsync(instance.Key, cancellationToken);
+            evicted++;
+        }
+
+        return evicted;
+    }
+
     public ServerEntry ResolveEntry(string server) =>
         manifest.TryGet(server, out ServerEntry? entry)
             ? entry!
@@ -160,7 +182,7 @@ public sealed class BackendSupervisor(
             logger.LogInformation(
                 "{Key} healthy on port {Port} (pid {Pid})", key, port.Port, port.Pid);
 
-            return new BackendInstance(key, version, port.Port, handle, shutdownToken);
+            return new BackendInstance(key, version, port.Port, handle, shutdownToken, _time);
         }
         catch
         {

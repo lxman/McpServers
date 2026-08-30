@@ -50,16 +50,24 @@ public static class GatewayApp
         builder.Services.AddSingleton(ManifestStore.Load(options.ManifestPath));
         builder.Services.AddSingleton<IBackendLauncher, ProcessBackendLauncher>();
         builder.Services.AddSingleton(new HealthProbe(new HttpClient()));
+        builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton(sp => new BackendSupervisor(
             sp.GetRequiredService<ManifestStore>(),
             sp.GetRequiredService<IBackendLauncher>(),
             sp.GetRequiredService<HealthProbe>(),
             options,
             token,
-            sp.GetRequiredService<ILogger<BackendSupervisor>>()));
+            sp.GetRequiredService<ILogger<BackendSupervisor>>(),
+            sp.GetRequiredService<TimeProvider>()));
 
         builder.Services.AddHttpForwarder();
         builder.Services.AddSingleton<McpForwarder>();
+
+        builder.Services.AddSingleton<IdleReaper>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<IdleReaper>());
+
+        builder.Services.AddSingleton<EagerStarter>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<EagerStarter>());
 
         configureServices?.Invoke(builder.Services);
 
