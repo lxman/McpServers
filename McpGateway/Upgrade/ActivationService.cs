@@ -30,29 +30,41 @@ public sealed class ActivationService(
                 .Where(instance => instance.Key.Server == server)
                 .ToList();
 
-            var swapped = 0;
+            // Start and health-gate EVERY replacement before touching a single live backend.
+            // Swapping as we go would leave earlier backends on the new version with their old
+            // instances already stopped, while a later failure skipped the manifest write -- a
+            // fleet running one version and a manifest claiming another, which everything
+            // downstream reads.
+            var replacements = new List<(BackendInstance Old, BackendInstance New)>();
+
+            try
+            {
+                foreach (BackendInstance old in live)
+                {
+                    replacements.Add(
+                        (old, await supervisor.StartDetachedAsync(old.Key, version, cancellationToken)));
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex, "Could not start {Server} at {Version}; nothing was swapped", server, version);
+
+                foreach ((_, BackendInstance started) in replacements)
+                {
+                    await started.StopAsync(cancellationToken);
+                }
+
+                return new ActivationResult(
+                    false, server, from, version, 0, false,
+                    $"New version failed to start: {ex.Message}");
+            }
+
             var drainTimedOut = false;
 
-            foreach (BackendInstance old in live)
+            foreach ((BackendInstance old, BackendInstance replacement) in replacements)
             {
-                BackendInstance replacement;
-                try
-                {
-                    replacement = await supervisor.StartDetachedAsync(
-                        old.Key, version, cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    // The old backend is untouched, so the failure costs nothing but the attempt.
-                    logger.LogError(ex, "Could not start {Key} at {Version}", old.Key, version);
-
-                    return new ActivationResult(
-                        false, server, from, version, swapped, drainTimedOut,
-                        $"New version failed to start: {ex.Message}");
-                }
-
                 supervisor.Replace(old.Key, replacement);
-                swapped++;
 
                 if (!await old.WaitForDrainAsync(DrainTimeout, cancellationToken))
                 {
@@ -64,6 +76,8 @@ public sealed class ActivationService(
 
                 await old.StopAsync(cancellationToken);
             }
+
+            int swapped = replacements.Count;
 
             await manifest.SetActiveVersionAsync(server, version, cancellationToken);
 
