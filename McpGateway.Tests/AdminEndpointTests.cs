@@ -151,10 +151,12 @@ public sealed class AdminEndpointTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Restart_RestartsLiveBackendsAndReturnsTheCount()
+    public async Task Restart_RestartsLiveBackendsAndReturnsTheResult()
     {
         int before = await SendRequestAndGetPidAsync("code");
 
+        // Restart is now an activation to the server's own current version, so the response is the
+        // same ActivationResult shape /activate returns -- not a hand-rolled { restarted, ... }.
         HttpResponseMessage response = await _client.PostAsync(
             "/admin/servers/demo/restart", null, TestContext.Current.CancellationToken);
 
@@ -162,7 +164,10 @@ public sealed class AdminEndpointTests : IAsyncLifetime
 
         string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         using JsonDocument doc = JsonDocument.Parse(body);
-        Assert.Equal(1, doc.RootElement.GetProperty("restarted").GetInt32());
+
+        Assert.True(doc.RootElement.GetProperty("succeeded").GetBoolean());
+        Assert.Equal(1, doc.RootElement.GetProperty("backendsSwapped").GetInt32());
+        Assert.Equal("v-one", doc.RootElement.GetProperty("toVersion").GetString());
 
         string afterBody = await _client.GetStringAsync(
             "/admin/servers", TestContext.Current.CancellationToken);

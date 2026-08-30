@@ -199,10 +199,18 @@ public sealed class BlueGreenActivationTests : IAsyncDisposable
         // not propagate out of ActivateAsync as an unhandled exception.
         _launcher.ThrowOnStop = true;
 
-        ActivationResult result = await _activation.ActivateAsync(
-            "overlaps", "v-two", TestContext.Current.CancellationToken);
-
-        _launcher.ThrowOnStop = false;
+        ActivationResult result;
+        try
+        {
+            result = await _activation.ActivateAsync(
+                "overlaps", "v-two", TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            // In a try/finally so a mutation that makes activation propagate still resets this --
+            // otherwise DisposeAsync's own teardown throws too, muddying the mutation's output.
+            _launcher.ThrowOnStop = false;
+        }
 
         Assert.False(result.Succeeded);
         Assert.Equal(1, result.BackendsSwapped);

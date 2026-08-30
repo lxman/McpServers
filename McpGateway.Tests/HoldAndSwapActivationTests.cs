@@ -89,23 +89,57 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
     public async Task Activate_RestartsThePreviousVersion_WhenTheNewOneFailsToStart()
     {
         var key = new BackendKey("exclusive", "");
-        await _supervisor.GetOrStartAsync(key, TestContext.Current.CancellationToken);
+        BackendInstance before = await _supervisor.GetOrStartAsync(
+            key, TestContext.Current.CancellationToken);
 
-        _launcher.Unhealthy = true;
+        // UnhealthyFromStartNumber is a floor -- StartCount only increases, so "the new version's
+        // start (call #2, v-two) fails but the restore's start (call #3, v-one) succeeds" cannot be
+        // expressed by one static value: 2 would also catch call #3, since 3 >= 2. Lift the floor
+        // from HealthStatusCaptured instead, the instant call #2's own status is locked into its
+        // closure -- deterministically, not by racing a delay against the real ~10s health-check
+        // timeout call #2 is about to sit in before the catch block below even runs.
+        _launcher.UnhealthyFromStartNumber = 2;
+        _launcher.HealthStatusCaptured += count =>
+        {
+            if (count == 2) _launcher.UnhealthyFromStartNumber = int.MaxValue;
+        };
 
         ActivationResult result = await _activation.ActivateAsync(
             "exclusive", "v-two", TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
+        Assert.Contains(
+            "previous version was restored", result.Error, StringComparison.OrdinalIgnoreCase);
 
-        // No old process to fall back to, so the gateway brings v-one back up.
-        _launcher.Unhealthy = false;
-        BackendInstance recovered = await _supervisor.GetOrStartAsync(
-            key, TestContext.Current.CancellationToken);
+        // Assert on the instance the restore's own Replace() installed, not on a fresh
+        // GetOrStartAsync -- a deleted Replace() call would leave a later GetOrStartAsync free to
+        // start its own backend and satisfy a weaker assertion, hiding exactly the regression this
+        // test exists to catch (see mutation check in the report).
+        Assert.True(_supervisor.TryGet(key, out BackendInstance? restored));
+        Assert.Equal("v-one", restored!.Version);
+        Assert.NotSame(before, restored);
 
-        Assert.Equal("v-one", recovered.Version);
         Assert.True(_manifest.TryGet("exclusive", out ServerEntry? entry));
         Assert.Equal("v-one", entry!.ActiveVersion);
+    }
+
+    [Fact]
+    public async Task Activate_ReturnsAFailedResult_WhenTheOldVersionCannotBeRestoredEither()
+    {
+        var key = new BackendKey("exclusive", "");
+        await _supervisor.GetOrStartAsync(key, TestContext.Current.CancellationToken);
+
+        // Unlike the test above, nothing lifts the floor: both the new version's start (#2) and
+        // the restore attempt (#3) land on or past it, so the restore genuinely fails too. This is
+        // the "no running instance at all" outcome Finding 1 makes distinguishable from "restored."
+        _launcher.UnhealthyFromStartNumber = 2;
+
+        ActivationResult result = await _activation.ActivateAsync(
+            "exclusive", "v-two", TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("CRITICAL", result.Error, StringComparison.Ordinal);
+        Assert.Contains("no running instance", result.Error, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -119,8 +153,18 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
         // of this test is that ActivateAsync must not let that propagate as an unhandled exception.
         _launcher.ThrowOnStop = true;
 
-        ActivationResult result = await _activation.ActivateAsync(
-            "exclusive", "v-two", TestContext.Current.CancellationToken);
+        ActivationResult result;
+        try
+        {
+            result = await _activation.ActivateAsync(
+                "exclusive", "v-two", TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            // In a try/finally so a mutation that makes activation propagate still resets this --
+            // otherwise DisposeAsync's own teardown throws too, muddying the mutation's output.
+            _launcher.ThrowOnStop = false;
+        }
 
         Assert.False(result.Succeeded);
         Assert.Equal(0, result.BackendsSwapped);
@@ -130,8 +174,32 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
         // old process's true state, this at least is not a fleet/manifest disagreement.
         Assert.True(_manifest.TryGet("exclusive", out ServerEntry? entry));
         Assert.Equal("v-one", entry!.ActiveVersion);
+    }
 
-        _launcher.ThrowOnStop = false;
+    [Fact]
+    public async Task Activate_ReturnsAFailedResult_WhenTheManifestWriteFails_AfterTheSwapSucceeded()
+    {
+        var key = new BackendKey("exclusive", "");
+        await _supervisor.GetOrStartAsync(key, TestContext.Current.CancellationToken);
+
+        // Deletes the directory the manifest file lives in, so SetActiveVersionAsync's own
+        // File.WriteAllTextAsync throws DirectoryNotFoundException -- a cheap, uncontrived way to
+        // induce the "swap succeeded but the manifest write failed" sub-case without a new fake
+        // seam. The fake launcher doesn't read anything under _root, so starting v-two still
+        // succeeds; only the manifest write is affected.
+        Directory.Delete(_root, recursive: true);
+
+        ActivationResult result = await _activation.ActivateAsync(
+            "exclusive", "v-two", TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(1, result.BackendsSwapped);
+        Assert.Contains("manifest write failed", result.Error, StringComparison.OrdinalIgnoreCase);
+
+        // The swap itself went through -- the pool holds the new version even though the write
+        // that should have recorded it never landed.
+        Assert.True(_supervisor.TryGet(key, out BackendInstance? after));
+        Assert.Equal("v-two", after!.Version);
     }
 
     public async ValueTask DisposeAsync()

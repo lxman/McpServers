@@ -76,9 +76,14 @@ public static class AdminEndpoints
             return Results.Json(new { stopped = keys.Count });
         });
 
+        // A restart is just an activation to the server's own current version. Routing it through
+        // ActivateAsync -- rather than a hand-rolled stop/start loop -- inherits the gate, the
+        // hold, the ordering guarantee and the error reporting for free, and closes a real race: a
+        // hand-rolled restart could stop-and-restart a key while a concurrent activation held a
+        // stale reference to the very same key.
         app.MapPost("/admin/servers/{name}/restart", async (
             string name,
-            BackendSupervisor supervisor,
+            ActivationService activation,
             ManifestStore manifest,
             CancellationToken cancellationToken) =>
         {
@@ -87,30 +92,28 @@ public static class AdminEndpoints
                 return Results.NotFound($"No server named '{name}'.");
             }
 
-            List<BackendKey> keys = supervisor.All
-                .Where(instance => instance.Key.Server == name)
-                .Select(instance => instance.Key)
-                .ToList();
+            ActivationResult result = await activation.ActivateAsync(
+                name, entry!.ActiveVersion, cancellationToken);
 
-            foreach (BackendKey key in keys)
-            {
-                await supervisor.StopAsync(key, cancellationToken);
-                await supervisor.GetOrStartAsync(key, cancellationToken);
-            }
-
-            return Results.Json(new { restarted = keys.Count, entry!.ActiveVersion });
+            return result.Succeeded
+                ? Results.Json(result)
+                : Results.Json(result, statusCode: StatusCodes.Status409Conflict);
         });
 
+        // Pruning deletes deploy directories, so it goes through ActivationService.PruneAsync
+        // rather than BackendSupervisor.PruneVersionsAsync directly -- taking the same gate an
+        // activation holds closes the window where a concurrent prune could delete the directory a
+        // mid-flight swap is about to start from.
         app.MapPost("/admin/prune", async (
             ManifestStore manifest,
-            BackendSupervisor supervisor,
+            ActivationService activation,
             CancellationToken cancellationToken) =>
         {
             var pruned = new Dictionary<string, IReadOnlyList<string>>();
 
             foreach (string server in manifest.Entries.Keys)
             {
-                pruned[server] = await supervisor.PruneVersionsAsync(server, cancellationToken);
+                pruned[server] = await activation.PruneAsync(server, cancellationToken);
             }
 
             return Results.Json(pruned);

@@ -17,6 +17,26 @@ public sealed class ActivationService(
     /// </summary>
     public TimeSpan DrainTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// Pruning deletes deploy directories, so it must not run while a swap is mid-flight: between
+    /// stopping the old backend and writing the manifest, the incoming version is neither active
+    /// nor live, and an unsynchronised prune would delete the directory the swap is about to start
+    /// from.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> PruneAsync(
+        string server, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            return await supervisor.PruneVersionsAsync(server, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task<ActivationResult> ActivateAsync(
         string server, string version, CancellationToken cancellationToken)
     {
@@ -177,12 +197,17 @@ public sealed class ActivationService(
                     old.Key, version, from);
 
                 // Nothing to fall back to, so bring the previous version back up. Held requests
-                // survive if this succeeds.
+                // survive if this succeeds. Track whether it actually did: the caller of
+                // POST /admin/servers/{name}/activate cannot otherwise tell a degraded server (old
+                // version restored) from a down one (no running instance at all) -- for a
+                // non-overlap server that distinction is the whole point of reporting truthfully.
+                var restoreSucceeded = false;
                 try
                 {
                     BackendInstance restored = await supervisor.StartDetachedAsync(
                         old.Key, from, cancellationToken);
                     supervisor.Replace(old.Key, restored);
+                    restoreSucceeded = true;
                 }
                 catch (Exception restoreFailure)
                 {
@@ -191,9 +216,14 @@ public sealed class ActivationService(
                         old.Key, from);
                 }
 
+                string restoreNote = restoreSucceeded
+                    ? " The previous version was restored."
+                    : " CRITICAL: the previous version could NOT be restarted; this server has " +
+                      "no running instance.";
+
                 return new ActivationResult(
                     false, server, from, version, swapped, drainTimedOut,
-                    $"New version failed to start: {ex.Message}");
+                    $"New version failed to start: {ex.Message}{restoreNote}");
             }
         }
 

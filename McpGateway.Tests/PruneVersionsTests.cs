@@ -1,5 +1,6 @@
 using McpGateway.Configuration;
 using McpGateway.Supervision;
+using McpGateway.Upgrade;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -12,6 +13,7 @@ public sealed class PruneVersionsTests : IAsyncDisposable
 
     private readonly FakeBackendLauncher _launcher = new();
     private readonly BackendSupervisor _supervisor;
+    private readonly ActivationService _activation;
 
     public PruneVersionsTests()
     {
@@ -28,8 +30,9 @@ public sealed class PruneVersionsTests : IAsyncDisposable
         }
         """);
 
+        ManifestStore manifest = ManifestStore.Load(manifestPath);
         _supervisor = new BackendSupervisor(
-            ManifestStore.Load(manifestPath),
+            manifest,
             _launcher,
             new HealthProbe(new HttpClient()),
             new GatewayBuildOptions
@@ -40,6 +43,9 @@ public sealed class PruneVersionsTests : IAsyncDisposable
             },
             "shutdown-token",
             NullLogger<BackendSupervisor>.Instance);
+
+        _activation = new ActivationService(
+            _supervisor, manifest, NullLogger<ActivationService>.Instance);
     }
 
     private string VersionDirectory(string version) =>
@@ -115,6 +121,26 @@ public sealed class PruneVersionsTests : IAsyncDisposable
 
         Assert.DoesNotContain("v-locked", pruned);
         Assert.True(Directory.Exists(VersionDirectory("v-locked")));
+    }
+
+    [Fact]
+    public async Task PruneAsync_DelegatesToPruneVersionsAsync()
+    {
+        // ActivationService.PruneAsync exists so pruning takes the same gate an activation holds
+        // -- the fix for the race where a concurrent prune could delete the deploy directory a
+        // mid-flight swap is about to start from. That race itself is not exercised here (it would
+        // need a slow-motion activation running concurrently with a prune, timing their overlap);
+        // this only proves the wrapper actually delegates rather than being dead code the /admin/
+        // prune endpoint calls into for no effect. See the report for why the deeper race is not
+        // covered by any test.
+        CreateVersionDirectory("v-one");
+        CreateVersionDirectory("v-two"); // the manifest's activeVersion
+
+        IReadOnlyList<string> pruned = await _activation.PruneAsync(
+            "prunable", TestContext.Current.CancellationToken);
+
+        Assert.Contains("v-one", pruned);
+        Assert.False(Directory.Exists(VersionDirectory("v-one")));
     }
 
     public async ValueTask DisposeAsync()

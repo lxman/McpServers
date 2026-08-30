@@ -44,6 +44,17 @@ public sealed class FakeBackendLauncher : IBackendLauncher
 
     public int StartCount { get; private set; }
 
+    /// <summary>
+    /// Fires synchronously from Start, once this call's own healthy/unhealthy status has already
+    /// been captured into its closure below. UnhealthyFromStartNumber is a floor -- StartCount only
+    /// increases, so a single static value cannot express "this exact start fails, but the very
+    /// next one succeeds": that next call's count would still be >= the floor. A handler here can
+    /// safely change UnhealthyFromStartNumber without affecting the call that just captured its own
+    /// status, letting a test express that sequence deterministically instead of racing a wall-clock
+    /// delay against the real health-check timeout the failing call is about to sit in.
+    /// </summary>
+    public event Action<int>? HealthStatusCaptured;
+
     /// <summary>Track how many fakes are alive at once, to prove non-overlap.</summary>
     public bool ObserveConcurrency { get; set; }
     public int MaxConcurrentLive { get; private set; }
@@ -90,6 +101,7 @@ public sealed class FakeBackendLauncher : IBackendLauncher
         WebApplication app = builder.Build();
 
         bool unhealthy = Unhealthy || StartCount >= UnhealthyFromStartNumber;
+        HealthStatusCaptured?.Invoke(StartCount);
         app.MapGet("/health", () => unhealthy
             ? Results.StatusCode(500)
             : Results.Json(new { status = "ok", version = request.Version }));
