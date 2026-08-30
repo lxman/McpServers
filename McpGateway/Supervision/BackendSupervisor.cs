@@ -16,6 +16,8 @@ public sealed class BackendSupervisor(
 {
     private readonly TimeProvider _time = time ?? TimeProvider.System;
     private readonly ConcurrentDictionary<BackendKey, Lazy<Task<BackendInstance>>> _pool = new();
+    private readonly ConcurrentDictionary<string, TaskCompletionSource> _holds =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public IReadOnlyCollection<BackendInstance> All => _pool.Values
         .Where(entry => entry.IsValueCreated && entry.Value.IsCompletedSuccessfully)
@@ -31,6 +33,11 @@ public sealed class BackendSupervisor(
     {
         while (true)
         {
+            if (_holds.TryGetValue(key.Server, out TaskCompletionSource? hold))
+            {
+                await hold.Task.WaitAsync(cancellationToken);
+            }
+
             Lazy<Task<BackendInstance>> entry = _pool.GetOrAdd(key, k => new Lazy<Task<BackendInstance>>(
                 () => StartAsync(k, ResolveEntry(k.Server).ActiveVersion, CancellationToken.None)));
 
@@ -65,6 +72,76 @@ public sealed class BackendSupervisor(
     public Task<BackendInstance> StartDetachedAsync(
         BackendKey key, string version, CancellationToken cancellationToken) =>
         StartAsync(key, version, cancellationToken);
+
+    /// <summary>
+    /// Blocks new starts for a server while a swap is in progress. Callers of GetOrStartAsync wait
+    /// on the hold instead of getting an error, which is what makes a stop-then-start upgrade cost
+    /// latency rather than failed calls.
+    /// </summary>
+    public Task<IAsyncDisposable> HoldAsync(string server, CancellationToken cancellationToken)
+    {
+        var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        if (!_holds.TryAdd(server, source))
+        {
+            throw new InvalidOperationException($"A swap is already in progress for '{server}'.");
+        }
+
+        return Task.FromResult<IAsyncDisposable>(new Hold(this, server, source));
+    }
+
+    private sealed class Hold(BackendSupervisor owner, string server, TaskCompletionSource source)
+        : IAsyncDisposable
+    {
+        public ValueTask DisposeAsync()
+        {
+            owner._holds.TryRemove(server, out _);
+            source.TrySetResult();
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    /// <summary>
+    /// Deletes version directories that are neither active nor backing a live backend. A directory
+    /// whose files are still locked is skipped rather than fought.
+    /// </summary>
+    public Task<IReadOnlyList<string>> PruneVersionsAsync(
+        string server, CancellationToken cancellationToken)
+    {
+        ServerEntry entry = ResolveEntry(server);
+        string root = Path.Combine(options.RepoRoot, entry.DeployRoot);
+
+        var pruned = new List<string>();
+        if (!Directory.Exists(root)) return Task.FromResult<IReadOnlyList<string>>(pruned);
+
+        HashSet<string> keep = All
+            .Where(instance => instance.Key.Server == server)
+            .Select(instance => instance.Version)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        keep.Add(entry.ActiveVersion);
+
+        foreach (string directory in Directory.GetDirectories(root))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            string name = Path.GetFileName(directory);
+            if (keep.Contains(name)) continue;
+
+            try
+            {
+                Directory.Delete(directory, recursive: true);
+                pruned.Add(name);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                logger.LogInformation(
+                    "Left {Directory} in place; something still holds it", directory);
+            }
+        }
+
+        return Task.FromResult<IReadOnlyList<string>>(pruned);
+    }
 
     public bool TryGet(BackendKey key, out BackendInstance? instance)
     {

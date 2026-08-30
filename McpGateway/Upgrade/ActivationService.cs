@@ -30,6 +30,12 @@ public sealed class ActivationService(
                 .Where(instance => instance.Key.Server == server)
                 .ToList();
 
+            if (!entry.OverlapAllowed)
+            {
+                return await ActivateExclusiveAsync(
+                    server, from, version, live, cancellationToken);
+            }
+
             // Start and health-gate EVERY replacement before touching a single live backend.
             // Swapping as we go would leave earlier backends on the new version with their old
             // instances already stopped, while a later failure skipped the manifest write -- a
@@ -92,5 +98,66 @@ public sealed class ActivationService(
         {
             _gate.Release();
         }
+    }
+
+    /// <summary>
+    /// For servers whose machine-wide state two live instances would corrupt. Requests arriving
+    /// mid-swap are held by the supervisor until the new backend is up.
+    /// </summary>
+    private async Task<ActivationResult> ActivateExclusiveAsync(
+        string server,
+        string from,
+        string version,
+        List<BackendInstance> live,
+        CancellationToken cancellationToken)
+    {
+        await using IAsyncDisposable hold = await supervisor.HoldAsync(server, cancellationToken);
+
+        var drainTimedOut = false;
+        var swapped = 0;
+
+        foreach (BackendInstance old in live)
+        {
+            if (!await old.WaitForDrainAsync(DrainTimeout, cancellationToken)) drainTimedOut = true;
+
+            await supervisor.StopAsync(old.Key, cancellationToken);
+
+            try
+            {
+                BackendInstance replacement = await supervisor.StartDetachedAsync(
+                    old.Key, version, cancellationToken);
+
+                supervisor.Replace(old.Key, replacement);
+                swapped++;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Could not start {Key} at {Version}; restoring {From}",
+                    old.Key, version, from);
+
+                // Nothing to fall back to, so bring the previous version back up. Held requests
+                // survive if this succeeds.
+                try
+                {
+                    BackendInstance restored = await supervisor.StartDetachedAsync(
+                        old.Key, from, cancellationToken);
+                    supervisor.Replace(old.Key, restored);
+                }
+                catch (Exception restoreFailure)
+                {
+                    logger.LogCritical(restoreFailure,
+                        "Could not restore {Key} at {From}; it will start on the next request",
+                        old.Key, from);
+                }
+
+                return new ActivationResult(
+                    false, server, from, version, swapped, drainTimedOut,
+                    $"New version failed to start: {ex.Message}");
+            }
+        }
+
+        await manifest.SetActiveVersionAsync(server, version, cancellationToken);
+
+        return new ActivationResult(true, server, from, version, swapped, drainTimedOut, null);
     }
 }

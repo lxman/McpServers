@@ -44,6 +44,12 @@ public sealed class FakeBackendLauncher : IBackendLauncher
 
     public int StartCount { get; private set; }
 
+    /// <summary>Track how many fakes are alive at once, to prove non-overlap.</summary>
+    public bool ObserveConcurrency { get; set; }
+    public int MaxConcurrentLive { get; private set; }
+
+    private int _live;
+
     private readonly List<IBackendHandle> _handles = [];
 
     /// <summary>
@@ -57,6 +63,17 @@ public sealed class FakeBackendLauncher : IBackendLauncher
     public IBackendHandle Start(BackendLaunchRequest request)
     {
         StartCount++;
+
+        // Paired unconditionally with FakeHandle's onExit decrement below: a handle started before
+        // ObserveConcurrency was turned on (e.g. the pre-existing backend in a swap test) still
+        // decrements _live when it exits, so the increment must not be gated on the flag or _live
+        // goes negative and MaxConcurrentLive under-reports. Only the *recorded peak* is gated, so
+        // unrelated tests that never touch ObserveConcurrency see MaxConcurrentLive stay at 0.
+        int live = Interlocked.Increment(ref _live);
+        if (ObserveConcurrency)
+        {
+            MaxConcurrentLive = Math.Max(MaxConcurrentLive, live);
+        }
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -105,12 +122,12 @@ public sealed class FakeBackendLauncher : IBackendLauncher
             }
         }
 
-        var handle = new FakeHandle(app, pid);
+        var handle = new FakeHandle(app, pid, () => Interlocked.Decrement(ref _live));
         _handles.Add(handle);
         return handle;
     }
 
-    private sealed class FakeHandle(WebApplication app, int pid) : IBackendHandle
+    private sealed class FakeHandle(WebApplication app, int pid, Action onExit) : IBackendHandle
     {
         public int ProcessId { get; } = pid;
         public bool HasExited { get; private set; }
@@ -119,6 +136,7 @@ public sealed class FakeBackendLauncher : IBackendLauncher
         {
             if (HasExited) return;
             HasExited = true;
+            onExit();
             await app.StopAsync();
             await app.DisposeAsync();
         }

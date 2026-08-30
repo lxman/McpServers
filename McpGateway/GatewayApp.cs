@@ -1,4 +1,5 @@
 using McpGateway.Configuration;
+using McpGateway.Endpoints;
 using McpGateway.Routing;
 using McpGateway.Security;
 using McpGateway.Supervision;
@@ -78,16 +79,7 @@ public static class GatewayApp
 
         app.UseMiddleware<BearerAuthMiddleware>(token);
 
-        app.MapGet("/admin/servers", (ManifestStore manifest) => Results.Json(
-            manifest.Entries.ToDictionary(
-                pair => pair.Key,
-                pair => new
-                {
-                    pair.Value.Pool,
-                    pair.Value.ActiveVersion,
-                    pair.Value.OverlapAllowed,
-                    pair.Value.EagerStart
-                })));
+        app.MapAdminEndpoints();
 
         app.MapPost("/{server}/mcp", (HttpContext ctx, McpForwarder fwd, string server) =>
             fwd.ForwardAsync(ctx, server, "/mcp"));
