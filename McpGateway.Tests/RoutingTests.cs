@@ -99,6 +99,26 @@ public sealed class RoutingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Forwarding_KeepsTheClientHeader_DropsTheGatewayToken_AndPreservesTheQuery()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/shared-demo/mcp?trace=abc123")
+        {
+            Content = JsonContent.Create(new { jsonrpc = "2.0", id = 1, method = "tools/list" })
+        };
+        request.Headers.Add("X-Mcp-Client", "code");
+
+        HttpResponseMessage response = await _client.SendAsync(
+            request, TestContext.Current.CancellationToken);
+
+        string body = await response.Content.ReadAsStringAsync(
+            TestContext.Current.CancellationToken);
+
+        Assert.Contains("\"clientHeader\":\"code\"", body);
+        Assert.Contains("\"authHeader\":null", body);
+        Assert.Contains("trace=abc123", body);
+    }
+
+    [Fact]
     public async Task UnknownServer_Is404()
     {
         HttpResponseMessage response = await PostMcpAsync("nope", "code");

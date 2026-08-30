@@ -80,7 +80,16 @@ public sealed class McpForwarder(
             await base.TransformRequestAsync(
                 context, request, destinationPrefix, cancellationToken);
 
-            request.RequestUri = new Uri(destinationPrefix.TrimEnd('/') + suffix);
+            // Keep the query string. base.TransformRequestAsync built it into RequestUri, and
+            // overwriting the URI here would drop it silently rather than failing loudly.
+            request.RequestUri = new Uri(
+                destinationPrefix.TrimEnd('/') + suffix + context.Request.QueryString);
+
+            // X-Mcp-Client must survive -- the backend's McpCaller.ClientId reads it. The
+            // gateway's bearer token must not: it is also the backend's own shutdown token, and a
+            // tool call has no reason to carry it.
+            request.Headers.Remove("Authorization");
+
             request.Headers.Host = null;
         }
     }

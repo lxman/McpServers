@@ -51,7 +51,13 @@ public sealed class FakeBackendLauncher : IBackendLauncher
             ? Results.StatusCode(500)
             : Results.Json(new { status = "ok", version = request.Version }));
 
-        app.MapPost("/mcp", () => Results.Json(new { version = request.Version }));
+        app.MapPost("/mcp", (HttpContext ctx) => Results.Json(new
+        {
+            version = request.Version,
+            clientHeader = ctx.Request.Headers["X-Mcp-Client"].FirstOrDefault(),
+            authHeader = ctx.Request.Headers.Authorization.FirstOrDefault(),
+            query = ctx.Request.QueryString.Value
+        }));
         app.MapPost("/admin/shutdown", () => Results.Accepted());
 
         app.Start();
