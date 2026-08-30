@@ -2,6 +2,7 @@ using McpGateway.Configuration;
 using McpGateway.Routing;
 using McpGateway.Security;
 using McpGateway.Supervision;
+using McpGateway.Upgrade;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -68,6 +69,8 @@ public static class GatewayApp
 
         builder.Services.AddSingleton<EagerStarter>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<EagerStarter>());
+
+        builder.Services.AddSingleton<ActivationService>();
 
         configureServices?.Invoke(builder.Services);
 
