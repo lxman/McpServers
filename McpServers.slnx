@@ -11,6 +11,8 @@
     <Project Path="Libraries\Mcp.Common.Core\Mcp.Common.Core.csproj" />
     <Project Path="Libraries\Mcp.Database.Core\Mcp.Database.Core.csproj" />
     <Project Path="Libraries\Mcp.DependencyInjection.Core\Mcp.DependencyInjection.Core.csproj" />
+    <Project Path="Libraries\Mcp.Hosting.Core\Mcp.Hosting.Core.csproj" />
+    <Project Path="Libraries\Mcp.Hosting.Core.Tests\Mcp.Hosting.Core.Tests.csproj" />
     <Project Path="Libraries\Mcp.ResponseGuard\Mcp.ResponseGuard.csproj" />
     <Project Path="Libraries\MongoServer.Core\MongoServer.Core.csproj" />
     <Project Path="Libraries\MsOfficeCrypto\MsOfficeCrypto.csproj" />
