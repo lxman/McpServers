@@ -187,6 +187,37 @@ public sealed class BlueGreenActivationTests : IAsyncDisposable
         Assert.Equal("v-one", entry!.ActiveVersion);
     }
 
+    [Fact]
+    public async Task Activate_ReturnsAFailedResult_RatherThanThrowing_WhenStoppingTheOldBackendFails()
+    {
+        var key = new BackendKey("overlaps", "code");
+        await _supervisor.GetOrStartAsync(key, TestContext.Current.CancellationToken);
+
+        // Simulates a real process kill failing during the drain-then-stop phase, after the new
+        // backend has already been Replace()'d in. There is nothing to roll back to at that point;
+        // the point of this test is that the exception must surface as a failed ActivationResult,
+        // not propagate out of ActivateAsync as an unhandled exception.
+        _launcher.ThrowOnStop = true;
+
+        ActivationResult result = await _activation.ActivateAsync(
+            "overlaps", "v-two", TestContext.Current.CancellationToken);
+
+        _launcher.ThrowOnStop = false;
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(1, result.BackendsSwapped);
+        Assert.Contains("already replaced", result.Error, StringComparison.OrdinalIgnoreCase);
+
+        // Replace() already ran before the throw, so the new backend is live in the pool --
+        // but the manifest write never ran. Fleet and manifest now genuinely disagree; the
+        // failed result says so rather than hiding it behind a crash.
+        Assert.True(_supervisor.TryGet(key, out BackendInstance? after));
+        Assert.Equal("v-two", after!.Version);
+
+        Assert.True(_manifest.TryGet("overlaps", out ServerEntry? entry));
+        Assert.Equal("v-one", entry!.ActiveVersion);
+    }
+
     public async ValueTask DisposeAsync()
     {
         await _supervisor.DisposeAsync();

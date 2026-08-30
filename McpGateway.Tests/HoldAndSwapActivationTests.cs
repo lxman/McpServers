@@ -108,6 +108,32 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
         Assert.Equal("v-one", entry!.ActiveVersion);
     }
 
+    [Fact]
+    public async Task Activate_ReturnsAFailedResult_RatherThanThrowing_WhenStoppingTheOldBackendFails()
+    {
+        var key = new BackendKey("exclusive", "");
+        await _supervisor.GetOrStartAsync(key, TestContext.Current.CancellationToken);
+
+        // Simulates a real process kill failing -- BackendSupervisor.StopAsync has already removed
+        // the pool entry by the time this throws, so the old process's fate is unknown. The point
+        // of this test is that ActivateAsync must not let that propagate as an unhandled exception.
+        _launcher.ThrowOnStop = true;
+
+        ActivationResult result = await _activation.ActivateAsync(
+            "exclusive", "v-two", TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(0, result.BackendsSwapped);
+        Assert.Contains("may still be alive", result.Error, StringComparison.OrdinalIgnoreCase);
+
+        // Nothing was swapped, so the manifest correctly still says the old version -- whatever the
+        // old process's true state, this at least is not a fleet/manifest disagreement.
+        Assert.True(_manifest.TryGet("exclusive", out ServerEntry? entry));
+        Assert.Equal("v-one", entry!.ActiveVersion);
+
+        _launcher.ThrowOnStop = false;
+    }
+
     public async ValueTask DisposeAsync()
     {
         await _supervisor.DisposeAsync();

@@ -150,6 +150,57 @@ public sealed class AdminEndpointTests : IAsyncLifetime
             doc.RootElement.GetProperty("demo").GetProperty("backends").GetArrayLength());
     }
 
+    [Fact]
+    public async Task Restart_RestartsLiveBackendsAndReturnsTheCount()
+    {
+        int before = await SendRequestAndGetPidAsync("code");
+
+        HttpResponseMessage response = await _client.PostAsync(
+            "/admin/servers/demo/restart", null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        using JsonDocument doc = JsonDocument.Parse(body);
+        Assert.Equal(1, doc.RootElement.GetProperty("restarted").GetInt32());
+
+        string afterBody = await _client.GetStringAsync(
+            "/admin/servers", TestContext.Current.CancellationToken);
+        using JsonDocument afterDoc = JsonDocument.Parse(afterBody);
+        JsonElement backends = afterDoc.RootElement.GetProperty("demo").GetProperty("backends");
+
+        Assert.Equal(1, backends.GetArrayLength());
+
+        // A genuine restart means a fresh process, not the same one still answering.
+        Assert.NotEqual(before, backends[0].GetProperty("pid").GetInt32());
+    }
+
+    [Fact]
+    public async Task Restart_Returns404_ForAnUnknownServer()
+    {
+        HttpResponseMessage response = await _client.PostAsync(
+            "/admin/servers/nope/restart", null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    private async Task<int> SendRequestAndGetPidAsync(string clientId)
+    {
+        var start = new HttpRequestMessage(HttpMethod.Post, "/demo/mcp")
+        {
+            Content = JsonContent.Create(new { jsonrpc = "2.0", id = 1, method = "tools/list" })
+        };
+        start.Headers.Add("X-Mcp-Client", clientId);
+        await _client.SendAsync(start, TestContext.Current.CancellationToken);
+
+        string body = await _client.GetStringAsync(
+            "/admin/servers", TestContext.Current.CancellationToken);
+        using JsonDocument doc = JsonDocument.Parse(body);
+
+        return doc.RootElement.GetProperty("demo").GetProperty("backends")[0]
+            .GetProperty("pid").GetInt32();
+    }
+
     public async ValueTask DisposeAsync()
     {
         _client.Dispose();

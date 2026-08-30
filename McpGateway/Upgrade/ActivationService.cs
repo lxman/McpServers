@@ -67,25 +67,44 @@ public sealed class ActivationService(
             }
 
             var drainTimedOut = false;
+            var swapped = 0;
 
-            foreach ((BackendInstance old, BackendInstance replacement) in replacements)
+            // Once a backend has been Replace()'d there is nothing to roll back to -- the old
+            // instance may already be stopped, or stopping it may be what threw. An exception here
+            // cannot be undone, so the goal is not recovery: it is a loud, structured, truthful
+            // ActivationResult instead of an exception escaping as an unhandled 500. The manifest
+            // write stays here, last, inside the same guarded region.
+            try
             {
-                supervisor.Replace(old.Key, replacement);
-
-                if (!await old.WaitForDrainAsync(DrainTimeout, cancellationToken))
+                foreach ((BackendInstance old, BackendInstance replacement) in replacements)
                 {
-                    logger.LogWarning(
-                        "{Key} still had {InFlight} request(s) after {Timeout}; stopping anyway",
-                        old.Key, old.InFlight, DrainTimeout);
-                    drainTimedOut = true;
+                    supervisor.Replace(old.Key, replacement);
+                    swapped++;
+
+                    if (!await old.WaitForDrainAsync(DrainTimeout, cancellationToken))
+                    {
+                        logger.LogWarning(
+                            "{Key} still had {InFlight} request(s) after {Timeout}; stopping anyway",
+                            old.Key, old.InFlight, DrainTimeout);
+                        drainTimedOut = true;
+                    }
+
+                    await old.StopAsync(cancellationToken);
                 }
 
-                await old.StopAsync(cancellationToken);
+                await manifest.SetActiveVersionAsync(server, version, cancellationToken);
             }
+            catch (Exception ex)
+            {
+                logger.LogCritical(ex,
+                    "Swap failed for {Server} after {Swapped} backend(s) were already replaced " +
+                    "with {Version}; fleet and manifest may disagree", server, swapped, version);
 
-            int swapped = replacements.Count;
-
-            await manifest.SetActiveVersionAsync(server, version, cancellationToken);
+                return new ActivationResult(
+                    false, server, from, version, swapped, drainTimedOut,
+                    $"Swap failed after {swapped} backend(s) were already replaced; fleet and " +
+                    $"manifest may disagree: {ex.Message}");
+            }
 
             logger.LogInformation(
                 "Activated {Server} {From} -> {To}, {Count} backend(s) swapped",
@@ -118,9 +137,31 @@ public sealed class ActivationService(
 
         foreach (BackendInstance old in live)
         {
-            if (!await old.WaitForDrainAsync(DrainTimeout, cancellationToken)) drainTimedOut = true;
+            try
+            {
+                if (!await old.WaitForDrainAsync(DrainTimeout, cancellationToken)) drainTimedOut = true;
 
-            await supervisor.StopAsync(old.Key, cancellationToken);
+                await supervisor.StopAsync(old.Key, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Stopping is the one step here with no undo: BackendSupervisor.StopAsync removes
+                // the pool entry before it tries to tear down the process, so a throw from that
+                // teardown (a real process kill failing) leaves no entry behind and no way to know
+                // whether the old process actually died. Guessing at its state would be worse than
+                // reporting -- this is the two-live-instance hazard the whole task exists to
+                // prevent, so it is called out explicitly rather than folded into a generic message.
+                logger.LogCritical(ex,
+                    "Could not stop {Key} while swapping {Server} to {Version}; the old process " +
+                    "may still be alive, so {Server} may now be running two instances -- the exact " +
+                    "hazard this task exists to prevent", old.Key, server, version, server);
+
+                return new ActivationResult(
+                    false, server, from, version, swapped, drainTimedOut,
+                    $"Swap failed while stopping the previous version of {old.Key}; the old " +
+                    $"process may still be alive, risking two live instances of a non-overlap " +
+                    $"server: {ex.Message}");
+            }
 
             try
             {
@@ -156,7 +197,21 @@ public sealed class ActivationService(
             }
         }
 
-        await manifest.SetActiveVersionAsync(server, version, cancellationToken);
+        try
+        {
+            await manifest.SetActiveVersionAsync(server, version, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogCritical(ex,
+                "Swap succeeded for {Server} ({Swapped} backend(s) now on {Version}) but the " +
+                "manifest write failed; fleet and manifest may disagree", server, swapped, version);
+
+            return new ActivationResult(
+                false, server, from, version, swapped, drainTimedOut,
+                $"Swap succeeded but the manifest write failed after {swapped} backend(s) were " +
+                $"already replaced; fleet and manifest may disagree: {ex.Message}");
+        }
 
         return new ActivationResult(true, server, from, version, swapped, drainTimedOut, null);
     }

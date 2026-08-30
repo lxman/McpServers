@@ -50,6 +50,14 @@ public sealed class FakeBackendLauncher : IBackendLauncher
 
     private int _live;
 
+    /// <summary>
+    /// Makes every live handle's teardown throw instead of completing, simulating a real process
+    /// kill that fails. The handle's HasExited stays false when this happens -- deliberately: a
+    /// failed kill means we genuinely do not know whether the process died, and this fake must not
+    /// pretend otherwise.
+    /// </summary>
+    public bool ThrowOnStop { get; set; }
+
     private readonly List<IBackendHandle> _handles = [];
 
     /// <summary>
@@ -122,12 +130,14 @@ public sealed class FakeBackendLauncher : IBackendLauncher
             }
         }
 
-        var handle = new FakeHandle(app, pid, () => Interlocked.Decrement(ref _live));
+        var handle = new FakeHandle(
+            app, pid, () => Interlocked.Decrement(ref _live), () => ThrowOnStop);
         _handles.Add(handle);
         return handle;
     }
 
-    private sealed class FakeHandle(WebApplication app, int pid, Action onExit) : IBackendHandle
+    private sealed class FakeHandle(WebApplication app, int pid, Action onExit, Func<bool> throwOnStop)
+        : IBackendHandle
     {
         public int ProcessId { get; } = pid;
         public bool HasExited { get; private set; }
@@ -135,6 +145,13 @@ public sealed class FakeBackendLauncher : IBackendLauncher
         public async ValueTask DisposeAsync()
         {
             if (HasExited) return;
+
+            if (throwOnStop())
+            {
+                throw new InvalidOperationException(
+                    "Simulated failure killing the backend process; it may still be running.");
+            }
+
             HasExited = true;
             onExit();
             await app.StopAsync();
