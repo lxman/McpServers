@@ -80,7 +80,11 @@ public sealed class BackendSupervisor(
     {
         TryGet(key, out BackendInstance? previous);
 
-        _pool[key] = new Lazy<Task<BackendInstance>>(() => Task.FromResult(instance));
+        // Lazy(T value) is already-created, so IsValueCreated is true immediately. A deferred
+        // factory here would make the swapped-in backend invisible to TryGet, All and StopAsync,
+        // which all short-circuit on !IsValueCreated -- the blue/green swap would install a live
+        // backend that /admin/servers never lists and the idle reaper never reaps.
+        _pool[key] = new Lazy<Task<BackendInstance>>(Task.FromResult(instance));
 
         return previous;
     }
@@ -95,7 +99,19 @@ public sealed class BackendSupervisor(
         {
             // A start still in flight has to be awaited rather than abandoned: its process would
             // otherwise finish coming up with nothing left holding a handle to stop it.
-            instance = await entry.Value;
+            instance = await entry.Value.WaitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // The caller gave up waiting -- a slow server's startup timeout must not pin a
+            // shutdown. Hand the teardown to a continuation so the process is still stopped when
+            // the start finally lands, instead of leaking it.
+            _ = entry.Value.ContinueWith(
+                started => started.Result.StopAsync(CancellationToken.None),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnRanToCompletion,
+                TaskScheduler.Default);
+            return;
         }
         catch (Exception)
         {
@@ -212,9 +228,13 @@ public sealed class BackendSupervisor(
 
     public async ValueTask DisposeAsync()
     {
+        // Bounded: without this a backend still inside its startup timeout (120s for code-assist)
+        // would pin the whole gateway shutdown.
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
         foreach (BackendKey key in _pool.Keys.ToList())
         {
-            await StopAsync(key, CancellationToken.None);
+            await StopAsync(key, timeout.Token);
         }
     }
 }

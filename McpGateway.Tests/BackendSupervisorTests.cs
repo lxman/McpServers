@@ -243,6 +243,67 @@ public sealed class BackendSupervisorTests : IAsyncDisposable
         Assert.False(_supervisor.TryGet(key, out _));
     }
 
+    [Fact]
+    public async Task Replace_MakesTheNewInstanceVisibleToTryGetAndAll()
+    {
+        var key = new BackendKey("demo", "code");
+        BackendInstance original = await _supervisor.GetOrStartAsync(
+            key, TestContext.Current.CancellationToken);
+
+        BackendInstance replacement = await _supervisor.StartDetachedAsync(
+            key, "v-two", TestContext.Current.CancellationToken);
+
+        BackendInstance? displaced = _supervisor.Replace(key, replacement);
+
+        Assert.Same(original, displaced);
+
+        // A swapped-in backend that TryGet and All cannot see is invisible to the admin API,
+        // the idle reaper, and the next activation.
+        Assert.True(_supervisor.TryGet(key, out BackendInstance? current));
+        Assert.Same(replacement, current);
+        Assert.Contains(replacement, _supervisor.All);
+        Assert.DoesNotContain(original, _supervisor.All);
+
+        await original.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task StopAsync_HonoursCancellation_ButStillStopsTheBackendAfterwards()
+    {
+        _launcher.StartDelay = TimeSpan.FromSeconds(2);
+        var key = new BackendKey("demo", "code");
+
+        Task<BackendInstance> starting = _supervisor.GetOrStartAsync(
+            key, TestContext.Current.CancellationToken);
+
+        using var giveUp = new CancellationTokenSource();
+        await giveUp.CancelAsync();
+
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        await _supervisor.StopAsync(key, giveUp.Token);
+        watch.Stop();
+
+        // Must not have waited out the 2s start.
+        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(1),
+            $"StopAsync blocked for {watch.Elapsed} despite a cancelled token");
+
+        BackendInstance instance = await starting;
+
+        // The continuation must still tear it down rather than leaking the process.
+        await WaitUntilAsync(() => instance.Handle.HasExited, TimeSpan.FromSeconds(5));
+        Assert.True(instance.Handle.HasExited);
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
+    {
+        DateTimeOffset deadline = DateTimeOffset.UtcNow + timeout;
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            if (condition()) return;
+            await Task.Delay(25);
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         await _supervisor.DisposeAsync();
