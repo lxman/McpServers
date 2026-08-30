@@ -34,6 +34,12 @@ public sealed class IdleReaperTests : IAsyncDisposable
             "activeVersion": "v-one", "pool": "shared",
             "eagerStart": true,
             "idleTimeoutMinutes": 0, "startupTimeoutSeconds": 10
+          },
+          "shared-lazy": {
+            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d",
+            "activeVersion": "v-one", "pool": "shared",
+            "eagerStart": false,
+            "idleTimeoutMinutes": 30, "startupTimeoutSeconds": 10
           }
         }
         """);
@@ -137,8 +143,11 @@ public sealed class IdleReaperTests : IAsyncDisposable
 
         await starter.StartEagerServersAsync(TestContext.Current.CancellationToken);
 
-        // "never-reaps" is the eager one; "reaps" is not.
+        // "shared-lazy" is the load-bearing assertion: it is shared, so EagerStarter's IsShared
+        // branch does not filter it, which leaves the EagerStart guard as the only thing keeping
+        // it from starting. A per-client server would be filtered either way and prove nothing.
         Assert.True(_supervisor.TryGet(new BackendKey("never-reaps", ""), out _));
+        Assert.False(_supervisor.TryGet(new BackendKey("shared-lazy", ""), out _));
         Assert.False(_supervisor.TryGet(new BackendKey("reaps", "code"), out _));
     }
 
@@ -156,6 +165,11 @@ public sealed class IdleReaperTests : IAsyncDisposable
         await starter.StartEagerServersAsync(TestContext.Current.CancellationToken);
 
         Assert.False(_supervisor.TryGet(new BackendKey("never-reaps", ""), out _));
+
+        // TryGet alone cannot tell "never attempted" from "attempted and failed" -- a failed start
+        // is removed from the pool either way. StartCount == 1 proves "shared-lazy" (not eager)
+        // was never even attempted, only "never-reaps" was.
+        Assert.Equal(1, _launcher.StartCount);
     }
 
     public async ValueTask DisposeAsync()
