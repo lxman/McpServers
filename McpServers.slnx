@@ -43,4 +43,6 @@
   <Project Path="SqlMcp\SqlMcp.csproj" />
   <Project Path="SshMcp/SshMcp.csproj" />
   <Project Path="EdgarMcp\EdgarMcp.csproj" />
+  <Project Path="McpGateway\McpGateway.csproj" />
+  <Project Path="McpGateway.Tests\McpGateway.Tests.csproj" />
 </Solution>

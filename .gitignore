@@ -18,3 +18,4 @@ riderModule.iml
 /.vs/McpServers.slnx
 /EdgarMcp/appsettings.json
 /CodeAssistMcp/mlx-server/.venv*/
+deploy/
