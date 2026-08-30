@@ -80,20 +80,20 @@ public static class AdminEndpoints
         // ActivateAsync -- rather than a hand-rolled stop/start loop -- inherits the gate, the
         // hold, the ordering guarantee and the error reporting for free, and closes a real race: a
         // hand-rolled restart could stop-and-restart a key while a concurrent activation held a
-        // stale reference to the very same key.
+        // stale reference to the very same key. The version is passed as null rather than read
+        // from the entry here -- ActivateAsync resolves it inside the gate, because reading it out
+        // here would be its own snapshot-then-use race: a restart queued behind another activation
+        // would otherwise capture the pre-swap version and revert it once its turn comes.
         app.MapPost("/admin/servers/{name}/restart", async (
             string name,
             ActivationService activation,
             ManifestStore manifest,
             CancellationToken cancellationToken) =>
         {
-            if (!manifest.TryGet(name, out ServerEntry? entry))
-            {
-                return Results.NotFound($"No server named '{name}'.");
-            }
+            if (!manifest.TryGet(name, out _)) return Results.NotFound($"No server named '{name}'.");
 
             ActivationResult result = await activation.ActivateAsync(
-                name, entry!.ActiveVersion, cancellationToken);
+                name, null, cancellationToken);
 
             return result.Succeeded
                 ? Results.Json(result)

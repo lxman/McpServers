@@ -226,6 +226,62 @@ public sealed class BlueGreenActivationTests : IAsyncDisposable
         Assert.Equal("v-one", entry!.ActiveVersion);
     }
 
+    [Fact]
+    public async Task Activate_WithNullVersion_UsesTheVersionActiveWhenItRuns()
+    {
+        var key = new BackendKey("overlaps", "code");
+        await _supervisor.GetOrStartAsync(key, TestContext.Current.CancellationToken);
+
+        // Something else moved the active version after this restart would have been requested.
+        await _manifest.SetActiveVersionAsync(
+            "overlaps", "v-two", TestContext.Current.CancellationToken);
+
+        ActivationResult result = await _activation.ActivateAsync(
+            "overlaps", null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded, result.Error);
+        Assert.Equal("v-two", result.ToVersion);
+
+        Assert.True(_supervisor.TryGet(key, out BackendInstance? restarted));
+        Assert.Equal("v-two", restarted!.Version);
+    }
+
+    [Fact]
+    public async Task Activate_WithNullVersion_QueuedBehindAnotherActivation_TargetsWhatItWroteNotWhatWasThere()
+    {
+        var key = new BackendKey("overlaps", "code");
+        await _supervisor.GetOrStartAsync(key, TestContext.Current.CancellationToken);
+
+        // Slow the first activation's new-version start so it is still holding the gate -- and the
+        // manifest still says v-one -- when the restart below is issued and queues behind it.
+        _launcher.StartDelay = TimeSpan.FromMilliseconds(400);
+        Task<ActivationResult> firstActivation = _activation.ActivateAsync(
+            "overlaps", "v-two", TestContext.Current.CancellationToken);
+
+        await Task.Delay(150, TestContext.Current.CancellationToken);
+        _launcher.StartDelay = TimeSpan.Zero;
+
+        // A restart requested here, while v-one is still the manifest's active version and the
+        // swap to v-two has not yet been written. If the target were captured now (at call time)
+        // instead of after this call actually acquires the gate, it would capture "v-one" -- and
+        // once its turn comes, after the first activation has already finished and written
+        // "v-two", this restart would silently revert that swap back to v-one.
+        Task<ActivationResult> restart = _activation.ActivateAsync(
+            "overlaps", null, TestContext.Current.CancellationToken);
+
+        ActivationResult firstResult = await firstActivation;
+        ActivationResult restartResult = await restart;
+
+        Assert.True(firstResult.Succeeded, firstResult.Error);
+        Assert.Equal("v-two", firstResult.ToVersion);
+
+        Assert.True(restartResult.Succeeded, restartResult.Error);
+        Assert.Equal("v-two", restartResult.ToVersion);
+
+        Assert.True(_manifest.TryGet("overlaps", out ServerEntry? entry));
+        Assert.Equal("v-two", entry!.ActiveVersion);
+    }
+
     public async ValueTask DisposeAsync()
     {
         await _supervisor.DisposeAsync();

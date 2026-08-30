@@ -37,14 +37,25 @@ public sealed class ActivationService(
         }
     }
 
+    /// <summary>
+    /// Activates a server to <paramref name="version"/>, or -- when null -- to whatever version is
+    /// active when this actually runs. The null case is a restart: it must not capture the version
+    /// at call time, because a restart queued behind another activation on the same gate would
+    /// otherwise resolve the pre-swap version and, once its turn comes, silently revert the swap
+    /// that just completed ahead of it.
+    /// </summary>
     public async Task<ActivationResult> ActivateAsync(
-        string server, string version, CancellationToken cancellationToken)
+        string server, string? version, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken);
         try
         {
             ServerEntry entry = supervisor.ResolveEntry(server);
             string from = entry.ActiveVersion;
+
+            // Resolved inside the gate: a restart queued behind another activation must target
+            // whatever is active when it runs, not what was active when the request arrived.
+            string target = version ?? from;
 
             List<BackendInstance> live = supervisor.All
                 .Where(instance => instance.Key.Server == server)
@@ -53,7 +64,7 @@ public sealed class ActivationService(
             if (!entry.OverlapAllowed)
             {
                 return await ActivateExclusiveAsync(
-                    server, from, version, live, cancellationToken);
+                    server, from, target, live, cancellationToken);
             }
 
             // Start and health-gate EVERY replacement before touching a single live backend.
@@ -68,13 +79,13 @@ public sealed class ActivationService(
                 foreach (BackendInstance old in live)
                 {
                     replacements.Add(
-                        (old, await supervisor.StartDetachedAsync(old.Key, version, cancellationToken)));
+                        (old, await supervisor.StartDetachedAsync(old.Key, target, cancellationToken)));
                 }
             }
             catch (Exception ex)
             {
                 logger.LogError(
-                    ex, "Could not start {Server} at {Version}; nothing was swapped", server, version);
+                    ex, "Could not start {Server} at {Version}; nothing was swapped", server, target);
 
                 foreach ((_, BackendInstance started) in replacements)
                 {
@@ -82,7 +93,7 @@ public sealed class ActivationService(
                 }
 
                 return new ActivationResult(
-                    false, server, from, version, 0, false,
+                    false, server, from, target, 0, false,
                     $"New version failed to start: {ex.Message}");
             }
 
@@ -112,26 +123,26 @@ public sealed class ActivationService(
                     await old.StopAsync(cancellationToken);
                 }
 
-                await manifest.SetActiveVersionAsync(server, version, cancellationToken);
+                await manifest.SetActiveVersionAsync(server, target, cancellationToken);
             }
             catch (Exception ex)
             {
                 logger.LogCritical(ex,
                     "Swap failed for {Server} after {Swapped} backend(s) were already replaced " +
-                    "with {Version}; fleet and manifest may disagree", server, swapped, version);
+                    "with {Version}; fleet and manifest may disagree", server, swapped, target);
 
                 return new ActivationResult(
-                    false, server, from, version, swapped, drainTimedOut,
+                    false, server, from, target, swapped, drainTimedOut,
                     $"Swap failed after {swapped} backend(s) were already replaced; fleet and " +
                     $"manifest may disagree: {ex.Message}");
             }
 
             logger.LogInformation(
                 "Activated {Server} {From} -> {To}, {Count} backend(s) swapped",
-                server, from, version, swapped);
+                server, from, target, swapped);
 
             return new ActivationResult(
-                true, server, from, version, swapped, drainTimedOut, null);
+                true, server, from, target, swapped, drainTimedOut, null);
         }
         finally
         {

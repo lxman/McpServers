@@ -128,11 +128,9 @@ public sealed class PruneVersionsTests : IAsyncDisposable
     {
         // ActivationService.PruneAsync exists so pruning takes the same gate an activation holds
         // -- the fix for the race where a concurrent prune could delete the deploy directory a
-        // mid-flight swap is about to start from. That race itself is not exercised here (it would
-        // need a slow-motion activation running concurrently with a prune, timing their overlap);
-        // this only proves the wrapper actually delegates rather than being dead code the /admin/
-        // prune endpoint calls into for no effect. See the report for why the deeper race is not
-        // covered by any test.
+        // mid-flight swap is about to start from. This only proves the wrapper actually delegates
+        // rather than being dead code the /admin/prune endpoint calls into for no effect; the
+        // gate-ordering property itself is exercised separately below.
         CreateVersionDirectory("v-one");
         CreateVersionDirectory("v-two"); // the manifest's activeVersion
 
@@ -141,6 +139,41 @@ public sealed class PruneVersionsTests : IAsyncDisposable
 
         Assert.Contains("v-one", pruned);
         Assert.False(Directory.Exists(VersionDirectory("v-one")));
+    }
+
+    [Fact]
+    public async Task PruneAsync_WaitsForAnInFlightActivation_RatherThanRunningConcurrently()
+    {
+        CreateVersionDirectory("v-one"); // orphan; gives the eventual prune something to remove
+        CreateVersionDirectory("v-two"); // the manifest's activeVersion
+
+        var key = new BackendKey("prunable", "code");
+        await _supervisor.GetOrStartAsync(key, TestContext.Current.CancellationToken);
+
+        // Hold the gate with a slow-motion activation, the same pattern
+        // Activate_HoldsArrivingRequestsRatherThanRefusingThem already uses.
+        _launcher.StartDelay = TimeSpan.FromMilliseconds(400);
+        Task<ActivationResult> activating = _activation.ActivateAsync(
+            "prunable", "v-three", TestContext.Current.CancellationToken);
+
+        await Task.Delay(150, TestContext.Current.CancellationToken);
+
+        // Issued while the activation above is still mid-swap and holding the gate.
+        Task<IReadOnlyList<string>> pruning = _activation.PruneAsync(
+            "prunable", TestContext.Current.CancellationToken);
+
+        // Give the call a moment to reach (and block on) the gate, then confirm it is genuinely
+        // still blocked -- not racing the activation, waiting for it.
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+        Assert.False(pruning.IsCompleted,
+            "PruneAsync completed while an activation was still holding the gate -- it is not " +
+            "actually serialized against activations.");
+
+        ActivationResult activationResult = await activating;
+        Assert.True(activationResult.Succeeded, activationResult.Error);
+
+        IReadOnlyList<string> pruned = await pruning;
+        Assert.Contains("v-one", pruned);
     }
 
     public async ValueTask DisposeAsync()
