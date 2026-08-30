@@ -151,23 +151,28 @@ public sealed class BlueGreenActivationTests : IAsyncDisposable
     [Fact]
     public async Task Activate_SwapsNothing_WhenAnyBackendFailsToStart()
     {
-        await _supervisor.GetOrStartAsync(
-            new BackendKey("overlaps", "code"), TestContext.Current.CancellationToken);
-        await _supervisor.GetOrStartAsync(
-            new BackendKey("overlaps", "desktop"), TestContext.Current.CancellationToken);
-
         BackendInstance beforeCode = await _supervisor.GetOrStartAsync(
             new BackendKey("overlaps", "code"), TestContext.Current.CancellationToken);
         BackendInstance beforeDesktop = await _supervisor.GetOrStartAsync(
             new BackendKey("overlaps", "desktop"), TestContext.Current.CancellationToken);
 
-        _launcher.Unhealthy = true;
+        // Two backends are live, so StartCount is 2. Fail the FOURTH start: the first replacement
+        // comes up healthy and the second does not, which is the only shape that distinguishes
+        // all-or-nothing from swap-as-you-go. A global Unhealthy flag would fail the first
+        // replacement too, and both implementations would then look identical.
+        _launcher.UnhealthyFromStartNumber = 4;
 
         ActivationResult result = await _activation.ActivateAsync(
             "overlaps", "v-two", TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Equal(0, result.BackendsSwapped);
+
+        // The third Start() call (after the two initial live backends) is the replacement that
+        // came up healthy before the fourth one failed. The catch block's cleanup loop is the only
+        // thing that could have stopped it -- BackendSupervisor never touches a start that
+        // succeeded -- so this is the cleanup loop's own signature.
+        Assert.True(_launcher.Handles[2].HasExited);
 
         // Neither backend may have moved, and the manifest must still agree with them.
         Assert.True(_supervisor.TryGet(new BackendKey("overlaps", "code"), out BackendInstance? code));

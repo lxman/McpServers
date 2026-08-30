@@ -27,6 +27,14 @@ public sealed class FakeBackendLauncher : IBackendLauncher
     public bool Unhealthy { get; set; }
 
     /// <summary>
+    /// Makes starts unhealthy from this start number onward, counting every Start call from 1.
+    /// Unlike <see cref="Unhealthy"/>, which fails every start including the first, this lets a
+    /// test bring earlier backends up healthy and fail a later one -- the case where an activation
+    /// has to undo replacements it already started.
+    /// </summary>
+    public int UnhealthyFromStartNumber { get; set; } = int.MaxValue;
+
+    /// <summary>
     /// Delays the port file so a test can act while a start is genuinely in flight. It must delay
     /// the port file rather than Start itself: Start runs synchronously inside Lazy.Value on the
     /// caller's thread, so a sleep here would be spent before GetOrStartAsync ever returns a Task,
@@ -35,6 +43,16 @@ public sealed class FakeBackendLauncher : IBackendLauncher
     public TimeSpan StartDelay { get; set; } = TimeSpan.Zero;
 
     public int StartCount { get; private set; }
+
+    private readonly List<IBackendHandle> _handles = [];
+
+    /// <summary>
+    /// Every handle Start has returned, in call order (index 0 is the first call). Lets a test
+    /// confirm a specific start was later torn down -- e.g. a replacement that came up healthy but
+    /// was then stopped because a sibling start in the same activation failed -- without the
+    /// production code needing to expose it anywhere.
+    /// </summary>
+    public IReadOnlyList<IBackendHandle> Handles => _handles;
 
     public IBackendHandle Start(BackendLaunchRequest request)
     {
@@ -46,7 +64,7 @@ public sealed class FakeBackendLauncher : IBackendLauncher
 
         WebApplication app = builder.Build();
 
-        bool unhealthy = Unhealthy;
+        bool unhealthy = Unhealthy || StartCount >= UnhealthyFromStartNumber;
         app.MapGet("/health", () => unhealthy
             ? Results.StatusCode(500)
             : Results.Json(new { status = "ok", version = request.Version }));
@@ -87,7 +105,9 @@ public sealed class FakeBackendLauncher : IBackendLauncher
             }
         }
 
-        return new FakeHandle(app, pid);
+        var handle = new FakeHandle(app, pid);
+        _handles.Add(handle);
+        return handle;
     }
 
     private sealed class FakeHandle(WebApplication app, int pid) : IBackendHandle
