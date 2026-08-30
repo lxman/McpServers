@@ -97,7 +97,7 @@ public sealed class BackendSupervisorTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task GetOrStartAsync_ThrowsWithLogTail_WhenThePortFileNeverArrives()
+    public async Task GetOrStartAsync_Throws_WhenThePortFileNeverArrives()
     {
         _launcher.SuppressPortFile = true;
 
@@ -172,6 +172,75 @@ public sealed class BackendSupervisorTests : IAsyncDisposable
 
         Assert.False(await instance.WaitForDrainAsync(
             TimeSpan.FromMilliseconds(150), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task WaitForDrainAsync_StaysPending_UntilEveryOverlappingRequestFinishes()
+    {
+        BackendInstance instance = await _supervisor.GetOrStartAsync(
+            new BackendKey("demo", "code"), TestContext.Current.CancellationToken);
+
+        IDisposable first = instance.BeginRequest();
+        IDisposable second = instance.BeginRequest();
+        Assert.Equal(2, instance.InFlight);
+
+        first.Dispose();
+        Assert.Equal(1, instance.InFlight);
+
+        // One request is still in flight, so a short drain must time out. A drain that signals
+        // here would let an upgrade kill a backend mid-request -- the exact failure the
+        // zero-downtime swap exists to prevent.
+        Assert.False(await instance.WaitForDrainAsync(
+            TimeSpan.FromMilliseconds(150), TestContext.Current.CancellationToken));
+
+        second.Dispose();
+
+        Assert.True(await instance.WaitForDrainAsync(
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        Assert.Equal(0, instance.InFlight);
+    }
+
+    [Fact]
+    public async Task GetOrStartAsync_OneCallersCancellation_LeavesTheSharedStartIntact()
+    {
+        _launcher.StartDelay = TimeSpan.FromMilliseconds(400);
+        var key = new BackendKey("demo", "code");
+
+        using var impatientToken = new CancellationTokenSource();
+        Task<BackendInstance> impatient = _supervisor.GetOrStartAsync(key, impatientToken.Token);
+        Task<BackendInstance> patient = _supervisor.GetOrStartAsync(
+            key, TestContext.Current.CancellationToken);
+
+        await impatientToken.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => impatient);
+
+        BackendInstance instance = await patient;
+
+        // The cancelled waiter must not have evicted the entry; if it did, this starts a second
+        // process and orphans the first.
+        BackendInstance again = await _supervisor.GetOrStartAsync(
+            key, TestContext.Current.CancellationToken);
+
+        Assert.Same(instance, again);
+        Assert.Equal(1, _launcher.StartCount);
+    }
+
+    [Fact]
+    public async Task StopAsync_StopsABackendThatWasStillStarting()
+    {
+        _launcher.StartDelay = TimeSpan.FromMilliseconds(400);
+        var key = new BackendKey("demo", "code");
+
+        Task<BackendInstance> starting = _supervisor.GetOrStartAsync(
+            key, TestContext.Current.CancellationToken);
+
+        await _supervisor.StopAsync(key, TestContext.Current.CancellationToken);
+
+        BackendInstance instance = await starting;
+
+        // StopAsync must have awaited the in-flight start and torn it down, not abandoned it.
+        Assert.True(instance.Handle.HasExited);
+        Assert.False(_supervisor.TryGet(key, out _));
     }
 
     public async ValueTask DisposeAsync()

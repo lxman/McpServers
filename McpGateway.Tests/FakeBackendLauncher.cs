@@ -26,11 +26,16 @@ public sealed class FakeBackendLauncher : IBackendLauncher
     /// <summary>Set to make /health return 500, simulating a backend that starts unhealthy.</summary>
     public bool Unhealthy { get; set; }
 
+    /// <summary>Slows a start so a test can act while one is still in flight.</summary>
+    public TimeSpan StartDelay { get; set; } = TimeSpan.Zero;
+
     public int StartCount { get; private set; }
 
     public IBackendHandle Start(BackendLaunchRequest request)
     {
         StartCount++;
+
+        if (StartDelay > TimeSpan.Zero) Thread.Sleep(StartDelay);
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");

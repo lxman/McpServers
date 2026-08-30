@@ -48,9 +48,12 @@ public sealed class BackendSupervisor(
             }
             catch
             {
-                // A failed start must not poison the key forever — drop it so the next request
-                // tries again.
-                RemoveIfSame(key, entry);
+                // Evict only a genuinely failed start, so the key is not poisoned forever.
+                // Task.WaitAsync throws when THIS caller's token fires while the shared start is
+                // still running — the start itself is unaffected and will finish. Evicting on that
+                // would hand the next caller a duplicate spawn and orphan the process still coming
+                // up, with nothing holding a handle to stop it.
+                if (entry.Value.IsFaulted) RemoveIfSame(key, entry);
                 throw;
             }
         }
@@ -85,9 +88,22 @@ public sealed class BackendSupervisor(
     public async Task StopAsync(BackendKey key, CancellationToken cancellationToken)
     {
         if (!_pool.TryRemove(key, out Lazy<Task<BackendInstance>>? entry)) return;
-        if (!entry.IsValueCreated || !entry.Value.IsCompletedSuccessfully) return;
+        if (!entry.IsValueCreated) return;
 
-        await entry.Value.Result.StopAsync(cancellationToken);
+        BackendInstance instance;
+        try
+        {
+            // A start still in flight has to be awaited rather than abandoned: its process would
+            // otherwise finish coming up with nothing left holding a handle to stop it.
+            instance = await entry.Value;
+        }
+        catch (Exception)
+        {
+            // The start failed, so there is no process to stop.
+            return;
+        }
+
+        await instance.StopAsync(cancellationToken);
     }
 
     public ServerEntry ResolveEntry(string server) =>
@@ -188,14 +204,11 @@ public sealed class BackendSupervisor(
         }
     }
 
-    private void RemoveIfSame(BackendKey key, Lazy<Task<BackendInstance>> entry)
-    {
-        if (_pool.TryGetValue(key, out Lazy<Task<BackendInstance>>? current)
-            && ReferenceEquals(current, entry))
-        {
-            _pool.TryRemove(key, out _);
-        }
-    }
+    private void RemoveIfSame(BackendKey key, Lazy<Task<BackendInstance>> entry) =>
+        // Atomic compare-and-remove. The check-then-act form could delete a healthy replacement
+        // that Replace() installed between the read and the remove — and Replace is exactly what
+        // the blue/green swap in later tasks uses.
+        _pool.TryRemove(new KeyValuePair<BackendKey, Lazy<Task<BackendInstance>>>(key, entry));
 
     public async ValueTask DisposeAsync()
     {

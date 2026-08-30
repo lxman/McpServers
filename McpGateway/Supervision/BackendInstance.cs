@@ -53,7 +53,7 @@ public sealed class BackendInstance(
 
             await client.SendAsync(request, cancellationToken);
         }
-        catch (Exception) when (true)
+        catch (Exception)
         {
             // A backend that won't answer its shutdown endpoint still gets disposed below.
         }
