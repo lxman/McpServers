@@ -15,6 +15,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Libraries\SerilogFileWriter\SerilogFileWriter.csproj" />
+        <ProjectReference Include="..\Libraries\Mcp.Hosting.Core\Mcp.Hosting.Core.csproj" />
     </ItemGroup>
 
 </Project>

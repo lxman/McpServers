@@ -1,5 +1,6 @@
 using McpGateway.Configuration;
 using McpGateway.Security;
+using McpGateway.Supervision;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -43,6 +44,15 @@ public static class GatewayApp
 
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton(ManifestStore.Load(options.ManifestPath));
+        builder.Services.AddSingleton<IBackendLauncher, ProcessBackendLauncher>();
+        builder.Services.AddSingleton(new HealthProbe(new HttpClient()));
+        builder.Services.AddSingleton(sp => new BackendSupervisor(
+            sp.GetRequiredService<ManifestStore>(),
+            sp.GetRequiredService<IBackendLauncher>(),
+            sp.GetRequiredService<HealthProbe>(),
+            options,
+            token,
+            sp.GetRequiredService<ILogger<BackendSupervisor>>()));
 
         WebApplication app = builder.Build();
 
