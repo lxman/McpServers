@@ -27,8 +27,14 @@ $version = "v-$sha-$stamp"
 $output = Join-Path $repoRoot (Join-Path $entry.deployRoot $version)
 $project = Join-Path $repoRoot $entry.project
 
+# --artifacts-path is load-bearing, not tidiness. `dotnet publish` BUILDS into bin/<config> and
+# obj/ before copying to -o, and those are exactly the paths a running stdio server holds locked --
+# so the very first publish would fail on the lock this project exists to remove. Redirecting the
+# whole build tree (the referenced libraries too, which are equally locked) keeps bin/ untouched.
+$artifacts = Join-Path $env:TEMP "mcp-publish-artifacts\$Server"
+
 Write-Host "Publishing $Server -> $output"
-dotnet publish $project -c $Configuration -o $output --nologo -v quiet
+dotnet publish $project -c $Configuration -o $output --artifacts-path $artifacts --nologo -v quiet
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $Server." }
 
 $assembly = Join-Path $output $entry.assembly
