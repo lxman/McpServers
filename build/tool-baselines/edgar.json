@@ -1,0 +1,156 @@
+[
+  {
+    "name": "check_for_new_filing",
+    "description": "Check if a tracked filer has a newer 13F filing on EDGAR than the most recent one we've synced locally. Returns the new filing details if available, or a message saying we're up to date.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filerName": {
+          "description": "Name of the tracked filer (e.g. 'Berkshire Hathaway')",
+          "type": "string"
+        }
+      },
+      "required": [
+        "filerName"
+      ]
+    }
+  },
+  {
+    "name": "diff_holdings",
+    "description": "Compare two quarters' holdings for a filer, showing new positions, increases, decreases, and exits. If accession numbers are omitted, uses the two most recent filings.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filerName": {
+          "description": "Name of the tracked filer (e.g. 'Berkshire Hathaway')",
+          "type": "string"
+        },
+        "previousAccession": {
+          "description": "Accession number of the previous (older) filing. If omitted, uses second most recent.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "currentAccession": {
+          "description": "Accession number of the current (newer) filing. If omitted, uses most recent.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "filerName"
+      ]
+    }
+  },
+  {
+    "name": "generate_trades",
+    "description": "Generate trade recommendations based on a filer's latest holdings diff, scaled to the Alpaca account size. Does NOT execute trades - use sync_portfolio for that.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filerName": {
+          "description": "Name of the tracked filer (e.g. 'Berkshire Hathaway')",
+          "type": "string"
+        }
+      },
+      "required": [
+        "filerName"
+      ]
+    }
+  },
+  {
+    "name": "get_holdings",
+    "description": "Parse and return all holdings from a specific 13F filing. Fetches the XML informationTable, parses it, resolves CUSIPs to ticker symbols, and caches the result.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filerName": {
+          "description": "Name of the tracked filer (e.g. 'Berkshire Hathaway')",
+          "type": "string"
+        },
+        "accessionNumber": {
+          "description": "Accession number of the filing (from list_filings or get_latest_filing). If omitted, uses the most recent filing.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "filerName"
+      ]
+    }
+  },
+  {
+    "name": "get_latest_filing",
+    "description": "Fetch the most recent 13F filing for a tracked filer. Returns filing metadata including accession number, dates, and form type.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filerName": {
+          "description": "Name of the tracked filer (e.g. 'Berkshire Hathaway')",
+          "type": "string"
+        }
+      },
+      "required": [
+        "filerName"
+      ]
+    }
+  },
+  {
+    "name": "list_filings",
+    "description": "List recent 13F filings for a tracked filer with dates and accession numbers.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filerName": {
+          "description": "Name of the tracked filer (e.g. 'Berkshire Hathaway')",
+          "type": "string"
+        },
+        "count": {
+          "description": "Number of recent filings to return (default: 10)",
+          "type": "integer",
+          "default": 10
+        }
+      },
+      "required": [
+        "filerName"
+      ]
+    }
+  },
+  {
+    "name": "list_tracked_filers",
+    "description": "Show all configured institutional filers being tracked (e.g. Berkshire Hathaway).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "sync_portfolio",
+    "description": "One-shot operation: fetches latest 13F diff, generates scaled trade recommendations, and executes them on the Alpaca paper trading account.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filerName": {
+          "description": "Name of the tracked filer (e.g. 'Berkshire Hathaway')",
+          "type": "string"
+        },
+        "execute": {
+          "description": "Set to true to actually execute trades. If false, returns recommendations only (dry run).",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "filerName"
+      ]
+    }
+  }
+]

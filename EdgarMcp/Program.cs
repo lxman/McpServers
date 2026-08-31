@@ -1,57 +1,74 @@
 using System.Reflection;
 using Edgar.Core.Services;
 using EdgarMcp.McpTools;
+using Mcp.Hosting.Core;
 using Mcp.ResponseGuard.Services;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using ModelContextProtocol.AspNetCore;
 using Serilog;
-using SerilogFileWriter;
 
-// Set the base path to where the DLL lives so appsettings.json is found
-string executablePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-string executableDir = Path.GetDirectoryName(executablePath) ?? Directory.GetCurrentDirectory();
-
-// Setup MCP-safe logging (redirects Console to file)
-string logPath = Path.Combine(executableDir, "logs", "edgar-mcp-.log");
-Log.Logger = McpLoggingExtensions.SetupMcpLogging(logPath);
-
-HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+try
 {
-    Args = args,
-    ContentRootPath = executableDir
-});
+    // Logging, the loopback listener and the gateway's port-file contract all live in McpHttpHost.
+    // It also sets ContentRootPath to AppContext.BaseDirectory, which is what the hand-rolled
+    // executableDir dance here used to be for -- appsettings.json is found beside the assembly
+    // rather than beside whatever the working directory happens to be.
+    WebApplicationBuilder builder = McpHttpHost.CreateBuilder(args, "edgar");
 
-// Load user secrets (API keys, etc.)
-builder.Configuration.AddUserSecrets(Assembly.GetExecutingAssembly(), optional: true);
+    Log.Information("Starting Edgar MCP server");
 
-// Configure Serilog
-builder.Logging.ClearProviders();
-builder.Logging.AddSerilog();
+    // Load user secrets (API keys, etc.). Still explicit: WebApplication.CreateBuilder adds them
+    // only in the Development environment, and a gateway-launched backend is not in it.
+    builder.Configuration.AddUserSecrets(Assembly.GetExecutingAssembly(), optional: true);
 
-// Register HttpClientFactory
-builder.Services.AddHttpClient();
+    // Edgar:DataDirectory ships as "./data", which resolved against the working directory. That
+    // directory is now a VERSIONED deploy path, so the holdings archive and the CUSIP cache would
+    // move to a new empty location on every deploy and silently orphan everything written before
+    // it. Anchoring the value here fixes both readers -- HoldingsStore and CusipTickerMapper --
+    // because they read this one key. An absolute value configured by the user still wins.
+    string dataDirectory = McpHttpHost.ResolveDataDirectory(
+        builder.Configuration["Edgar:DataDirectory"], "edgar");
 
-// Register Edgar.Core services
-builder.Services.AddSingleton<EdgarApiClient>();
-builder.Services.AddSingleton<Filing13FParser>();
-builder.Services.AddSingleton<HoldingsDiffer>();
-builder.Services.AddSingleton<CusipTickerMapper>();
-builder.Services.AddSingleton<PortfolioScaler>();
-builder.Services.AddSingleton<TradeExecutor>();
-builder.Services.AddSingleton<HoldingsStore>();
+    builder.Configuration.AddInMemoryCollection(
+        new Dictionary<string, string?> { ["Edgar:DataDirectory"] = dataDirectory });
 
-// Register response guard
-builder.Services.AddSingleton<OutputGuard>();
+    Log.Information("Edgar data directory: {DataDirectory}", dataDirectory);
 
-// Add MCP server with all tool types
-builder.Services.AddMcpServer()
-    .WithStdioServerTransport()
-    .WithTools<FilingTools>()
-    .WithTools<HoldingsTools>()
-    .WithTools<TradeTools>();
+    // Register HttpClientFactory
+    builder.Services.AddHttpClient();
 
-IHost app = builder.Build();
+    // Register Edgar.Core services
+    builder.Services.AddSingleton<EdgarApiClient>();
+    builder.Services.AddSingleton<Filing13FParser>();
+    builder.Services.AddSingleton<HoldingsDiffer>();
+    builder.Services.AddSingleton<CusipTickerMapper>();
+    builder.Services.AddSingleton<PortfolioScaler>();
+    builder.Services.AddSingleton<TradeExecutor>();
+    builder.Services.AddSingleton<HoldingsStore>();
 
-await app.RunAsync();
+    // Register response guard
+    builder.Services.AddSingleton<OutputGuard>();
+
+    builder.Services
+        .AddMcpServer()
+        .WithHttpTransport(o => o.SessionMode = HttpServerSessionMode.StatefulForInitializeClients)
+        .WithTools<FilingTools>()
+        .WithTools<HoldingsTools>()
+        .WithTools<TradeTools>();
+
+    WebApplication app = builder.Build();
+    app.MapMcpHost();
+
+    await app.RunAsync();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Edgar MCP server terminated unexpectedly");
+    Environment.ExitCode = 1;
+}
+finally
+{
+    await Log.CloseAndFlushAsync();
+}
