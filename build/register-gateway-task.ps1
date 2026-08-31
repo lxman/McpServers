@@ -1,26 +1,38 @@
 #requires -Version 7
 <#
 .SYNOPSIS
-Registers the gateway to start at logon as the current user.
+Points the logon task at one published gateway version.
+
+.DESCRIPTION
+Registration no longer publishes. The gateway cannot be swapped in place the way a backend can --
+one instance holds the port and the single-instance mutex -- so an upgrade is stop, repoint, start,
+and the task action names the exact version directory it will run.
+
+That makes the live version inspectable (Get-ScheduledTask McpGateway shows the path) and rollback
+just this script with an older -Version.
+
+deploy-gateway.ps1 runs the whole cycle; this is one step of it, and the one to reach for when
+rolling back.
 #>
 [CmdletBinding()]
 param(
-    [string] $TaskName = 'McpGateway',
-    [string] $Configuration = 'Release'
+    [Parameter(Mandatory)][string] $Version,
+    [string] $TaskName = 'McpGateway'
 )
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
-$publishRoot = Join-Path $repoRoot 'deploy\_gateway\current'
-Write-Host "Publishing gateway -> $publishRoot"
-dotnet publish (Join-Path $repoRoot 'McpGateway\McpGateway.csproj') `
-    -c $Configuration -o $publishRoot --nologo -v quiet
-if ($LASTEXITCODE -ne 0) { throw 'Gateway publish failed.' }
+$publishRoot = Join-Path $repoRoot "deploy\_gateway\$Version"
+$assembly = Join-Path $publishRoot 'McpGateway.dll'
+
+if (-not (Test-Path $assembly)) {
+    throw "No gateway published at $publishRoot. Run publish-gateway.ps1 first."
+}
 
 $action = New-ScheduledTaskAction `
     -Execute 'dotnet' `
-    -Argument "`"$publishRoot\McpGateway.dll`"" `
+    -Argument "`"$assembly`"" `
     -WorkingDirectory $repoRoot
 
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
@@ -35,4 +47,4 @@ $settings = New-ScheduledTaskSettingsSet `
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger `
     -Settings $settings -Force -RunLevel Limited | Out-Null
 
-Write-Host "Registered '$TaskName'. Start it now with: Start-ScheduledTask -TaskName $TaskName"
+Write-Host "'$TaskName' now points at $Version."
