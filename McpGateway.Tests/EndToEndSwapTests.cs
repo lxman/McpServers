@@ -92,10 +92,17 @@ public sealed class EndToEndSwapTests : IAsyncLifetime
         }
 
         using Process process = Process.Start(info)!;
-        string stderr = process.StandardError.ReadToEnd();
+
+        // Both pipes have to be drained concurrently. Reading stderr to the end while stdout fills
+        // its 4 KB buffer deadlocks the publish -- the child blocks on a write nobody is reading
+        // and WaitForExit never returns. Seen for real on a publish whose dependency graph had
+        // just been rebuilt, so this is not theoretical.
+        Task<string> stdout = process.StandardOutput.ReadToEndAsync();
+        Task<string> stderr = process.StandardError.ReadToEndAsync();
         process.WaitForExit();
 
-        Assert.True(process.ExitCode == 0, $"publish {version} failed: {stderr}");
+        Assert.True(process.ExitCode == 0,
+            $"publish {version} failed: {stderr.Result}{Environment.NewLine}{stdout.Result}");
     }
 
     private static string RepoPath(string relative) => Path.GetFullPath(Path.Combine(

@@ -1,4 +1,5 @@
 using McpGateway.Configuration;
+using McpGateway.Security;
 using McpGateway.Supervision;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -34,7 +35,7 @@ public sealed class BackendSupervisorTests : IAsyncDisposable
         _supervisor = new BackendSupervisor(
             ManifestStore.Load(manifestPath),
             _launcher,
-            new HealthProbe(new HttpClient()),
+            new HealthProbe(new HttpClient(), BackendToken.Mint()),
             new GatewayBuildOptions
             {
                 ManifestPath = manifestPath,

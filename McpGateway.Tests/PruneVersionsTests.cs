@@ -1,4 +1,5 @@
 using McpGateway.Configuration;
+using McpGateway.Security;
 using McpGateway.Supervision;
 using McpGateway.Upgrade;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -34,7 +35,7 @@ public sealed class PruneVersionsTests : IAsyncDisposable
         _supervisor = new BackendSupervisor(
             manifest,
             _launcher,
-            new HealthProbe(new HttpClient()),
+            new HealthProbe(new HttpClient(), BackendToken.Mint()),
             new GatewayBuildOptions
             {
                 ManifestPath = manifestPath,

@@ -1,5 +1,6 @@
 using System.Net;
 using McpGateway.Configuration;
+using McpGateway.Security;
 using McpGateway.Supervision;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,7 @@ public sealed class McpForwarder(
     IHttpForwarder forwarder,
     BackendSupervisor supervisor,
     ManifestStore manifest,
+    BackendToken backendToken,
     ILogger<McpForwarder> logger)
 {
     // Long timeout: a streamable-HTTP POST response can be a text/event-stream the handler holds
@@ -58,7 +60,7 @@ public sealed class McpForwarder(
         using IDisposable lease = instance.BeginRequest();
 
         // Rewrite /{server}/mcp to /mcp — backends don't know they're behind a gateway.
-        var transformer = new PathTransformer(suffix);
+        var transformer = new PathTransformer(suffix, backendToken.Value);
 
         ForwarderError error = await forwarder.SendAsync(
             context, instance.DestinationPrefix, _invoker, RequestConfig, transformer);
@@ -69,7 +71,7 @@ public sealed class McpForwarder(
         }
     }
 
-    private sealed class PathTransformer(string suffix) : HttpTransformer
+    private sealed class PathTransformer(string suffix, string backendToken) : HttpTransformer
     {
         public override async ValueTask TransformRequestAsync(
             HttpContext context,
@@ -85,10 +87,15 @@ public sealed class McpForwarder(
             request.RequestUri = new Uri(
                 destinationPrefix.TrimEnd('/') + suffix + context.Request.QueryString);
 
-            // X-Mcp-Client must survive -- the backend's McpCaller.ClientId reads it. The
-            // gateway's bearer token must not: it is also the backend's own shutdown token, and a
-            // tool call has no reason to carry it.
+            // X-Mcp-Client must survive -- the backend's McpCaller.ClientId reads it.
+            //
+            // The caller's own token must not: it is the client-facing credential and a backend
+            // has no business being able to replay it. Swap in the gateway's separate backend
+            // token instead, which is what the backend actually authenticates against. Replacing
+            // rather than removing is load-bearing now that /mcp is guarded: strip it and every
+            // forwarded call comes back 401.
             request.Headers.Remove("Authorization");
+            request.Headers.Add("Authorization", $"Bearer {backendToken}");
 
             request.Headers.Host = null;
         }

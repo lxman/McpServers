@@ -1,35 +1,25 @@
-using System.Security.Cryptography;
 using System.Text;
+using Mcp.Hosting.Core;
 using Microsoft.AspNetCore.Http;
 
 namespace McpGateway.Security;
 
+/// <summary>
+/// Guards every gateway route with the client-facing bearer token. Backends guard their own ports
+/// separately, with a different token -- see <see cref="BackendToken"/>.
+/// </summary>
 public sealed class BearerAuthMiddleware(RequestDelegate next, string expectedToken)
 {
     private readonly byte[] _expected = Encoding.UTF8.GetBytes(expectedToken);
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (!IsAuthorized(context))
+        if (!BearerToken.Matches(_expected, context))
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            context.Response.Headers.WWWAuthenticate = "Bearer";
-            await context.Response.WriteAsync("Missing or invalid bearer token.");
+            await BearerToken.ChallengeAsync(context);
             return;
         }
 
         await next(context);
-    }
-
-    private bool IsAuthorized(HttpContext context)
-    {
-        string? presented = context.Request.Headers.Authorization.FirstOrDefault();
-        if (presented is null || !presented.StartsWith("Bearer ", StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        return CryptographicOperations.FixedTimeEquals(
-            _expected, Encoding.UTF8.GetBytes(presented["Bearer ".Length..]));
     }
 }

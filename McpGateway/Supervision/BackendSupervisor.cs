@@ -10,7 +10,7 @@ public sealed class BackendSupervisor(
     IBackendLauncher launcher,
     HealthProbe healthProbe,
     GatewayBuildOptions options,
-    string shutdownToken,
+    string backendToken,
     ILogger<BackendSupervisor> logger,
     TimeProvider? time = null) : IAsyncDisposable
 {
@@ -240,7 +240,7 @@ public sealed class BackendSupervisor(
         logger.LogInformation("Starting {Key} version {Version}", key, version);
 
         IBackendHandle handle = launcher.Start(new BackendLaunchRequest(
-            key.Server, version, assemblyPath, portFilePath, shutdownToken));
+            key.Server, version, assemblyPath, portFilePath, backendToken));
 
         var timeout = TimeSpan.FromSeconds(entry.StartupTimeoutSeconds);
 
@@ -259,7 +259,7 @@ public sealed class BackendSupervisor(
             logger.LogInformation(
                 "{Key} healthy on port {Port} (pid {Pid})", key, port.Port, port.Pid);
 
-            return new BackendInstance(key, version, port.Port, handle, shutdownToken, _time);
+            return new BackendInstance(key, version, port.Port, handle, backendToken, _time);
         }
         catch
         {

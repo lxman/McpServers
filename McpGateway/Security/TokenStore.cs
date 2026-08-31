@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+using Mcp.Hosting.Core;
 
 namespace McpGateway.Security;
 
@@ -23,7 +23,7 @@ public static class TokenStore
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            string token = Base64Url(RandomNumberGenerator.GetBytes(32));
+            string token = BearerToken.Generate();
 
             string temp = path + ".tmp";
             File.WriteAllText(temp, token);
@@ -36,7 +36,4 @@ public static class TokenStore
             Gate.Release();
         }
     }
-
-    private static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes)
-        .TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }

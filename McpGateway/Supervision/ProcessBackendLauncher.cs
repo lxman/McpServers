@@ -26,7 +26,11 @@ public sealed class ProcessBackendLauncher : IBackendLauncher
 
         info.Environment["MCP_SERVER_NAME"] = request.ServerName;
         info.Environment["MCP_SERVER_VERSION"] = request.Version;
-        info.Environment["MCP_SHUTDOWN_TOKEN"] = request.ShutdownToken;
+        // Historical name, widened meaning: this is the token the backend requires on /mcp and
+        // /health too, not just /admin/shutdown. Kept as-is so a version directory published
+        // before the widening still receives it. Mcp.Hosting.Core reads it into
+        // McpHostOptions.AuthToken.
+        info.Environment["MCP_SHUTDOWN_TOKEN"] = request.AuthToken;
 
         Process process = Process.Start(info)
             ?? throw new BackendStartupException(

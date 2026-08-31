@@ -5,7 +5,7 @@ public sealed class BackendInstance(
     string version,
     int port,
     IBackendHandle handle,
-    string shutdownToken,
+    string authToken,
     TimeProvider time)
 {
     private readonly object _gate = new();
@@ -50,7 +50,7 @@ public sealed class BackendInstance(
             using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
             using var request = new HttpRequestMessage(
                 HttpMethod.Post, $"{DestinationPrefix}/admin/shutdown");
-            request.Headers.Add("Authorization", $"Bearer {shutdownToken}");
+            request.Headers.Add("Authorization", $"Bearer {authToken}");
 
             await client.SendAsync(request, cancellationToken);
         }

@@ -1,5 +1,6 @@
 using McpGateway;
 using McpGateway.Configuration;
+using McpGateway.Security;
 using McpGateway.Supervision;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
@@ -45,7 +46,7 @@ public sealed class IdleReaperTests : IAsyncDisposable
         """);
 
         _supervisor = new BackendSupervisor(
-            ManifestStore.Load(manifestPath), _launcher, new HealthProbe(new HttpClient()),
+            ManifestStore.Load(manifestPath), _launcher, new HealthProbe(new HttpClient(), BackendToken.Mint()),
             new GatewayBuildOptions
             {
                 ManifestPath = manifestPath,

@@ -45,7 +45,12 @@ public static class McpHttpHost
     {
         ServerName = Environment.GetEnvironmentVariable("MCP_SERVER_NAME") ?? serverName,
         PortFilePath = ReadArg(args, "--mcp-port-file"),
-        ShutdownToken = Environment.GetEnvironmentVariable("MCP_SHUTDOWN_TOKEN"),
+
+        // MCP_SHUTDOWN_TOKEN is the historical name -- it once guarded /admin/shutdown alone. It
+        // now authenticates every endpoint this backend serves, so it is read into AuthToken. The
+        // variable name is kept so a version directory published before the widening still gets
+        // its token from a newer gateway.
+        AuthToken = Environment.GetEnvironmentVariable("MCP_SHUTDOWN_TOKEN"),
         Version = Environment.GetEnvironmentVariable("MCP_SERVER_VERSION") ?? "unknown"
     };
 

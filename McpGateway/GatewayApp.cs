@@ -48,17 +48,23 @@ public static class GatewayApp
 
         string token = TokenStore.GetOrCreate(options.TokenPath);
 
+        // A second, distinct token for the gateway -> backend hop, minted fresh each run and held
+        // only in memory. See BackendToken: sharing the client-facing token would let anyone who
+        // has it talk to a backend port directly and skip the gateway entirely.
+        BackendToken backendToken = BackendToken.Mint();
+
         builder.Services.AddSingleton(options);
+        builder.Services.AddSingleton(backendToken);
         builder.Services.AddSingleton(ManifestStore.Load(options.ManifestPath));
         builder.Services.AddSingleton<IBackendLauncher, ProcessBackendLauncher>();
-        builder.Services.AddSingleton(new HealthProbe(new HttpClient()));
+        builder.Services.AddSingleton(new HealthProbe(new HttpClient(), backendToken));
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton(sp => new BackendSupervisor(
             sp.GetRequiredService<ManifestStore>(),
             sp.GetRequiredService<IBackendLauncher>(),
             sp.GetRequiredService<HealthProbe>(),
             options,
-            token,
+            backendToken.Value,
             sp.GetRequiredService<ILogger<BackendSupervisor>>(),
             sp.GetRequiredService<TimeProvider>()));
 

@@ -1,5 +1,6 @@
 using McpGateway;
 using McpGateway.Configuration;
+using McpGateway.Security;
 using McpGateway.Supervision;
 using McpGateway.Upgrade;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -34,7 +35,7 @@ public sealed class BlueGreenActivationTests : IAsyncDisposable
 
         _manifest = ManifestStore.Load(manifestPath);
         _supervisor = new BackendSupervisor(
-            _manifest, _launcher, new HealthProbe(new HttpClient()),
+            _manifest, _launcher, new HealthProbe(new HttpClient(), BackendToken.Mint()),
             new GatewayBuildOptions
             {
                 ManifestPath = manifestPath,

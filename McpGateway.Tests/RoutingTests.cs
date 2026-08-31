@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using McpGateway;
+using McpGateway.Security;
 using McpGateway.Supervision;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -99,7 +100,7 @@ public sealed class RoutingTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Forwarding_KeepsTheClientHeader_DropsTheGatewayToken_AndPreservesTheQuery()
+    public async Task Forwarding_KeepsTheClientHeader_SwapsInTheBackendToken_AndPreservesTheQuery()
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/shared-demo/mcp?trace=abc123")
         {
@@ -113,8 +114,14 @@ public sealed class RoutingTests : IAsyncLifetime
         string body = await response.Content.ReadAsStringAsync(
             TestContext.Current.CancellationToken);
 
+        string backendToken = _app.Services.GetRequiredService<BackendToken>().Value;
+
         Assert.Contains("\"clientHeader\":\"code\"", body);
-        Assert.Contains("\"authHeader\":null", body);
+        Assert.Contains($"\"authHeader\":\"Bearer {backendToken}\"", body);
+
+        // The caller's own token must not reach the backend: it is the client-facing credential,
+        // and a backend has no business being able to replay it against the gateway.
+        Assert.DoesNotContain(_token, body, StringComparison.Ordinal);
         Assert.Contains("trace=abc123", body);
     }
 
