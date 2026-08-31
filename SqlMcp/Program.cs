@@ -1,49 +1,34 @@
+using Mcp.Hosting.Core;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Mcp.Database.Core.Sql;
 using Mcp.ResponseGuard.Configuration;
 using Mcp.ResponseGuard.Services;
+using ModelContextProtocol.AspNetCore;
 using Serilog;
-using SerilogFileWriter;
 using SqlMcp.Tools;
 using SqlServer.Core.Models;
 using SqlServer.Core.Services;
 using SqlServer.Core.Services.Interfaces;
 
-// Configure Serilog for file logging (STDIO servers cannot log to console)
-string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "sql-mcp-.log");
-Log.Logger = McpLoggingExtensions.SetupMcpLogging(logPath);
-
 try
 {
-    // Set the base path to the directory where the DLL is located
-    // This ensures appsettings.json is found even when the working directory is different
-    string executablePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-    string executableDir = Path.GetDirectoryName(executablePath) ?? Directory.GetCurrentDirectory();
+    // Logging, the loopback listener and the gateway's port-file contract all live in McpHttpHost.
+    // It also sets ContentRootPath to AppContext.BaseDirectory, which is what the executableDir
+    // dance here used to be for -- appsettings.json is found beside the assembly rather than beside
+    // whatever the working directory happens to be.
+    WebApplicationBuilder builder = McpHttpHost.CreateBuilder(args, "sql-database-explorer");
 
-    HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
-    {
-        Args = args,
-        ContentRootPath = executableDir
-    });
+    string appSettingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
 
-    // Log diagnostic information about working directory and configuration
-    string currentDir = Directory.GetCurrentDirectory();
-    string appSettingsPath = Path.Combine(executableDir, "appsettings.json");
-    bool appSettingsExists = File.Exists(appSettingsPath);
-
-    builder.Logging.ClearProviders();
-    builder.Logging.AddSerilog(Log.Logger, dispose: false);
-
-    // Log diagnostic information to help troubleshoot configuration issues
+    // Diagnostics kept: they exist to explain a server that starts with zero configured
+    // connections, and that failure mode is unchanged by the transport.
     Log.Information("=== SqlMcp Startup Diagnostics ===");
-    Log.Information("Current Working Directory: {CurrentDir}", currentDir);
-    Log.Information("Executable Directory (ContentRootPath): {ExecDir}", executableDir);
-
+    Log.Information("Content root: {ContentRoot}", AppContext.BaseDirectory);
     Log.Information("Looking for appsettings.json at: {AppSettingsPath}", appSettingsPath);
-    Log.Information("appsettings.json exists: {Exists}", appSettingsExists);
-    Log.Information("Log file location: {LogPath}", logPath);
+    Log.Information("appsettings.json exists: {Exists}", File.Exists(appSettingsPath));
+    Log.Information("Log file location: {LogPath}", McpHttpHost.LogPathFor("sql-database-explorer"));
 
     // Log configuration source paths
     List<string> configSources = builder.Configuration.Sources
@@ -70,27 +55,29 @@ try
         sp.GetRequiredService<ILogger<OutputGuard>>(),
         new OutputGuardOptions { SafeTokenLimit = 15_000 }));
 
-    // Configure MCP server
-    builder.Services.AddMcpServer()
-        .WithStdioServerTransport()
+    builder.Services
+        .AddMcpServer()
+        .WithHttpTransport(o => o.SessionMode = HttpServerSessionMode.StatefulForInitializeClients)
         .WithTools<SqlConnectionTools>()
         .WithTools<SqlQueryTools>()
         .WithTools<SqlSchemaTools>()
         .WithTools<SqlTransactionTools>();
 
-    IHost host = builder.Build();
+    WebApplication app = builder.Build();
+    app.MapMcpHost();
 
     // Log startup information
-    var connectionManager = host.Services.GetRequiredService<SqlConnectionManager>();
+    var connectionManager = app.Services.GetRequiredService<SqlConnectionManager>();
     List<string> availableConnections = connectionManager.GetConnectionNames();
     Log.Information("SqlMcp starting with {ConnectionCount} configured connections: {Connections}",
         availableConnections.Count,
         string.Join(", ", availableConnections));
-    await host.RunAsync();
+    await app.RunAsync();
 }
 catch (Exception ex)
 {
     Log.Fatal(ex, "SqlMcp terminated unexpectedly");
+    Environment.ExitCode = 1;
 }
 finally
 {
