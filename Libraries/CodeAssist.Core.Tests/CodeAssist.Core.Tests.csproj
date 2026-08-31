@@ -20,6 +20,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\CodeAssist.Core\CodeAssist.Core.csproj" />
+        <ProjectReference Include="..\..\CodeAssistMcp\CodeAssistMcp.csproj" />
     </ItemGroup>
 
 </Project>

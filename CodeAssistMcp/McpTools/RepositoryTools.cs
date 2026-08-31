@@ -25,10 +25,10 @@ public class RepositoryTools(
     ILogger<RepositoryTools> logger)
 {
     [McpServerTool, DisplayName("set_active_repository")]
-    [Description("Set the active repository for file watching. Stops watching all other repositories and starts watching the specified one. Use this when switching between projects to ensure only the current project is monitored for changes.")]
+    [Description("Set the active repository for file watching. Stops watching all other repositories and starts watching the specified one. Use this when switching between projects to ensure only the current project is monitored for changes. Set clearOtherCaches to true to also drop other repositories' in-memory caches — this affects every session sharing this server, so leave it off unless you mean it.")]
     public async Task<string> SetActiveRepository(
         string repositoryName,
-        bool clearOtherCaches = true)
+        bool clearOtherCaches = false)
     {
         try
         {
