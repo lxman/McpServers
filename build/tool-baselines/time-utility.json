@@ -1,0 +1,95 @@
+[
+  {
+    "name": "calculate_elapsed_time",
+    "description": "See skills/utilities/time/calculate_elapsed_time.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "startTimestamp": {
+          "type": "string"
+        },
+        "endTimestamp": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "startTimestamp"
+      ]
+    }
+  },
+  {
+    "name": "get_current_time",
+    "description": "See skills/utilities/time/get_current_time.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_timestamp",
+    "description": "See skills/utilities/time/get_timestamp.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_timers",
+    "description": "See skills/utilities/time/list_timers.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "simulate_delay",
+    "description": "See skills/utilities/time/simulate_delay.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "durationSeconds": {
+          "type": "number",
+          "default": 5
+        },
+        "includeTimestamps": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  },
+  {
+    "name": "start_timer",
+    "description": "See skills/utilities/time/start_timer.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "timerName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "timerName"
+      ]
+    }
+  },
+  {
+    "name": "stop_timer",
+    "description": "See skills/utilities/time/stop_timer.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "timerName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "timerName"
+      ]
+    }
+  }
+]
