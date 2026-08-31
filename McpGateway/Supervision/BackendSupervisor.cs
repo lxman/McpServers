@@ -20,6 +20,23 @@ public sealed class BackendSupervisor(
     private readonly ConcurrentDictionary<string, TaskCompletionSource> _holds =
         new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// One gate per server, held only across the hold check and the pool insert -- and, on the
+    /// other side, only across installing a hold. It exists so those two cannot interleave; it is
+    /// emphatically not a lock over starting a backend, still less over a whole swap. Overlap
+    /// servers never take a hold at all, so for them this is one uncontended semaphore per request.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _gates =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Test seam, null in production. Fires immediately after the hold check and before the pool
+    /// insert -- the window a swap must not be able to slip a hold into. There is no way to park a
+    /// request there deterministically from outside, and a race this narrow is not worth
+    /// establishing by sleeping at it.
+    /// </summary>
+    internal Action? OnHoldChecked { get; set; }
+
     public IReadOnlyCollection<BackendInstance> All => _pool.Values
         .Where(entry => entry.IsValueCreated && entry.Value.IsCompletedSuccessfully)
         .Select(entry => entry.Value.Result)
@@ -34,13 +51,44 @@ public sealed class BackendSupervisor(
     {
         while (true)
         {
-            if (_holds.TryGetValue(key.Server, out TaskCompletionSource? hold))
+            Lazy<Task<BackendInstance>>? entry = null;
+            TaskCompletionSource? hold;
+
+            SemaphoreSlim gate = GateFor(key.Server);
+            await gate.WaitAsync(cancellationToken);
+            try
             {
-                await hold.Task.WaitAsync(cancellationToken);
+                _holds.TryGetValue(key.Server, out hold);
+                OnHoldChecked?.Invoke();
+
+                // The insert happens under the same gate HoldAsync needs, so a swap cannot install
+                // a hold in between. Without that, a request descheduled here while
+                // ActivateExclusiveAsync reaches StopAsync finds the key gone, spawns a backend at
+                // the old version, and Replace then orphans it -- never stopped, invisible to
+                // /admin/servers and to the reaper.
+                if (hold is null)
+                {
+                    entry = _pool.GetOrAdd(key, k => new Lazy<Task<BackendInstance>>(
+                        () => StartAsync(k, RequireActiveVersion(k.Server), CancellationToken.None)));
+                }
+            }
+            finally
+            {
+                // Released before the wait below, and before the start is awaited: holding it
+                // across either would serialise ordinary traffic behind a swap.
+                gate.Release();
             }
 
-            Lazy<Task<BackendInstance>> entry = _pool.GetOrAdd(key, k => new Lazy<Task<BackendInstance>>(
-                () => StartAsync(k, RequireActiveVersion(k.Server), CancellationToken.None)));
+            if (entry is null)
+            {
+                await hold!.Task.WaitAsync(cancellationToken);
+
+                // Loop rather than fall through. Activations queue back to back on
+                // ActivationService's own gate, so the next one's hold may already be installed by
+                // the time this waiter wakes -- and falling through would insert into the pool
+                // inside that swap.
+                continue;
+            }
 
             try
             {
@@ -79,17 +127,32 @@ public sealed class BackendSupervisor(
     /// on the hold instead of getting an error, which is what makes a stop-then-start upgrade cost
     /// latency rather than failed calls.
     /// </summary>
-    public Task<IAsyncDisposable> HoldAsync(string server, CancellationToken cancellationToken)
+    public async Task<IAsyncDisposable> HoldAsync(string server, CancellationToken cancellationToken)
     {
         var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        if (!_holds.TryAdd(server, source))
+        // Long enough to install the hold and no longer. The hold itself, not the gate, is what
+        // spans the swap -- but installing it has to be mutually exclusive with a request's
+        // check-then-insert, or the request slips through between the two.
+        SemaphoreSlim gate = GateFor(server);
+        await gate.WaitAsync(cancellationToken);
+        try
         {
-            throw new InvalidOperationException($"A swap is already in progress for '{server}'.");
+            if (!_holds.TryAdd(server, source))
+            {
+                throw new InvalidOperationException($"A swap is already in progress for '{server}'.");
+            }
+        }
+        finally
+        {
+            gate.Release();
         }
 
-        return Task.FromResult<IAsyncDisposable>(new Hold(this, server, source));
+        return new Hold(this, server, source);
     }
+
+    private SemaphoreSlim GateFor(string server) =>
+        _gates.GetOrAdd(server, _ => new SemaphoreSlim(1, 1));
 
     private sealed class Hold(BackendSupervisor owner, string server, TaskCompletionSource source)
         : IAsyncDisposable
