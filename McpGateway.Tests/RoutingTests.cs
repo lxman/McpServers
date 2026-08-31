@@ -94,6 +94,22 @@ public sealed class RoutingTests : IAsyncLifetime
         Assert.Equal(1, _launcher.StartCount);
     }
 
+    /// <summary>
+    /// Manifest lookup is case-INSENSITIVE but BackendKey is case-SENSITIVE, so a mis-cased URL
+    /// used to resolve to the right entry and then land in a second pool slot -- a second live
+    /// backend for a server declared overlapAllowed: false, and a key that falls outside the
+    /// prune keep-set, which is what lets prune delete a directory a live backend is running from.
+    /// </summary>
+    [Fact]
+    public async Task MisCasedServerName_ReusesTheSameBackend()
+    {
+        await PostMcpAsync("shared-demo", "code");
+        await PostMcpAsync("SHARED-DEMO", "code");
+        await PostMcpAsync("Shared-Demo", "code");
+
+        Assert.Equal(1, _launcher.StartCount);
+    }
+
     [Fact]
     public async Task PerClientServer_GivesEachClientItsOwnBackend()
     {

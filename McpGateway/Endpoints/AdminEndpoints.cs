@@ -48,10 +48,15 @@ public static class AdminEndpoints
             ManifestStore manifest,
             CancellationToken cancellationToken) =>
         {
-            if (!manifest.TryGet(name, out _)) return Results.NotFound($"No server named '{name}'.");
+            // Canonical spelling, not the URL's: ActivateAsync filters live backends with an
+            // ordinal Key.Server comparison, so a mis-cased name would find none and swap nothing.
+            if (!manifest.TryGet(name, out _, out string canonical))
+            {
+                return Results.NotFound($"No server named '{name}'.");
+            }
 
             ActivationResult result = await activation.ActivateAsync(
-                name, body.Version, cancellationToken);
+                canonical, body.Version, cancellationToken);
 
             return result.Succeeded
                 ? Results.Json(result)
@@ -64,10 +69,13 @@ public static class AdminEndpoints
             ManifestStore manifest,
             CancellationToken cancellationToken) =>
         {
-            if (!manifest.TryGet(name, out _)) return Results.NotFound($"No server named '{name}'.");
+            if (!manifest.TryGet(name, out _, out string canonical))
+            {
+                return Results.NotFound($"No server named '{name}'.");
+            }
 
             List<BackendKey> keys = supervisor.All
-                .Where(instance => instance.Key.Server == name)
+                .Where(instance => instance.Key.Server == canonical)
                 .Select(instance => instance.Key)
                 .ToList();
 
@@ -90,10 +98,13 @@ public static class AdminEndpoints
             ManifestStore manifest,
             CancellationToken cancellationToken) =>
         {
-            if (!manifest.TryGet(name, out _)) return Results.NotFound($"No server named '{name}'.");
+            if (!manifest.TryGet(name, out _, out string canonical))
+            {
+                return Results.NotFound($"No server named '{name}'.");
+            }
 
             ActivationResult result = await activation.ActivateAsync(
-                name, null, cancellationToken);
+                canonical, null, cancellationToken);
 
             return result.Succeeded
                 ? Results.Json(result)

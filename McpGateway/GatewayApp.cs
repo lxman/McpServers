@@ -125,8 +125,19 @@ public static class GatewayApp
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton(backendToken);
         builder.Services.AddSingleton(liveBackends);
-        builder.Services.AddSingleton(
-            ManifestStore.Load(options.ManifestPath, options.StatePath));
+        ManifestStore manifest = ManifestStore.Load(options.ManifestPath, options.StatePath);
+
+        // Logged at startup rather than enforced at load: one unwise entry must not stop every
+        // other server from being served. See ManifestValidation for what is checked and why.
+        Microsoft.Extensions.Logging.ILogger manifestLogger =
+            bootstrapLoggers.CreateLogger("McpGateway.Configuration.ManifestValidation");
+
+        foreach (string warning in ManifestValidation.Warnings(manifest.Entries))
+        {
+            manifestLogger.LogWarning("{Warning}", warning);
+        }
+
+        builder.Services.AddSingleton(manifest);
         builder.Services.AddSingleton<IBackendLauncher, ProcessBackendLauncher>();
         builder.Services.AddSingleton(new HealthProbe(new HttpClient(), backendToken));
         builder.Services.AddSingleton(TimeProvider.System);

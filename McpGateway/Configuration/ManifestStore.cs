@@ -24,10 +24,18 @@ public sealed class ManifestStore
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private volatile Dictionary<string, ServerEntry> _entries;
 
+    /// <summary>
+    /// Any casing a caller might use, mapped to the manifest's own spelling. Built once: activating
+    /// a version replaces entry VALUES, never the key set.
+    /// </summary>
+    private readonly Dictionary<string, string> _canonicalNames;
+
     private ManifestStore(string statePath, Dictionary<string, ServerEntry> entries)
     {
         _statePath = statePath;
         _entries = entries;
+        _canonicalNames = entries.Keys.ToDictionary(
+            key => key, key => key, StringComparer.OrdinalIgnoreCase);
     }
 
     public IReadOnlyDictionary<string, ServerEntry> Entries => _entries;
@@ -55,7 +63,30 @@ public sealed class ManifestStore
         return new ManifestStore(statePath, merged);
     }
 
-    public bool TryGet(string name, out ServerEntry? entry) => _entries.TryGetValue(name, out entry);
+    public bool TryGet(string name, out ServerEntry? entry) => TryGet(name, out entry, out _);
+
+    /// <summary>
+    /// Looks a server up by any casing and hands back the manifest's own spelling of its name.
+    /// <para>
+    /// Callers that turn a name into a <c>BackendKey</c> must use the canonical one. Lookup here is
+    /// case-insensitive but BackendKey's equality is not, so routing a mis-cased URL straight
+    /// through resolves the right entry and then lands in a SECOND pool slot: a second live backend
+    /// for a server declared overlapAllowed: false, invisible to an activation that filters on the
+    /// canonical name, and outside the prune keep-set -- which is what lets prune delete a
+    /// directory a live backend is running from.
+    /// </para>
+    /// </summary>
+    public bool TryGet(string name, out ServerEntry? entry, out string canonicalName)
+    {
+        if (_entries.TryGetValue(name, out entry))
+        {
+            canonicalName = _canonicalNames.TryGetValue(name, out string? canonical) ? canonical : name;
+            return true;
+        }
+
+        canonicalName = name;
+        return false;
+    }
 
     /// <summary>
     /// Records the active version. Writes the runtime state file only -- servers.json is static
