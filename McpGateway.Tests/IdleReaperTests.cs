@@ -46,14 +46,19 @@ public sealed class IdleReaperTests : IAsyncDisposable
         """);
 
         _supervisor = new BackendSupervisor(
-            ManifestStore.Load(manifestPath), _launcher, new HealthProbe(new HttpClient(), BackendToken.Mint()),
+            ManifestStore.Load(manifestPath),
+            _launcher,
+            new HealthProbe(new HttpClient(), BackendToken.Mint()),
             new GatewayBuildOptions
             {
                 ManifestPath = manifestPath,
                 TokenPath = Path.Combine(_root, "token"),
+                LiveRegistryPath = Path.Combine(_root, "live"),
                 RepoRoot = _root
             },
-            "shutdown-token", NullLogger<BackendSupervisor>.Instance, _time);
+            "backend-token",
+            new LiveBackendRegistry(Path.Combine(_root, "live"), NullLogger.Instance),
+            NullLogger<BackendSupervisor>.Instance, _time);
 
         _reaper = new IdleReaper(_supervisor, _time, NullLogger<IdleReaper>.Instance);
     }

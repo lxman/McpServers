@@ -6,6 +6,7 @@ public sealed class BackendInstance(
     int port,
     IBackendHandle handle,
     string authToken,
+    LiveBackendRegistry registry,
     TimeProvider time)
 {
     private readonly object _gate = new();
@@ -59,7 +60,15 @@ public sealed class BackendInstance(
             // A backend that won't answer its shutdown endpoint still gets disposed below.
         }
 
+        // Read before teardown: a handle is free to release its underlying Process once disposed.
+        int pid = Handle.ProcessId;
+
         await Handle.DisposeAsync();
+
+        // Cleared only once the process is actually gone. Clearing the record first and then
+        // failing to kill it would produce the one thing the registry exists to prevent: a live
+        // backend nothing knows about.
+        registry.Forget(pid);
     }
 
     private void Release()

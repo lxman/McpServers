@@ -40,9 +40,12 @@ public sealed class BlueGreenActivationTests : IAsyncDisposable
             {
                 ManifestPath = manifestPath,
                 TokenPath = Path.Combine(_root, "token"),
+                LiveRegistryPath = Path.Combine(_root, "live"),
                 RepoRoot = _root
             },
-            "shutdown-token", NullLogger<BackendSupervisor>.Instance);
+            "backend-token",
+            new LiveBackendRegistry(Path.Combine(_root, "live"), NullLogger.Instance),
+            NullLogger<BackendSupervisor>.Instance);
 
         _activation = new ActivationService(
             _supervisor, _manifest, NullLogger<ActivationService>.Instance);

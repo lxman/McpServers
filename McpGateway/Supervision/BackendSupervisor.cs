@@ -11,6 +11,7 @@ public sealed class BackendSupervisor(
     HealthProbe healthProbe,
     GatewayBuildOptions options,
     string backendToken,
+    LiveBackendRegistry registry,
     ILogger<BackendSupervisor> logger,
     TimeProvider? time = null) : IAsyncDisposable
 {
@@ -242,6 +243,14 @@ public sealed class BackendSupervisor(
         IBackendHandle handle = launcher.Start(new BackendLaunchRequest(
             key.Server, version, assemblyPath, portFilePath, backendToken));
 
+        // Recorded before the health gate, not after. code-assist's startup timeout is 120 seconds,
+        // and a gateway killed inside that window would otherwise leave a running process that
+        // nothing -- not the pool, not the port file, not this registry -- has any record of.
+        var record = new LiveBackendRecord(
+            key.Server, key.PoolKey, version, handle.ProcessId, Port: 0, handle.StartedAt);
+
+        registry.Record(record);
+
         var timeout = TimeSpan.FromSeconds(entry.StartupTimeoutSeconds);
 
         try
@@ -259,11 +268,15 @@ public sealed class BackendSupervisor(
             logger.LogInformation(
                 "{Key} healthy on port {Port} (pid {Pid})", key, port.Port, port.Pid);
 
-            return new BackendInstance(key, version, port.Port, handle, backendToken, _time);
+            registry.Record(record with { Port = port.Port });
+
+            return new BackendInstance(
+                key, version, port.Port, handle, backendToken, registry, _time);
         }
         catch
         {
             await handle.DisposeAsync();
+            registry.Forget(handle.ProcessId);
             throw;
         }
         finally

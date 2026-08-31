@@ -151,6 +151,10 @@ public sealed class FakeBackendLauncher : IBackendLauncher
     private sealed class FakeHandle(WebApplication app, int pid, Action onExit, Func<bool> throwOnStop)
         : IBackendHandle
     {
+        // The fake's processes are in-process Kestrel apps, so "now" is the honest answer and it
+        // is what the registry's pid-recycling check compares against.
+        public DateTimeOffset StartedAt { get; } = DateTimeOffset.UtcNow;
+
         public int ProcessId { get; } = pid;
         public bool HasExited { get; private set; }
 

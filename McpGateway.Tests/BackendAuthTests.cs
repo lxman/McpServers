@@ -65,6 +65,7 @@ public sealed class BackendAuthFixture : IAsyncLifetime
         {
             ManifestPath = manifestPath,
             TokenPath = TokenFilePath,
+            LiveRegistryPath = Path.Combine(Root, "live"),
             RepoRoot = Root,
             Url = "http://127.0.0.1:0"
         });

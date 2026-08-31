@@ -1,9 +1,21 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 
 namespace McpGateway.Supervision;
 
-public sealed class ProcessBackendLauncher : IBackendLauncher
+public sealed class ProcessBackendLauncher(ILogger<ProcessBackendLauncher> logger) : IBackendLauncher
 {
+    /// <summary>
+    /// Deliberately never disposed. Closing the job is what kills the backends, so the only correct
+    /// moment is gateway process exit -- which the OS handles for us, and which is exactly the
+    /// point: it happens on a crash too, not just on a graceful shutdown.
+    /// </summary>
+    private readonly BackendJobObject _job = BackendJobObject.Create(logger);
+
+    /// <summary>Verification only: lets a test confirm a spawned backend was adopted.</summary>
+    internal BackendJobObject Job => _job;
+
     public IBackendHandle Start(BackendLaunchRequest request)
     {
         if (!File.Exists(request.AssemblyPath))
@@ -26,6 +38,7 @@ public sealed class ProcessBackendLauncher : IBackendLauncher
 
         info.Environment["MCP_SERVER_NAME"] = request.ServerName;
         info.Environment["MCP_SERVER_VERSION"] = request.Version;
+
         // Historical name, widened meaning: this is the token the backend requires on /mcp and
         // /health too, not just /admin/shutdown. Kept as-is so a version directory published
         // before the widening still receives it. Mcp.Hosting.Core reads it into
@@ -36,12 +49,30 @@ public sealed class ProcessBackendLauncher : IBackendLauncher
             ?? throw new BackendStartupException(
                 $"Could not start {request.AssemblyPath}.", string.Empty);
 
+        // Immediately, so the window in which the backend is unadopted is as short as it can be
+        // without creating the process suspended.
+        if (!_job.TryAssign(process))
+        {
+            logger.LogCritical(
+                "Could not assign {Server} (pid {Pid}) to the gateway's job object (win32 error " +
+                "{Error}). It will survive a non-graceful gateway exit as an orphan, and startup " +
+                "reconciliation is then the only thing that will clean it up",
+                request.ServerName, process.Id, Marshal.GetLastWin32Error());
+        }
+
         return new ProcessHandle(process);
     }
 
     private sealed class ProcessHandle(Process process) : IBackendHandle
     {
-        public int ProcessId => process.Id;
+        // Captured now: Process.StartTime throws once the process has been reaped, and the whole
+        // point of recording it is to still know it after the process is gone.
+        public DateTimeOffset StartedAt { get; } = new(process.StartTime);
+
+        // Also captured: Process.Id throws once the Process object has been disposed, and the
+        // registry has to be able to name the pid it is clearing *after* teardown.
+        public int ProcessId { get; } = process.Id;
+
         public bool HasExited => process.HasExited;
 
         public async ValueTask DisposeAsync()

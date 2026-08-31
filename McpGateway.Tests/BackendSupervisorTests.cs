@@ -12,6 +12,7 @@ public sealed class BackendSupervisorTests : IAsyncDisposable
         Path.GetTempPath(), "mcp-supervisor-" + Guid.NewGuid().ToString("N"));
 
     private readonly FakeBackendLauncher _launcher = new();
+    private readonly LiveBackendRegistry _live;
     private readonly BackendSupervisor _supervisor;
 
     public BackendSupervisorTests()
@@ -32,6 +33,8 @@ public sealed class BackendSupervisorTests : IAsyncDisposable
         }
         """);
 
+        _live = new LiveBackendRegistry(Path.Combine(_root, "live"), NullLogger.Instance);
+
         _supervisor = new BackendSupervisor(
             ManifestStore.Load(manifestPath),
             _launcher,
@@ -40,10 +43,88 @@ public sealed class BackendSupervisorTests : IAsyncDisposable
             {
                 ManifestPath = manifestPath,
                 TokenPath = Path.Combine(_root, "token"),
+                LiveRegistryPath = Path.Combine(_root, "live"),
                 RepoRoot = _root
             },
-            "shutdown-token",
+            "backend-token",
+            _live,
             NullLogger<BackendSupervisor>.Instance);
+    }
+
+    [Fact]
+    public async Task GetOrStartAsync_RecordsTheBackendInTheLiveRegistry()
+    {
+        BackendInstance instance = await _supervisor.GetOrStartAsync(
+            new BackendKey("demo", "code"), TestContext.Current.CancellationToken);
+
+        LiveBackendRecord recorded = Assert.Single(_live.Read());
+
+        Assert.Equal("demo", recorded.Server);
+        Assert.Equal("code", recorded.PoolKey);
+        Assert.Equal("v-one", recorded.Version);
+        Assert.Equal(instance.Handle.ProcessId, recorded.Pid);
+
+        // The port is written a second time, once the backend has reported it. Without that the
+        // registry could name the process but not what it was serving.
+        Assert.Equal(instance.Port, recorded.Port);
+    }
+
+    /// <summary>
+    /// Before the health gate, not after. code-assist's startup timeout is 120 seconds; a gateway
+    /// killed inside that window leaves a live process behind, and only a record written this early
+    /// lets the next start find it. Asserting on the final state alone cannot tell the two apart --
+    /// the record written after the gate satisfies it either way.
+    /// </summary>
+    [Fact]
+    public async Task GetOrStartAsync_RecordsTheBackend_BeforeItIsHealthy()
+    {
+        _launcher.StartDelay = TimeSpan.FromSeconds(2);
+
+        Task<BackendInstance> starting = _supervisor.GetOrStartAsync(
+            new BackendKey("demo", "code"), TestContext.Current.CancellationToken);
+
+        LiveBackendRecord? recorded = null;
+        for (var attempt = 0; attempt < 50 && recorded is null; attempt++)
+        {
+            recorded = _live.Read().FirstOrDefault();
+            if (recorded is null) await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+
+        Assert.False(starting.IsCompleted, "the backend came up before the assertion could run");
+        Assert.NotNull(recorded);
+
+        // Zero because the backend has not reported a port yet. The record exists anyway: the pid
+        // is the part reconciliation needs.
+        Assert.Equal(0, recorded.Port);
+        Assert.Equal("demo", recorded.Server);
+
+        await starting;
+    }
+
+    [Fact]
+    public async Task StopAsync_ClearsTheLiveRegistryRecord()
+    {
+        var key = new BackendKey("demo", "code");
+        await _supervisor.GetOrStartAsync(key, TestContext.Current.CancellationToken);
+
+        await _supervisor.StopAsync(key, TestContext.Current.CancellationToken);
+
+        Assert.Empty(_live.Read());
+    }
+
+    /// <summary>
+    /// A start that never came up leaves no process to reconcile, so leaving its record behind
+    /// would point a later gateway start at a pid that now belongs to something else.
+    /// </summary>
+    [Fact]
+    public async Task FailedStart_ClearsTheLiveRegistryRecord()
+    {
+        _launcher.SuppressPortFile = true;
+
+        await Assert.ThrowsAsync<BackendStartupException>(() => _supervisor.GetOrStartAsync(
+            new BackendKey("demo", "code"), TestContext.Current.CancellationToken));
+
+        Assert.Empty(_live.Read());
     }
 
     [Fact]

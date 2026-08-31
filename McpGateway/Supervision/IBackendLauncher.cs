@@ -21,4 +21,10 @@ public interface IBackendHandle : IAsyncDisposable
 {
     int ProcessId { get; }
     bool HasExited { get; }
+
+    /// <summary>
+    /// When the OS started this process, captured while it is still alive. Half of the identity
+    /// check that stops startup reconciliation killing a process that merely inherited the pid.
+    /// </summary>
+    DateTimeOffset StartedAt { get; }
 }

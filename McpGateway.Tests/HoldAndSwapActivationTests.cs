@@ -13,6 +13,15 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
     private readonly string _root = Path.Combine(
         Path.GetTempPath(), "mcp-holdswap-" + Guid.NewGuid().ToString("N"));
 
+    /// <summary>
+    /// Outside _root on purpose. In production the live registry lives under %LOCALAPPDATA%, not in
+    /// the repo, and one test here deletes _root wholesale to make the manifest write fail -- a
+    /// registry inside it would re-create the directory on its next write and quietly un-break the
+    /// very failure that test is inducing.
+    /// </summary>
+    private readonly string _liveRoot = Path.Combine(
+        Path.GetTempPath(), "mcp-holdswap-live-" + Guid.NewGuid().ToString("N"));
+
     private readonly FakeBackendLauncher _launcher = new();
     private readonly ManifestStore _manifest;
     private readonly BackendSupervisor _supervisor;
@@ -40,9 +49,12 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
             {
                 ManifestPath = manifestPath,
                 TokenPath = Path.Combine(_root, "token"),
+                LiveRegistryPath = _liveRoot,
                 RepoRoot = _root
             },
-            "shutdown-token", NullLogger<BackendSupervisor>.Instance);
+            "backend-token",
+            new LiveBackendRegistry(_liveRoot, NullLogger.Instance),
+            NullLogger<BackendSupervisor>.Instance);
 
         _activation = new ActivationService(
             _supervisor, _manifest, NullLogger<ActivationService>.Instance);
@@ -206,7 +218,11 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await _supervisor.DisposeAsync();
-        try { Directory.Delete(_root, recursive: true); }
-        catch (DirectoryNotFoundException) { }
+
+        foreach (string directory in new[] { _root, _liveRoot })
+        {
+            try { Directory.Delete(directory, recursive: true); }
+            catch (DirectoryNotFoundException) { }
+        }
     }
 }

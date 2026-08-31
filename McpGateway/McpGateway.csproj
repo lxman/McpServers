@@ -8,6 +8,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="McpGateway.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Yarp.ReverseProxy" />
         <PackageReference Include="Serilog" />
         <PackageReference Include="Serilog.Extensions.Logging" />
