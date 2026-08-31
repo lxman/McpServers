@@ -1,8 +1,8 @@
+using Mcp.Hosting.Core;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using ModelContextProtocol.AspNetCore;
 using Serilog;
-using SerilogFileWriter;
 
 namespace McpUtilitiesServer;
 
@@ -10,32 +10,32 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        Log.Logger = McpLoggingExtensions.SetupMcpLogging("logs/mcp-utilities-.log");
-
         try
         {
+            // Logging, the loopback listener and the gateway's port-file contract all live in
+            // McpHttpHost. Log.Logger is configured by the time this returns, so the old
+            // SetupMcpLogging call and its relative "logs/" path are gone -- that path resolved
+            // against the working directory, which is now a versioned deploy directory.
+            WebApplicationBuilder builder = McpHttpHost.CreateBuilder(args, "time-utility");
+
             Log.Information("Starting Utilities server.");
 
-            // Create application builder with proper logging setup
-            HostApplicationBuilder builder = Host.CreateApplicationBuilder();
-
-            builder.Logging.ClearProviders();
-            builder.Logging.AddSerilog(Log.Logger, dispose: false);
-
-            // Configure the MCP server with proper tool registration
             builder.Services
                 .AddMcpServer()
-                .WithStdioServerTransport()
+                .WithHttpTransport(o => o.SessionMode = HttpServerSessionMode.StatefulForInitializeClients)
                 .WithTools<TimeUtilities>();
 
-            IHost host = builder.Build();
+            WebApplication app = builder.Build();
+            app.MapMcpHost();
 
-            await Console.Error.WriteLineAsync("MCP time utilities server ready to handle requests");
-            await host.RunAsync();
+            // The "ready to handle requests" line on stderr is gone with the stdio transport. The
+            // gateway does not read stderr; it waits for the port file McpHttpHost writes.
+            await app.RunAsync();
         }
         catch (Exception ex)
         {
             Log.Fatal(ex, "Utilities server terminated unexpectedly");
+            Environment.ExitCode = 1;
         }
         finally
         {

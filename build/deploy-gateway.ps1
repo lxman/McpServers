@@ -174,4 +174,4 @@ foreach ($name in $servers.PSObject.Properties.Name) {
 }
 
 Write-Host ""
-Write-Host "Roll back with: build\register-gateway-task.ps1 -Version $previous; Restart-ScheduledTask -TaskName $TaskName"
+Write-Host "Roll back with: build\register-gateway-task.ps1 -Version $previous; Stop-ScheduledTask -TaskName $TaskName; Start-ScheduledTask -TaskName $TaskName"
