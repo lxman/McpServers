@@ -1,0 +1,4736 @@
+[
+  {
+    "name": "clear_credential_selection",
+    "description": "Clear credential selection. See skills/azure/credentialmanagement/clear-credential-selection.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "copy_blob",
+    "description": "Copy blob. See skills/azure/storage/copy-blob.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sourceAccountName": {
+          "type": "string"
+        },
+        "sourceContainerName": {
+          "type": "string"
+        },
+        "sourceBlobName": {
+          "type": "string"
+        },
+        "destAccountName": {
+          "type": "string"
+        },
+        "destContainerName": {
+          "type": "string"
+        },
+        "destBlobName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sourceAccountName",
+        "sourceContainerName",
+        "sourceBlobName",
+        "destAccountName",
+        "destContainerName",
+        "destBlobName"
+      ]
+    }
+  },
+  {
+    "name": "create_alert",
+    "description": "Create alert rule. See skills/azure/monitor/create-alert.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "alertName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "workspaceId": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "evaluationFrequency": {
+          "type": "string"
+        },
+        "windowSize": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "alertName",
+        "description",
+        "severity",
+        "workspaceId",
+        "query",
+        "evaluationFrequency",
+        "windowSize"
+      ]
+    }
+  },
+  {
+    "name": "create_build_task",
+    "description": "Create build task. See skills/azure/container/create-build-task.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "registryName": {
+          "type": "string"
+        },
+        "request": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "sourceLocation": {
+              "type": "string"
+            },
+            "dockerFilePath": {
+              "type": "string"
+            },
+            "imageName": {
+              "type": "string"
+            },
+            "imageTags": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "branch": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "buildArguments": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "registryName",
+        "request"
+      ]
+    }
+  },
+  {
+    "name": "create_container",
+    "description": "Create blob container. See skills/azure/storage/create-container.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "containerName": {
+          "type": "string"
+        },
+        "publicAccess": {
+          "type": "string",
+          "default": "None"
+        }
+      },
+      "required": [
+        "accountName",
+        "containerName"
+      ]
+    }
+  },
+  {
+    "name": "create_container_group",
+    "description": "Create container group. See skills/azure/container/create-group.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "request": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "osType": {
+              "type": "string"
+            },
+            "restartPolicy": {
+              "type": "string"
+            },
+            "containers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "image": {
+                    "type": "string"
+                  },
+                  "cpuCores": {
+                    "type": "number"
+                  },
+                  "memoryInGb": {
+                    "type": "number"
+                  },
+                  "ports": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "integer"
+                    }
+                  },
+                  "environmentVariables": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "command": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "volumeMounts": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "mountPath": {
+                          "type": "string"
+                        },
+                        "readOnly": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "ipAddressType": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "ports": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "integer"
+              }
+            },
+            "dnsNameLabel": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "tags": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "imageRegistryCredentials": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "server": {
+                  "type": "string"
+                },
+                "username": {
+                  "type": "string"
+                },
+                "password": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "request"
+      ]
+    }
+  },
+  {
+    "name": "create_database",
+    "description": "Create SQL database. See skills/azure/sql/create-database.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "databaseName": {
+          "type": "string"
+        },
+        "serverName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "edition": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "serviceObjective": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "maxSizeBytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        },
+        "tags": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default": null
+        }
+      },
+      "required": [
+        "databaseName",
+        "serverName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "create_directory",
+    "description": "Create directory in file share. See skills/azure/filestorage/create-directory.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "shareName": {
+          "type": "string"
+        },
+        "directoryPath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountName",
+        "shareName",
+        "directoryPath"
+      ]
+    }
+  },
+  {
+    "name": "create_file_share",
+    "description": "Create file share. See skills/azure/filestorage/create-share.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "shareName": {
+          "type": "string"
+        },
+        "quotaInGB": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        },
+        "metadata": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default": null
+        }
+      },
+      "required": [
+        "accountName",
+        "shareName"
+      ]
+    }
+  },
+  {
+    "name": "create_firewall_rule",
+    "description": "Create firewall rule. See skills/azure/sql/create-firewall-rule.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ruleName": {
+          "type": "string"
+        },
+        "serverName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "startIpAddress": {
+          "type": "string"
+        },
+        "endIpAddress": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "ruleName",
+        "serverName",
+        "resourceGroupName",
+        "startIpAddress",
+        "endIpAddress"
+      ]
+    }
+  },
+  {
+    "name": "create_kubernetes_cluster",
+    "description": "Create Kubernetes cluster. See skills/azure/container/create-kubernetes.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "request": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "kubernetesVersion": {
+              "type": "string"
+            },
+            "dnsPrefix": {
+              "type": "string"
+            },
+            "agentPoolProfile": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "vmSize": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "integer"
+                },
+                "osType": {
+                  "type": "string"
+                },
+                "osDiskSizeGB": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "minCount": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "maxCount": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "enableAutoScaling": {
+                  "type": "boolean"
+                },
+                "mode": {
+                  "type": "string"
+                }
+              }
+            },
+            "networkPlugin": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "networkPolicy": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "enableRBAC": {
+              "type": "boolean"
+            },
+            "tags": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "request"
+      ]
+    }
+  },
+  {
+    "name": "create_namespace",
+    "description": "Create Service Bus namespace. See skills/azure/servicebus/create-namespace.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "namespaceName": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "sku": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "Standard"
+        }
+      },
+      "required": [
+        "resourceGroupName",
+        "namespaceName",
+        "location"
+      ]
+    }
+  },
+  {
+    "name": "create_node_pool",
+    "description": "Create node pool. See skills/azure/container/create-node-pool.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "clusterName": {
+          "type": "string"
+        },
+        "request": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "vmSize": {
+              "type": "string"
+            },
+            "count": {
+              "type": "integer"
+            },
+            "osType": {
+              "type": "string"
+            },
+            "osDiskSizeGB": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "minCount": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "maxCount": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "enableAutoScaling": {
+              "type": "boolean"
+            },
+            "mode": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "clusterName",
+        "request"
+      ]
+    }
+  },
+  {
+    "name": "create_registry",
+    "description": "Create container registry. See skills/azure/container/create-registry.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "request": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "sku": {
+              "type": "string"
+            },
+            "adminUserEnabled": {
+              "type": "boolean"
+            },
+            "tags": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "request"
+      ]
+    }
+  },
+  {
+    "name": "create_work_item",
+    "description": "Create work item. See skills/azure/devops/create-work-item.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "workItemType": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "fields": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "projectName",
+        "workItemType",
+        "title"
+      ]
+    }
+  },
+  {
+    "name": "delete_blob",
+    "description": "Delete blob. See skills/azure/storage/delete-blob.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "containerName": {
+          "type": "string"
+        },
+        "blobName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountName",
+        "containerName",
+        "blobName"
+      ]
+    }
+  },
+  {
+    "name": "delete_container",
+    "description": "Delete blob container. See skills/azure/storage/delete-container.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "containerName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountName",
+        "containerName"
+      ]
+    }
+  },
+  {
+    "name": "delete_container_group",
+    "description": "Delete container group. See skills/azure/container/delete-group.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "containerGroupName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "containerGroupName"
+      ]
+    }
+  },
+  {
+    "name": "delete_database",
+    "description": "Delete SQL database. See skills/azure/sql/delete-database.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "databaseName": {
+          "type": "string"
+        },
+        "serverName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "databaseName",
+        "serverName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "delete_directory",
+    "description": "Delete directory in file share. See skills/azure/filestorage/delete-directory.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "shareName": {
+          "type": "string"
+        },
+        "directoryPath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountName",
+        "shareName",
+        "directoryPath"
+      ]
+    }
+  },
+  {
+    "name": "delete_file_share",
+    "description": "Delete file share. See skills/azure/filestorage/delete-share.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "shareName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountName",
+        "shareName"
+      ]
+    }
+  },
+  {
+    "name": "delete_firewall_rule",
+    "description": "Delete firewall rule. See skills/azure/sql/delete-firewall-rule.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ruleName": {
+          "type": "string"
+        },
+        "serverName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "ruleName",
+        "serverName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "delete_image",
+    "description": "Delete container image. See skills/azure/container/delete-image.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "registryName": {
+          "type": "string"
+        },
+        "repositoryName": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "registryName",
+        "repositoryName",
+        "tag"
+      ]
+    }
+  },
+  {
+    "name": "delete_kubernetes_cluster",
+    "description": "Delete Kubernetes cluster. See skills/azure/container/delete-kubernetes.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "clusterName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "clusterName"
+      ]
+    }
+  },
+  {
+    "name": "delete_my_sql_server",
+    "description": "Delete MySQL server. See skills/azure/sql/delete-mysql-server.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "serverName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "delete_namespace",
+    "description": "Delete Service Bus namespace. See skills/azure/servicebus/delete-namespace.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "namespaceName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "resourceGroupName",
+        "namespaceName"
+      ]
+    }
+  },
+  {
+    "name": "delete_node_pool",
+    "description": "Delete node pool. See skills/azure/container/delete-node-pool.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "clusterName": {
+          "type": "string"
+        },
+        "nodePoolName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "clusterName",
+        "nodePoolName"
+      ]
+    }
+  },
+  {
+    "name": "delete_postgre_sql_server",
+    "description": "Delete PostgreSQL server. See skills/azure/sql/delete-postgresql-server.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "serverName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "delete_registry",
+    "description": "Delete container registry. See skills/azure/container/delete-registry.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "registryName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "registryName"
+      ]
+    }
+  },
+  {
+    "name": "delete_repository",
+    "description": "Delete container repository. See skills/azure/container/delete-repository.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "registryName": {
+          "type": "string"
+        },
+        "repositoryName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "registryName",
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "delete_secret",
+    "description": "Delete secret from Key Vault. See skills/azure/keyvault/delete-secret.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vaultName": {
+          "type": "string"
+        },
+        "secretName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "vaultName",
+        "secretName"
+      ]
+    }
+  },
+  {
+    "name": "delete_server",
+    "description": "Delete SQL server. See skills/azure/sql/delete-server.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "serverName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "download_blob_as_text",
+    "description": "Download blob as text. See skills/azure/storage/download-blob.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "containerName": {
+          "type": "string"
+        },
+        "blobName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountName",
+        "containerName",
+        "blobName"
+      ]
+    }
+  },
+  {
+    "name": "execute_container_command",
+    "description": "Execute command in container. See skills/azure/container/execute-command.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "containerGroupName": {
+          "type": "string"
+        },
+        "containerName": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "containerGroupName",
+        "containerName",
+        "command"
+      ]
+    }
+  },
+  {
+    "name": "file_share_exists",
+    "description": "Check if file share exists. See skills/azure/filestorage/share-exists.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "shareName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountName",
+        "shareName"
+      ]
+    }
+  },
+  {
+    "name": "find_yaml_pipeline_files",
+    "description": "Find YAML pipeline files. See skills/azure/devops/find-yaml-pipelines.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "repositoryName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "projectName",
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "generate_blob_sas_url",
+    "description": "Generate blob SAS URL. See skills/azure/storage/blob-sas.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "containerName": {
+          "type": "string"
+        },
+        "blobName": {
+          "type": "string"
+        },
+        "expiryHours": {
+          "type": "integer",
+          "default": 1
+        },
+        "permissions": {
+          "type": "string",
+          "default": "r"
+        }
+      },
+      "required": [
+        "accountName",
+        "containerName",
+        "blobName"
+      ]
+    }
+  },
+  {
+    "name": "generate_container_sas_url",
+    "description": "Generate container SAS URL. See skills/azure/storage/container-sas.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "containerName": {
+          "type": "string"
+        },
+        "expiryHours": {
+          "type": "integer",
+          "default": 1
+        },
+        "permissions": {
+          "type": "string",
+          "default": "rl"
+        }
+      },
+      "required": [
+        "accountName",
+        "containerName"
+      ]
+    }
+  },
+  {
+    "name": "get_account_info",
+    "description": "Get Azure account information. See skills/azure/health/get-account-info.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_app_service_plan",
+    "description": "Get app service plan. See skills/azure/appservice/get-plan.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "planName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "planName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "get_app_settings",
+    "description": "Get app settings. See skills/azure/appservice/get-app-settings.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "webAppName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "webAppName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "get_application_insights",
+    "description": "Get Application Insights component details. See skills/azure/monitor/get-application-insights.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "componentName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "resourceGroupName",
+        "componentName"
+      ]
+    }
+  },
+  {
+    "name": "get_application_logs",
+    "description": "Get application logs. See skills/azure/appservice/get-logs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "webAppName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "lastHours": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "webAppName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "get_blob_metadata",
+    "description": "Get blob metadata. See skills/azure/storage/get-blob-metadata.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "containerName": {
+          "type": "string"
+        },
+        "blobName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountName",
+        "containerName",
+        "blobName"
+      ]
+    }
+  },
+  {
+    "name": "get_blob_properties",
+    "description": "Get blob properties. See skills/azure/storage/get-blob-properties.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "containerName": {
+          "type": "string"
+        },
+        "blobName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountName",
+        "containerName",
+        "blobName"
+      ]
+    }
+  },
+  {
+    "name": "get_budget",
+    "description": "Get budget details. See skills/azure/costmanagement/get-budget.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "budgetName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "budgetName"
+      ]
+    }
+  },
+  {
+    "name": "get_budgets",
+    "description": "Get budgets. See skills/azure/costmanagement/get-budgets.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "get_build",
+    "description": "Get build. See skills/azure/devops/get-build.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "buildId": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "projectName",
+        "buildId"
+      ]
+    }
+  },
+  {
+    "name": "get_build_definition",
+    "description": "Get build definition. See skills/azure/devops/get-build-definition.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "definitionId": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "projectName",
+        "definitionId"
+      ]
+    }
+  },
+  {
+    "name": "get_build_definitions",
+    "description": "Get build definitions. See skills/azure/devops/get-build-definitions.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "projectName"
+      ]
+    }
+  },
+  {
+    "name": "get_build_log",
+    "description": "Get build log. See skills/azure/container/get-build-log.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "registryName": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "registryName",
+        "runId"
+      ]
+    }
+  },
+  {
+    "name": "get_build_log_content",
+    "description": "Get build log content. See skills/azure/devops/get-build-log.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "buildId": {
+          "type": "integer"
+        },
+        "logId": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "projectName",
+        "buildId",
+        "logId"
+      ]
+    }
+  },
+  {
+    "name": "get_build_logs",
+    "description": "Get build logs. See skills/azure/devops/get-build-logs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "buildId": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "projectName",
+        "buildId"
+      ]
+    }
+  },
+  {
+    "name": "get_build_step_logs",
+    "description": "Get build step logs. See skills/azure/devops/get-step-logs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "buildId": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "projectName",
+        "buildId"
+      ]
+    }
+  },
+  {
+    "name": "get_build_task_log",
+    "description": "Get build task log. See skills/azure/devops/get-task-log.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "buildId": {
+          "type": "integer"
+        },
+        "taskId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "projectName",
+        "buildId",
+        "taskId"
+      ]
+    }
+  },
+  {
+    "name": "get_build_timeline",
+    "description": "Get build timeline. See skills/azure/devops/get-build-timeline.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "buildId": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "projectName",
+        "buildId"
+      ]
+    }
+  },
+  {
+    "name": "get_builds",
+    "description": "Get builds. See skills/azure/devops/get-builds.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "definitionId": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        },
+        "top": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "projectName"
+      ]
+    }
+  },
+  {
+    "name": "get_complete_build_log",
+    "description": "Get complete build log. See skills/azure/devops/get-complete-log.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "buildId": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "projectName",
+        "buildId"
+      ]
+    }
+  },
+  {
+    "name": "get_connection_strings",
+    "description": "Get connection strings. See skills/azure/appservice/get-connection-strings.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "webAppName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "webAppName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "get_container",
+    "description": "Get container properties. See skills/azure/storage/get-container.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "containerName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountName",
+        "containerName"
+      ]
+    }
+  },
+  {
+    "name": "get_container_group",
+    "description": "Get container group. See skills/azure/container/get-group.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "containerGroupName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "containerGroupName"
+      ]
+    }
+  },
+  {
+    "name": "get_container_logs",
+    "description": "Get container logs. See skills/azure/container/get-logs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "containerGroupName": {
+          "type": "string"
+        },
+        "containerName": {
+          "type": "string"
+        },
+        "tail": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "containerGroupName",
+        "containerName"
+      ]
+    }
+  },
+  {
+    "name": "get_cost_forecast",
+    "description": "Get cost forecast. See skills/azure/costmanagement/get-cost-forecast.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "daysAhead": {
+          "type": "integer",
+          "default": 30
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "get_costs_by_resource_group",
+    "description": "Get costs grouped by resource group. See skills/azure/costmanagement/get-costs-by-resource-group.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "startDate": {
+          "type": "string"
+        },
+        "endDate": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "startDate",
+        "endDate"
+      ]
+    }
+  },
+  {
+    "name": "get_costs_by_service",
+    "description": "Get costs grouped by service. See skills/azure/costmanagement/get-costs-by-service.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "startDate": {
+          "type": "string"
+        },
+        "endDate": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "startDate",
+        "endDate"
+      ]
+    }
+  },
+  {
+    "name": "get_costs_for_period",
+    "description": "Get costs for specific period. See skills/azure/costmanagement/get-costs-for-period.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "startDate": {
+          "type": "string"
+        },
+        "endDate": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "startDate",
+        "endDate"
+      ]
+    }
+  },
+  {
+    "name": "get_credentials_help",
+    "description": "Get help for Azure credentials. See skills/azure/credentialmanagement/get-credentials-help.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_current_credential",
+    "description": "Get currently selected credential. See skills/azure/credentialmanagement/get-current-credential.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_current_month_costs",
+    "description": "Get current month costs. See skills/azure/costmanagement/get-current-month-costs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "get_daily_costs",
+    "description": "Get daily costs breakdown. See skills/azure/costmanagement/get-daily-costs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "startDate": {
+          "type": "string"
+        },
+        "endDate": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "startDate",
+        "endDate"
+      ]
+    }
+  },
+  {
+    "name": "get_database",
+    "description": "Get SQL database. See skills/azure/sql/get-database.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "databaseName": {
+          "type": "string"
+        },
+        "serverName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "databaseName",
+        "serverName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "get_deleted_secret",
+    "description": "Get deleted secret from Key Vault. See skills/azure/keyvault/get-deleted-secret.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vaultName": {
+          "type": "string"
+        },
+        "secretName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "vaultName",
+        "secretName"
+      ]
+    }
+  },
+  {
+    "name": "get_deployment_slot",
+    "description": "Get deployment slot. See skills/azure/appservice/get-slot.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "webAppName": {
+          "type": "string"
+        },
+        "slotName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "webAppName",
+        "slotName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "get_file_share",
+    "description": "Get file share. See skills/azure/filestorage/get-share.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "shareName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountName",
+        "shareName"
+      ]
+    }
+  },
+  {
+    "name": "get_health",
+    "description": "Get Azure service health status. See skills/azure/health/get-health.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_image",
+    "description": "Get container image. See skills/azure/container/get-image.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "registryName": {
+          "type": "string"
+        },
+        "repositoryName": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "registryName",
+        "repositoryName",
+        "tag"
+      ]
+    }
+  },
+  {
+    "name": "get_kubernetes_cluster",
+    "description": "Get Kubernetes cluster. See skills/azure/container/get-kubernetes.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "clusterName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "clusterName"
+      ]
+    }
+  },
+  {
+    "name": "get_kubernetes_credentials",
+    "description": "Get Kubernetes credentials. See skills/azure/container/get-kubernetes-creds.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "clusterName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "clusterName"
+      ]
+    }
+  },
+  {
+    "name": "get_namespace",
+    "description": "Get Service Bus namespace details. See skills/azure/servicebus/get-namespace.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "namespaceName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "resourceGroupName",
+        "namespaceName"
+      ]
+    }
+  },
+  {
+    "name": "get_network_security_group",
+    "description": "Get network security group details. See skills/azure/networking/get-network-security-group.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "nsgName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "resourceGroupName",
+        "nsgName"
+      ]
+    }
+  },
+  {
+    "name": "get_node_pool",
+    "description": "Get node pool. See skills/azure/container/get-node-pool.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "clusterName": {
+          "type": "string"
+        },
+        "nodePoolName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "clusterName",
+        "nodePoolName"
+      ]
+    }
+  },
+  {
+    "name": "get_pipeline_yaml",
+    "description": "Get pipeline YAML. See skills/azure/devops/get-pipeline-yaml.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "definitionId": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "projectName",
+        "definitionId"
+      ]
+    }
+  },
+  {
+    "name": "get_project",
+    "description": "Get DevOps project. See skills/azure/devops/get-project.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "projectName"
+      ]
+    }
+  },
+  {
+    "name": "get_projects",
+    "description": "Get DevOps projects. See skills/azure/devops/get-projects.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_registry",
+    "description": "Get container registry. See skills/azure/container/get-registry.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "registryName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "registryName"
+      ]
+    }
+  },
+  {
+    "name": "get_registry_credentials",
+    "description": "Get registry credentials. See skills/azure/container/get-credentials.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "registryName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "registryName"
+      ]
+    }
+  },
+  {
+    "name": "get_release_definition",
+    "description": "Get release definition. See skills/azure/devops/get-release-definition.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "definitionId": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "projectName",
+        "definitionId"
+      ]
+    }
+  },
+  {
+    "name": "get_release_definitions",
+    "description": "Get release definitions. See skills/azure/devops/get-release-definitions.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "projectName"
+      ]
+    }
+  },
+  {
+    "name": "get_releases",
+    "description": "Get releases. See skills/azure/devops/get-releases.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "definitionId": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "projectName"
+      ]
+    }
+  },
+  {
+    "name": "get_repositories",
+    "description": "Get repositories. See skills/azure/devops/get-repositories.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "projectName"
+      ]
+    }
+  },
+  {
+    "name": "get_repository",
+    "description": "Get repository. See skills/azure/devops/get-repository.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "repositoryName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "projectName",
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "get_repository_file_content",
+    "description": "Get repository file content. See skills/azure/devops/get-file.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "repositoryName": {
+          "type": "string"
+        },
+        "filePath": {
+          "type": "string"
+        },
+        "branch": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "projectName",
+        "repositoryName",
+        "filePath"
+      ]
+    }
+  },
+  {
+    "name": "get_resource",
+    "description": "Get resource by ID. See skills/azure/resourcemanagement/get-resource.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "resourceId"
+      ]
+    }
+  },
+  {
+    "name": "get_resource_count_by_type",
+    "description": "Get resource count by type. See skills/azure/resourcemanagement/get-resource-count-by-type.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "get_resource_group",
+    "description": "Get resource group details. See skills/azure/resourcemanagement/get-resource-group.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "get_secret",
+    "description": "Get secret value from Key Vault. See skills/azure/keyvault/get-secret.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vaultName": {
+          "type": "string"
+        },
+        "secretName": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "vaultName",
+        "secretName"
+      ]
+    }
+  },
+  {
+    "name": "get_secret_versions",
+    "description": "Get all versions of a secret. See skills/azure/keyvault/get-secret-versions.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vaultName": {
+          "type": "string"
+        },
+        "secretName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "vaultName",
+        "secretName"
+      ]
+    }
+  },
+  {
+    "name": "get_server",
+    "description": "Get SQL server. See skills/azure/sql/get-server.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "serverName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "get_storage_account",
+    "description": "Get storage account details. See skills/azure/storage/get-account.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "accountName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "accountName"
+      ]
+    }
+  },
+  {
+    "name": "get_subscription",
+    "description": "Get subscription details. See skills/azure/resourcemanagement/get-subscription.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId"
+      ]
+    }
+  },
+  {
+    "name": "get_virtual_network",
+    "description": "Get virtual network details. See skills/azure/networking/get-virtual-network.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "vnetName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "resourceGroupName",
+        "vnetName"
+      ]
+    }
+  },
+  {
+    "name": "get_web_app",
+    "description": "Get web app. See skills/azure/appservice/get-webapp.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "webAppName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "webAppName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "get_work_item",
+    "description": "Get work item. See skills/azure/devops/get-work-item.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  {
+    "name": "get_work_items",
+    "description": "Get work items. See skills/azure/devops/get-work-items.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "wiql": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "projectName"
+      ]
+    }
+  },
+  {
+    "name": "list_alerts",
+    "description": "List alert rules. See skills/azure/monitor/list-alerts.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_app_service_plans",
+    "description": "List app service plans. See skills/azure/appservice/list-plans.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_application_insights",
+    "description": "List Application Insights components. See skills/azure/monitor/list-application-insights.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_blobs",
+    "description": "List blobs in container. See skills/azure/storage/list-blobs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "containerName": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "maxResults": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "accountName",
+        "containerName"
+      ]
+    }
+  },
+  {
+    "name": "list_build_runs",
+    "description": "List build runs. See skills/azure/container/list-build-runs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "registryName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "registryName"
+      ]
+    }
+  },
+  {
+    "name": "list_container_groups",
+    "description": "List container groups. See skills/azure/container/list-groups.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_containers",
+    "description": "List blob containers. See skills/azure/storage/list-containers.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "accountName"
+      ]
+    }
+  },
+  {
+    "name": "list_credentials",
+    "description": "List available Azure credentials. See skills/azure/credentialmanagement/list-credentials.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_databases",
+    "description": "List SQL databases. See skills/azure/sql/list-databases.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "serverName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "list_deleted_secrets",
+    "description": "List deleted secrets in Key Vault. See skills/azure/keyvault/list-deleted-secrets.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vaultName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "vaultName"
+      ]
+    }
+  },
+  {
+    "name": "list_deployment_slots",
+    "description": "List deployment slots. See skills/azure/appservice/list-slots.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "webAppName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "webAppName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "list_elastic_pools",
+    "description": "List elastic pools. See skills/azure/sql/list-elastic-pools.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "serverName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "list_file_shares",
+    "description": "List file shares. See skills/azure/filestorage/list-shares.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "accountName"
+      ]
+    }
+  },
+  {
+    "name": "list_firewall_rules",
+    "description": "List firewall rules. See skills/azure/sql/list-firewall-rules.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "serverName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "list_images",
+    "description": "List container images. See skills/azure/container/list-images.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "registryName": {
+          "type": "string"
+        },
+        "repositoryName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "registryName"
+      ]
+    }
+  },
+  {
+    "name": "list_kubernetes_clusters",
+    "description": "List Kubernetes clusters. See skills/azure/container/list-kubernetes.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_load_balancers",
+    "description": "List load balancers. See skills/azure/networking/list-load-balancers.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_log_streams",
+    "description": "List log streams in a workspace. See skills/azure/monitor/list-log-streams.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "workspaceId"
+      ]
+    }
+  },
+  {
+    "name": "list_log_workspaces",
+    "description": "List Azure Monitor Log Analytics workspaces. See skills/azure/monitor/list-log-workspaces.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_metrics",
+    "description": "List available metrics for a resource. See skills/azure/monitor/list-metrics.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceId": {
+          "type": "string"
+        },
+        "metricNamespace": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "resourceId"
+      ]
+    }
+  },
+  {
+    "name": "list_my_sql_databases",
+    "description": "List MySQL databases. See skills/azure/sql/list-mysql-databases.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "serverName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "list_my_sql_servers",
+    "description": "List MySQL servers. See skills/azure/sql/list-mysql-servers.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_namespaces",
+    "description": "List Service Bus namespaces. See skills/azure/servicebus/list-namespaces.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_network_security_groups",
+    "description": "List network security groups. See skills/azure/networking/list-network-security-groups.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_node_pools",
+    "description": "List node pools. See skills/azure/container/list-node-pools.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "clusterName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "clusterName"
+      ]
+    }
+  },
+  {
+    "name": "list_postgre_sql_databases",
+    "description": "List PostgreSQL databases. See skills/azure/sql/list-postgresql-databases.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "serverName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "list_postgre_sql_flexible_servers",
+    "description": "List PostgreSQL Flexible servers. See skills/azure/sql/list-postgresql-flexible.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_postgre_sql_servers",
+    "description": "List PostgreSQL servers. See skills/azure/sql/list-postgresql-servers.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_public_ip_addresses",
+    "description": "List public IP addresses. See skills/azure/networking/list-public-ip-addresses.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_queues",
+    "description": "List queues in Service Bus namespace. See skills/azure/servicebus/list-queues.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "namespaceName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "resourceGroupName",
+        "namespaceName"
+      ]
+    }
+  },
+  {
+    "name": "list_registries",
+    "description": "List container registries. See skills/azure/container/list-registries.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_repositories",
+    "description": "List registry repositories. See skills/azure/container/list-repositories.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "registryName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "registryName"
+      ]
+    }
+  },
+  {
+    "name": "list_resource_groups",
+    "description": "List resource groups. See skills/azure/resourcemanagement/list-resource-groups.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_resources",
+    "description": "List Azure resources. See skills/azure/resourcemanagement/list-resources.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_resources_by_type",
+    "description": "List resources by type. See skills/azure/resourcemanagement/list-resources-by-type.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceType": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "resourceType"
+      ]
+    }
+  },
+  {
+    "name": "list_secrets",
+    "description": "List secrets in Key Vault. See skills/azure/keyvault/list-secrets.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vaultName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "vaultName"
+      ]
+    }
+  },
+  {
+    "name": "list_servers",
+    "description": "List SQL servers. See skills/azure/sql/list-servers.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_storage_accounts",
+    "description": "List Azure storage accounts. See skills/azure/storage/list-accounts.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_subnets",
+    "description": "List subnets in virtual network. See skills/azure/networking/list-subnets.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "vnetName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "resourceGroupName",
+        "vnetName"
+      ]
+    }
+  },
+  {
+    "name": "list_subscriptions",
+    "description": "List Azure subscriptions. See skills/azure/resourcemanagement/list-subscriptions.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_virtual_networks",
+    "description": "List virtual networks. See skills/azure/networking/list-virtual-networks.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "list_web_apps",
+    "description": "List web apps. See skills/azure/appservice/list-webapps.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "resourceGroupName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "purge_deleted_secret",
+    "description": "Permanently purge deleted secret from Key Vault. See skills/azure/keyvault/purge-deleted-secret.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vaultName": {
+          "type": "string"
+        },
+        "secretName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "vaultName",
+        "secretName"
+      ]
+    }
+  },
+  {
+    "name": "query_logs",
+    "description": "Query logs from Azure Monitor workspace. See skills/azure/monitor/query-logs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "timeRangeHours": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        },
+        "useQuickEstimate": {
+          "type": "boolean",
+          "default": true
+        },
+        "maxResults": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 1000
+        }
+      },
+      "required": [
+        "workspaceId",
+        "query"
+      ]
+    }
+  },
+  {
+    "name": "query_metrics",
+    "description": "Query metrics from Azure Monitor. See skills/azure/monitor/query-metrics.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "resourceId": {
+          "type": "string"
+        },
+        "metricNames": {
+          "type": "string"
+        },
+        "startTime": {
+          "type": "string"
+        },
+        "endTime": {
+          "type": "string"
+        },
+        "intervalMinutes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        },
+        "aggregations": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "resourceId",
+        "metricNames",
+        "startTime",
+        "endTime"
+      ]
+    }
+  },
+  {
+    "name": "queue_build",
+    "description": "Queue build. See skills/azure/devops/queue-build.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "definitionId": {
+          "type": "integer"
+        },
+        "branch": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "projectName",
+        "definitionId"
+      ]
+    }
+  },
+  {
+    "name": "recover_deleted_secret",
+    "description": "Recover deleted secret in Key Vault. See skills/azure/keyvault/recover-deleted-secret.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vaultName": {
+          "type": "string"
+        },
+        "secretName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "vaultName",
+        "secretName"
+      ]
+    }
+  },
+  {
+    "name": "regenerate_registry_credential",
+    "description": "Regenerate registry credential. See skills/azure/container/regenerate-credential.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "registryName": {
+          "type": "string"
+        },
+        "passwordName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "registryName",
+        "passwordName"
+      ]
+    }
+  },
+  {
+    "name": "restart_container_group",
+    "description": "Restart container group. See skills/azure/container/restart-group.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "containerGroupName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "containerGroupName"
+      ]
+    }
+  },
+  {
+    "name": "restart_web_app",
+    "description": "Restart web app. See skills/azure/appservice/restart-webapp.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "webAppName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "webAppName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "run_build_task",
+    "description": "Run build task. See skills/azure/container/run-build-task.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "registryName": {
+          "type": "string"
+        },
+        "buildTaskName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "registryName",
+        "buildTaskName"
+      ]
+    }
+  },
+  {
+    "name": "scale_kubernetes_cluster",
+    "description": "Scale Kubernetes cluster. See skills/azure/container/scale-kubernetes.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "clusterName": {
+          "type": "string"
+        },
+        "nodePoolName": {
+          "type": "string"
+        },
+        "nodeCount": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "clusterName",
+        "nodePoolName",
+        "nodeCount"
+      ]
+    }
+  },
+  {
+    "name": "scale_web_app",
+    "description": "Scale web app. See skills/azure/appservice/scale-webapp.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "webAppName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "instanceCount": {
+          "type": "integer"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "webAppName",
+        "resourceGroupName",
+        "instanceCount"
+      ]
+    }
+  },
+  {
+    "name": "search_build_logs_with_regex",
+    "description": "Search build logs with regex. See skills/azure/devops/search-logs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "buildId": {
+          "type": "integer"
+        },
+        "regexPattern": {
+          "type": "string"
+        },
+        "contextLines": {
+          "type": "integer",
+          "default": 3
+        },
+        "caseSensitive": {
+          "type": "boolean",
+          "default": false
+        },
+        "maxMatches": {
+          "type": "integer",
+          "default": 50
+        }
+      },
+      "required": [
+        "projectName",
+        "buildId",
+        "regexPattern"
+      ]
+    }
+  },
+  {
+    "name": "search_logs_with_regex",
+    "description": "Search logs using regex pattern. See skills/azure/monitor/search-logs-regex.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string"
+        },
+        "regexPattern": {
+          "type": "string"
+        },
+        "timeRangeHours": {
+          "type": "integer",
+          "default": 24
+        },
+        "contextLines": {
+          "type": "integer",
+          "default": 3
+        },
+        "caseSensitive": {
+          "type": "boolean",
+          "default": false
+        },
+        "maxMatches": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "workspaceId",
+        "regexPattern"
+      ]
+    }
+  },
+  {
+    "name": "search_multiple_workspaces_with_regex",
+    "description": "Search multiple workspaces using regex. See skills/azure/monitor/search-multiple-workspaces-regex.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workspaceIds": {
+          "type": "string"
+        },
+        "regexPattern": {
+          "type": "string"
+        },
+        "timeRangeHours": {
+          "type": "integer",
+          "default": 24
+        },
+        "contextLines": {
+          "type": "integer",
+          "default": 2
+        },
+        "caseSensitive": {
+          "type": "boolean",
+          "default": false
+        },
+        "maxMatches": {
+          "type": "integer",
+          "default": 100
+        },
+        "maxWorkspaces": {
+          "type": "integer",
+          "default": 5
+        }
+      },
+      "required": [
+        "workspaceIds",
+        "regexPattern"
+      ]
+    }
+  },
+  {
+    "name": "select_credential",
+    "description": "Select specific Azure credential. See skills/azure/credentialmanagement/select-credential.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "credentialId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "credentialId"
+      ]
+    }
+  },
+  {
+    "name": "set_blob_metadata",
+    "description": "Set blob metadata. See skills/azure/storage/set-blob-metadata.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "containerName": {
+          "type": "string"
+        },
+        "blobName": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "accountName",
+        "containerName",
+        "blobName",
+        "metadata"
+      ]
+    }
+  },
+  {
+    "name": "set_secret",
+    "description": "Set secret value in Key Vault. See skills/azure/keyvault/set-secret.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vaultName": {
+          "type": "string"
+        },
+        "secretName": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "expiresOn": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "notBefore": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "tags": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default": null
+        }
+      },
+      "required": [
+        "vaultName",
+        "secretName",
+        "value"
+      ]
+    }
+  },
+  {
+    "name": "start_container_group",
+    "description": "Start container group. See skills/azure/container/start-group.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "containerGroupName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "containerGroupName"
+      ]
+    }
+  },
+  {
+    "name": "start_kubernetes_cluster",
+    "description": "Start Kubernetes cluster. See skills/azure/container/start-kubernetes.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "clusterName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "clusterName"
+      ]
+    }
+  },
+  {
+    "name": "start_slot",
+    "description": "Start deployment slot. See skills/azure/appservice/start-slot.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "webAppName": {
+          "type": "string"
+        },
+        "slotName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "webAppName",
+        "slotName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "start_web_app",
+    "description": "Start web app. See skills/azure/appservice/start-webapp.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "webAppName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "webAppName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "stop_container_group",
+    "description": "Stop container group. See skills/azure/container/stop-group.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "containerGroupName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "containerGroupName"
+      ]
+    }
+  },
+  {
+    "name": "stop_kubernetes_cluster",
+    "description": "Stop Kubernetes cluster. See skills/azure/container/stop-kubernetes.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "clusterName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "clusterName"
+      ]
+    }
+  },
+  {
+    "name": "stop_slot",
+    "description": "Stop deployment slot. See skills/azure/appservice/stop-slot.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "webAppName": {
+          "type": "string"
+        },
+        "slotName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "webAppName",
+        "slotName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "stop_web_app",
+    "description": "Stop web app. See skills/azure/appservice/stop-webapp.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "webAppName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "webAppName",
+        "resourceGroupName"
+      ]
+    }
+  },
+  {
+    "name": "swap_slots",
+    "description": "Swap deployment slots. See skills/azure/appservice/swap-slots.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "webAppName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "sourceSlotName": {
+          "type": "string"
+        },
+        "targetSlotName": {
+          "type": "string"
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "webAppName",
+        "resourceGroupName",
+        "sourceSlotName",
+        "targetSlotName"
+      ]
+    }
+  },
+  {
+    "name": "test_credential",
+    "description": "Test current credential by attempting to get subscriptions. See skills/azure/credentialmanagement/test-credential.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "update_app_settings",
+    "description": "Update app settings. See skills/azure/appservice/update-app-settings.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "webAppName": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "settings": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "subscriptionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "webAppName",
+        "resourceGroupName",
+        "settings"
+      ]
+    }
+  },
+  {
+    "name": "update_node_pool",
+    "description": "Update node pool. See skills/azure/container/update-node-pool.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "clusterName": {
+          "type": "string"
+        },
+        "nodePoolName": {
+          "type": "string"
+        },
+        "request": {
+          "type": "object",
+          "properties": {
+            "count": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "minCount": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "maxCount": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "enableAutoScaling": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "orchestratorVersion": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "clusterName",
+        "nodePoolName",
+        "request"
+      ]
+    }
+  },
+  {
+    "name": "update_pipeline_yaml",
+    "description": "Update pipeline YAML. See skills/azure/devops/update-pipeline-yaml.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "definitionId": {
+          "type": "integer"
+        },
+        "yamlContent": {
+          "type": "string"
+        },
+        "commitMessage": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "projectName",
+        "definitionId",
+        "yamlContent",
+        "commitMessage"
+      ]
+    }
+  },
+  {
+    "name": "update_repository_file",
+    "description": "Update repository file. See skills/azure/devops/update-file.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "projectName": {
+          "type": "string"
+        },
+        "repositoryName": {
+          "type": "string"
+        },
+        "filePath": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "commitMessage": {
+          "type": "string"
+        },
+        "branch": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "projectName",
+        "repositoryName",
+        "filePath",
+        "content",
+        "commitMessage"
+      ]
+    }
+  },
+  {
+    "name": "update_secret_properties",
+    "description": "Update secret properties in Key Vault. See skills/azure/keyvault/update-secret-properties.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vaultName": {
+          "type": "string"
+        },
+        "secretName": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "enabled": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "expiresOn": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "notBefore": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "contentType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "tags": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default": null
+        }
+      },
+      "required": [
+        "vaultName",
+        "secretName"
+      ]
+    }
+  },
+  {
+    "name": "upgrade_kubernetes_cluster",
+    "description": "Upgrade Kubernetes cluster. See skills/azure/container/upgrade-kubernetes.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "resourceGroupName": {
+          "type": "string"
+        },
+        "clusterName": {
+          "type": "string"
+        },
+        "kubernetesVersion": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "resourceGroupName",
+        "clusterName",
+        "kubernetesVersion"
+      ]
+    }
+  },
+  {
+    "name": "upload_blob_from_text",
+    "description": "Upload text to blob. See skills/azure/storage/upload-blob.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "accountName": {
+          "type": "string"
+        },
+        "containerName": {
+          "type": "string"
+        },
+        "blobName": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "accountName",
+        "containerName",
+        "blobName",
+        "content"
+      ]
+    }
+  }
+]

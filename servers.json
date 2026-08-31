@@ -9,6 +9,16 @@
     "idleTimeoutMinutes": 30,
     "startupTimeoutSeconds": 30
   },
+  "azure": {
+    "project": "AzureMcp/AzureMcp.csproj",
+    "assembly": "AzureMcp.dll",
+    "deployRoot": "deploy/azure",
+    "pool": "per-session",
+    "overlapAllowed": true,
+    "eagerStart": false,
+    "idleTimeoutMinutes": 30,
+    "startupTimeoutSeconds": 60
+  },
   "code-assist": {
     "project": "CodeAssistMcp/CodeAssistMcp.csproj",
     "assembly": "CodeAssistMcp.dll",
