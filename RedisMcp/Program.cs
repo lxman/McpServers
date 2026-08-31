@@ -1,24 +1,20 @@
+using Mcp.Hosting.Core;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Mcp.Database.Core.Redis;
+using ModelContextProtocol.AspNetCore;
 using RedisBrowser.Core.Services;
 using RedisMcp.McpTools;
 using Serilog;
-using SerilogFileWriter;
-
-// Configure Serilog to write to a file (stdout is reserved for MCP protocol)
-string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "redis-mcp-.log");
-Log.Logger = McpLoggingExtensions.SetupMcpLogging(logPath);
 
 try
 {
+    // Logging, the loopback listener and the gateway's port-file contract all live in McpHttpHost.
+    // The old log path was built from AppContext.BaseDirectory, which is a versioned deploy
+    // directory now, so logs would have scattered one directory per deploy.
+    WebApplicationBuilder builder = McpHttpHost.CreateBuilder(args, "redis");
+
     Log.Information("Starting RedisMcp");
-
-    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-
-    builder.Logging.ClearProviders();
-    builder.Logging.AddSerilog(Log.Logger, dispose: false);
 
     // Register Redis connection manager
     builder.Services.AddRedisConnectionManager();
@@ -26,18 +22,19 @@ try
     // Register RedisBrowser.Core services
     builder.Services.AddSingleton<RedisService>();
 
-    // Configure MCP Server with all tool classes
-    builder.Services.AddMcpServer()
-        .WithStdioServerTransport()
+    builder.Services
+        .AddMcpServer()
+        .WithHttpTransport(o => o.SessionMode = HttpServerSessionMode.StatefulForInitializeClients)
         .WithTools<ConnectionTools>()
         .WithTools<KeyTools>()
         .WithTools<ExpiryTools>()
         .WithTools<ServerTools>();
 
-    IHost host = builder.Build();
+    WebApplication app = builder.Build();
+    app.MapMcpHost();
 
     Log.Information("RedisMcp starting...");
-    await host.RunAsync();
+    await app.RunAsync();
 }
 catch (Exception ex)
 {

@@ -1,0 +1,209 @@
+[
+  {
+    "name": "connect",
+    "description": "Connect to Redis server. See skills/redis/connection/connect.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionString": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionString"
+      ]
+    }
+  },
+  {
+    "name": "delete",
+    "description": "Delete a Redis key. See skills/redis/key/delete.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ]
+    }
+  },
+  {
+    "name": "disconnect",
+    "description": "Disconnect from Redis server. See skills/redis/connection/disconnect.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "exists",
+    "description": "Check if a Redis key exists. See skills/redis/key/exists.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ]
+    }
+  },
+  {
+    "name": "flush_database",
+    "description": "Flush current Redis database. See skills/redis/server/flush-database.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get",
+    "description": "Get value of a Redis key. See skills/redis/key/get.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ]
+    }
+  },
+  {
+    "name": "get_connection_status",
+    "description": "Get Redis connection status. See skills/redis/connection/get-connection-status.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_info",
+    "description": "Get Redis server information. See skills/redis/server/get-info.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "section": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "get_key_type",
+    "description": "Get the type of a Redis key. See skills/redis/key/get-key-type.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ]
+    }
+  },
+  {
+    "name": "get_keys",
+    "description": "Get Redis keys matching a pattern. See skills/redis/key/get-keys.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "default": "*"
+        },
+        "count": {
+          "type": "integer",
+          "default": 100
+        }
+      }
+    }
+  },
+  {
+    "name": "get_ttl",
+    "description": "Get time-to-live of a Redis key. See skills/redis/expiry/get-ttl.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ]
+    }
+  },
+  {
+    "name": "select_database",
+    "description": "Select Redis database by number. See skills/redis/connection/select-database.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "databaseNumber": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "databaseNumber"
+      ]
+    }
+  },
+  {
+    "name": "set",
+    "description": "Set value of a Redis key. See skills/redis/key/set.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "expirySeconds": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    }
+  },
+  {
+    "name": "set_expire",
+    "description": "Set expiry time for a Redis key. See skills/redis/expiry/set-expire.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "expirySeconds": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "key",
+        "expirySeconds"
+      ]
+    }
+  }
+]
