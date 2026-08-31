@@ -47,6 +47,36 @@ function Test-PortBound {
     catch { return $false }
 }
 
+function Get-PortOwner {
+    param([int] $Port)
+
+    try {
+        $listener = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction Stop |
+            Select-Object -First 1
+    }
+    catch { return $null }
+
+    if (-not $listener) { return $null }
+
+    # Not $pid -- that is an automatic read-only variable in PowerShell.
+    $owningPid = $listener.OwningProcess
+    if (-not $owningPid) { return $null }
+
+    try { return Get-CimInstance Win32_Process -Filter "ProcessId = $owningPid" -ErrorAction Stop }
+    catch { return $null }
+}
+
+function Wait-PortFree {
+    param([int] $Port, [int] $TimeoutSeconds)
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Test-PortBound -Port $Port) -and (Get-Date) -lt $deadline) {
+        Start-Sleep -Milliseconds 250
+    }
+
+    return -not (Test-PortBound -Port $Port)
+}
+
 $previous = Get-RegisteredVersion -Name $TaskName
 
 # 1. Publish first, while the old gateway is still serving every client. This is the step that was
@@ -62,15 +92,35 @@ if ($version -eq $previous) {
 #    a new gateway that races the old one dies on the port instead of starting.
 if ($previous) {
     Write-Host "Stopping $TaskName (running $previous)"
-    Stop-ScheduledTask -TaskName $TaskName
 
-    $deadline = (Get-Date).AddSeconds($StopTimeoutSeconds)
-    while ((Test-PortBound -Port $port) -and (Get-Date) -lt $deadline) {
-        Start-Sleep -Milliseconds 250
-    }
+    # Stopping a task that is not running is not a failure here -- see the direct stop below.
+    try { Stop-ScheduledTask -TaskName $TaskName -ErrorAction Stop }
+    catch { Write-Host "  (task was not running)" }
 
-    if (Test-PortBound -Port $port) {
-        throw "Port $port is still bound after ${StopTimeoutSeconds}s. The old gateway has not let go, and a new one would be refused. Nothing has been repointed; $previous is still registered."
+    if (-not (Wait-PortFree -Port $port -TimeoutSeconds $StopTimeoutSeconds)) {
+        # The gateway is not necessarily task-owned. It gets started by hand during a cutover and
+        # while debugging, and Stop-ScheduledTask is then a silent no-op against a live process --
+        # which is exactly how the first machine to run this script was set up. Fall back to
+        # stopping the listener itself, but only once it has proved it is a gateway.
+        $owner = Get-PortOwner -Port $port
+
+        if (-not $owner) {
+            throw "Port $port is still bound after ${StopTimeoutSeconds}s and its owner could not be identified. Nothing has been repointed; $previous is still registered."
+        }
+
+        if ($owner.CommandLine -notmatch 'McpGateway\.dll') {
+            throw "Port $port is held by pid $($owner.ProcessId) ($($owner.Name)), which is not a gateway: $($owner.CommandLine). Nothing has been repointed; $previous is still registered."
+        }
+
+        Write-Host "  port still held by pid $($owner.ProcessId), which the task does not own; stopping it directly"
+
+        # A hard stop is safe by construction: the job object kills the backends with the gateway,
+        # and startup reconciliation clears anything it misses. That is what those exist for.
+        Stop-Process -Id $owner.ProcessId -Force
+
+        if (-not (Wait-PortFree -Port $port -TimeoutSeconds $StopTimeoutSeconds)) {
+            throw "Port $port is still bound after stopping pid $($owner.ProcessId). Nothing has been repointed; $previous is still registered."
+        }
     }
 }
 
