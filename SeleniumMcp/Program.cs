@@ -1,36 +1,31 @@
 using Mcp.Database.Core.MongoDB;
+using Mcp.Hosting.Core;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using ModelContextProtocol.AspNetCore;
 using SeleniumChrome.Core.Models;
 using SeleniumChrome.Core.Services;
 using SeleniumChrome.Core.Services.Enhanced;
 using SeleniumChrome.Core.Services.Scrapers;
 using SeleniumMcp.McpTools;
 using Serilog;
-using SerilogFileWriter;
-
-// Configure Serilog to write to a file (stdout is reserved for MCP protocol)
-string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "selenium-mcp-.log");
-Log.Logger = McpLoggingExtensions.SetupMcpLogging(logPath);
 
 try
 {
+    // Logging, the loopback listener and the gateway's port-file contract all live in McpHttpHost,
+    // which also sets ContentRootPath to AppContext.BaseDirectory -- what the explicit setting here
+    // was for. The old log path was built from AppContext.BaseDirectory too, which is a versioned
+    // deploy directory now, so logs would have scattered one directory per deploy.
+    WebApplicationBuilder builder = McpHttpHost.CreateBuilder(args, "selenium");
+
     Log.Information("Starting SeleniumMcp");
-    
-    // Configure builder to use the executable's directory as the content root
-    HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
-    {
-        Args = args,
-        ContentRootPath = AppContext.BaseDirectory
-    });
 
-    builder.Logging.ClearProviders();
-    builder.Logging.AddSerilog(Log.Logger, dispose: false);
-
-    Log.Logger.Debug($"AppContext.BaseDirectory is {AppContext.BaseDirectory}");
-    Log.Logger.Debug($"Content root is {builder.Environment.ContentRootPath}");
+    // Screenshots used a bare relative "Screenshots" directory, so they landed wherever the process
+    // happened to be running -- a versioned deploy directory under the gateway, orphaned at the
+    // next deploy. Anchor them beside every other server's data.
+    ScreenshotStore.Root = Path.Combine(McpHttpHost.DataPathFor("selenium"), "Screenshots");
+    Log.Information("Screenshot directory: {ScreenshotRoot}", ScreenshotStore.Root);
 
     // MongoDB configuration - required for most services
     MongoDbSettings mongoSettings = builder.Configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>()
@@ -75,9 +70,9 @@ try
     builder.Services.AddScoped<MarketIntelligenceService>();
     builder.Services.AddSingleton<JobQueueManager>();
 
-    // Configure MCP Server with all tool classes
-    builder.Services.AddMcpServer()
-        .WithStdioServerTransport()
+    builder.Services
+        .AddMcpServer()
+        .WithHttpTransport(o => o.SessionMode = HttpServerSessionMode.StatefulForInitializeClients)
         .WithTools<JobScrapingTools>()
         .WithTools<JobStorageTools>()
         .WithTools<EmailAlertTools>()
@@ -85,16 +80,17 @@ try
         .WithTools<ApplicationTrackingTools>()
         .WithTools<ConfigurationTools>();
 
-    IHost host = builder.Build();
+    WebApplication app = builder.Build();
+    app.MapMcpHost();
 
     // Initialize MongoDB connection
-    var connectionManager = host.Services.GetRequiredService<MongoConnectionManager>();
+    var connectionManager = app.Services.GetRequiredService<MongoConnectionManager>();
     await connectionManager.AddConnectionAsync("default", mongoSettings.ConnectionString, mongoSettings.DatabaseName);
     connectionManager.SetDefaultConnection("default");
 
     Log.Information("SeleniumMcp starting with MongoDB connection to database: {DatabaseName}", mongoSettings.DatabaseName);
 
-    await host.RunAsync();
+    await app.RunAsync();
 }
 catch (Exception ex)
 {

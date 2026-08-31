@@ -1,4 +1,4 @@
-﻿using Mcp.Database.Core.MongoDB;
+using Mcp.Database.Core.MongoDB;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -222,9 +222,8 @@ public class EnhancedJobScrapingService(
 
             Screenshot screenshot = ((ITakesScreenshot)_screenshotDriver).GetScreenshot();
             var fileName = $"screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png";
-            string filePath = Path.Combine("Screenshots", fileName);
-            
-            Directory.CreateDirectory("Screenshots");
+            string filePath = ScreenshotStore.PathFor(fileName);
+
             screenshot.SaveAsFile(filePath);
             
             return filePath;

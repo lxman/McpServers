@@ -1,0 +1,703 @@
+[
+  {
+    "name": "automated_comprehensive_search",
+    "description": "See skills/selenium/analysis/automated_comprehensive_search.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "searchTermsJson": {
+          "type": "string"
+        },
+        "locationsJson": {
+          "type": "string"
+        },
+        "targetJobsPerSearch": {
+          "type": "integer",
+          "default": 20
+        },
+        "maxTotalResults": {
+          "type": "integer",
+          "default": 50
+        },
+        "maxAgeInDays": {
+          "type": "integer",
+          "default": 30
+        },
+        "userId": {
+          "type": "string",
+          "default": "automated_search_user"
+        }
+      },
+      "required": [
+        "searchTermsJson",
+        "locationsJson"
+      ]
+    }
+  },
+  {
+    "name": "bulk_process_jobs",
+    "description": "See skills/selenium/analysis/bulk_process_jobs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "searchTerm": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "targetJobs": {
+          "type": "integer",
+          "default": 20
+        },
+        "maxAgeInDays": {
+          "type": "integer",
+          "default": 30
+        },
+        "userId": {
+          "type": "string",
+          "default": "bulk_user"
+        }
+      },
+      "required": [
+        "searchTerm",
+        "location"
+      ]
+    }
+  },
+  {
+    "name": "cancel_job",
+    "description": "See skills/selenium/analysis/cancel_job.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "jobId"
+      ]
+    }
+  },
+  {
+    "name": "categorize_applications",
+    "description": "See skills/selenium/analysis/categorize_applications.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobsJson": {
+          "type": "string"
+        },
+        "preferencesJson": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "jobsJson"
+      ]
+    }
+  },
+  {
+    "name": "check_job_status",
+    "description": "See skills/selenium/analysis/check_job_status.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "jobId"
+      ]
+    }
+  },
+  {
+    "name": "consolidate_temporary_results",
+    "description": "See skills/selenium/storage/consolidate_temporary_results.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sessionId",
+        "userId"
+      ]
+    }
+  },
+  {
+    "name": "enhanced_job_analysis",
+    "description": "See skills/selenium/config/enhanced_job_analysis.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobsJson": {
+          "type": "string"
+        },
+        "preferencesJson": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "marketRequestJson": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "jobsJson"
+      ]
+    }
+  },
+  {
+    "name": "fetch_jobs_by_ids",
+    "description": "See skills/selenium/config/fetch_jobs_by_ids.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobIdsJson": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string",
+          "default": "default_user"
+        }
+      },
+      "required": [
+        "jobIdsJson"
+      ]
+    }
+  },
+  {
+    "name": "get_bulk_job_results",
+    "description": "See skills/selenium/analysis/get_bulk_job_results.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "jobId"
+      ]
+    }
+  },
+  {
+    "name": "get_email_alert_jobs",
+    "description": "See skills/selenium/email/get_email_alert_jobs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "daysBack": {
+          "type": "integer",
+          "default": 7
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "get_email_alert_summary",
+    "description": "See skills/selenium/email/get_email_alert_summary.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "daysBack": {
+          "type": "integer",
+          "default": 7
+        }
+      }
+    }
+  },
+  {
+    "name": "get_enhanced_email_alerts",
+    "description": "See skills/selenium/email/get_enhanced_email_alerts.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "daysBack": {
+          "type": "integer",
+          "default": 7
+        }
+      }
+    }
+  },
+  {
+    "name": "get_recent_email_alerts",
+    "description": "See skills/selenium/email/get_recent_email_alerts.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_screenshot",
+    "description": "See skills/selenium/storage/get_screenshot.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ]
+    }
+  },
+  {
+    "name": "get_site_config",
+    "description": "See skills/selenium/config/get_site_config.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "site": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "site"
+      ]
+    }
+  },
+  {
+    "name": "get_stored_jobs",
+    "description": "See skills/selenium/storage/get_stored_jobs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "sitesJson": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "fromDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "toDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "isRemote": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "minMatchScore": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "default": null
+        },
+        "isApplied": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "requiredSkillsJson": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        },
+        "skip": {
+          "type": "integer",
+          "default": 0
+        }
+      },
+      "required": [
+        "userId"
+      ]
+    }
+  },
+  {
+    "name": "get_temporary_results",
+    "description": "See skills/selenium/storage/get_temporary_results.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "includeConsolidated": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  },
+  {
+    "name": "health_check",
+    "description": "See skills/selenium/config/health_check.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_bulk_jobs",
+    "description": "See skills/selenium/analysis/list_bulk_jobs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "includeCompleted": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  },
+  {
+    "name": "market_intelligence",
+    "description": "See skills/selenium/analysis/market_intelligence.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobsJson": {
+          "type": "string"
+        },
+        "requestJson": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "jobsJson"
+      ]
+    }
+  },
+  {
+    "name": "save_jobs",
+    "description": "See skills/selenium/storage/save_jobs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobsJson": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "overwriteExisting": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "jobsJson",
+        "userId"
+      ]
+    }
+  },
+  {
+    "name": "scrape_multiple_sites",
+    "description": "See skills/selenium/scraping/scrape_multiple_sites.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sitesJson": {
+          "type": "string"
+        },
+        "searchTerm": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string",
+          "default": "default_user"
+        },
+        "maxResults": {
+          "type": "integer",
+          "default": 50
+        },
+        "maxAgeInDays": {
+          "type": "integer",
+          "default": 30
+        }
+      },
+      "required": [
+        "sitesJson",
+        "searchTerm",
+        "location"
+      ]
+    }
+  },
+  {
+    "name": "scrape_site",
+    "description": "See skills/selenium/scraping/scrape_site.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "site": {
+          "type": "string"
+        },
+        "searchTerm": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string",
+          "default": "default_user"
+        },
+        "maxResults": {
+          "type": "integer",
+          "default": 50
+        },
+        "maxAgeInDays": {
+          "type": "integer",
+          "default": 30
+        }
+      },
+      "required": [
+        "site",
+        "searchTerm",
+        "location"
+      ]
+    }
+  },
+  {
+    "name": "simplify_jobs_enhanced",
+    "description": "See skills/selenium/analysis/simplify_jobs_enhanced.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "searchTerm": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "maxResults": {
+          "type": "integer",
+          "default": 50
+        },
+        "maxAgeInDays": {
+          "type": "integer",
+          "default": 30
+        },
+        "userId": {
+          "type": "string",
+          "default": "bulk_user"
+        }
+      },
+      "required": [
+        "searchTerm",
+        "location"
+      ]
+    }
+  },
+  {
+    "name": "simplify_jobs_google",
+    "description": "See skills/selenium/scraping/simplify_jobs_google.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "searchTerm": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "maxResults": {
+          "type": "integer",
+          "default": 20
+        },
+        "userId": {
+          "type": "string",
+          "default": "default_user"
+        },
+        "maxAgeInDays": {
+          "type": "integer",
+          "default": 30
+        }
+      },
+      "required": [
+        "searchTerm",
+        "location"
+      ]
+    }
+  },
+  {
+    "name": "smart_deduplication",
+    "description": "See skills/selenium/analysis/smart_deduplication.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobsJson": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "jobsJson"
+      ]
+    }
+  },
+  {
+    "name": "start_bulk_job",
+    "description": "See skills/selenium/analysis/start_bulk_job.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "searchTerm": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "targetJobs": {
+          "type": "integer",
+          "default": 20
+        },
+        "maxAgeInDays": {
+          "type": "integer",
+          "default": 30
+        },
+        "userId": {
+          "type": "string",
+          "default": "bulk_user"
+        }
+      },
+      "required": [
+        "searchTerm",
+        "location"
+      ]
+    }
+  },
+  {
+    "name": "test_site_access",
+    "description": "See skills/selenium/config/test_site_access.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "site": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "site"
+      ]
+    }
+  },
+  {
+    "name": "track_application",
+    "description": "See skills/selenium/tracking/track_application.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "applicationJson": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "applicationJson"
+      ]
+    }
+  },
+  {
+    "name": "update_application_status",
+    "description": "See skills/selenium/tracking/update_application_status.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "applicationId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Planned",
+            "Applied",
+            "UnderReview",
+            "Interview",
+            "Rejected",
+            "Offered",
+            "Accepted",
+            "Withdrawn"
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "applicationId",
+        "status"
+      ]
+    }
+  },
+  {
+    "name": "update_site_config",
+    "description": "See skills/selenium/config/update_site_config.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "configJson": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "configJson"
+      ]
+    }
+  }
+]
