@@ -1,0 +1,241 @@
+[
+  {
+    "name": "analyze_code",
+    "description": "Analyze C# code for errors, warnings, and diagnostics. See skills/csharp/analyze-code.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "filePath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "code"
+      ]
+    }
+  },
+  {
+    "name": "calculate_metrics",
+    "description": "Calculate code metrics including cyclomatic complexity and lines of code. See skills/csharp/calculate-metrics.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "filePath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "code"
+      ]
+    }
+  },
+  {
+    "name": "find_dead_code",
+    "description": "Find dead code including unreachable code and unused private members. See skills/csharp/find-dead-code.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "filePath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "code"
+      ]
+    }
+  },
+  {
+    "name": "format_code",
+    "description": "Format C# code using Roslyn formatting rules. See skills/csharp/format-code.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "filePath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "code"
+      ]
+    }
+  },
+  {
+    "name": "get_assembly_info",
+    "description": "Get detailed metadata and information about a .NET assembly. See skills/csharp/get-assembly-info.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "assemblyPath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "assemblyPath"
+      ]
+    }
+  },
+  {
+    "name": "get_code_fixes",
+    "description": "Get code fix suggestions for diagnostics (errors and warnings). See skills/csharp/get-code-fixes.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "filePath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "code"
+      ]
+    }
+  },
+  {
+    "name": "get_symbols",
+    "description": "Get all symbols (classes, methods, properties, etc.) from C# code. See skills/csharp/get-symbols.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "filePath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "filter": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "code"
+      ]
+    }
+  },
+  {
+    "name": "get_type_info",
+    "description": "Get type information at a specific position in C# code. See skills/csharp/get-type-info.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "column": {
+          "type": "integer"
+        },
+        "filePath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "code",
+        "line",
+        "column"
+      ]
+    }
+  },
+  {
+    "name": "list_types",
+    "description": "List all types (classes, interfaces, enums, structs) in a .NET assembly. See skills/csharp/list-types.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "assemblyPath": {
+          "type": "string"
+        },
+        "publicOnly": {
+          "type": "boolean",
+          "default": false
+        },
+        "namespaceFilter": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "typeKindFilter": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "assemblyPath"
+      ]
+    }
+  },
+  {
+    "name": "remove_unused_usings",
+    "description": "Remove unused using directives from C# code. See skills/csharp/remove-unused-usings.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "filePath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "code"
+      ]
+    }
+  }
+]
