@@ -1,0 +1,242 @@
+[
+  {
+    "name": "begin_transaction",
+    "description": "Begin database transaction. See transaction-management/begin_transaction.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "type": "string"
+        },
+        "isolationLevel": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "connectionName"
+      ]
+    }
+  },
+  {
+    "name": "close_connection",
+    "description": "Close database connection. See connection-management/close_connection.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName"
+      ]
+    }
+  },
+  {
+    "name": "commit_transaction",
+    "description": "Commit transaction. See transaction-management/commit_transaction.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "transactionId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "transactionId"
+      ]
+    }
+  },
+  {
+    "name": "execute_non_query",
+    "description": "Execute SQL INSERT/UPDATE/DELETE. See query-execution/execute_non_query.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "type": "string"
+        },
+        "sql": {
+          "type": "string"
+        },
+        "parameters": {
+          "default": null
+        }
+      },
+      "required": [
+        "connectionName",
+        "sql"
+      ]
+    }
+  },
+  {
+    "name": "execute_query",
+    "description": "Execute SQL SELECT query. See query-execution/execute_query.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "type": "string"
+        },
+        "sql": {
+          "type": "string"
+        },
+        "parameters": {
+          "default": null
+        },
+        "maxRows": {
+          "type": "integer",
+          "default": 1000
+        }
+      },
+      "required": [
+        "connectionName",
+        "sql"
+      ]
+    }
+  },
+  {
+    "name": "execute_scalar",
+    "description": "Execute SQL scalar query. See query-execution/execute_scalar.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "type": "string"
+        },
+        "sql": {
+          "type": "string"
+        },
+        "parameters": {
+          "default": null
+        }
+      },
+      "required": [
+        "connectionName",
+        "sql"
+      ]
+    }
+  },
+  {
+    "name": "get_foreign_keys",
+    "description": "Get table foreign keys. See schema-inspection/get_foreign_keys.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "type": "string"
+        },
+        "tableName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName",
+        "tableName"
+      ]
+    }
+  },
+  {
+    "name": "get_table_indexes",
+    "description": "Get table indexes. See schema-inspection/get_table_indexes.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "type": "string"
+        },
+        "tableName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName",
+        "tableName"
+      ]
+    }
+  },
+  {
+    "name": "get_table_schema",
+    "description": "Get table schema details. See schema-inspection/get_table_schema.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "type": "string"
+        },
+        "tableName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName",
+        "tableName"
+      ]
+    }
+  },
+  {
+    "name": "list_active_transactions",
+    "description": "List active transactions. See transaction-management/list_active_transactions.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_connections",
+    "description": "List available database connections. See connection-management/list_connections.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_tables",
+    "description": "List all tables in database. See schema-inspection/list_tables.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName"
+      ]
+    }
+  },
+  {
+    "name": "rollback_transaction",
+    "description": "Rollback transaction. See transaction-management/rollback_transaction.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "transactionId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "transactionId"
+      ]
+    }
+  },
+  {
+    "name": "test_connection",
+    "description": "Test database connection. See connection-management/test_connection.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName"
+      ]
+    }
+  }
+]
