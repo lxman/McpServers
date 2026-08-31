@@ -146,12 +146,19 @@ public sealed class FakeBackendLauncher : IBackendLauncher
         }
 
         var handle = new FakeHandle(
-            app, pid, () => Interlocked.Decrement(ref _live), () => ThrowOnStop);
+            app, pid, () => Interlocked.Decrement(ref _live), () => ThrowOnStop, ExitsImmediately);
         _handles.Add(handle);
         return handle;
     }
 
-    private sealed class FakeHandle(WebApplication app, int pid, Action onExit, Func<bool> throwOnStop)
+    /// <summary>
+    /// Makes every started backend report as already exited, standing in for one that dies the
+    /// instant it comes up. Drives the crash-restart cap.
+    /// </summary>
+    public bool ExitsImmediately { get; set; }
+
+    private sealed class FakeHandle(
+        WebApplication app, int pid, Action onExit, Func<bool> throwOnStop, bool exitsImmediately)
         : IBackendHandle
     {
         // The fake's processes are in-process Kestrel apps, so "now" is the honest answer and it
@@ -159,11 +166,16 @@ public sealed class FakeBackendLauncher : IBackendLauncher
         public DateTimeOffset StartedAt { get; } = DateTimeOffset.UtcNow;
 
         public int ProcessId { get; } = pid;
-        public bool HasExited { get; private set; }
+
+        private bool _stopped;
+
+        // Guarded on _stopped rather than HasExited: a handle that reports exited from birth must
+        // still shut its Kestrel app down exactly once, or the test leaks a live app per attempt.
+        public bool HasExited => exitsImmediately || _stopped;
 
         public async ValueTask DisposeAsync()
         {
-            if (HasExited) return;
+            if (_stopped) return;
 
             if (throwOnStop())
             {
@@ -171,7 +183,7 @@ public sealed class FakeBackendLauncher : IBackendLauncher
                     "Simulated failure killing the backend process; it may still be running.");
             }
 
-            HasExited = true;
+            _stopped = true;
             onExit();
             await app.StopAsync();
             await app.DisposeAsync();

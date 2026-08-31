@@ -75,6 +75,12 @@ public sealed class ProcessBackendLauncher(ILogger<ProcessBackendLauncher> logge
 
         public bool HasExited => process.HasExited;
 
+        /// <summary>How long a backend gets to exit on its own before it is killed.</summary>
+        private static readonly TimeSpan GracePeriod = TimeSpan.FromSeconds(3);
+
+        /// <summary>How long the kill itself gets to be reaped before we stop waiting on it.</summary>
+        private static readonly TimeSpan ReapTimeout = TimeSpan.FromSeconds(5);
+
         public async ValueTask DisposeAsync()
         {
             try
@@ -83,14 +89,35 @@ public sealed class ProcessBackendLauncher(ILogger<ProcessBackendLauncher> logge
                 {
                     // The graceful path is /admin/shutdown; this is the backstop for a backend
                     // that ignored it.
-                    if (!process.WaitForExit(3000)) process.Kill(entireProcessTree: true);
+                    //
+                    // Awaited rather than process.WaitForExit(3000). That overload blocks a thread
+                    // pool thread for the whole grace period and no CancellationToken can reach
+                    // into it, so a caller's timeout could not bound it -- and with a backend per
+                    // session across fourteen servers, shutdown disposes a lot of these at once.
+                    using var grace = new CancellationTokenSource(GracePeriod);
+                    try
+                    {
+                        await process.WaitForExitAsync(grace.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        process.Kill(entireProcessTree: true);
+                    }
                 }
 
-                await process.WaitForExitAsync();
+                // Bounded too. TerminateProcess does not fail in practice, but an unbounded await
+                // here is an unbounded await on gateway shutdown, which is where this runs.
+                using var reap = new CancellationTokenSource(ReapTimeout);
+                await process.WaitForExitAsync(reap.Token);
             }
             catch (InvalidOperationException)
             {
                 // Already gone.
+            }
+            catch (OperationCanceledException)
+            {
+                // Killed and still not reaped. There is nothing further to try, and holding
+                // shutdown open on it helps nobody.
             }
             finally
             {
