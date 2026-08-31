@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using McpGateway.Routing;
 using McpGateway;
 using McpGateway.Configuration;
 using McpGateway.Security;
@@ -40,12 +42,18 @@ public sealed class IdleReaperTests : IAsyncDisposable
             "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d", "pool": "shared",
             "eagerStart": false,
             "idleTimeoutMinutes": 30, "startupTimeoutSeconds": 10
+          },
+          "sessions": {
+            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d",
+            "pool": "per-session",
+            "idleTimeoutMinutes": 30, "startupTimeoutSeconds": 10
           }
         }
         """);
 
         _statePath = TestState.Write(
-            _root, ("reaps", "v-one"), ("never-reaps", "v-one"), ("shared-lazy", "v-one"));
+            _root, ("reaps", "v-one"), ("never-reaps", "v-one"), ("shared-lazy", "v-one"),
+            ("sessions", "v-one"));
 
         _supervisor = new BackendSupervisor(
             ManifestStore.Load(manifestPath, _statePath),
@@ -187,5 +195,56 @@ public sealed class IdleReaperTests : IAsyncDisposable
         await _supervisor.DisposeAsync();
         try { Directory.Delete(_root, recursive: true); }
         catch (DirectoryNotFoundException) { }
+    }
+
+    /// <summary>
+    /// A per-session backend whose session has exited has nothing left to serve, but the idle
+    /// timeout knows nothing about that: it keeps the backend alive for the full window, holding
+    /// whatever the session held. Seventeen of these accumulated within minutes the first time a
+    /// per-session server went live.
+    /// </summary>
+    [Fact]
+    public async Task Sweep_StopsAPerSessionBackend_WhoseOwnerHasExited()
+    {
+        var key = new BackendKey("sessions", await DeadOwnerKeyAsync());
+
+        await _supervisor.GetOrStartAsync(key, TestContext.Current.CancellationToken);
+        Assert.True(_supervisor.TryGet(key, out _));
+
+        // No clock advance at all: the backend is not remotely idle, and must still go.
+        int stopped = await _reaper.SweepAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, stopped);
+        Assert.False(_supervisor.TryGet(key, out _));
+    }
+
+    /// <summary>The other half: a live session's backend must survive the same sweep.</summary>
+    [Fact]
+    public async Task Sweep_KeepsAPerSessionBackend_WhoseOwnerIsStillRunning()
+    {
+        using Process self = Process.GetCurrentProcess();
+        var key = new BackendKey(
+            "sessions", SessionIdentity.FormatKey(Environment.ProcessId, self.StartTime));
+
+        await _supervisor.GetOrStartAsync(key, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, await _reaper.SweepAsync(TestContext.Current.CancellationToken));
+        Assert.True(_supervisor.TryGet(key, out _));
+    }
+
+    /// <summary>A pool key naming a process that has already exited.</summary>
+    private static async Task<string> DeadOwnerKeyAsync()
+    {
+        using Process child = Process.Start(new ProcessStartInfo(
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "curl.exe"),
+            "-s --max-time 120 http://127.0.0.1:1/never")
+        { UseShellExecute = false, CreateNoWindow = true })!;
+
+        string key = SessionIdentity.FormatKey(child.Id, child.StartTime);
+
+        child.Kill(entireProcessTree: true);
+        await child.WaitForExitAsync(TestContext.Current.CancellationToken);
+
+        return key;
     }
 }

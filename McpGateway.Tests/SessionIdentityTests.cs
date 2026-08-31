@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using McpGateway.Routing;
 using Xunit;
 
@@ -59,5 +60,69 @@ public sealed class SessionIdentityTests
         Assert.Equal(
             SessionIdentity.FormatKey(4242, startedAt),
             SessionIdentity.FormatKey(4242, startedAt));
+    }
+
+    [Fact]
+    public void TryParseKey_RoundTripsFormatKey()
+    {
+        var startedAt = DateTimeOffset.FromUnixTimeMilliseconds(1_788_000_000_123);
+        string key = SessionIdentity.FormatKey(4242, startedAt);
+
+        Assert.True(SessionIdentity.TryParseKey(key, out int pid, out DateTimeOffset parsed));
+        Assert.Equal(4242, pid);
+        Assert.Equal(startedAt, parsed);
+    }
+
+    [Fact]
+    public void IsOwnerAlive_IsTrue_ForThisProcess()
+    {
+        using Process self = Process.GetCurrentProcess();
+        string key = SessionIdentity.FormatKey(Environment.ProcessId, self.StartTime);
+
+        Assert.True(SessionIdentity.IsOwnerAlive(key));
+    }
+
+    [Fact]
+    public async Task IsOwnerAlive_IsFalse_OnceTheOwnerHasGone()
+    {
+        using Process child = Process.Start(new ProcessStartInfo(
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "curl.exe"),
+            "-s --max-time 120 http://127.0.0.1:1/never")
+        { UseShellExecute = false, CreateNoWindow = true })!;
+
+        string key = SessionIdentity.FormatKey(child.Id, child.StartTime);
+        Assert.True(SessionIdentity.IsOwnerAlive(key));
+
+        child.Kill(entireProcessTree: true);
+        await child.WaitForExitAsync(TestContext.Current.CancellationToken);
+
+        Assert.False(SessionIdentity.IsOwnerAlive(key));
+    }
+
+    /// <summary>
+    /// Windows reuses pids. A key naming a live pid that started at a different time belongs to a
+    /// session that is gone, and treating it as alive would keep a dead session's backend forever.
+    /// </summary>
+    [Fact]
+    public void IsOwnerAlive_IsFalse_WhenThePidBelongsToADifferentProcessNow()
+    {
+        using Process self = Process.GetCurrentProcess();
+        string key = SessionIdentity.FormatKey(
+            Environment.ProcessId, self.StartTime.AddSeconds(-30));
+
+        Assert.False(SessionIdentity.IsOwnerAlive(key));
+    }
+
+    /// <summary>
+    /// "default" is what ResolvePoolKey falls back to when the owner could not be established.
+    /// There is no owner to check, so it must never be treated as a dead one -- reaping on a key
+    /// we cannot reason about would stop live backends.
+    /// </summary>
+    [Fact]
+    public void IsOwnerAlive_IsTrue_ForAKeyItCannotParse()
+    {
+        Assert.True(SessionIdentity.IsOwnerAlive("default"));
+        Assert.True(SessionIdentity.IsOwnerAlive(""));
+        Assert.True(SessionIdentity.IsOwnerAlive("s-notanumber-123"));
     }
 }

@@ -46,6 +46,62 @@ public static class SessionIdentity
     /// Null is not an error: the caller falls back to the shared key, which is exactly how the
     /// gateway behaved before per-session pooling existed.
     /// </summary>
+    /// <summary>
+    /// Reads a key produced by <see cref="FormatKey"/> back into its parts. False for anything
+    /// else -- a shared server's empty key, or the "default" fallback -- because those encode no
+    /// owner at all.
+    /// </summary>
+    public static bool TryParseKey(string key, out int pid, out DateTimeOffset startedAt)
+    {
+        pid = 0;
+        startedAt = default;
+
+        if (string.IsNullOrEmpty(key)) return false;
+
+        string[] parts = key.Split('-');
+        if (parts.Length != 3 || parts[0] != "s") return false;
+        if (!int.TryParse(parts[1], out pid)) return false;
+        if (!long.TryParse(parts[2], out long startedAtMillis)) return false;
+
+        startedAt = DateTimeOffset.FromUnixTimeMilliseconds(startedAtMillis);
+        return true;
+    }
+
+    /// <summary>
+    /// Whether the session that owns this pool key still exists.
+    /// <para>
+    /// A per-session backend outlives its session otherwise: nothing will ever call it again, but
+    /// it keeps running until the idle timeout expires, holding whatever the session held. For
+    /// time-utility that is a few megabytes; for ssh-mcp it is open connections.
+    /// </para>
+    /// <para>
+    /// Unparseable keys answer TRUE. They carry no owner to check, and reaping on a key we cannot
+    /// reason about would stop live backends -- the failure that matters here is the false
+    /// negative, not the lingering process.
+    /// </para>
+    /// </summary>
+    public static bool IsOwnerAlive(string key)
+    {
+        if (!TryParseKey(key, out int pid, out DateTimeOffset startedAt)) return true;
+
+        try
+        {
+            using Process process = Process.GetProcessById(pid);
+
+            // Pid AND start time, because Windows recycles pids: a live process wearing a dead
+            // session's number is not that session. Same identity check LiveBackendRegistry makes
+            // before killing anything it believes is an orphan.
+            return new DateTimeOffset(process.StartTime).ToUnixTimeMilliseconds()
+                   == startedAt.ToUnixTimeMilliseconds();
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException
+                                       or System.ComponentModel.Win32Exception)
+        {
+            // No such process, or it went away between the lookup and the question.
+            return false;
+        }
+    }
+
     public static string? TryResolveKey(int clientPort, int gatewayPort)
     {
         int? pid = TryResolvePid(clientPort, gatewayPort);
