@@ -8,6 +8,7 @@ using Playwright.Core.Models;
 using Playwright.Core.Services;
 using Mcp.Common.Core;
 using PlaywrightServerMcp.Models;
+using PlaywrightServerMcp;
 
 namespace PlaywrightServerMcp.Tools;
 
@@ -315,7 +316,7 @@ public partial class NetworkTestingTools(PlaywrightSessionManager sessionManager
             };
 
             // Set up the download directory
-            string downloadDir = Path.Combine(Directory.GetCurrentDirectory(), "downloads", sessionId);
+            string downloadDir = Path.Combine(OutputPaths.Root, "downloads", sessionId);
             Directory.CreateDirectory(downloadDir);
 
             // Set up download handling

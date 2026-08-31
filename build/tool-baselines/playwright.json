@@ -1,0 +1,2213 @@
+[
+  {
+    "name": "analyze_angular_component_styles",
+    "description": "Analyze Angular component styling and detect component isolation issues. See skills/playwright-mcp/tools/angular/style-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "componentSelector": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "componentSelector"
+      ]
+    }
+  },
+  {
+    "name": "analyze_angular_json_config",
+    "description": "Analyze Angular workspace configuration (angular.json) with comprehensive parsing and validation. See skills/playwright-mcp/tools/angular/configuration-analyzer.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workingDirectory": {
+          "type": "string",
+          "default": ""
+        },
+        "includeDependencyAnalysis": {
+          "type": "boolean",
+          "default": true
+        },
+        "includeSecurityScan": {
+          "type": "boolean",
+          "default": true
+        },
+        "includeArchitecturalInsights": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "analyze_angular_routing_configuration",
+    "description": "Analyze Angular routing configuration and extract route information. See skills/playwright-mcp/tools/angular/routing-testing.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "includeRouteTree": {
+          "type": "boolean",
+          "default": true
+        },
+        "includeGuardAnalysis": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "analyze_bundle_size_by_component",
+    "description": "Analyze Angular bundle size by component with detailed impact analysis and optimization recommendations. See skills/playwright-mcp/tools/angular/bundle-analyzer.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workingDirectory": {
+          "type": "string",
+          "default": ""
+        },
+        "buildConfiguration": {
+          "type": "string",
+          "default": "production"
+        },
+        "includeComponentAnalysis": {
+          "type": "boolean",
+          "default": true
+        },
+        "includeDependencyAnalysis": {
+          "type": "boolean",
+          "default": true
+        },
+        "includeAssetAnalysis": {
+          "type": "boolean",
+          "default": true
+        },
+        "generateRecommendations": {
+          "type": "boolean",
+          "default": true
+        },
+        "maxComponents": {
+          "type": "integer",
+          "default": 50
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "analyze_change_detection",
+    "description": "Monitor Angular change detection cycles. See skills/playwright-mcp/tools/angular/performance-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "analyze_hover_effects",
+    "description": "Analyze hover effects and style changes. See skills/playwright-mcp/tools/visual-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "selector"
+      ]
+    }
+  },
+  {
+    "name": "analyze_layout",
+    "description": "Get layout analysis for responsive design testing. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "containerSelector": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "analyze_lifecycle_hook_patterns",
+    "description": "Monitor specific lifecycle hook execution patterns for performance optimization. See skills/playwright-mcp/tools/angular/lifecycle-monitor.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "hookName": {
+          "type": "string"
+        },
+        "durationSeconds": {
+          "type": "integer",
+          "default": 15
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "hookName"
+      ]
+    }
+  },
+  {
+    "name": "analyze_page_colors",
+    "description": "Get detailed color analysis for elements (useful for design system validation). See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "containerSelector": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "analyze_service_dependency_graph",
+    "description": "Analyzes Angular service dependency graph with comprehensive DI hierarchy mapping and service relationship visualization. See skills/playwright-mcp/tools/angular/service-dependency-analyzer.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        },
+        "includeDetailedAnalysis": {
+          "type": "boolean",
+          "default": true
+        },
+        "maxServices": {
+          "type": "integer",
+          "default": 50
+        },
+        "analyzeProviders": {
+          "type": "boolean",
+          "default": true
+        },
+        "generateVisualization": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  },
+  {
+    "name": "analyze_signal_dependencies",
+    "description": "Analyze signal dependencies and detect circular dependencies. See skills/playwright-mcp/tools/angular/signal-monitor.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "build_angular_project",
+    "description": "Build Angular project with specified configuration. See skills/playwright-mcp/tools/angular/cli-integration.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "configuration": {
+          "type": "string",
+          "default": "development"
+        },
+        "options": {
+          "type": "string",
+          "default": ""
+        },
+        "workingDirectory": {
+          "type": "string",
+          "default": ""
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "capture_element_screenshot",
+    "description": "Capture screenshot of specific element. See skills/playwright-mcp/tools/visual-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "selector"
+      ]
+    }
+  },
+  {
+    "name": "capture_element_visual_report",
+    "description": "Capture visual element properties for detailed reporting to Claude. See skills/playwright-mcp/tools/angular/style-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "selector"
+      ]
+    }
+  },
+  {
+    "name": "capture_screenshot",
+    "description": "Capture full page or element screenshot. See skills/playwright-mcp/tools/visual-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "fullPage": {
+          "type": "boolean",
+          "default": false
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "check_angular_cli_status",
+    "description": "Check if Angular CLI is installed and get version information. See skills/playwright-mcp/tools/angular/cli-integration.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "workingDirectory": {
+          "type": "string",
+          "default": ""
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "check_angular_stability_status",
+    "description": "Check current Angular application stability status without waiting. See skills/playwright-mcp/tools/angular/stability-detection.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "includeDetails": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "check_component_lifecycle_status",
+    "description": "Get quick lifecycle monitoring status for components without full monitoring. See skills/playwright-mcp/tools/angular/lifecycle-monitor.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "cleanup_downloads",
+    "description": "Clean up downloaded files and remove tracking. See skills/playwright-mcp/tools/network-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "downloadId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "deleteFiles": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "clear_session_logs",
+    "description": "Clear console and network logs for a browser session. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        },
+        "clearConsole": {
+          "type": "boolean",
+          "default": true
+        },
+        "clearNetwork": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  },
+  {
+    "name": "clear_storage",
+    "description": "Clear browser storage (localStorage, sessionStorage, or indexedDB). See skills/playwright-mcp/tools/browser-management-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "default": "all"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "click_element",
+    "description": "Click an element using CSS selector or data-testid. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "selector"
+      ]
+    }
+  },
+  {
+    "name": "close_browser",
+    "description": "Close browser session and cleanup resources. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "compare_element_styles",
+    "description": "Compare visual styles between multiple elements. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "selectorsJson": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "selectorsJson"
+      ]
+    }
+  },
+  {
+    "name": "compare_screenshots",
+    "description": "Visual regression testing with pixel comparison. See skills/playwright-mcp/tools/visual-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "baselinePath": {
+          "type": "string"
+        },
+        "selector": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "baselinePath"
+      ]
+    }
+  },
+  {
+    "name": "detect_change_detection_bottlenecks",
+    "description": "Detect and analyze change detection bottlenecks in Angular applications. See skills/playwright-mcp/tools/angular/change-detection-analyzer.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "durationSeconds": {
+          "type": "integer",
+          "default": 30
+        },
+        "maxComponents": {
+          "type": "integer",
+          "default": 25
+        },
+        "includeDetailedAnalysis": {
+          "type": "boolean",
+          "default": true
+        },
+        "severityThreshold": {
+          "type": "string",
+          "default": "medium"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "detect_circular_dependencies",
+    "description": "Detect circular dependencies in Angular applications with comprehensive analysis and resolution suggestions. See skills/playwright-mcp/tools/angular/circular-dependency-detector.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        },
+        "includeResolutionSuggestions": {
+          "type": "boolean",
+          "default": true
+        },
+        "analyzeArchitectureImpact": {
+          "type": "boolean",
+          "default": true
+        },
+        "includePerformanceAnalysis": {
+          "type": "boolean",
+          "default": true
+        },
+        "detectionMethod": {
+          "type": "string",
+          "default": "comprehensive"
+        }
+      }
+    }
+  },
+  {
+    "name": "drag_and_drop",
+    "description": "Drag and drop between elements. See skills/playwright-mcp/tools/interaction-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sourceSelector": {
+          "type": "string"
+        },
+        "targetSelector": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "sourceSelector",
+        "targetSelector"
+      ]
+    }
+  },
+  {
+    "name": "emulate_device",
+    "description": "Simulate mobile device (iPhone, Android, iPad). See skills/playwright-mcp/tools/advanced-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "deviceType": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "deviceType"
+      ]
+    }
+  },
+  {
+    "name": "execute_angular_unit_tests",
+    "description": "Execute Angular unit tests with comprehensive result parsing and analysis. See skills/playwright-mcp/tools/angular/testing-integration.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "default": "single-run"
+        },
+        "testPattern": {
+          "type": "string",
+          "default": ""
+        },
+        "codeCoverage": {
+          "type": "boolean",
+          "default": true
+        },
+        "browser": {
+          "type": "string",
+          "default": "chrome"
+        },
+        "workingDirectory": {
+          "type": "string",
+          "default": ""
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "execute_comprehensive_enrollment_test",
+    "description": "Execute comprehensive TADERATCS enrollment form test suite. See skills/playwright-mcp/tools/advanced-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "baseUrl": {
+          "type": "string",
+          "default": "http://localhost:4200"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "execute_enrollment_success_test",
+    "description": "Execute TADERATCS enrollment form success test. See skills/playwright-mcp/tools/advanced-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "baseUrl": {
+          "type": "string",
+          "default": "http://localhost:4200"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "execute_java_script",
+    "description": "Execute custom JavaScript on the page. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jsCode": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "jsCode"
+      ]
+    }
+  },
+  {
+    "name": "execute_ng_commands",
+    "description": "Execute Angular CLI commands and capture their output with comprehensive error handling. See skills/playwright-mcp/tools/angular/cli-integration.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "workingDirectory": {
+          "type": "string",
+          "default": ""
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "default": 120
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "command"
+      ]
+    }
+  },
+  {
+    "name": "extract_angular_material_theme",
+    "description": "Extract Angular Material theme and design token information for accessibility analysis. See skills/playwright-mcp/tools/angular/material-accessibility-testing.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "extract_design_tokens",
+    "description": "Extract design system information and CSS custom properties. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "fill_field",
+    "description": "Fill a form field using CSS selector or data-testid. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "selector",
+        "value"
+      ]
+    }
+  },
+  {
+    "name": "generate_angular_artifact",
+    "description": "Generate Angular components, services, or other artifacts using Angular CLI. See skills/playwright-mcp/tools/angular/cli-integration.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "artifactType": {
+          "type": "string"
+        },
+        "artifactName": {
+          "type": "string"
+        },
+        "options": {
+          "type": "string",
+          "default": ""
+        },
+        "workingDirectory": {
+          "type": "string",
+          "default": ""
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "artifactType",
+        "artifactName"
+      ]
+    }
+  },
+  {
+    "name": "generate_har_file",
+    "description": "Generate HAR file for network analysis. See skills/playwright-mcp/tools/network-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "outputPath": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "outputPath"
+      ]
+    }
+  },
+  {
+    "name": "generate_pdf",
+    "description": "Generate PDF of current page. See skills/playwright-mcp/tools/visual-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "landscape": {
+          "type": "boolean",
+          "default": false
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "generate_test_data",
+    "description": "Generate test data for forms. See skills/playwright-mcp/tools/advanced-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "dataType": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "default": 1
+        }
+      },
+      "required": [
+        "dataType"
+      ]
+    }
+  },
+  {
+    "name": "generate_zoneless_migration_plan",
+    "description": "Generate zoneless migration recommendations for Angular applications. See skills/playwright-mcp/tools/angular/zoneless-testing.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "includeStepByStep": {
+          "type": "boolean",
+          "default": true
+        },
+        "analyzeRisks": {
+          "type": "boolean",
+          "default": true
+        },
+        "estimateEffort": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "get_angular_component_tree",
+    "description": "Enhanced Angular component hierarchy analysis with Angular 17+ support, standalone components, and signals detection. See skills/playwright-mcp/tools/angular/component-analyzer.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "get_console_logs",
+    "description": "Get console logs from a browser session. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        },
+        "logType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "maxLogs": {
+          "type": "integer",
+          "default": 100
+        }
+      }
+    }
+  },
+  {
+    "name": "get_network_activity",
+    "description": "Get network activity from a browser session. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        },
+        "urlFilter": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "get_performance_metrics",
+    "description": "Get performance metrics (Core Web Vitals, load times). See skills/playwright-mcp/tools/performance-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "get_session_debug_summary",
+    "description": "Get session debug summary with counts and recent activity. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "get_viewport_info",
+    "description": "Get current browser viewport information. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "hover_element",
+    "description": "Simulate hover effects on element. See skills/playwright-mcp/tools/visual-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "selector"
+      ]
+    }
+  },
+  {
+    "name": "inject_security_payloads",
+    "description": "Inject security test payloads (XSS, SQL injection). See skills/playwright-mcp/tools/advanced-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "payloadType": {
+          "type": "string"
+        },
+        "selector": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "payloadType",
+        "selector"
+      ]
+    }
+  },
+  {
+    "name": "inspect_element_styles",
+    "description": "Extract comprehensive CSS style information for a specific element. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        },
+        "includeAllStyles": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "selector"
+      ]
+    }
+  },
+  {
+    "name": "intercept_requests",
+    "description": "Intercept and modify network requests. See skills/playwright-mcp/tools/network-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "urlPattern": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string",
+          "default": "block"
+        },
+        "method": {
+          "type": "string",
+          "default": "*"
+        },
+        "modifiedBody": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "modifiedHeaders": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "modifiedStatusCode": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        },
+        "delayMs": {
+          "type": "integer",
+          "default": 1000
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "urlPattern"
+      ]
+    }
+  },
+  {
+    "name": "launch_accessibility_browser",
+    "description": "Launch a browser with accessibility testing configuration. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "browserType": {
+          "type": "string",
+          "default": "chrome"
+        },
+        "headless": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        },
+        "viewportWidth": {
+          "type": "integer",
+          "default": 1920
+        },
+        "viewportHeight": {
+          "type": "integer",
+          "default": 1080
+        }
+      }
+    }
+  },
+  {
+    "name": "launch_browser",
+    "description": "Launch a browser and create a new session. Returns session ID. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "browserType": {
+          "type": "string",
+          "default": "chrome"
+        },
+        "headless": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        },
+        "viewportWidth": {
+          "type": "integer",
+          "default": 1920
+        },
+        "viewportHeight": {
+          "type": "integer",
+          "default": 1080
+        },
+        "deviceEmulation": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "userAgent": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "timezone": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "locale": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "colorScheme": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "reducedMotion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "enableGeolocation": {
+          "type": "boolean",
+          "default": false
+        },
+        "enableCamera": {
+          "type": "boolean",
+          "default": false
+        },
+        "enableMicrophone": {
+          "type": "boolean",
+          "default": false
+        },
+        "extraHttpHeaders": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "launch_dark_mode_browser",
+    "description": "Launch a browser with dark mode enabled. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "browserType": {
+          "type": "string",
+          "default": "chrome"
+        },
+        "headless": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        },
+        "viewportWidth": {
+          "type": "integer",
+          "default": 1920
+        },
+        "viewportHeight": {
+          "type": "integer",
+          "default": 1080
+        }
+      }
+    }
+  },
+  {
+    "name": "launch_mobile_browser",
+    "description": "Launch a browser with mobile device emulation. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "deviceType": {
+          "type": "string"
+        },
+        "browserType": {
+          "type": "string",
+          "default": "chrome"
+        },
+        "headless": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "deviceType"
+      ]
+    }
+  },
+  {
+    "name": "list_active_downloads",
+    "description": "List all active downloads for a session. See skills/playwright-mcp/tools/network-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "list_intercept_rules",
+    "description": "List and manage active intercept rules. See skills/playwright-mcp/tools/network-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "list_mock_rules",
+    "description": "List and manage active mock rules. See skills/playwright-mcp/tools/network-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "mock_api_response",
+    "description": "Mock API responses for testing with advanced features. See skills/playwright-mcp/tools/network-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "urlPattern": {
+          "type": "string"
+        },
+        "responseBody": {
+          "type": "string"
+        },
+        "statusCode": {
+          "type": "integer",
+          "default": 200
+        },
+        "method": {
+          "type": "string",
+          "default": "GET"
+        },
+        "headers": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "delayMs": {
+          "type": "integer",
+          "default": 0
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "urlPattern",
+        "responseBody"
+      ]
+    }
+  },
+  {
+    "name": "monitor_memory_usage",
+    "description": "Monitor memory usage and performance metrics. See skills/playwright-mcp/tools/performance-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "durationSeconds": {
+          "type": "integer",
+          "default": 30
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "monitor_signal_updates",
+    "description": "Monitor Angular signals in real-time, tracking signal changes and dependencies. See skills/playwright-mcp/tools/angular/signal-monitor.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "durationSeconds": {
+          "type": "integer",
+          "default": 30
+        },
+        "maxSignals": {
+          "type": "integer",
+          "default": 50
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "monitor_system_performance",
+    "description": "Monitor system performance (CPU, memory) during test execution. See skills/playwright-mcp/tools/performance-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "durationSeconds": {
+          "type": "integer",
+          "default": 30
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "monitor_zone_activity",
+    "description": "Monitor Zone.js activity and async operations. See skills/playwright-mcp/tools/angular/performance-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "durationSeconds": {
+          "type": "integer",
+          "default": 30
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "navigate_to_url",
+    "description": "Navigate to a URL. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "url"
+      ]
+    }
+  },
+  {
+    "name": "open_new_tab",
+    "description": "Open new tab in current browser session. See skills/playwright-mcp/tools/browser-management-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "profile_component_render_times",
+    "description": "Profile individual component rendering performance and identify bottlenecks. See skills/playwright-mcp/tools/angular/performance-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "durationSeconds": {
+          "type": "integer",
+          "default": 30
+        },
+        "maxComponents": {
+          "type": "integer",
+          "default": 25
+        },
+        "includeDetailedAnalysis": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "rotate_device",
+    "description": "Simulate device orientation change (portrait/landscape). See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "orientation": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "orientation"
+      ]
+    }
+  },
+  {
+    "name": "run_lighthouse_audit",
+    "description": "Run Lighthouse performance audits. See skills/playwright-mcp/tools/performance-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "select_option",
+    "description": "Select an option from a dropdown. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "selector",
+        "value"
+      ]
+    }
+  },
+  {
+    "name": "send_keyboard_shortcut",
+    "description": "Send keyboard shortcuts like Ctrl+S, Tab, complex sequences, and platform-specific shortcuts. See skills/playwright-mcp/tools/interaction-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "keys": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "keys"
+      ]
+    }
+  },
+  {
+    "name": "set_viewport_size",
+    "description": "Change viewport size of existing browser session. See skills/playwright-mcp/tools/playwright-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "integer"
+        },
+        "height": {
+          "type": "integer"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ]
+    }
+  },
+  {
+    "name": "simulate_network_conditions",
+    "description": "Simulate network conditions (slow, fast, offline). See skills/playwright-mcp/tools/advanced-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "networkType": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "networkType"
+      ]
+    }
+  },
+  {
+    "name": "start_coverage_tracking",
+    "description": "Start JavaScript and CSS coverage tracking. See skills/playwright-mcp/tools/performance-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "js": {
+          "type": "boolean",
+          "default": true
+        },
+        "css": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "start_performance_trace",
+    "description": "Start performance tracing. See skills/playwright-mcp/tools/performance-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "stop_coverage_tracking",
+    "description": "Stop coverage tracking and return results. See skills/playwright-mcp/tools/performance-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "stop_performance_trace",
+    "description": "Stop performance tracing and return results. See skills/playwright-mcp/tools/performance-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "switch_to_tab",
+    "description": "Switch to a specific tab by index. See skills/playwright-mcp/tools/browser-management-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "integer"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "index"
+      ]
+    }
+  },
+  {
+    "name": "test_accessibility",
+    "description": "Test accessibility features (keyboard navigation, screen reader). See skills/playwright-mcp/tools/advanced-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "testType": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "testType"
+      ]
+    }
+  },
+  {
+    "name": "test_angular_routing_scenarios",
+    "description": "Test Angular routing scenarios with navigation testing and guard/resolver validation. See skills/playwright-mcp/tools/angular/routing-testing.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "timeoutSeconds": {
+          "type": "integer",
+          "default": 60
+        },
+        "includeDetailedAnalysis": {
+          "type": "boolean",
+          "default": true
+        },
+        "testNavigationGuards": {
+          "type": "boolean",
+          "default": true
+        },
+        "testResolvers": {
+          "type": "boolean",
+          "default": true
+        },
+        "testLazyLoading": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "test_business_rules",
+    "description": "Test specific TADERATCS business rules. See skills/playwright-mcp/tools/advanced-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ruleType": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "ruleType"
+      ]
+    }
+  },
+  {
+    "name": "test_color_contrast",
+    "description": "Test color contrast ratios against WCAG guidelines. See skills/playwright-mcp/tools/accessibility-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ratio": {
+          "type": "number",
+          "default": 4.5
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "test_focus_order",
+    "description": "Test keyboard focus order and focus management. See skills/playwright-mcp/tools/accessibility-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "containerSelector": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "test_local_storage_auto_save",
+    "description": "Test localStorage auto-save functionality. See skills/playwright-mcp/tools/advanced-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "test_navigation_guard_behaviors",
+    "description": "Test specific navigation guard behaviors and validate guard execution. See skills/playwright-mcp/tools/angular/routing-testing.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "routesToTest": {
+          "type": "string",
+          "default": ""
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "default": 30
+        },
+        "includeDetailedAnalysis": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "test_ngrx_store_actions",
+    "description": "Test NgRx store actions, effects, and state management with comprehensive automation. See skills/playwright-mcp/tools/angular/ngrx-testing.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        },
+        "actionTypes": {
+          "type": "string",
+          "default": ""
+        },
+        "testEffects": {
+          "type": "boolean",
+          "default": true
+        },
+        "testReducers": {
+          "type": "boolean",
+          "default": true
+        },
+        "testSelectors": {
+          "type": "boolean",
+          "default": true
+        },
+        "validateStateStructure": {
+          "type": "boolean",
+          "default": true
+        },
+        "generateRecommendations": {
+          "type": "boolean",
+          "default": true
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "default": 60
+        }
+      }
+    }
+  },
+  {
+    "name": "test_screen_reader_navigation",
+    "description": "Test screen reader navigation patterns. See skills/playwright-mcp/tools/accessibility-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "test_zoneless_change_detection",
+    "description": "Test zoneless change detection in Angular 18+ applications. See skills/playwright-mcp/tools/angular/zoneless-testing.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "timeoutSeconds": {
+          "type": "integer",
+          "default": 60
+        },
+        "testCycles": {
+          "type": "integer",
+          "default": 5
+        },
+        "includeDetailedAnalysis": {
+          "type": "boolean",
+          "default": true
+        },
+        "testIntervalMs": {
+          "type": "integer",
+          "default": 1000
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "trace_component_lifecycle_hooks",
+    "description": "Monitor Angular component lifecycle hooks execution with timing and performance analysis. See skills/playwright-mcp/tools/angular/lifecycle-monitor.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "durationSeconds": {
+          "type": "integer",
+          "default": 30
+        },
+        "maxComponents": {
+          "type": "integer",
+          "default": 25
+        },
+        "includeTimingDetails": {
+          "type": "boolean",
+          "default": true
+        },
+        "specificHooks": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "upload_files",
+    "description": "Upload files for testing (documents tab). See skills/playwright-mcp/tools/advanced-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string"
+        },
+        "filePaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "selector",
+        "filePaths"
+      ]
+    }
+  },
+  {
+    "name": "validate_angular_style_guide_compliance",
+    "description": "Validate Angular application against Angular Style Guide compliance rules and best practices. See skills/playwright-mcp/tools/angular/style-guide-compliance.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "validate_angular_styling_best_practices",
+    "description": "Validate Angular component styling best practices. See skills/playwright-mcp/tools/angular/style-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "componentSelector": {
+          "type": "string"
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "componentSelector"
+      ]
+    }
+  },
+  {
+    "name": "validate_aria_labels",
+    "description": "Validate ARIA labels and attributes with comprehensive rules. See skills/playwright-mcp/tools/accessibility-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "containerSelector": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "validate_change_detection_patterns",
+    "description": "Validate change detection patterns in Angular applications for zoneless compatibility. See skills/playwright-mcp/tools/angular/zoneless-testing.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "checkAntiPatterns": {
+          "type": "boolean",
+          "default": true
+        },
+        "analyzeHierarchy": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "validate_component_contracts",
+    "description": "Validate Angular component contracts including inputs, outputs, and interfaces. See skills/playwright-mcp/tools/angular/component-contract-testing.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "componentSelector": {
+          "type": "string"
+        },
+        "validationScope": {
+          "type": "string",
+          "default": "all"
+        },
+        "includePerformanceTesting": {
+          "type": "boolean",
+          "default": true
+        },
+        "generateRecommendations": {
+          "type": "boolean",
+          "default": true
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "default": 60
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "componentSelector"
+      ]
+    }
+  },
+  {
+    "name": "validate_material_accessibility_compliance",
+    "description": "Validate Angular Material components for accessibility compliance with comprehensive WCAG testing. See skills/playwright-mcp/tools/angular/material-accessibility-testing.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        },
+        "componentSelector": {
+          "type": "string",
+          "default": ""
+        },
+        "wcagLevel": {
+          "type": "string",
+          "default": "AA"
+        },
+        "includeDetails": {
+          "type": "boolean",
+          "default": true
+        },
+        "testColorContrast": {
+          "type": "boolean",
+          "default": true
+        },
+        "testKeyboardNavigation": {
+          "type": "boolean",
+          "default": true
+        },
+        "testScreenReader": {
+          "type": "boolean",
+          "default": true
+        },
+        "generateRecommendations": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  },
+  {
+    "name": "validate_standalone_dependencies",
+    "description": "Validate standalone components' import patterns and dependency validation. See skills/playwright-mcp/tools/angular/component-analyzer.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "wait_for_angular_stability",
+    "description": "Wait for Angular application to reach stability by monitoring Zone.js and async operations. See skills/playwright-mcp/tools/angular/stability-detection.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "timeoutSeconds": {
+          "type": "integer",
+          "default": 30
+        },
+        "checkIntervalMs": {
+          "type": "integer",
+          "default": 100
+        },
+        "includeDetailedInfo": {
+          "type": "boolean",
+          "default": true
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "wait_for_download",
+    "description": "Handle file downloads with support for multiple concurrent downloads. See skills/playwright-mcp/tools/network-testing-tools.md.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "triggerSelector": {
+          "type": "string"
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "default": 30
+        },
+        "expectedFileName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "triggerSelector"
+      ]
+    }
+  }
+]

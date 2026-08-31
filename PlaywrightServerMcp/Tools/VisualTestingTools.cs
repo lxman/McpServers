@@ -4,6 +4,7 @@ using Microsoft.Playwright;
 using ModelContextProtocol.Server;
 using Playwright.Core.Services;
 using Mcp.Common.Core;
+using PlaywrightServerMcp;
 
 namespace PlaywrightServerMcp.Tools;
 
@@ -25,7 +26,7 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
 
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             var filename = $"screenshot_{timestamp}_{sessionId}.png";
-            string outputPath = Path.Combine(Directory.GetCurrentDirectory(), "screenshots", filename);
+            string outputPath = Path.Combine(OutputPaths.Root, "screenshots", filename);
             
             // Ensure directory exists
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
@@ -101,7 +102,7 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
 
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             var filename = $"element_{timestamp}_{sessionId}.png";
-            string outputPath = Path.Combine(Directory.GetCurrentDirectory(), "screenshots", filename);
+            string outputPath = Path.Combine(OutputPaths.Root, "screenshots", filename);
             
             // Ensure directory exists
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
@@ -175,7 +176,7 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string filename = path ?? $"page_{timestamp}_{sessionId}.pdf";
             string outputPath = Path.IsPathRooted(filename) ? filename : 
-                           Path.Combine(Directory.GetCurrentDirectory(), "pdfs", filename);
+                           Path.Combine(OutputPaths.Root, "pdfs", filename);
             
             // Ensure directory exists
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
@@ -498,7 +499,7 @@ public class VisualTestingTools(PlaywrightSessionManager sessionManager)
             // Take current screenshot
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             var currentFilename = $"current_{timestamp}_{sessionId}.png";
-            string currentPath = Path.Combine(Directory.GetCurrentDirectory(), "screenshots", "comparison", currentFilename);
+            string currentPath = Path.Combine(OutputPaths.Root, "screenshots", "comparison", currentFilename);
             
             // Ensure directory exists
             Directory.CreateDirectory(Path.GetDirectoryName(currentPath)!);
