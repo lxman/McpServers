@@ -1,24 +1,22 @@
 using AwsMcp.McpTools;
 using AwsServer.Core.Configuration;
+using Mcp.Hosting.Core;
 using Mcp.ResponseGuard.Configuration;
 using Mcp.ResponseGuard.Services;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ModelContextProtocol.AspNetCore;
 using Serilog;
-using SerilogFileWriter;
-
-// Configure Serilog to write to a file (not stdout!)
-Log.Logger = McpLoggingExtensions.SetupMcpLogging("logs/aws-mcp-.log");
 
 try
 {
+    // Logging, the loopback listener and the gateway's port-file contract all live in McpHttpHost.
+    // The old "logs/aws-mcp-.log" resolved against the working directory, which is a versioned
+    // deploy directory now.
+    WebApplicationBuilder builder = McpHttpHost.CreateBuilder(args, "aws");
+
     Log.Information("Starting AWS MCP server");
-
-    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-
-    builder.Logging.ClearProviders();
-    builder.Logging.AddSerilog(Log.Logger, dispose: false);
 
     // Register AWS Core services
     builder.Services.AddAwsServices();
@@ -28,9 +26,9 @@ try
         sp.GetRequiredService<ILogger<OutputGuard>>(),
         new OutputGuardOptions { SafeTokenLimit = 15_000 }));
 
-    // Configure an MCP server with STDIO transport
-    builder.Services.AddMcpServer()
-        .WithStdioServerTransport()
+    builder.Services
+        .AddMcpServer()
+        .WithHttpTransport(o => o.SessionMode = HttpServerSessionMode.StatefulForInitializeClients)
         // AWS Service Tools
         .WithTools<S3Tools>()
         .WithTools<CloudWatchTools>()
@@ -38,12 +36,15 @@ try
         .WithTools<EcrTools>()
         .WithTools<QuickSightTools>();
 
-    IHost host = builder.Build();
-    await host.RunAsync();
+    WebApplication app = builder.Build();
+    app.MapMcpHost();
+
+    await app.RunAsync();
 }
 catch (Exception ex)
 {
     Log.Fatal(ex, "AWS MCP server terminated unexpectedly");
+    Environment.ExitCode = 1;
 }
 finally
 {

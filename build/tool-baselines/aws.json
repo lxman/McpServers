@@ -1,0 +1,1535 @@
+[
+  {
+    "name": "batch_delete_ecr_images",
+    "description": "Batch delete ECR images. See skills/aws/ecr/batch-delete-images.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "imageTags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "repositoryName",
+        "imageTags"
+      ]
+    }
+  },
+  {
+    "name": "bucket_exists",
+    "description": "Check if S3 bucket exists. See skills/aws/s3/bucket-exists.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "bucketName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bucketName"
+      ]
+    }
+  },
+  {
+    "name": "create_ecr_repository",
+    "description": "Create ECR repository. See skills/aws/ecr/create-repository.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "scanOnPush": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "required": [
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "create_log_group",
+    "description": "Create CloudWatch log group. See skills/aws/cloudwatch/create-log-group.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "logGroupName"
+      ]
+    }
+  },
+  {
+    "name": "create_s3_bucket",
+    "description": "Create S3 bucket. See skills/aws/s3/create-bucket.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "bucketName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bucketName"
+      ]
+    }
+  },
+  {
+    "name": "delete_ecr_repository",
+    "description": "Delete ECR repository. See skills/aws/ecr/delete-repository.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "force": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "delete_log_group",
+    "description": "Delete CloudWatch log group. See skills/aws/cloudwatch/delete-log-group.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "logGroupName"
+      ]
+    }
+  },
+  {
+    "name": "delete_metric_alarm",
+    "description": "Delete CloudWatch metric alarm. See skills/aws/cloudwatch/delete-alarm.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "alarmNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "alarmNames"
+      ]
+    }
+  },
+  {
+    "name": "delete_s3_bucket",
+    "description": "Delete S3 bucket. See skills/aws/s3/delete-bucket.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "bucketName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bucketName"
+      ]
+    }
+  },
+  {
+    "name": "delete_s3_object",
+    "description": "Delete S3 object. See skills/aws/s3/delete-object.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "bucketName": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bucketName",
+        "key"
+      ]
+    }
+  },
+  {
+    "name": "describe_ecr_images",
+    "description": "Describe ECR images. See skills/aws/ecr/describe-images.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "imageTags": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "imageDigest": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "describe_ecr_repositories",
+    "description": "Describe ECR repositories. See skills/aws/ecr/describe-repositories.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryNames": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "describe_ecs_cluster",
+    "description": "Describe ECS cluster. See skills/aws/ecs/describe-cluster.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "clusterName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "clusterName"
+      ]
+    }
+  },
+  {
+    "name": "describe_ecs_services",
+    "description": "Describe ECS services. See skills/aws/ecs/describe-services.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "clusterName": {
+          "type": "string"
+        },
+        "serviceNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "clusterName",
+        "serviceNames"
+      ]
+    }
+  },
+  {
+    "name": "describe_ecs_tasks",
+    "description": "Describe ECS tasks. See skills/aws/ecs/describe-tasks.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "clusterName": {
+          "type": "string"
+        },
+        "taskArns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "clusterName",
+        "taskArns"
+      ]
+    }
+  },
+  {
+    "name": "describe_quick_sight_analysis",
+    "description": "Describe QuickSight analysis. See skills/aws/quicksight/describe-analysis.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "analysisId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "analysisId"
+      ]
+    }
+  },
+  {
+    "name": "describe_quick_sight_dashboard",
+    "description": "Describe QuickSight dashboard. See skills/aws/quicksight/describe-dashboard.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "dashboardId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "dashboardId"
+      ]
+    }
+  },
+  {
+    "name": "describe_quick_sight_data_source",
+    "description": "Describe QuickSight data source. See skills/aws/quicksight/describe-data-source.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "dataSourceId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "dataSourceId"
+      ]
+    }
+  },
+  {
+    "name": "describe_quick_sight_dataset",
+    "description": "Describe QuickSight dataset. See skills/aws/quicksight/describe-dataset.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "dataSetId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "dataSetId"
+      ]
+    }
+  },
+  {
+    "name": "describe_quick_sight_user",
+    "description": "Describe QuickSight user. See skills/aws/quicksight/describe-user.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "userName": {
+          "type": "string"
+        },
+        "namespaceName": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "userName"
+      ]
+    }
+  },
+  {
+    "name": "describe_task_definition",
+    "description": "Describe ECS task definition. See skills/aws/ecs/describe-task-definition.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "taskDefinition": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "taskDefinition"
+      ]
+    }
+  },
+  {
+    "name": "disable_metric_alarms",
+    "description": "Disable CloudWatch metric alarms. See skills/aws/cloudwatch/disable-alarms.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "alarmNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "alarmNames"
+      ]
+    }
+  },
+  {
+    "name": "enable_metric_alarms",
+    "description": "Enable CloudWatch metric alarms. See skills/aws/cloudwatch/enable-alarms.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "alarmNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "alarmNames"
+      ]
+    }
+  },
+  {
+    "name": "filter_logs",
+    "description": "Filter CloudWatch logs. See skills/aws/cloudwatch/filter-logs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupName": {
+          "type": "string"
+        },
+        "filterPattern": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "startTime": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "endTime": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "logGroupName"
+      ]
+    }
+  },
+  {
+    "name": "filter_logs_multi",
+    "description": "Filter logs from multiple groups. See skills/aws/cloudwatch/filter-logs-multi.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "filterPattern": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "startTime": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "endTime": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "logGroupNames"
+      ]
+    }
+  },
+  {
+    "name": "filter_logs_multi_group",
+    "description": "Filter logs across multiple groups. See skills/aws/cloudwatch/filter-logs-multi.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupNames": {
+          "type": "string"
+        },
+        "filterPattern": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "minutes": {
+          "type": "integer",
+          "default": 30
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "logGroupNames"
+      ]
+    }
+  },
+  {
+    "name": "generate_embed_url",
+    "description": "Generate QuickSight dashboard embed URL. See skills/aws/quicksight/generate-embed-url.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "dashboardId": {
+          "type": "string"
+        },
+        "namespaceName": {
+          "type": "string",
+          "default": "default"
+        },
+        "sessionLifetimeInMinutes": {
+          "type": "integer",
+          "default": 60
+        },
+        "region": {
+          "type": "string",
+          "default": "us-east-1"
+        }
+      },
+      "required": [
+        "dashboardId"
+      ]
+    }
+  },
+  {
+    "name": "generate_presigned_url",
+    "description": "Generate presigned URL for S3 object. See skills/aws/s3/presigned-url.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "bucketName": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "expirationHours": {
+          "type": "integer",
+          "default": 1
+        },
+        "httpMethod": {
+          "type": "string",
+          "default": "GET"
+        }
+      },
+      "required": [
+        "bucketName",
+        "key"
+      ]
+    }
+  },
+  {
+    "name": "get_alarm_history",
+    "description": "Get CloudWatch alarm history. See skills/aws/cloudwatch/alarm-history.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "alarmName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "alarmTypes": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default": null
+        },
+        "historyItemType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "startDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "endDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "maxRecords": {
+          "type": "integer",
+          "default": 100
+        }
+      }
+    }
+  },
+  {
+    "name": "get_bucket_versioning",
+    "description": "Get S3 bucket versioning. See skills/aws/s3/get-bucket-versioning.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "bucketName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bucketName"
+      ]
+    }
+  },
+  {
+    "name": "get_ecr_authorization_token",
+    "description": "Get ECR authorization token. See skills/aws/ecr/get-authorization-token.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_ecr_lifecycle_policy",
+    "description": "Get ECR lifecycle policy. See skills/aws/ecr/get-lifecycle-policy.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "get_error_logs",
+    "description": "Get error logs from group. See skills/aws/cloudwatch/error-logs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupName": {
+          "type": "string"
+        },
+        "minutes": {
+          "type": "integer",
+          "default": 60
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "logGroupName"
+      ]
+    }
+  },
+  {
+    "name": "get_error_logs_multi",
+    "description": "Get error logs from multiple groups. See skills/aws/cloudwatch/error-logs-multi.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "minutesBack": {
+          "type": "integer",
+          "default": 60
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "logGroupNames"
+      ]
+    }
+  },
+  {
+    "name": "get_error_logs_multi_group",
+    "description": "Get error logs from multiple groups. See skills/aws/cloudwatch/error-logs-multi.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupNames": {
+          "type": "string"
+        },
+        "minutes": {
+          "type": "integer",
+          "default": 60
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "logGroupNames"
+      ]
+    }
+  },
+  {
+    "name": "get_insights_results",
+    "description": "Get CloudWatch Insights results. See skills/aws/cloudwatch/insights-results.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "queryId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "queryId"
+      ]
+    }
+  },
+  {
+    "name": "get_log_context",
+    "description": "Get log context around timestamp. See skills/aws/cloudwatch/log-context.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupName": {
+          "type": "string"
+        },
+        "logStreamName": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "integer"
+        },
+        "contextLines": {
+          "type": "integer",
+          "default": 50
+        }
+      },
+      "required": [
+        "logGroupName",
+        "logStreamName",
+        "timestamp"
+      ]
+    }
+  },
+  {
+    "name": "get_log_events",
+    "description": "Get CloudWatch log events. See skills/aws/cloudwatch/get-log-events.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupName": {
+          "type": "string"
+        },
+        "logStreamName": {
+          "type": "string"
+        },
+        "startTime": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "endTime": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "logGroupName",
+        "logStreamName"
+      ]
+    }
+  },
+  {
+    "name": "get_recent_logs",
+    "description": "Get recent CloudWatch logs. See skills/aws/cloudwatch/recent-logs.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupName": {
+          "type": "string"
+        },
+        "minutes": {
+          "type": "integer",
+          "default": 30
+        },
+        "filterPattern": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "logGroupName"
+      ]
+    }
+  },
+  {
+    "name": "get_recent_logs_multi",
+    "description": "Get recent logs from multiple groups. See skills/aws/cloudwatch/recent-logs-multi.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "minutesBack": {
+          "type": "integer",
+          "default": 60
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "logGroupNames"
+      ]
+    }
+  },
+  {
+    "name": "get_recent_logs_multi_group",
+    "description": "Get recent logs from multiple groups. See skills/aws/cloudwatch/recent-logs-multi.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupNames": {
+          "type": "string"
+        },
+        "minutes": {
+          "type": "integer",
+          "default": 30
+        },
+        "filterPattern": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "logGroupNames"
+      ]
+    }
+  },
+  {
+    "name": "get_s3_object",
+    "description": "Get S3 object content. See skills/aws/s3/get-object.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "bucketName": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bucketName",
+        "key"
+      ]
+    }
+  },
+  {
+    "name": "initialize_quick_sight",
+    "description": "Initialize QuickSight with AWS account ID. See skills/aws/quicksight/initialize.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "awsAccountId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "awsAccountId"
+      ]
+    }
+  },
+  {
+    "name": "list_ecr_images",
+    "description": "List images in ECR repository. See skills/aws/ecr/list-images.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "maxResults": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "list_ecr_repositories",
+    "description": "List ECR repositories. See skills/aws/ecr/list-repositories.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_ecs_clusters",
+    "description": "List ECS clusters. See skills/aws/ecs/list-clusters.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_ecs_services",
+    "description": "List ECS services in cluster. See skills/aws/ecs/list-services.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "clusterName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "clusterName"
+      ]
+    }
+  },
+  {
+    "name": "list_ecs_tasks",
+    "description": "List ECS tasks. See skills/aws/ecs/list-tasks.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "clusterName": {
+          "type": "string"
+        },
+        "serviceName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "clusterName"
+      ]
+    }
+  },
+  {
+    "name": "list_log_groups",
+    "description": "List CloudWatch log groups. See skills/aws/cloudwatch/list-log-groups.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "prefix": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        }
+      }
+    }
+  },
+  {
+    "name": "list_log_streams",
+    "description": "List CloudWatch log streams. See skills/aws/cloudwatch/list-log-streams.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupName": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "orderBy": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "descending": {
+          "type": "boolean",
+          "default": true
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        }
+      },
+      "required": [
+        "logGroupName"
+      ]
+    }
+  },
+  {
+    "name": "list_metric_namespaces",
+    "description": "List CloudWatch metric namespaces. See skills/aws/cloudwatch/list-namespaces.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_object_versions",
+    "description": "List S3 object versions. See skills/aws/s3/list-object-versions.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "bucketName": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "bucketName"
+      ]
+    }
+  },
+  {
+    "name": "list_quick_sight_analyses",
+    "description": "List QuickSight analyses. See skills/aws/quicksight/list-analyses.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_quick_sight_dashboards",
+    "description": "List QuickSight dashboards. See skills/aws/quicksight/list-dashboards.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_quick_sight_data_sources",
+    "description": "List QuickSight data sources. See skills/aws/quicksight/list-data-sources.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_quick_sight_datasets",
+    "description": "List QuickSight datasets. See skills/aws/quicksight/list-datasets.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_quick_sight_users",
+    "description": "List QuickSight users. See skills/aws/quicksight/list-users.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "namespaceName": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "list_s3_buckets",
+    "description": "List S3 buckets. See skills/aws/s3/list-buckets.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_s3_objects",
+    "description": "List objects in S3 bucket. See skills/aws/s3/list-objects.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "bucketName": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "maxKeys": {
+          "type": "integer",
+          "default": 1000
+        },
+        "continuationToken": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "bucketName"
+      ]
+    }
+  },
+  {
+    "name": "list_task_definitions",
+    "description": "List ECS task definitions. See skills/aws/ecs/list-task-definitions.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "familyPrefix": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "object_exists",
+    "description": "Check if S3 object exists. See skills/aws/s3/object-exists.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "bucketName": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bucketName",
+        "key"
+      ]
+    }
+  },
+  {
+    "name": "put_ecr_lifecycle_policy",
+    "description": "Put ECR lifecycle policy. See skills/aws/ecr/put-lifecycle-policy.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "lifecyclePolicyText": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "repositoryName",
+        "lifecyclePolicyText"
+      ]
+    }
+  },
+  {
+    "name": "put_metric_data",
+    "description": "Put metric data to CloudWatch. See skills/aws/cloudwatch/put-metric-data.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "namespaceName": {
+          "type": "string"
+        },
+        "metricName": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "timestamp": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "namespaceName",
+        "metricName",
+        "value"
+      ]
+    }
+  },
+  {
+    "name": "put_s3_object",
+    "description": "Put object to S3 bucket. See skills/aws/s3/put-object.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "bucketName": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string",
+          "default": "text/plain"
+        }
+      },
+      "required": [
+        "bucketName",
+        "key",
+        "content"
+      ]
+    }
+  },
+  {
+    "name": "run_ecs_task",
+    "description": "Run ECS task. See skills/aws/ecs/run-task.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "clusterName": {
+          "type": "string"
+        },
+        "taskDefinition": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "default": 1
+        }
+      },
+      "required": [
+        "clusterName",
+        "taskDefinition"
+      ]
+    }
+  },
+  {
+    "name": "run_insights_query",
+    "description": "Run CloudWatch Insights query. See skills/aws/cloudwatch/insights-query.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupNames": {
+          "type": "string"
+        },
+        "queryString": {
+          "type": "string"
+        },
+        "startTime": {
+          "type": "string"
+        },
+        "endTime": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "logGroupNames",
+        "queryString",
+        "startTime",
+        "endTime"
+      ]
+    }
+  },
+  {
+    "name": "search_log_pattern",
+    "description": "Search for pattern in logs. See skills/aws/cloudwatch/search-pattern.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupName": {
+          "type": "string"
+        },
+        "searchPattern": {
+          "type": "string"
+        },
+        "minutesBack": {
+          "type": "integer",
+          "default": 60
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        },
+        "caseSensitive": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "logGroupName",
+        "searchPattern"
+      ]
+    }
+  },
+  {
+    "name": "search_pattern",
+    "description": "Search for pattern in logs. See skills/aws/cloudwatch/search-pattern.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupNames": {
+          "type": "string"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "minutes": {
+          "type": "integer",
+          "default": 60
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "logGroupNames",
+        "pattern"
+      ]
+    }
+  },
+  {
+    "name": "set_retention_policy",
+    "description": "Set log group retention policy. See skills/aws/cloudwatch/set-retention.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupName": {
+          "type": "string"
+        },
+        "retentionInDays": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "logGroupName",
+        "retentionInDays"
+      ]
+    }
+  },
+  {
+    "name": "start_insights_query",
+    "description": "Start CloudWatch Insights query. See skills/aws/cloudwatch/insights-start.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "logGroupNames": {
+          "type": "string"
+        },
+        "queryString": {
+          "type": "string"
+        },
+        "startTime": {
+          "type": "string"
+        },
+        "endTime": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "logGroupNames",
+        "queryString",
+        "startTime",
+        "endTime"
+      ]
+    }
+  },
+  {
+    "name": "stop_ecs_task",
+    "description": "Stop ECS task. See skills/aws/ecs/stop-task.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "clusterName": {
+          "type": "string"
+        },
+        "taskArn": {
+          "type": "string"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "clusterName",
+        "taskArn"
+      ]
+    }
+  },
+  {
+    "name": "stop_insights_query",
+    "description": "Stop CloudWatch Insights query. See skills/aws/cloudwatch/insights-stop.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "queryId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "queryId"
+      ]
+    }
+  },
+  {
+    "name": "update_ecs_service",
+    "description": "Update ECS service. See skills/aws/ecs/update-service.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "clusterName": {
+          "type": "string"
+        },
+        "serviceName": {
+          "type": "string"
+        },
+        "desiredCount": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        },
+        "taskDefinition": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "clusterName",
+        "serviceName"
+      ]
+    }
+  }
+]
