@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Microsoft.Extensions.Logging;
 using OpenQA.Selenium;
 using SeleniumChrome.Core.Models;
+using SeleniumChrome.Core.Services;
 
 namespace SeleniumChrome.Core.Services.Scrapers;
 
@@ -449,7 +450,7 @@ public class BuiltInScraper(ILogger<BuiltInScraper> logger) : BaseJobScraper(log
         {
             Screenshot screenshot = ((ITakesScreenshot)Driver!).GetScreenshot();
             var fileName = $"debug_{context}_{DateTime.Now:yyyyMMdd_HHmmss}.png";
-            string filePath = Path.Combine("Screenshots", fileName);
+            string filePath = ScreenshotStore.PathFor(fileName);
             screenshot.SaveAsFile(filePath);
             Logger.LogInformation($"Debug screenshot saved: {filePath}");
         }
