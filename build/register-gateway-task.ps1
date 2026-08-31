@@ -24,15 +24,19 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
 $publishRoot = Join-Path $repoRoot "deploy\_gateway\$Version"
-$assembly = Join-Path $publishRoot 'McpGateway.dll'
 
-if (-not (Test-Path $assembly)) {
+# The apphost, not `dotnet McpGateway.dll`. dotnet.exe is a console-subsystem binary, so launching
+# through it produces a console window no matter what the app is built as -- and closing that
+# window kills the gateway outright (CTRL_CLOSE_EVENT -> 0xC000013A). McpGateway is built WinExe,
+# so running its apphost directly allocates no console at all.
+$executable = Join-Path $publishRoot 'McpGateway.exe'
+
+if (-not (Test-Path $executable)) {
     throw "No gateway published at $publishRoot. Run publish-gateway.ps1 first."
 }
 
 $action = New-ScheduledTaskAction `
-    -Execute 'dotnet' `
-    -Argument "`"$assembly`"" `
+    -Execute $executable `
     -WorkingDirectory $repoRoot
 
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME

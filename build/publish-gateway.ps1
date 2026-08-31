@@ -33,7 +33,9 @@ Write-Host "Publishing gateway -> $output"
 dotnet publish $project -c $Configuration -o $output --artifacts-path $artifacts --nologo -v quiet
 if ($LASTEXITCODE -ne 0) { throw 'Gateway publish failed.' }
 
-$assembly = Join-Path $output 'McpGateway.dll'
-if (-not (Test-Path $assembly)) { throw "Publish produced no McpGateway.dll at $output." }
+# The apphost is what the task runs, so it is what must exist -- checking only the dll would let a
+# publish that somehow skipped the apphost register a task that cannot start.
+$executable = Join-Path $output 'McpGateway.exe'
+if (-not (Test-Path $executable)) { throw "Publish produced no McpGateway.exe at $output." }
 
 Write-Output $version

@@ -108,7 +108,7 @@ if ($previous) {
             throw "Port $port is still bound after ${StopTimeoutSeconds}s and its owner could not be identified. Nothing has been repointed; $previous is still registered."
         }
 
-        if ($owner.CommandLine -notmatch 'McpGateway\.dll') {
+        if ($owner.CommandLine -notmatch 'McpGateway\.(exe|dll)') {
             throw "Port $port is held by pid $($owner.ProcessId) ($($owner.Name)), which is not a gateway: $($owner.CommandLine). Nothing has been repointed; $previous is still registered."
         }
 
@@ -152,8 +152,12 @@ if ($null -eq $servers) {
 
 # 5. Prove it is the NEW build answering. A gateway that never died, or a Task Scheduler restart of
 #    the old action, would answer step 4 just as happily.
-$expected = Join-Path $repoRoot "deploy\_gateway\$version\McpGateway.dll"
-$running = @(Get-CimInstance Win32_Process -Filter "Name = 'dotnet.exe'" |
+$expected = Join-Path $repoRoot "deploy\_gateway\$version\McpGateway.exe"
+
+# Matched on command line rather than process name: the gateway is McpGateway.exe now, but a
+# version published before the WinExe change still runs as dotnet.exe, and a rollback onto one of
+# those has to stay verifiable.
+$running = @(Get-CimInstance Win32_Process |
     Where-Object { $_.CommandLine -and $_.CommandLine.Contains($expected) })
 
 if ($running.Count -eq 0) {
