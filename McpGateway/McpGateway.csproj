@@ -2,6 +2,18 @@
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
+        <!--
+          WinExe, not Exe. The gateway is a background service: it logs to Serilog files and has
+          nothing to say on a console. Left as Exe it gets a console window whenever Task Scheduler
+          starts it with an interactive token, and closing that window sends CTRL_CLOSE_EVENT,
+          which terminates the gateway as 0xC000013A with no chance to shut down, taking every
+          backend with it via the job object. That cost a long hunt: the exit looked spontaneous
+          because it depended on when someone noticed the window.
+          This only helps if the apphost is launched directly. `dotnet McpGateway.dll` gets its
+          console from dotnet.exe, which is console-subsystem regardless, so the task runs
+          McpGateway.exe.
+        -->
+        <OutputType>WinExe</OutputType>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>McpGateway</RootNamespace>

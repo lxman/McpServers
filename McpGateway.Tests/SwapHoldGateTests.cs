@@ -55,6 +55,7 @@ public sealed class SwapHoldGateTests : IAsyncDisposable
                 ManifestPath = manifestPath,
                 TokenPath = Path.Combine(_root, "token"),
                 LiveRegistryPath = Path.Combine(_root, "live"),
+                LogPath = Path.Combine(_root, "logs", "gateway-.log"),
                 StatePath = statePath,
                 RepoRoot = _root
             },

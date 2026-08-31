@@ -59,6 +59,7 @@ public sealed class GatewayStartupReconciliationTests : IDisposable
         ManifestPath = Path.Combine(_root, "servers.json"),
         TokenPath = Path.Combine(_root, "token"),
         LiveRegistryPath = LivePath,
+        LogPath = Path.Combine(_root, "logs", "gateway-.log"),
         StatePath = TestState.Write(_root, ("demo", "v-one")),
         RepoRoot = _root,
         Url = "http://127.0.0.1:0"

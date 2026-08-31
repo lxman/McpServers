@@ -59,6 +59,7 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
                 ManifestPath = manifestPath,
                 TokenPath = Path.Combine(_root, "token"),
                 LiveRegistryPath = _liveRoot,
+                LogPath = Path.Combine(_root, "logs", "gateway-.log"),
                 StatePath = _statePath,
                 RepoRoot = _root
             },
