@@ -41,6 +41,7 @@ public sealed class PruneVersionsTests : IAsyncDisposable
                 ManifestPath = manifestPath,
                 TokenPath = Path.Combine(_root, "token"),
                 LiveRegistryPath = Path.Combine(_root, "live"),
+                LogPath = Path.Combine(_root, "logs", "gateway-.log"),
                 StatePath = TestState.Write(_root, ("prunable", "v-two")),
                 RepoRoot = _root
             },

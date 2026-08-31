@@ -42,6 +42,14 @@ public sealed record GatewayBuildOptions
     /// </summary>
     public string? InstanceMutexName { get; init; }
 
+    /// <summary>
+    /// Where this gateway's Serilog file sink writes. Required for the same reason as
+    /// LiveRegistryPath and StatePath: it was once hardcoded to the machine-wide path, so every
+    /// test that built a gateway wrote into the live gateway's log -- which is the one file a real
+    /// incident has to be diagnosed from.
+    /// </summary>
+    public required string LogPath { get; init; }
+
     public string Url { get; init; } = "http://127.0.0.1:7300";
 }
 
@@ -59,6 +67,9 @@ public static class GatewayApp
         StatePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "McpGateway", "state.json"),
+        LogPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "McpServers", "logs", "gateway", "gateway-.log"),
         RepoRoot = repoRoot
     };
 
@@ -66,11 +77,14 @@ public static class GatewayApp
         GatewayBuildOptions options,
         Action<IServiceCollection>? configureServices = null)
     {
-        Log.Logger = McpLoggingExtensions.SetupMcpLogging(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "McpServers", "logs", "gateway", "gateway-.log"));
+        // A local, deliberately not Serilog's static Log.Logger. In production one process builds
+        // one gateway and the difference is invisible, but the test suite builds many in parallel:
+        // a shared static means one gateway's records can land in another's sink, and that sink can
+        // be disposed out from under a gateway still using it. Nothing else in the gateway reads
+        // the static, so there is nothing to keep in sync.
+        var logger = McpLoggingExtensions.SetupMcpLogging(options.LogPath);
 
-        var bootstrapLoggers = new SerilogLoggerFactory(Log.Logger, dispose: false);
+        var bootstrapLoggers = new SerilogLoggerFactory(logger, dispose: false);
 
         // First, before the registry is read and before anything is constructed: reconciliation
         // cannot distinguish an orphan from a running gateway's live backend, so a second gateway
@@ -94,7 +108,11 @@ public static class GatewayApp
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls(options.Url);
         builder.Logging.ClearProviders();
-        builder.Logging.AddSerilog(Log.Logger, dispose: false);
+        // dispose: true so the app owns the file sink. On the real gateway that just means the
+        // log is flushed and closed on shutdown. In tests it is what lets a class delete its own
+        // temp root: the sink holds the log file open, and the root is deleted right after the app
+        // is disposed.
+        builder.Logging.AddSerilog(logger, dispose: true);
 
         string token = TokenStore.GetOrCreate(options.TokenPath);
 

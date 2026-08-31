@@ -39,6 +39,7 @@ public sealed class AdminEndpointTests : IAsyncLifetime
             ManifestPath = manifestPath,
             TokenPath = Path.Combine(_root, "token"),
             LiveRegistryPath = Path.Combine(_root, "live"),
+            LogPath = Path.Combine(_root, "logs", "gateway-.log"),
             StatePath = TestState.Write(_root, ("demo", "v-one")),
             RepoRoot = _root,
             Url = "http://127.0.0.1:0"

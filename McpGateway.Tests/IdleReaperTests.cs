@@ -56,6 +56,7 @@ public sealed class IdleReaperTests : IAsyncDisposable
                 ManifestPath = manifestPath,
                 TokenPath = Path.Combine(_root, "token"),
                 LiveRegistryPath = Path.Combine(_root, "live"),
+                LogPath = Path.Combine(_root, "logs", "gateway-.log"),
                 StatePath = _statePath,
                 RepoRoot = _root
             },

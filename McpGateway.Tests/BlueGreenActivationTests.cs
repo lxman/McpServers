@@ -45,6 +45,7 @@ public sealed class BlueGreenActivationTests : IAsyncDisposable
                 ManifestPath = manifestPath,
                 TokenPath = Path.Combine(_root, "token"),
                 LiveRegistryPath = Path.Combine(_root, "live"),
+                LogPath = Path.Combine(_root, "logs", "gateway-.log"),
                 StatePath = TestState.Write(_root, ("overlaps", "v-one")),
                 RepoRoot = _root
             },
