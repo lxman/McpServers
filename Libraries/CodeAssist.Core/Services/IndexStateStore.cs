@@ -217,15 +217,26 @@ public sealed class IndexStateStore(
         }
     }
 
-    public void Delete(string repositoryName)
+    /// <summary>
+    /// Remove a repository's state file.
+    /// </summary>
+    /// <remarks>
+    /// Takes the write lock for the same reason <see cref="LoadAsync"/> does: this method reads the
+    /// file before deleting it, and on Windows a reader holding the path open is enough to fail a
+    /// concurrent <see cref="WriteAtomicAsync"/> move.
+    /// </remarks>
+    public async Task DeleteAsync(string repositoryName, CancellationToken cancellationToken = default)
     {
         string path = GetStatePath(repositoryName);
 
+        await _writeLock.WaitAsync(cancellationToken);
         try
         {
             if (!File.Exists(path)) return;
 
-            IndexStateFile? state = JsonSerializer.Deserialize<IndexStateFile>(File.ReadAllText(path));
+            IndexStateFile? state = JsonSerializer.Deserialize<IndexStateFile>(
+                await File.ReadAllTextAsync(path, cancellationToken));
+
             ValidateRepositoryName(repositoryName, state);
             File.Delete(path);
         }
@@ -236,6 +247,10 @@ public sealed class IndexStateStore(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to delete index state at {Path}", path);
+        }
+        finally
+        {
+            _writeLock.Release();
         }
     }
 

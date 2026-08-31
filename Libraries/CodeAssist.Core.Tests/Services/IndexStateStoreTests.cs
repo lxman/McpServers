@@ -154,7 +154,8 @@ public class IndexStateStoreTests : IDisposable
             RepositoryName = "My-Repo"
         }, TestContext.Current.CancellationToken);
 
-        Assert.Throws<InvalidOperationException>(() => store.Delete("My_Repo"));
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => store.DeleteAsync("My_Repo", TestContext.Current.CancellationToken));
         Assert.True(File.Exists(store.GetStatePath("My-Repo")));
     }
 
@@ -173,11 +174,11 @@ public class IndexStateStoreTests : IDisposable
     }
 
     [Fact]
-    public void Delete_DoesNotThrowWhenTheStateFileIsAbsent()
+    public async Task Delete_DoesNotThrowWhenTheStateFileIsAbsent()
     {
         IndexStateStore store = MakeStore();
 
-        store.Delete("neverindexed");
+        await store.DeleteAsync("neverindexed", TestContext.Current.CancellationToken);
     }
 
     [Fact]
@@ -192,7 +193,7 @@ public class IndexStateStoreTests : IDisposable
 
         using (File.Open(store.GetStatePath("MyRepo"), FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-            store.Delete("MyRepo");
+            await store.DeleteAsync("MyRepo", TestContext.Current.CancellationToken);
         }
     }
 

@@ -408,7 +408,7 @@ public sealed class RepositoryIndexer(
         string collectionName = SanitizeCollectionName(repositoryName);
         await qdrantService.DeleteCollectionAsync(collectionName, cancellationToken);
 
-        indexStateStore.Delete(repositoryName);
+        await indexStateStore.DeleteAsync(repositoryName, cancellationToken);
 
         logger.LogInformation("Deleted index for repository {Repository}", repositoryName);
     }
