@@ -34,10 +34,15 @@ function Get-RegisteredVersion {
     try { $task = Get-ScheduledTask -TaskName $Name -ErrorAction Stop }
     catch { return $null }
 
-    $argument = $task.Actions[0].Arguments
-    if (-not $argument) { return $null }
+    # The action is the apphost now (Execute, no Arguments). It used to be `dotnet <dll>`, where
+    # the path lived in Arguments -- and a rollback onto one of those versions still looks like
+    # that. Reading only Arguments made this return null for every current task, which silently
+    # skipped the whole stop step and left the old gateway holding the port.
+    $action = $task.Actions[0]
+    $path = if ($action.Arguments) { $action.Arguments.Trim('"') } else { $action.Execute }
+    if (-not $path) { return $null }
 
-    return Split-Path -Leaf (Split-Path -Parent $argument.Trim('"'))
+    return Split-Path -Leaf (Split-Path -Parent $path)
 }
 
 function Test-PortBound {
