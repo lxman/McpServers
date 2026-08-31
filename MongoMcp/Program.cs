@@ -1,29 +1,21 @@
 using Mcp.ResponseGuard.Configuration;
 using Mcp.ResponseGuard.Services;
+using Mcp.Hosting.Core;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ModelContextProtocol.AspNetCore;
 using MongoMcp.McpTools;
 using MongoServer.Core;
 using MongoServer.Core.Services;
 using Serilog;
-using SerilogFileWriter;
-
-// Configure Serilog to write to a file (stdout is reserved for MCP protocol)
-string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "mongo-mcp-.log");
-Log.Logger = McpLoggingExtensions.SetupMcpLogging(logPath);
 
 try
 {
-    // Create builder WITHOUT default logging to prevent console output
-    var builder = new HostApplicationBuilder(new HostApplicationBuilderSettings
-    {
-        Args = args,
-        DisableDefaults = true  // This prevents default console logging
-    });
-    
-    builder.Logging.ClearProviders();
-    builder.Logging.AddSerilog(Log.Logger, dispose: false);
+    // Logging, the loopback listener and the gateway's port-file contract all live in McpHttpHost,
+    // which clears the logging providers and installs Serilog. The DisableDefaults dance that used
+    // to keep console output off stdout went with the stdio transport that needed it.
+    WebApplicationBuilder builder = McpHttpHost.CreateBuilder(args, "mongo");
 
     // Register MongoServer.Core services
     builder.Services.AddSingleton<MongoDbService>();
@@ -39,19 +31,20 @@ try
         sp.GetRequiredService<ILogger<OutputGuard>>(),
         new OutputGuardOptions { SafeTokenLimit = 15_000 }));
 
-    // Configure MCP Server with all tool classes
-    builder.Services.AddMcpServer()
-        .WithStdioServerTransport()
+    builder.Services
+        .AddMcpServer()
+        .WithHttpTransport(o => o.SessionMode = HttpServerSessionMode.StatefulForInitializeClients)
         .WithTools<ConnectionTools>()
         .WithTools<DatabaseTools>()
         .WithTools<CollectionTools>()
         .WithTools<AdvancedTools>()
         .WithTools<CrossServerTools>();
 
-    IHost host = builder.Build();
+    WebApplication app = builder.Build();
+    app.MapMcpHost();
 
     Log.Information("MongoMcp starting...");
-    await host.RunAsync();
+    await app.RunAsync();
 }
 catch (Exception ex)
 {

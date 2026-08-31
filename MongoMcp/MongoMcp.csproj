@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -15,10 +15,12 @@
         <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions"  />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"  />
         <PackageReference Include="ModelContextProtocol"  />
+        <PackageReference Include="ModelContextProtocol.AspNetCore" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Libraries\MongoServer.Core\MongoServer.Core.csproj" />
+      <ProjectReference Include="..\Libraries\Mcp.Hosting.Core\Mcp.Hosting.Core.csproj" />
       <ProjectReference Include="..\Libraries\Mcp.ResponseGuard\Mcp.ResponseGuard.csproj" />
       <ProjectReference Include="..\Libraries\SerilogFileWriter\SerilogFileWriter.csproj" />
     </ItemGroup>

@@ -1,0 +1,636 @@
+[
+  {
+    "name": "aggregate",
+    "description": "Execute MongoDB aggregation pipeline. See skills/mongo/advanced/aggregate.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "collectionName": {
+          "type": "string"
+        },
+        "pipelineJson": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName",
+        "collectionName",
+        "pipelineJson"
+      ]
+    }
+  },
+  {
+    "name": "bulk_transfer",
+    "description": "Bulk transfer collections from source to target server. See skills/mongo/cross-server/bulk-transfer.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sourceServer": {
+          "type": "string"
+        },
+        "targetServer": {
+          "type": "string"
+        },
+        "collectionNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dryRun": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "required": [
+        "sourceServer",
+        "targetServer",
+        "collectionNames"
+      ]
+    }
+  },
+  {
+    "name": "compare_collections",
+    "description": "Compare collections across two MongoDB servers. See skills/mongo/cross-server/compare-collections.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "server1": {
+          "type": "string"
+        },
+        "server2": {
+          "type": "string"
+        },
+        "collectionName": {
+          "type": "string"
+        },
+        "filterJson": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "server1",
+        "server2",
+        "collectionName"
+      ]
+    }
+  },
+  {
+    "name": "connect_to_server",
+    "description": "Connect to MongoDB server. See skills/mongo/connection/connect-to-server.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "connectionString": {
+          "type": "string"
+        },
+        "databaseName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName",
+        "connectionString",
+        "databaseName"
+      ]
+    }
+  },
+  {
+    "name": "connect_with_profile",
+    "description": "Connect to MongoDB using a saved profile. See skills/mongo/connection/connect-with-profile.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "profileName"
+      ]
+    }
+  },
+  {
+    "name": "count_documents",
+    "description": "Count documents in a collection. See skills/mongo/advanced/count-documents.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "collectionName": {
+          "type": "string"
+        },
+        "filterJson": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "serverName",
+        "collectionName"
+      ]
+    }
+  },
+  {
+    "name": "create_index",
+    "description": "Create an index on a collection. See skills/mongo/advanced/create-index.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "collectionName": {
+          "type": "string"
+        },
+        "indexJson": {
+          "type": "string"
+        },
+        "indexName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "serverName",
+        "collectionName",
+        "indexJson"
+      ]
+    }
+  },
+  {
+    "name": "cross_server_query",
+    "description": "Execute query across multiple MongoDB servers. See skills/mongo/cross-server/cross-server-query.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "collectionName": {
+          "type": "string"
+        },
+        "filterJson": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "limitPerServer": {
+          "type": "integer",
+          "default": 50
+        }
+      },
+      "required": [
+        "serverNames",
+        "collectionName"
+      ]
+    }
+  },
+  {
+    "name": "delete_many",
+    "description": "Delete multiple documents from a collection. See skills/mongo/collection/delete-many.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "collectionName": {
+          "type": "string"
+        },
+        "filterJson": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName",
+        "collectionName",
+        "filterJson"
+      ]
+    }
+  },
+  {
+    "name": "delete_one",
+    "description": "Delete a single document from a collection. See skills/mongo/collection/delete-one.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "collectionName": {
+          "type": "string"
+        },
+        "filterJson": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName",
+        "collectionName",
+        "filterJson"
+      ]
+    }
+  },
+  {
+    "name": "disconnect_from_server",
+    "description": "Disconnect from MongoDB server. See skills/mongo/connection/disconnect-from-server.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName"
+      ]
+    }
+  },
+  {
+    "name": "drop_collection",
+    "description": "Drop a collection from the database. See skills/mongo/advanced/drop-collection.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "collectionName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName",
+        "collectionName"
+      ]
+    }
+  },
+  {
+    "name": "execute_command",
+    "description": "Execute a MongoDB database command. See skills/mongo/advanced/execute-command.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName",
+        "command"
+      ]
+    }
+  },
+  {
+    "name": "execute_on_all_servers",
+    "description": "Execute a MongoDB command on all connected servers. See skills/mongo/cross-server/execute-on-all-servers.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "command"
+      ]
+    }
+  },
+  {
+    "name": "get_auto_connect_status",
+    "description": "Get MongoDB auto-connect configuration status. See skills/mongo/connection/get-autoconnect-status.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_current_database_info",
+    "description": "Get information about the current database. See skills/mongo/database/get-current-database-info.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName"
+      ]
+    }
+  },
+  {
+    "name": "get_health_dashboard",
+    "description": "Get health status of all connected MongoDB servers. See skills/mongo/cross-server/get-health-dashboard.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_server_status",
+    "description": "Get MongoDB server connection status. See skills/mongo/connection/get-server-status.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName"
+      ]
+    }
+  },
+  {
+    "name": "insert_many",
+    "description": "Insert multiple documents into a collection. See skills/mongo/collection/insert-many.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "collectionName": {
+          "type": "string"
+        },
+        "documentsJson": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName",
+        "collectionName",
+        "documentsJson"
+      ]
+    }
+  },
+  {
+    "name": "insert_one",
+    "description": "Insert a single document into a collection. See skills/mongo/collection/insert-one.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "collectionName": {
+          "type": "string"
+        },
+        "documentJson": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName",
+        "collectionName",
+        "documentJson"
+      ]
+    }
+  },
+  {
+    "name": "list_active_connections",
+    "description": "List all active MongoDB connections. See skills/mongo/connection/list-active-connections.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_collections_by_database",
+    "description": "List all collections in a specific database. See skills/mongo/database/list-collections-by-database.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "databaseName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName",
+        "databaseName"
+      ]
+    }
+  },
+  {
+    "name": "list_connection_profiles",
+    "description": "List available MongoDB connection profiles. See skills/mongo/connection/list-connection-profiles.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_databases",
+    "description": "List all databases on a MongoDB server. See skills/mongo/database/list-databases.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName"
+      ]
+    }
+  },
+  {
+    "name": "ping_server",
+    "description": "Ping MongoDB server to check connectivity. See skills/mongo/connection/ping-server.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName"
+      ]
+    }
+  },
+  {
+    "name": "query",
+    "description": "Query documents from a collection. See skills/mongo/collection/query.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "collectionName": {
+          "type": "string"
+        },
+        "filterJson": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "default": 100
+        },
+        "skip": {
+          "type": "integer",
+          "default": 0
+        }
+      },
+      "required": [
+        "serverName",
+        "collectionName",
+        "filterJson"
+      ]
+    }
+  },
+  {
+    "name": "set_default_server",
+    "description": "Set default MongoDB server. See skills/mongo/connection/set-default-server.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName"
+      ]
+    }
+  },
+  {
+    "name": "switch_database",
+    "description": "Switch to a different database on a MongoDB server. See skills/mongo/database/switch-database.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "databaseName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName",
+        "databaseName"
+      ]
+    }
+  },
+  {
+    "name": "sync_data",
+    "description": "Sync data from source to target MongoDB server. See skills/mongo/cross-server/sync-data.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sourceServer": {
+          "type": "string"
+        },
+        "targetServer": {
+          "type": "string"
+        },
+        "collectionName": {
+          "type": "string"
+        },
+        "filterJson": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "dryRun": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "required": [
+        "sourceServer",
+        "targetServer",
+        "collectionName"
+      ]
+    }
+  },
+  {
+    "name": "update_many",
+    "description": "Update multiple documents in a collection. See skills/mongo/collection/update-many.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "collectionName": {
+          "type": "string"
+        },
+        "filterJson": {
+          "type": "string"
+        },
+        "updateJson": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName",
+        "collectionName",
+        "filterJson",
+        "updateJson"
+      ]
+    }
+  },
+  {
+    "name": "update_one",
+    "description": "Update a single document in a collection. See skills/mongo/collection/update-one.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverName": {
+          "type": "string"
+        },
+        "collectionName": {
+          "type": "string"
+        },
+        "filterJson": {
+          "type": "string"
+        },
+        "updateJson": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "serverName",
+        "collectionName",
+        "filterJson",
+        "updateJson"
+      ]
+    }
+  }
+]
