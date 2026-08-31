@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using McpGateway.Supervision;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.AspNetCore.Builder;
 using Xunit;
 
@@ -68,7 +69,7 @@ public sealed class GatewayStartupReconciliationTests : IDisposable
     {
         Process orphan = StartHarmlessProcess();
 
-        new LiveBackendRegistry(LivePath, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance)
+        new LiveBackendRegistry(LivePath, NullLogger.Instance)
             .Record(new LiveBackendRecord(
                 "demo", "", "v-one", orphan.Id, 51000, new DateTimeOffset(orphan.StartTime)));
 
@@ -85,7 +86,7 @@ public sealed class GatewayStartupReconciliationTests : IDisposable
     {
         Process innocent = StartHarmlessProcess();
 
-        new LiveBackendRegistry(LivePath, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance)
+        new LiveBackendRegistry(LivePath, NullLogger.Instance)
             .Record(new LiveBackendRecord(
                 "demo", "", "v-one", innocent.Id, 51000,
                 new DateTimeOffset(innocent.StartTime).AddHours(-1)));
@@ -94,6 +95,68 @@ public sealed class GatewayStartupReconciliationTests : IDisposable
 
         innocent.Refresh();
         Assert.False(innocent.HasExited, "gateway startup killed a process it had not started");
+    }
+
+    /// <summary>
+    /// Reconciliation cannot tell an orphan from a live backend of a gateway that is still running:
+    /// both are records naming a live process whose start time matches. So a second gateway must be
+    /// refused before it reads the registry at all -- otherwise starting one by hand, or Task
+    /// Scheduler restarting one while the first is still exiting, destroys a live backend and then
+    /// dies on the port anyway.
+    /// </summary>
+    [Fact]
+    public async Task Build_Refuses_WhenAnotherGatewayIsRunning()
+    {
+        await using WebApplication running = BuildGateway();
+
+        InvalidOperationException refusal =
+            Assert.Throws<InvalidOperationException>(() => BuildGateway());
+
+        Assert.Contains("already running", refusal.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Separate from the refusal test on purpose: if both lived together, an Assert.Throws that
+    /// fails first would mask the assertion that actually matters -- whether the live backend
+    /// survived. Here the refusal is swallowed so the survival check always runs.
+    /// </summary>
+    [Fact]
+    public async Task Build_ReconcilesNothing_WhenItIsRefused()
+    {
+        await using WebApplication running = BuildGateway();
+
+        // Recorded only after the first gateway has taken the guard, so it stands in for a backend
+        // the *running* gateway owns rather than an orphan. Reconciliation cannot tell them apart.
+        Process live = StartHarmlessProcess();
+
+        new LiveBackendRegistry(LivePath, NullLogger.Instance)
+            .Record(new LiveBackendRecord(
+                "demo", "", "v-one", live.Id, 51000, new DateTimeOffset(live.StartTime)));
+
+        try
+        {
+            await using WebApplication second = BuildGateway();
+        }
+        catch (InvalidOperationException)
+        {
+            // Expected; asserted on by the test above.
+        }
+
+        live.Refresh();
+
+        Assert.False(live.HasExited,
+            "the second gateway reconciled the running gateway's live backend and killed it");
+
+        Assert.Single(Directory.GetFiles(LivePath, "*.json"));
+    }
+
+    /// <summary>Once the first gateway is gone, the name is free again.</summary>
+    [Fact]
+    public async Task Build_Succeeds_AfterTheRunningGatewayIsDisposed()
+    {
+        await using (WebApplication first = BuildGateway()) { }
+
+        await using WebApplication second = BuildGateway();
     }
 
     public void Dispose()

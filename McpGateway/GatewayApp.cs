@@ -35,6 +35,13 @@ public sealed record GatewayBuildOptions
     /// </summary>
     public required string StatePath { get; init; }
 
+    /// <summary>
+    /// Name of the single-instance mutex. Null derives one from <see cref="LiveRegistryPath"/>,
+    /// which is what it actually protects -- so tests pointed at their own registry get their own
+    /// name for free, and two real gateways sharing the machine-wide registry collide as intended.
+    /// </summary>
+    public string? InstanceMutexName { get; init; }
+
     public string Url { get; init; } = "http://127.0.0.1:7300";
 }
 
@@ -63,6 +70,27 @@ public static class GatewayApp
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "McpServers", "logs", "gateway", "gateway-.log"));
 
+        var bootstrapLoggers = new SerilogLoggerFactory(Log.Logger, dispose: false);
+
+        // First, before the registry is read and before anything is constructed: reconciliation
+        // cannot distinguish an orphan from a running gateway's live backend, so a second gateway
+        // must be refused rather than allowed to kill the first one's work. Held for the process
+        // lifetime -- it is registered below so DI releases it on shutdown.
+        SingleInstanceGuard instanceGuard = SingleInstanceGuard.Acquire(
+            options.InstanceMutexName ?? SingleInstanceGuard.NameFor(options.LiveRegistryPath),
+            bootstrapLoggers.CreateLogger<SingleInstanceGuard>());
+
+        // Before anything is served. A gateway that was killed rather than shut down leaves its
+        // backends running, and Task Scheduler's RestartCount brings a fresh gateway up beside
+        // them -- two instances of code-assist writing the same machine-wide index. The job object
+        // in ProcessBackendLauncher normally prevents that; this catches what it cannot, including
+        // orphans left by a run from before the job object existed.
+        var liveBackends = new LiveBackendRegistry(
+            options.LiveRegistryPath,
+            bootstrapLoggers.CreateLogger<LiveBackendRegistry>());
+
+        liveBackends.Reconcile();
+
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls(options.Url);
         builder.Logging.ClearProviders();
@@ -75,18 +103,7 @@ public static class GatewayApp
         // has it talk to a backend port directly and skip the gateway entirely.
         BackendToken backendToken = BackendToken.Mint();
 
-        // Before anything is served. A gateway that was killed rather than shut down leaves its
-        // backends running, and Task Scheduler's RestartCount brings a fresh gateway up beside
-        // them -- two instances of code-assist writing the same machine-wide index. The job object
-        // in ProcessBackendLauncher normally prevents that; this catches what it cannot, including
-        // orphans left by a run from before the job object existed.
-        var liveBackends = new LiveBackendRegistry(
-            options.LiveRegistryPath,
-            new SerilogLoggerFactory(Log.Logger, dispose: false)
-                .CreateLogger<LiveBackendRegistry>());
-
-        liveBackends.Reconcile();
-
+        builder.Services.AddSingleton(_ => instanceGuard);
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton(backendToken);
         builder.Services.AddSingleton(liveBackends);
@@ -120,12 +137,24 @@ public static class GatewayApp
 
         WebApplication app = builder.Build();
 
+        // Realized eagerly, and registered through a factory rather than as a bare instance, so
+        // the container takes ownership of releasing it. An instance-registered singleton that is
+        // never resolved is never disposed -- and this one has to be released when the app is
+        // disposed even if the app was built and thrown away without ever being started.
+        app.Services.GetRequiredService<SingleInstanceGuard>();
+
         app.UseMiddleware<BearerAuthMiddleware>(token);
 
         app.MapAdminEndpoints();
 
-        app.MapPost("/{server}/mcp", (HttpContext ctx, McpForwarder fwd, string server) =>
-            fwd.ForwardAsync(ctx, server, "/mcp"));
+        // All three verbs the streamable-HTTP transport uses: POST for requests, GET for the
+        // server-to-client SSE stream, DELETE to close a session. Claude Code negotiates
+        // 2026-07-28 and is stateless, so it should only ever POST -- but Claude Desktop's
+        // negotiated revision is unknown and a legacy client on the handshake path needs GET, and
+        // both are about to be pointed at this. Mapping only POST 404s them at the gateway.
+        app.MapMethods("/{server}/mcp", ["GET", "POST", "DELETE"],
+            (HttpContext ctx, McpForwarder fwd, string server) =>
+                fwd.ForwardAsync(ctx, server, "/mcp"));
 
         app.MapGet("/{server}/health", (HttpContext ctx, McpForwarder fwd, string server) =>
             fwd.ForwardAsync(ctx, server, "/health"));

@@ -68,8 +68,22 @@ public sealed class BackendSupervisor(
                 // /admin/servers and to the reaper.
                 if (hold is null)
                 {
+                    // Resolved HERE, not in the Lazy factory. Evaluated inside the factory it
+                    // throws synchronously, and Lazy<T> in ExecutionAndPublication mode caches a
+                    // factory exception for the life of the object -- while the recovery path
+                    // below is defeated by its own guard, because `entry.Value.IsFaulted`
+                    // re-accesses Value and rethrows before RemoveIfSame can run. The entry would
+                    // be poisoned until the gateway process restarted. That is not hypothetical:
+                    // code-assist is eagerStart, the first start after a cutover happens before
+                    // any version is recorded, and deploy.ps1's activation swaps nothing (there is
+                    // no live backend) so it never displaces the poisoned entry either.
+                    //
+                    // Throwing from here instead propagates out of the try, releases the gate in
+                    // the finally, and leaves no pool entry behind at all.
+                    string version = RequireActiveVersion(key.Server);
+
                     entry = _pool.GetOrAdd(key, k => new Lazy<Task<BackendInstance>>(
-                        () => StartAsync(k, RequireActiveVersion(k.Server), CancellationToken.None)));
+                        () => StartAsync(k, version, CancellationToken.None)));
                 }
             }
             finally

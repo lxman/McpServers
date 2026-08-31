@@ -15,12 +15,19 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
 
     /// <summary>
     /// Outside _root on purpose. In production the live registry lives under %LOCALAPPDATA%, not in
-    /// the repo, and one test here deletes _root wholesale to make the manifest write fail -- a
-    /// registry inside it would re-create the directory on its next write and quietly un-break the
-    /// very failure that test is inducing.
+    /// the repo, and one test here induces a failure by making the state file unwritable -- a
+    /// registry inside the same directory would keep re-creating it.
     /// </summary>
     private readonly string _liveRoot = Path.Combine(
         Path.GetTempPath(), "mcp-holdswap-live-" + Guid.NewGuid().ToString("N"));
+
+    /// <summary>
+    /// Its own directory, separate from _liveRoot. LiveBackendRegistry.Read globs *.json, so a
+    /// state.json sitting beside the pid records would deserialize into a bogus LiveBackendRecord
+    /// -- harmless while nothing here reconciles, and a trap for whoever adds a test that does.
+    /// </summary>
+    private readonly string _stateRoot = Path.Combine(
+        Path.GetTempPath(), "mcp-holdswap-state-" + Guid.NewGuid().ToString("N"));
 
     private readonly string _statePath;
 
@@ -43,7 +50,7 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
         }
         """);
 
-        _statePath = TestState.Write(_liveRoot, ("exclusive", "v-one"));
+        _statePath = TestState.Write(_stateRoot, ("exclusive", "v-one"));
         _manifest = ManifestStore.Load(manifestPath, _statePath);
         _supervisor = new BackendSupervisor(
             _manifest, _launcher, new HealthProbe(new HttpClient(), BackendToken.Mint()),
@@ -224,7 +231,7 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
     {
         await _supervisor.DisposeAsync();
 
-        foreach (string directory in new[] { _root, _liveRoot })
+        foreach (string directory in new[] { _root, _liveRoot, _stateRoot })
         {
             try { Directory.Delete(directory, recursive: true); }
             catch (DirectoryNotFoundException) { }

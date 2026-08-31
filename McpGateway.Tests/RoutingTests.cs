@@ -129,6 +129,30 @@ public sealed class RoutingTests : IAsyncLifetime
         Assert.Contains("trace=abc123", body);
     }
 
+    /// <summary>
+    /// DELETE /mcp closes a session in the streamable-HTTP transport. Asserting on the method the
+    /// backend actually saw, not merely on a non-404: YARP is documented to preserve the method,
+    /// but "documented" is not the same as "checked on this path with this transformer".
+    /// </summary>
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("DELETE")]
+    public async Task McpRoute_ForwardsEveryTransportVerb_WithTheMethodIntact(string method)
+    {
+        var request = new HttpRequestMessage(new HttpMethod(method), "/shared-demo/mcp");
+        request.Headers.Add("X-Mcp-Client", "code");
+
+        HttpResponseMessage response = await _client.SendAsync(
+            request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        string body = await response.Content.ReadAsStringAsync(
+            TestContext.Current.CancellationToken);
+
+        Assert.Contains($"\"method\":\"{method}\"", body);
+    }
+
     [Fact]
     public async Task UnknownServer_Is404()
     {
@@ -165,6 +189,33 @@ public sealed class RoutingTests : IAsyncLifetime
 
         Assert.Contains("no active version recorded", body, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, _launcher.StartCount);
+    }
+
+    /// <summary>
+    /// The recovery path, and the reason a single-request test cannot stand in for it: a second
+    /// request against a still-undeployed server returns the same correct-looking 503 whether the
+    /// pool entry was poisoned or never created. Only activating in between separates them.
+    /// </summary>
+    [Fact]
+    public async Task ServerWithNoRecordedVersion_Starts_OnceAVersionIsActivated()
+    {
+        HttpResponseMessage before = await PostMcpAsync("undeployed", "code");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, before.StatusCode);
+
+        HttpResponseMessage activated = await _client.PostAsJsonAsync(
+            "/admin/servers/undeployed/activate",
+            new { version = "v-first" },
+            TestContext.Current.CancellationToken);
+
+        activated.EnsureSuccessStatusCode();
+
+        HttpResponseMessage after = await PostMcpAsync("undeployed", "code");
+
+        string body = await after.Content.ReadAsStringAsync(
+            TestContext.Current.CancellationToken);
+
+        Assert.True(after.StatusCode == HttpStatusCode.OK,
+            $"the failed first request left the pool entry poisoned: {after.StatusCode} {body}");
     }
 
     [Fact]

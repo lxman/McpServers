@@ -106,9 +106,12 @@ public sealed class FakeBackendLauncher : IBackendLauncher
             ? Results.StatusCode(500)
             : Results.Json(new { status = "ok", version = request.Version }));
 
-        app.MapPost("/mcp", (HttpContext ctx) => Results.Json(new
+        // GET and DELETE as well as POST: the gateway forwards all three, and echoing the method
+        // back is how a test confirms YARP passed it through rather than rewriting it.
+        app.MapMethods("/mcp", ["GET", "POST", "DELETE"], (HttpContext ctx) => Results.Json(new
         {
             version = request.Version,
+            method = ctx.Request.Method,
             clientHeader = ctx.Request.Headers["X-Mcp-Client"].FirstOrDefault(),
             authHeader = ctx.Request.Headers.Authorization.FirstOrDefault(),
             query = ctx.Request.QueryString.Value

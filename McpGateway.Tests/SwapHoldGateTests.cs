@@ -36,6 +36,10 @@ public sealed class SwapHoldGateTests : IAsyncDisposable
           "perclient": {
             "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d",
             "pool": "per-client", "overlapAllowed": true, "startupTimeoutSeconds": 30
+          },
+          "undeployed": {
+            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d",
+            "pool": "shared", "overlapAllowed": false, "startupTimeoutSeconds": 10
           }
         }
         """);
@@ -197,6 +201,26 @@ public sealed class SwapHoldGateTests : IAsyncDisposable
         Assert.False(code.IsCompleted, "the first start finished before the assertion could run");
 
         await Task.WhenAll(code, desktop);
+    }
+
+    /// <summary>
+    /// The version lookup now happens inside the gate, so it can throw while the gate is held.
+    /// If the finally did not cover it, every later operation on that server -- including a swap --
+    /// would block forever on a semaphore nobody owns. WaitAsync turns that into a failure rather
+    /// than a hung run.
+    /// </summary>
+    [Fact]
+    public async Task AFailedVersionLookup_StillReleasesTheGate()
+    {
+        await Assert.ThrowsAsync<BackendStartupException>(
+            () => _supervisor.GetOrStartAsync(
+                new BackendKey("undeployed", ""), TestContext.Current.CancellationToken));
+
+        Task<IAsyncDisposable> holding = _supervisor.HoldAsync(
+            "undeployed", TestContext.Current.CancellationToken);
+
+        await using IAsyncDisposable hold = await holding.WaitAsync(
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     public async ValueTask DisposeAsync()
