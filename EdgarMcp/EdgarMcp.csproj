@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -10,10 +10,12 @@
 
     <ItemGroup>
         <PackageReference Include="ModelContextProtocol" />
+        <PackageReference Include="ModelContextProtocol.AspNetCore" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\Libraries\Edgar.Core\Edgar.Core.csproj" />
+        <ProjectReference Include="..\Libraries\Mcp.Hosting.Core\Mcp.Hosting.Core.csproj" />
         <ProjectReference Include="..\Libraries\SerilogFileWriter\SerilogFileWriter.csproj" />
     </ItemGroup>
 
