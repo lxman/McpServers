@@ -152,6 +152,29 @@ public sealed class AdminEndpointTests : IAsyncLifetime
             doc.RootElement.GetProperty("demo").GetProperty("backends").GetArrayLength());
     }
 
+    /// <summary>
+    /// ActivateAsync filters live backends with an ordinal Key.Server comparison. Before the name
+    /// was canonicalised, a mis-cased URL passed the manifest's case-insensitive existence check,
+    /// then matched no live backend -- so it reported success having swapped nothing, leaving the
+    /// running backend on the old version while the manifest claimed the new one.
+    /// </summary>
+    [Fact]
+    public async Task Restart_WithAMisCasedName_StillFindsTheLiveBackend()
+    {
+        await SendRequestAndGetPidAsync("code");
+
+        HttpResponseMessage response = await _client.PostAsync(
+            "/admin/servers/DEMO/restart", null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        string body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        using JsonDocument doc = JsonDocument.Parse(body);
+
+        Assert.True(doc.RootElement.GetProperty("succeeded").GetBoolean());
+        Assert.Equal(1, doc.RootElement.GetProperty("backendsSwapped").GetInt32());
+    }
+
     [Fact]
     public async Task Restart_RestartsLiveBackendsAndReturnsTheResult()
     {

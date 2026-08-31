@@ -33,14 +33,16 @@ public sealed class McpForwarder(
 
     public async Task ForwardAsync(HttpContext context, string server, string suffix)
     {
-        if (!manifest.TryGet(server, out ServerEntry? entry))
+        if (!manifest.TryGet(server, out ServerEntry? entry, out string canonicalServer))
         {
             context.Response.StatusCode = StatusCodes.Status404NotFound;
             await context.Response.WriteAsync($"No server named '{server}'.");
             return;
         }
 
-        var key = new BackendKey(server, ClientIdentity.ResolvePoolKey(context, entry!));
+        // The manifest's spelling, not the URL's. Lookup is case-insensitive and BackendKey's
+        // equality is not, so keying on the URL segment gives every casing its own backend.
+        var key = new BackendKey(canonicalServer, ClientIdentity.ResolvePoolKey(context, entry!));
 
         BackendInstance instance;
         try
