@@ -1,0 +1,514 @@
+[
+  {
+    "name": "check_exit_code",
+    "description": "Execute a command and return just the exit code. Useful for simple checks.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "description": "Name of the SSH connection",
+          "type": "string"
+        },
+        "command": {
+          "description": "Command to execute",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName",
+        "command"
+      ]
+    }
+  },
+  {
+    "name": "connect",
+    "description": "Connect to an SSH server. Returns connection info on success.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "description": "Unique name for this connection",
+          "type": "string"
+        },
+        "host": {
+          "description": "Hostname or IP address",
+          "type": "string"
+        },
+        "username": {
+          "description": "SSH username",
+          "type": "string"
+        },
+        "privateKeyPath": {
+          "description": "Path to private key file (optional if password provided)",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "passphrase": {
+          "description": "Passphrase for private key (optional)",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "password": {
+          "description": "Password (optional if key provided)",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "port": {
+          "description": "SSH port (default: 22)",
+          "type": "integer",
+          "default": 22
+        },
+        "timeoutSeconds": {
+          "description": "Connection timeout in seconds (default: 30)",
+          "type": "integer",
+          "default": 30
+        }
+      },
+      "required": [
+        "connectionName",
+        "host",
+        "username"
+      ]
+    }
+  },
+  {
+    "name": "connect_with_profile",
+    "description": "Connect using a saved SSH profile.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileName": {
+          "description": "Name of the saved profile",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profileName"
+      ]
+    }
+  },
+  {
+    "name": "connection_help",
+    "description": "Get recovery guidance for choosing or creating an SSH MCP connection. Use this when an SSH/SFTP operation fails due to a missing connection or missing profile.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionNameOrHint": {
+          "description": "Connection/profile name, host, username, or other hint from the failed operation",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    }
+  },
+  {
+    "name": "create_directory",
+    "description": "Create a directory on the remote server.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "description": "Name of the SSH connection",
+          "type": "string"
+        },
+        "remotePath": {
+          "description": "Remote directory path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName",
+        "remotePath"
+      ]
+    }
+  },
+  {
+    "name": "delete",
+    "description": "Delete a remote file.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "description": "Name of the SSH connection",
+          "type": "string"
+        },
+        "remotePath": {
+          "description": "Remote file path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName",
+        "remotePath"
+      ]
+    }
+  },
+  {
+    "name": "disconnect",
+    "description": "Disconnect an SSH connection.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "description": "Name of the connection to disconnect",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName"
+      ]
+    }
+  },
+  {
+    "name": "disconnect_all",
+    "description": "Disconnect all SSH connections.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "download",
+    "description": "Download a file from remote to local path.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "description": "Name of the SSH connection",
+          "type": "string"
+        },
+        "remotePath": {
+          "description": "Remote file path",
+          "type": "string"
+        },
+        "localPath": {
+          "description": "Local destination path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName",
+        "remotePath",
+        "localPath"
+      ]
+    }
+  },
+  {
+    "name": "execute",
+    "description": "Execute a command on an SSH connection. Returns stdout, stderr, and exit code.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "description": "Name of the SSH connection",
+          "type": "string"
+        },
+        "command": {
+          "description": "Command to execute",
+          "type": "string"
+        },
+        "workingDirectory": {
+          "description": "Working directory (optional)",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "timeoutSeconds": {
+          "description": "Timeout in seconds (default: 300)",
+          "type": "integer",
+          "default": 300
+        },
+        "maxOutputBytes": {
+          "description": "Maximum output bytes to capture (default: 100000)",
+          "type": "integer",
+          "default": 100000
+        }
+      },
+      "required": [
+        "connectionName",
+        "command"
+      ]
+    }
+  },
+  {
+    "name": "execute_batch",
+    "description": "Execute multiple commands sequentially on an SSH connection.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "description": "Name of the SSH connection",
+          "type": "string"
+        },
+        "commandsJson": {
+          "description": "JSON array of commands to execute",
+          "type": "string"
+        },
+        "stopOnError": {
+          "description": "Stop on first error (default: true)",
+          "type": "boolean",
+          "default": true
+        },
+        "timeoutSeconds": {
+          "description": "Timeout per command in seconds (default: 300)",
+          "type": "integer",
+          "default": 300
+        }
+      },
+      "required": [
+        "connectionName",
+        "commandsJson"
+      ]
+    }
+  },
+  {
+    "name": "exists",
+    "description": "Check if a path exists on the remote server.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "description": "Name of the SSH connection",
+          "type": "string"
+        },
+        "remotePath": {
+          "description": "Remote path to check",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName",
+        "remotePath"
+      ]
+    }
+  },
+  {
+    "name": "get_connection",
+    "description": "Get details about a specific SSH connection.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "description": "Name of the connection",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName"
+      ]
+    }
+  },
+  {
+    "name": "list",
+    "description": "List files and directories at a remote path.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "description": "Name of the SSH connection",
+          "type": "string"
+        },
+        "remotePath": {
+          "description": "Remote path to list",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName",
+        "remotePath"
+      ]
+    }
+  },
+  {
+    "name": "list_connections",
+    "description": "List all active SSH connections.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_profiles",
+    "description": "List all saved SSH profiles.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "read_text",
+    "description": "Read a remote file as text.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "description": "Name of the SSH connection",
+          "type": "string"
+        },
+        "remotePath": {
+          "description": "Remote file path",
+          "type": "string"
+        },
+        "maxBytes": {
+          "description": "Maximum bytes to read (default: 1000000)",
+          "type": "integer",
+          "default": 1000000
+        }
+      },
+      "required": [
+        "connectionName",
+        "remotePath"
+      ]
+    }
+  },
+  {
+    "name": "remove_profile",
+    "description": "Remove a saved SSH profile.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileName": {
+          "description": "Name of the profile to remove",
+          "type": "string"
+        }
+      },
+      "required": [
+        "profileName"
+      ]
+    }
+  },
+  {
+    "name": "save_profile",
+    "description": "Save an SSH connection profile for reuse.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "profileName": {
+          "description": "Unique name for this profile",
+          "type": "string"
+        },
+        "host": {
+          "description": "Hostname or IP address",
+          "type": "string"
+        },
+        "username": {
+          "description": "SSH username",
+          "type": "string"
+        },
+        "privateKeyPath": {
+          "description": "Path to private key file (optional)",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "passphrase": {
+          "description": "Passphrase for private key (optional)",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "password": {
+          "description": "Password (optional)",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "port": {
+          "description": "SSH port (default: 22)",
+          "type": "integer",
+          "default": 22
+        },
+        "timeoutSeconds": {
+          "description": "Connection timeout in seconds (default: 30)",
+          "type": "integer",
+          "default": 30
+        },
+        "description": {
+          "description": "Description of this profile",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "profileName",
+        "host",
+        "username"
+      ]
+    }
+  },
+  {
+    "name": "upload",
+    "description": "Upload a file from local to remote path.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "description": "Name of the SSH connection",
+          "type": "string"
+        },
+        "localPath": {
+          "description": "Local file path",
+          "type": "string"
+        },
+        "remotePath": {
+          "description": "Remote destination path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName",
+        "localPath",
+        "remotePath"
+      ]
+    }
+  },
+  {
+    "name": "write_text",
+    "description": "Write text content to a remote file.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "connectionName": {
+          "description": "Name of the SSH connection",
+          "type": "string"
+        },
+        "remotePath": {
+          "description": "Remote file path",
+          "type": "string"
+        },
+        "content": {
+          "description": "Text content to write",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connectionName",
+        "remotePath",
+        "content"
+      ]
+    }
+  }
+]
