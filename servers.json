@@ -9,6 +9,16 @@
     "idleTimeoutMinutes": 0,
     "startupTimeoutSeconds": 120
   },
+  "csharp-analyzer": {
+    "project": "CSharpAnalyzerMcp/CSharpAnalyzerMcp.csproj",
+    "assembly": "CSharpAnalyzerMcp.dll",
+    "deployRoot": "deploy/csharp-analyzer",
+    "pool": "shared",
+    "overlapAllowed": true,
+    "eagerStart": false,
+    "idleTimeoutMinutes": 30,
+    "startupTimeoutSeconds": 60
+  },
   "time-utility": {
     "project": "McpUtilitiesServer/McpUtilitiesServer.csproj",
     "assembly": "McpUtilitiesServer.dll",
