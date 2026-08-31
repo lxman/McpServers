@@ -1,0 +1,530 @@
+[
+  {
+    "name": "check_health",
+    "description": "Check if all required services (Ollama, Qdrant) are running and properly configured. Run this first if you encounter errors with indexing or searching.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "delete_index",
+    "description": "Delete a repository index and all its data from the vector database.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "detect_cycles",
+    "description": "Detect circular dependencies in the call graph. Returns all cycles found, where each cycle is the sequence of symbols forming the loop. Useful for identifying problematic circular dependencies that should be refactored.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        }
+      },
+      "required": [
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "explain_code_area",
+    "description": "Retrieve representative code areas related to a concept. Returns code locations and context; it does not generate a narrative explanation. Documentation and tests are excluded by default but can be included explicitly.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "concept": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "default": 5
+        },
+        "includeTests": {
+          "type": "boolean",
+          "default": false
+        },
+        "includeDocumentation": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "repositoryName",
+        "concept"
+      ]
+    }
+  },
+  {
+    "name": "find_entry_points",
+    "description": "Find entry points in the codebase — public methods and classes with no incoming call edges. These are typically API controllers, event handlers, Main methods, or other top-level entry points into the system.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        },
+        "namespaceFilter": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "includeTests": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "find_implementations",
+    "description": "Find all concrete implementations of an interface or abstract class. Returns the types that implement the given interface or extend the given abstract class, with file locations.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "interfaceName": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "default": 200
+        }
+      },
+      "required": [
+        "repositoryName",
+        "interfaceName"
+      ]
+    }
+  },
+  {
+    "name": "find_similar_code",
+    "description": "Find code similar to a given code snippet. Useful for finding duplicates, related implementations, or understanding patterns used elsewhere in the codebase.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "codeSnippet": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "default": 5
+        },
+        "minScore": {
+          "type": "number",
+          "default": 0.6
+        }
+      },
+      "required": [
+        "repositoryName",
+        "codeSnippet"
+      ]
+    }
+  },
+  {
+    "name": "get_component_detail",
+    "description": "Get detailed information about a specific component (namespace). Shows class count, method count, public symbols, and dependency relationships with other components.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "componentName": {
+          "type": "string"
+        },
+        "maxPublicSymbols": {
+          "type": "integer",
+          "default": 50
+        }
+      },
+      "required": [
+        "repositoryName",
+        "componentName"
+      ]
+    }
+  },
+  {
+    "name": "get_index_status",
+    "description": "Get detailed status of a specific repository index.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "get_solution_structure",
+    "description": "Get the project-level structure of a solution. Shows all projects, their references (project and NuGet package), target frameworks, solution folder groupings, and which namespaces belong to each project. Requires the repository to be indexed first.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "maxProjects": {
+          "type": "integer",
+          "default": 50
+        },
+        "includePackageReferences": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "get_system_overview",
+    "description": "Get a high-level overview of the system's architecture. Shows components (namespaces), their sizes, dependencies between them, cross-component edges, and entry points. Great for understanding the overall structure of a codebase.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "maxComponents": {
+          "type": "integer",
+          "default": 10
+        },
+        "maxEntryPoints": {
+          "type": "integer",
+          "default": 10
+        },
+        "includeTests": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "get_type_hierarchy",
+    "description": "Get the full inheritance and implementation hierarchy for a type. Shows base classes (upward) and subclasses/implementors (downward). Useful for understanding class hierarchies and interface implementations.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "typeName": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "default": 200
+        }
+      },
+      "required": [
+        "repositoryName",
+        "typeName"
+      ]
+    }
+  },
+  {
+    "name": "get_voice_profile",
+    "description": "Returns the user's writing voice profile — tone, sentence patterns, vocabulary preferences, and stylistic habits. Use this before generating any prose on the user's behalf (emails, docs, commit messages, cover letters, etc.) to match their natural voice.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_watched_repositories",
+    "description": "Get the list of repositories currently being watched for file changes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "impact_analysis",
+    "description": "Analyze the impact of changing a symbol. Shows what other code would be directly and transitively affected if the given method, class, or property changes. Useful before refactoring to understand blast radius.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "symbolName": {
+          "type": "string"
+        },
+        "maxDepth": {
+          "type": "integer",
+          "default": 5
+        },
+        "limit": {
+          "type": "integer",
+          "default": 200
+        }
+      },
+      "required": [
+        "repositoryName",
+        "symbolName"
+      ]
+    }
+  },
+  {
+    "name": "index_repository",
+    "description": "Index a code repository for semantic search. This scans all supported source files, chunks them intelligently (by class/method for C#), generates embeddings, and stores them in the vector database. Supports incremental updates - only changed files are re-indexed.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryPath": {
+          "type": "string"
+        },
+        "repositoryName": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "includePatterns": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "excludePatterns": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "repositoryPath"
+      ]
+    }
+  },
+  {
+    "name": "list_indexes",
+    "description": "List all indexed repositories with their metadata.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "pull_embedding_model",
+    "description": "Download the configured embedding model to Ollama. Required before indexing if the model isn't already available.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "refresh_index",
+    "description": "Refresh an existing repository index by detecting and processing changed files. This is faster than a full re-index as it only processes files that have changed since the last index.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "search_by_symbol",
+    "description": "Search for code by symbol name (class, method, property, etc.). Combines semantic search with the symbol name for more targeted results.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "symbolName": {
+          "type": "string"
+        },
+        "symbolType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "limit": {
+          "type": "integer",
+          "default": 10
+        }
+      },
+      "required": [
+        "repositoryName",
+        "symbolName"
+      ]
+    }
+  },
+  {
+    "name": "search_code",
+    "description": "Semantic search across an indexed repository. Returns code chunks most similar to the query, with file paths, line numbers, and relevance scores. Use natural language queries like 'function that handles user authentication' or 'error handling for database connections'. Set includeDependencies=true to also return callers and callees of matched symbols.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "default": 10
+        },
+        "minScore": {
+          "type": "number",
+          "default": 0.5
+        },
+        "includeDependencies": {
+          "type": "boolean",
+          "default": false
+        },
+        "pathPrefix": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "includeTests": {
+          "type": "boolean",
+          "default": true
+        },
+        "includeDocumentation": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "required": [
+        "repositoryName",
+        "query"
+      ]
+    }
+  },
+  {
+    "name": "set_active_repository",
+    "description": "Set the active repository for file watching. Stops watching all other repositories and starts watching the specified one. Use this when switching between projects to ensure only the current project is monitored for changes. Set clearOtherCaches to true to also drop other repositories' in-memory caches — this affects every session sharing this server, so leave it off unless you mean it.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "clearOtherCaches": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "repositoryName"
+      ]
+    }
+  },
+  {
+    "name": "setup_services",
+    "description": "Get instructions for setting up required services (Ollama and Qdrant) if they're not running.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "stop_watching_all",
+    "description": "Stop watching all repositories for file changes and clear the hot cache. Use this to free resources when you're done working.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "clearHotCache": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  },
+  {
+    "name": "trace_data_flow",
+    "description": "Trace data flow forward or backward from a symbol. Forward shows what a method calls and what data it passes. Backward shows who calls it and with what data. Use direction='both' for a complete bidirectional trace. The startSymbol can be a qualified name (e.g., 'Namespace.Class.Method'), a class.method name, or a bare symbol name.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string"
+        },
+        "startSymbol": {
+          "type": "string"
+        },
+        "direction": {
+          "type": "string",
+          "default": "forward"
+        },
+        "maxDepth": {
+          "type": "integer",
+          "default": 5
+        },
+        "limit": {
+          "type": "integer",
+          "default": 200
+        }
+      },
+      "required": [
+        "repositoryName",
+        "startSymbol"
+      ]
+    }
+  }
+]
