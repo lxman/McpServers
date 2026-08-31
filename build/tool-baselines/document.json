@@ -1,0 +1,581 @@
+[
+  {
+    "name": "auto_detect_password",
+    "description": "Attempt to auto-detect password files in a directory tree. See skills/document/password/auto-detect.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "rootPath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "rootPath"
+      ]
+    }
+  },
+  {
+    "name": "check_password",
+    "description": "Check if a password is registered for a file. See skills/document/password/check.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "filePath"
+      ]
+    }
+  },
+  {
+    "name": "check_scanned_pdf",
+    "description": "Check if a PDF is scanned (image-based) or contains searchable text. See skills/document/ocr/check-scanned.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "filePath"
+      ]
+    }
+  },
+  {
+    "name": "clear_cache",
+    "description": "Clear all loaded documents from memory. See skills/document/clear-cache.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "clear_passwords",
+    "description": "Clear all registered passwords. See skills/document/password/clear.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "compare_documents",
+    "description": "Compare two documents for differences. See skills/document/compare-documents.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath1": {
+          "type": "string"
+        },
+        "filePath2": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "filePath1",
+        "filePath2"
+      ]
+    }
+  },
+  {
+    "name": "create_index",
+    "description": "Create a new search index from a directory of documents. See skills/document/index/create-index.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "indexName": {
+          "type": "string"
+        },
+        "rootPath": {
+          "type": "string"
+        },
+        "includePatterns": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "recursive": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "required": [
+        "indexName",
+        "rootPath"
+      ]
+    }
+  },
+  {
+    "name": "delete_index",
+    "description": "Delete an index completely from memory and disk. See skills/document/index/delete.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "indexName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "indexName"
+      ]
+    }
+  },
+  {
+    "name": "extract_content",
+    "description": "Extract text content from a document. See skills/document/extract-content.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "includeMetadata": {
+          "type": "boolean",
+          "default": false
+        },
+        "startPage": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        },
+        "endPage": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        },
+        "maxPages": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "filePath"
+      ]
+    }
+  },
+  {
+    "name": "find_index_for_directory",
+    "description": "Find which index (if any) covers a specific directory. See skills/document/index/find-for-directory.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "directoryPath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "directoryPath"
+      ]
+    }
+  },
+  {
+    "name": "get_document_status",
+    "description": "Get the status of the document processing system. See skills/document/get-status.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_index_memory_status",
+    "description": "Get memory usage information for all indexes. See skills/document/index/get-memory-status.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_metadata",
+    "description": "Get metadata from a document. See skills/document/get-metadata.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "filePath"
+      ]
+    }
+  },
+  {
+    "name": "get_ocr_status",
+    "description": "Get OCR service status and configuration. See skills/document/ocr/get-status.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_password_patterns",
+    "description": "Get all registered password patterns. See skills/document/password/get-patterns.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_password_stats",
+    "description": "Get statistics about registered passwords. See skills/document/password/get-stats.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_documents",
+    "description": "List all loaded documents. See skills/document/list-documents.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_indexes",
+    "description": "List all available search indexes. See skills/document/index/list-indexes.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "load_document",
+    "description": "Load a document into memory. See skills/document/load-document.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "password": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "shouldCache": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "required": [
+        "filePath"
+      ]
+    }
+  },
+  {
+    "name": "ocr_image",
+    "description": "Perform OCR on an image file. See skills/document/ocr/ocr-image.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "autoRotate": {
+          "type": "boolean",
+          "default": true
+        },
+        "enhanceImage": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "filePath"
+      ]
+    }
+  },
+  {
+    "name": "ocr_pdf",
+    "description": "Perform OCR on a PDF document. See skills/document/ocr/ocr-pdf.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "autoRotate": {
+          "type": "boolean",
+          "default": true
+        },
+        "enhanceImage": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "filePath"
+      ]
+    }
+  },
+  {
+    "name": "register_bulk_passwords",
+    "description": "Register passwords for multiple files at once. See skills/document/password/register-bulk.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePasswords": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "filePasswords"
+      ]
+    }
+  },
+  {
+    "name": "register_password",
+    "description": "Register a password for a specific file. See skills/document/password/register.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "filePath",
+        "password"
+      ]
+    }
+  },
+  {
+    "name": "register_password_pattern",
+    "description": "Register a password pattern for multiple files. See skills/document/password/register-pattern.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "pattern": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "pattern",
+        "password"
+      ]
+    }
+  },
+  {
+    "name": "search_all_documents",
+    "description": "Search across all loaded documents. See skills/document/search/search-all.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "searchTerm": {
+          "type": "string"
+        },
+        "fuzzySearch": {
+          "type": "boolean",
+          "default": false
+        },
+        "maxResultsPerDocument": {
+          "type": "integer",
+          "default": 10
+        }
+      },
+      "required": [
+        "searchTerm"
+      ]
+    }
+  },
+  {
+    "name": "search_document",
+    "description": "Search within a single document. See skills/document/search/search-document.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "searchTerm": {
+          "type": "string"
+        },
+        "fuzzySearch": {
+          "type": "boolean",
+          "default": false
+        },
+        "maxResults": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "filePath",
+        "searchTerm"
+      ]
+    }
+  },
+  {
+    "name": "search_index",
+    "description": "Search within a specific index. See skills/document/index/search-index.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "indexName": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "maxResults": {
+          "type": "integer",
+          "default": 50
+        },
+        "includeSnippets": {
+          "type": "boolean",
+          "default": true
+        },
+        "sortBy": {
+          "type": "string",
+          "default": "relevance"
+        },
+        "sortDescending": {
+          "type": "boolean",
+          "default": true
+        },
+        "fileTypes": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default": null
+        },
+        "startDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "default": null
+        },
+        "endDate": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "default": null
+        }
+      },
+      "required": [
+        "indexName",
+        "query"
+      ]
+    }
+  },
+  {
+    "name": "test_index_query",
+    "description": "Test a query against an index without returning full results. See skills/document/index/test-index.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "indexName": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "indexName",
+        "query"
+      ]
+    }
+  },
+  {
+    "name": "unload_all_indexes",
+    "description": "Unload all indexes from memory. See skills/document/index/unload-all.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "unload_document",
+    "description": "Unload a document from memory. See skills/document/unload-document.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "filePath"
+      ]
+    }
+  },
+  {
+    "name": "unload_index",
+    "description": "Unload an index from memory while keeping it discoverable. See skills/document/index/unload.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "indexName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "indexName"
+      ]
+    }
+  },
+  {
+    "name": "validate_document",
+    "description": "Validate document structure and content. See skills/document/validate-document.md only when using this tool",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "filePath"
+      ]
+    }
+  }
+]

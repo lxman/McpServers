@@ -19,6 +19,16 @@
     "idleTimeoutMinutes": 30,
     "startupTimeoutSeconds": 60
   },
+  "document": {
+    "project": "DocumentMcp/DocumentMcp.csproj",
+    "assembly": "DocumentMcp.dll",
+    "deployRoot": "deploy/document",
+    "pool": "per-session",
+    "overlapAllowed": false,
+    "eagerStart": false,
+    "idleTimeoutMinutes": 30,
+    "startupTimeoutSeconds": 60
+  },
   "edgar": {
     "project": "EdgarMcp/EdgarMcp.csproj",
     "assembly": "EdgarMcp.dll",
