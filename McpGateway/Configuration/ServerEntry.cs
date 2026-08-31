@@ -7,7 +7,13 @@ public sealed record ServerEntry
     [JsonPropertyName("project")] public required string Project { get; init; }
     [JsonPropertyName("assembly")] public required string Assembly { get; init; }
     [JsonPropertyName("deployRoot")] public required string DeployRoot { get; init; }
-    [JsonPropertyName("activeVersion")] public required string ActiveVersion { get; init; }
+
+    /// <summary>
+    /// Runtime state, not config: it is merged in from the gateway's state file, never read from
+    /// servers.json. Null means the server has never been deployed -- an error at start, not a
+    /// path that quietly resolves to a directory named after a placeholder.
+    /// </summary>
+    [JsonIgnore] public string? ActiveVersion { get; init; }
 
     /// <summary>"shared" gives every caller one backend; "per-client" gives each its own.</summary>
     [JsonPropertyName("pool")] public string Pool { get; init; } = "per-client";

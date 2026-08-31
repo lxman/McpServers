@@ -28,6 +28,13 @@ public sealed record GatewayBuildOptions
     /// </summary>
     public required string LiveRegistryPath { get; init; }
 
+    /// <summary>
+    /// Runtime state the gateway writes -- active versions. Kept out of the repo so a deploy does
+    /// not dirty the working tree and a git checkout cannot revert it. Required for the same
+    /// reason as LiveRegistryPath: a defaulted path is one a test can write to by accident.
+    /// </summary>
+    public required string StatePath { get; init; }
+
     public string Url { get; init; } = "http://127.0.0.1:7300";
 }
 
@@ -42,6 +49,9 @@ public static class GatewayApp
         LiveRegistryPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "McpGateway", "live"),
+        StatePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "McpGateway", "state.json"),
         RepoRoot = repoRoot
     };
 
@@ -80,7 +90,8 @@ public static class GatewayApp
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton(backendToken);
         builder.Services.AddSingleton(liveBackends);
-        builder.Services.AddSingleton(ManifestStore.Load(options.ManifestPath));
+        builder.Services.AddSingleton(
+            ManifestStore.Load(options.ManifestPath, options.StatePath));
         builder.Services.AddSingleton<IBackendLauncher, ProcessBackendLauncher>();
         builder.Services.AddSingleton(new HealthProbe(new HttpClient(), backendToken));
         builder.Services.AddSingleton(TimeProvider.System);

@@ -53,9 +53,7 @@ public sealed class BackendAuthFixture : IAsyncLifetime
           "echo": {
             "project": "McpGateway.TestBackend/McpGateway.TestBackend.csproj",
             "assembly": "McpGateway.TestBackend.dll",
-            "deployRoot": "deploy/echo",
-            "activeVersion": "v-one",
-            "pool": "shared",
+            "deployRoot": "deploy/echo", "pool": "shared",
             "startupTimeoutSeconds": 60
           }
         }
@@ -66,6 +64,7 @@ public sealed class BackendAuthFixture : IAsyncLifetime
             ManifestPath = manifestPath,
             TokenPath = TokenFilePath,
             LiveRegistryPath = Path.Combine(Root, "live"),
+            StatePath = TestState.Write(Root, ("echo", "v-one")),
             RepoRoot = Root,
             Url = "http://127.0.0.1:0"
         });

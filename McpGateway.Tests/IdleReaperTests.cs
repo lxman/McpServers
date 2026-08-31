@@ -18,6 +18,8 @@ public sealed class IdleReaperTests : IAsyncDisposable
     private readonly BackendSupervisor _supervisor;
     private readonly IdleReaper _reaper;
 
+    private readonly string _statePath;
+
     public IdleReaperTests()
     {
         Directory.CreateDirectory(_root);
@@ -26,27 +28,27 @@ public sealed class IdleReaperTests : IAsyncDisposable
         File.WriteAllText(manifestPath, """
         {
           "reaps": {
-            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d",
-            "activeVersion": "v-one", "pool": "per-client",
+            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d", "pool": "per-client",
             "idleTimeoutMinutes": 30, "startupTimeoutSeconds": 10
           },
           "never-reaps": {
-            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d",
-            "activeVersion": "v-one", "pool": "shared",
+            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d", "pool": "shared",
             "eagerStart": true,
             "idleTimeoutMinutes": 0, "startupTimeoutSeconds": 10
           },
           "shared-lazy": {
-            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d",
-            "activeVersion": "v-one", "pool": "shared",
+            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d", "pool": "shared",
             "eagerStart": false,
             "idleTimeoutMinutes": 30, "startupTimeoutSeconds": 10
           }
         }
         """);
 
+        _statePath = TestState.Write(
+            _root, ("reaps", "v-one"), ("never-reaps", "v-one"), ("shared-lazy", "v-one"));
+
         _supervisor = new BackendSupervisor(
-            ManifestStore.Load(manifestPath),
+            ManifestStore.Load(manifestPath, _statePath),
             _launcher,
             new HealthProbe(new HttpClient(), BackendToken.Mint()),
             new GatewayBuildOptions
@@ -54,6 +56,7 @@ public sealed class IdleReaperTests : IAsyncDisposable
                 ManifestPath = manifestPath,
                 TokenPath = Path.Combine(_root, "token"),
                 LiveRegistryPath = Path.Combine(_root, "live"),
+                StatePath = _statePath,
                 RepoRoot = _root
             },
             "backend-token",
@@ -144,7 +147,7 @@ public sealed class IdleReaperTests : IAsyncDisposable
     {
         var starter = new EagerStarter(
             _supervisor,
-            ManifestStore.Load(Path.Combine(_root, "servers.json")),
+            ManifestStore.Load(Path.Combine(_root, "servers.json"), _statePath),
             NullLogger<EagerStarter>.Instance);
 
         await starter.StartEagerServersAsync(TestContext.Current.CancellationToken);
@@ -164,7 +167,7 @@ public sealed class IdleReaperTests : IAsyncDisposable
 
         var starter = new EagerStarter(
             _supervisor,
-            ManifestStore.Load(Path.Combine(_root, "servers.json")),
+            ManifestStore.Load(Path.Combine(_root, "servers.json"), _statePath),
             NullLogger<EagerStarter>.Instance);
 
         // A backend that won't come up must not take the gateway down with it.

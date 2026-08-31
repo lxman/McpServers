@@ -26,14 +26,18 @@ public sealed class BlueGreenActivationTests : IAsyncDisposable
         File.WriteAllText(manifestPath, """
         {
           "overlaps": {
-            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d",
-            "activeVersion": "v-one", "pool": "per-client",
+            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d", "pool": "per-client",
+            "overlapAllowed": true, "startupTimeoutSeconds": 10
+          },
+          "undeployed": {
+            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d", "pool": "shared",
             "overlapAllowed": true, "startupTimeoutSeconds": 10
           }
         }
         """);
 
-        _manifest = ManifestStore.Load(manifestPath);
+        _manifest = ManifestStore.Load(
+            manifestPath, TestState.Write(_root, ("overlaps", "v-one")));
         _supervisor = new BackendSupervisor(
             _manifest, _launcher, new HealthProbe(new HttpClient(), BackendToken.Mint()),
             new GatewayBuildOptions
@@ -41,6 +45,7 @@ public sealed class BlueGreenActivationTests : IAsyncDisposable
                 ManifestPath = manifestPath,
                 TokenPath = Path.Combine(_root, "token"),
                 LiveRegistryPath = Path.Combine(_root, "live"),
+                StatePath = TestState.Write(_root, ("overlaps", "v-one")),
                 RepoRoot = _root
             },
             "backend-token",
@@ -284,6 +289,37 @@ public sealed class BlueGreenActivationTests : IAsyncDisposable
 
         Assert.True(_manifest.TryGet("overlaps", out ServerEntry? entry));
         Assert.Equal("v-two", entry!.ActiveVersion);
+    }
+
+    /// <summary>
+    /// A restart resolves its target from the recorded active version. For a server that has never
+    /// been deployed there is nothing to resolve, and saying so plainly is the point of the split:
+    /// the old shape resolved to whatever placeholder servers.json carried and failed later as a
+    /// missing directory.
+    /// </summary>
+    [Fact]
+    public async Task Restart_OfAServerThatWasNeverDeployed_FailsSayingSo()
+    {
+        ActivationResult result = await _activation.ActivateAsync(
+            "undeployed", null, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            "no active version recorded", result.Error!, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, _launcher.StartCount);
+    }
+
+    /// <summary>Activating an explicit version is how a never-deployed server gets deployed.</summary>
+    [Fact]
+    public async Task Activate_OfAServerThatWasNeverDeployed_RecordsTheVersion()
+    {
+        ActivationResult result = await _activation.ActivateAsync(
+            "undeployed", "v-first", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded, result.Error);
+
+        Assert.True(_manifest.TryGet("undeployed", out ServerEntry? entry));
+        Assert.Equal("v-first", entry!.ActiveVersion);
     }
 
     public async ValueTask DisposeAsync()

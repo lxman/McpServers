@@ -28,8 +28,7 @@ public sealed class AdminEndpointTests : IAsyncLifetime
         File.WriteAllText(manifestPath, """
         {
           "demo": {
-            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d",
-            "activeVersion": "v-one", "pool": "per-client",
+            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d", "pool": "per-client",
             "overlapAllowed": true, "startupTimeoutSeconds": 10
           }
         }
@@ -40,6 +39,7 @@ public sealed class AdminEndpointTests : IAsyncLifetime
             ManifestPath = manifestPath,
             TokenPath = Path.Combine(_root, "token"),
             LiveRegistryPath = Path.Combine(_root, "live"),
+            StatePath = TestState.Write(_root, ("demo", "v-one")),
             RepoRoot = _root,
             Url = "http://127.0.0.1:0"
         }, services => services.AddSingleton<IBackendLauncher>(_launcher));

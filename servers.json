@@ -3,7 +3,6 @@
     "project": "CodeAssistMcp/CodeAssistMcp.csproj",
     "assembly": "CodeAssistMcp.dll",
     "deployRoot": "deploy/code-assist",
-    "activeVersion": "unset",
     "pool": "shared",
     "overlapAllowed": false,
     "eagerStart": true,

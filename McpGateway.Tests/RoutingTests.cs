@@ -30,13 +30,15 @@ public sealed class RoutingTests : IAsyncLifetime
         {
           "shared-demo": {
             "project": "Demo/Demo.csproj", "assembly": "Demo.dll",
-            "deployRoot": "deploy/demo", "activeVersion": "v-one",
-            "pool": "shared", "startupTimeoutSeconds": 10
+            "deployRoot": "deploy/demo", "pool": "shared", "startupTimeoutSeconds": 10
           },
           "client-demo": {
             "project": "Demo/Demo.csproj", "assembly": "Demo.dll",
-            "deployRoot": "deploy/demo", "activeVersion": "v-one",
-            "pool": "per-client", "startupTimeoutSeconds": 10
+            "deployRoot": "deploy/demo", "pool": "per-client", "startupTimeoutSeconds": 10
+          },
+          "undeployed": {
+            "project": "Demo/Demo.csproj", "assembly": "Demo.dll",
+            "deployRoot": "deploy/demo", "pool": "shared", "startupTimeoutSeconds": 10
           }
         }
         """);
@@ -46,6 +48,7 @@ public sealed class RoutingTests : IAsyncLifetime
             ManifestPath = manifestPath,
             TokenPath = Path.Combine(_root, "token"),
             LiveRegistryPath = Path.Combine(_root, "live"),
+            StatePath = TestState.Write(_root, ("shared-demo", "v-one"), ("client-demo", "v-one")),
             RepoRoot = _root,
             Url = "http://127.0.0.1:0"
         }, services => services.AddSingleton<IBackendLauncher>(_launcher));
@@ -143,6 +146,25 @@ public sealed class RoutingTests : IAsyncLifetime
             "/shared-demo/mcp", null, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Configured but never deployed: no version was ever recorded for it. That has to fail as a
+    /// 503 that says so, not resolve to a deploy directory named after a placeholder and fail much
+    /// later as a missing file.
+    /// </summary>
+    [Fact]
+    public async Task ServerWithNoRecordedVersion_Is503SayingItWasNeverDeployed()
+    {
+        HttpResponseMessage response = await PostMcpAsync("undeployed", "code");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+
+        string body = await response.Content.ReadAsStringAsync(
+            TestContext.Current.CancellationToken);
+
+        Assert.Contains("no active version recorded", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, _launcher.StartCount);
     }
 
     [Fact]

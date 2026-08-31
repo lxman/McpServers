@@ -24,14 +24,14 @@ public sealed class PruneVersionsTests : IAsyncDisposable
         File.WriteAllText(manifestPath, """
         {
           "prunable": {
-            "project": "P/P.csproj", "assembly": "P.dll", "deployRoot": "deploy/p",
-            "activeVersion": "v-two", "pool": "per-client",
+            "project": "P/P.csproj", "assembly": "P.dll", "deployRoot": "deploy/p", "pool": "per-client",
             "startupTimeoutSeconds": 10
           }
         }
         """);
 
-        ManifestStore manifest = ManifestStore.Load(manifestPath);
+        ManifestStore manifest = ManifestStore.Load(
+            manifestPath, TestState.Write(_root, ("prunable", "v-two")));
         _supervisor = new BackendSupervisor(
             manifest,
             _launcher,
@@ -41,6 +41,7 @@ public sealed class PruneVersionsTests : IAsyncDisposable
                 ManifestPath = manifestPath,
                 TokenPath = Path.Combine(_root, "token"),
                 LiveRegistryPath = Path.Combine(_root, "live"),
+                StatePath = TestState.Write(_root, ("prunable", "v-two")),
                 RepoRoot = _root
             },
             "backend-token",

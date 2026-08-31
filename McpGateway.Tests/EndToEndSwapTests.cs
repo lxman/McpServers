@@ -38,9 +38,7 @@ public sealed class EndToEndSwapTests : IAsyncLifetime
           "echo": {
             "project": "McpGateway.TestBackend/McpGateway.TestBackend.csproj",
             "assembly": "McpGateway.TestBackend.dll",
-            "deployRoot": "deploy/echo",
-            "activeVersion": "v-one",
-            "pool": "per-client",
+            "deployRoot": "deploy/echo", "pool": "per-client",
             "overlapAllowed": true,
             "startupTimeoutSeconds": 60
           }
@@ -52,6 +50,7 @@ public sealed class EndToEndSwapTests : IAsyncLifetime
             ManifestPath = manifestPath,
             TokenPath = Path.Combine(_root, "token"),
             LiveRegistryPath = Path.Combine(_root, "live"),
+            StatePath = TestState.Write(_root, ("echo", "v-one")),
             RepoRoot = _root,
             Url = "http://127.0.0.1:0"
         });

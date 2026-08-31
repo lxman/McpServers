@@ -40,7 +40,7 @@ public sealed class BackendSupervisor(
             }
 
             Lazy<Task<BackendInstance>> entry = _pool.GetOrAdd(key, k => new Lazy<Task<BackendInstance>>(
-                () => StartAsync(k, ResolveEntry(k.Server).ActiveVersion, CancellationToken.None)));
+                () => StartAsync(k, RequireActiveVersion(k.Server), CancellationToken.None)));
 
             try
             {
@@ -120,7 +120,9 @@ public sealed class BackendSupervisor(
             .Select(instance => instance.Version)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        keep.Add(entry.ActiveVersion);
+        // A server that has never been deployed has no active version to protect; everything
+        // under its deploy root that nothing is running is prunable.
+        if (entry.ActiveVersion is not null) keep.Add(entry.ActiveVersion);
 
         foreach (string directory in Directory.GetDirectories(root))
         {
@@ -226,6 +228,18 @@ public sealed class BackendSupervisor(
         manifest.TryGet(server, out ServerEntry? entry)
             ? entry!
             : throw new KeyNotFoundException($"No server named '{server}' in the manifest.");
+
+    /// <summary>
+    /// The version to start, or a message saying the server was never deployed. Thrown as a
+    /// BackendStartupException so it reaches the caller as a 503 that names the problem, rather
+    /// than as a path that resolves to a deploy directory nobody ever published.
+    /// </summary>
+    public string RequireActiveVersion(string server) =>
+        ResolveEntry(server).ActiveVersion
+        ?? throw new BackendStartupException(
+            $"{server} has no active version recorded, so nothing has ever been deployed for it. " +
+            $"Publish it and activate the version -- that is what writes {options.StatePath}.",
+            string.Empty);
 
     private async Task<BackendInstance> StartAsync(
         BackendKey key, string version, CancellationToken cancellationToken)

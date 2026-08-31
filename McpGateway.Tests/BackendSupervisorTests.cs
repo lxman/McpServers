@@ -25,9 +25,7 @@ public sealed class BackendSupervisorTests : IAsyncDisposable
           "demo": {
             "project": "Demo/Demo.csproj",
             "assembly": "Demo.dll",
-            "deployRoot": "deploy/demo",
-            "activeVersion": "v-one",
-            "pool": "per-client",
+            "deployRoot": "deploy/demo", "pool": "per-client",
             "startupTimeoutSeconds": 10
           }
         }
@@ -36,7 +34,7 @@ public sealed class BackendSupervisorTests : IAsyncDisposable
         _live = new LiveBackendRegistry(Path.Combine(_root, "live"), NullLogger.Instance);
 
         _supervisor = new BackendSupervisor(
-            ManifestStore.Load(manifestPath),
+            ManifestStore.Load(manifestPath, TestState.Write(_root, ("demo", "v-one"))),
             _launcher,
             new HealthProbe(new HttpClient(), BackendToken.Mint()),
             new GatewayBuildOptions
@@ -44,6 +42,7 @@ public sealed class BackendSupervisorTests : IAsyncDisposable
                 ManifestPath = manifestPath,
                 TokenPath = Path.Combine(_root, "token"),
                 LiveRegistryPath = Path.Combine(_root, "live"),
+                StatePath = TestState.Write(_root, ("demo", "v-one")),
                 RepoRoot = _root
             },
             "backend-token",

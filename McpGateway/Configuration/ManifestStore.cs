@@ -3,9 +3,14 @@ using System.Text.Json;
 namespace McpGateway.Configuration;
 
 /// <summary>
-/// servers.json is the source of truth for which version is active. Deliberately a file the
-/// gateway rewrites rather than a directory junction: rollback is one field, and Windows never has
-/// to retarget a path with open handles underneath it.
+/// Merges the two halves of a server's configuration: the static half in the git-tracked
+/// servers.json, and the runtime half -- which version is active -- in a state file under
+/// %LOCALAPPDATA%. The split is what stops a deploy dirtying the working tree, and stops a
+/// git checkout quietly reverting the active version of a live server.
+/// <para>
+/// Still a file rather than a directory junction, for the reason it always was: rollback is one
+/// field, and Windows never has to retarget a path with open handles underneath it.
+/// </para>
 /// </summary>
 public sealed class ManifestStore
 {
@@ -15,31 +20,47 @@ public sealed class ManifestStore
         PropertyNameCaseInsensitive = true
     };
 
-    private readonly string _path;
+    private readonly string _statePath;
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private volatile Dictionary<string, ServerEntry> _entries;
 
-    private ManifestStore(string path, Dictionary<string, ServerEntry> entries)
+    private ManifestStore(string statePath, Dictionary<string, ServerEntry> entries)
     {
-        _path = path;
+        _statePath = statePath;
         _entries = entries;
     }
 
     public IReadOnlyDictionary<string, ServerEntry> Entries => _entries;
 
-    public static ManifestStore Load(string path)
+    public static ManifestStore Load(string manifestPath, string statePath)
     {
         Dictionary<string, ServerEntry> entries =
             JsonSerializer.Deserialize<Dictionary<string, ServerEntry>>(
-                File.ReadAllText(path), Options)
-            ?? throw new InvalidOperationException($"Manifest at {path} deserialized to null.");
+                File.ReadAllText(manifestPath), Options)
+            ?? throw new InvalidOperationException($"Manifest at {manifestPath} deserialized to null.");
 
-        return new ManifestStore(path, new Dictionary<string, ServerEntry>(
-            entries, StringComparer.OrdinalIgnoreCase));
+        var merged = new Dictionary<string, ServerEntry>(entries, StringComparer.OrdinalIgnoreCase);
+
+        foreach ((string name, string version) in ReadState(statePath).ActiveVersions)
+        {
+            // A recorded version for a server that servers.json no longer lists is simply dropped.
+            // Removing a server from the manifest is a deliberate act; resurrecting it from runtime
+            // state would undo it.
+            if (merged.TryGetValue(name, out ServerEntry? entry))
+            {
+                merged[name] = entry with { ActiveVersion = version };
+            }
+        }
+
+        return new ManifestStore(statePath, merged);
     }
 
     public bool TryGet(string name, out ServerEntry? entry) => _entries.TryGetValue(name, out entry);
 
+    /// <summary>
+    /// Records the active version. Writes the runtime state file only -- servers.json is static
+    /// config and is never rewritten.
+    /// </summary>
     public async Task SetActiveVersionAsync(
         string name, string version, CancellationToken cancellationToken = default)
     {
@@ -57,16 +78,51 @@ public sealed class ManifestStore
                 [name] = entry with { ActiveVersion = version }
             };
 
-            string temp = _path + ".tmp";
+            var state = new GatewayState
+            {
+                ActiveVersions = updated
+                    .Where(pair => pair.Value.ActiveVersion is not null)
+                    .ToDictionary(
+                        pair => pair.Key,
+                        pair => pair.Value.ActiveVersion!,
+                        StringComparer.OrdinalIgnoreCase)
+            };
+
+            string? directory = Path.GetDirectoryName(_statePath);
+            if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+
+            string temp = _statePath + ".tmp";
             await File.WriteAllTextAsync(
-                temp, JsonSerializer.Serialize(updated, Options), cancellationToken);
-            File.Move(temp, _path, overwrite: true);
+                temp, JsonSerializer.Serialize(state, Options), cancellationToken);
+            File.Move(temp, _statePath, overwrite: true);
 
             _entries = updated;
         }
         finally
         {
             _writeLock.Release();
+        }
+    }
+
+    private static GatewayState ReadState(string statePath)
+    {
+        // Absent is the ordinary first-run case: nothing has been deployed yet, so every server is
+        // "not yet deployed" and says so when something tries to start it.
+        if (!File.Exists(statePath)) return new GatewayState();
+
+        try
+        {
+            return JsonSerializer.Deserialize<GatewayState>(File.ReadAllText(statePath), Options)
+                   ?? new GatewayState();
+        }
+        catch (JsonException ex)
+        {
+            // Loudly, rather than silently treating every server as undeployed. The file is written
+            // atomically, so corruption means something outside the gateway edited it, and quietly
+            // discarding a hand-edit would hide the mistake behind a fleet that is merely "down".
+            throw new InvalidOperationException(
+                $"Runtime state at {statePath} is not valid JSON. Fix or delete it; deleting it " +
+                "makes every server undeployed until it is activated again.", ex);
         }
     }
 }

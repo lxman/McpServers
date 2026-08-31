@@ -32,8 +32,7 @@ public sealed class GatewayStartupReconciliationTests : IDisposable
         {
           "demo": {
             "project": "Demo/Demo.csproj", "assembly": "Demo.dll",
-            "deployRoot": "deploy/demo", "activeVersion": "v-one",
-            "pool": "shared", "startupTimeoutSeconds": 10
+            "deployRoot": "deploy/demo", "pool": "shared", "startupTimeoutSeconds": 10
           }
         }
         """);
@@ -59,6 +58,7 @@ public sealed class GatewayStartupReconciliationTests : IDisposable
         ManifestPath = Path.Combine(_root, "servers.json"),
         TokenPath = Path.Combine(_root, "token"),
         LiveRegistryPath = LivePath,
+        StatePath = TestState.Write(_root, ("demo", "v-one")),
         RepoRoot = _root,
         Url = "http://127.0.0.1:0"
     });

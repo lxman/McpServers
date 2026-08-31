@@ -11,6 +11,9 @@ public sealed class ActivationService(
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
 
+    /// <summary>Stands in for a from-version on a server that has never been deployed.</summary>
+    private const string NotDeployed = "(none)";
+
     /// <summary>
     /// How long in-flight requests get to finish before the old backend is killed anyway. This is
     /// the only window in which an upgrade can fail a call.
@@ -51,11 +54,22 @@ public sealed class ActivationService(
         try
         {
             ServerEntry entry = supervisor.ResolveEntry(server);
-            string from = entry.ActiveVersion;
+            string? from = entry.ActiveVersion;
 
             // Resolved inside the gate: a restart queued behind another activation must target
             // whatever is active when it runs, not what was active when the request arrived.
-            string target = version ?? from;
+            string? target = version ?? from;
+
+            // A restart of something that was never deployed has nothing to restart to. Saying so
+            // is the whole point of the split: without it this resolved to a placeholder version
+            // and failed later, as a missing directory.
+            if (target is null)
+            {
+                return new ActivationResult(
+                    false, server, NotDeployed, NotDeployed, 0, false,
+                    $"{server} has no active version recorded, so nothing has ever been deployed " +
+                    "for it. Activate a published version explicitly rather than restarting.");
+            }
 
             List<BackendInstance> live = supervisor.All
                 .Where(instance => instance.Key.Server == server)
@@ -64,7 +78,7 @@ public sealed class ActivationService(
             if (!entry.OverlapAllowed)
             {
                 return await ActivateExclusiveAsync(
-                    server, from, target, live, cancellationToken);
+                    server, from ?? NotDeployed, target, live, cancellationToken);
             }
 
             // Start and health-gate EVERY replacement before touching a single live backend.
@@ -93,7 +107,7 @@ public sealed class ActivationService(
                 }
 
                 return new ActivationResult(
-                    false, server, from, target, 0, false,
+                    false, server, from ?? NotDeployed, target, 0, false,
                     $"New version failed to start: {ex.Message}");
             }
 
@@ -132,7 +146,7 @@ public sealed class ActivationService(
                     "with {Version}; fleet and manifest may disagree", server, swapped, target);
 
                 return new ActivationResult(
-                    false, server, from, target, swapped, drainTimedOut,
+                    false, server, from ?? NotDeployed, target, swapped, drainTimedOut,
                     $"Swap failed after {swapped} backend(s) were already replaced; fleet and " +
                     $"manifest may disagree: {ex.Message}");
             }
@@ -142,7 +156,7 @@ public sealed class ActivationService(
                 server, from, target, swapped);
 
             return new ActivationResult(
-                true, server, from, target, swapped, drainTimedOut, null);
+                true, server, from ?? NotDeployed, target, swapped, drainTimedOut, null);
         }
         finally
         {

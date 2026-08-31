@@ -22,6 +22,8 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
     private readonly string _liveRoot = Path.Combine(
         Path.GetTempPath(), "mcp-holdswap-live-" + Guid.NewGuid().ToString("N"));
 
+    private readonly string _statePath;
+
     private readonly FakeBackendLauncher _launcher = new();
     private readonly ManifestStore _manifest;
     private readonly BackendSupervisor _supervisor;
@@ -35,14 +37,14 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
         File.WriteAllText(manifestPath, """
         {
           "exclusive": {
-            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d",
-            "activeVersion": "v-one", "pool": "shared",
+            "project": "D/D.csproj", "assembly": "D.dll", "deployRoot": "deploy/d", "pool": "shared",
             "overlapAllowed": false, "startupTimeoutSeconds": 10
           }
         }
         """);
 
-        _manifest = ManifestStore.Load(manifestPath);
+        _statePath = TestState.Write(_liveRoot, ("exclusive", "v-one"));
+        _manifest = ManifestStore.Load(manifestPath, _statePath);
         _supervisor = new BackendSupervisor(
             _manifest, _launcher, new HealthProbe(new HttpClient(), BackendToken.Mint()),
             new GatewayBuildOptions
@@ -50,6 +52,7 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
                 ManifestPath = manifestPath,
                 TokenPath = Path.Combine(_root, "token"),
                 LiveRegistryPath = _liveRoot,
+                StatePath = _statePath,
                 RepoRoot = _root
             },
             "backend-token",
@@ -195,12 +198,14 @@ public sealed class HoldAndSwapActivationTests : IAsyncDisposable
         var key = new BackendKey("exclusive", "");
         await _supervisor.GetOrStartAsync(key, TestContext.Current.CancellationToken);
 
-        // Deletes the directory the manifest file lives in, so SetActiveVersionAsync's own
-        // File.WriteAllTextAsync throws DirectoryNotFoundException -- a cheap, uncontrived way to
-        // induce the "swap succeeded but the manifest write failed" sub-case without a new fake
-        // seam. The fake launcher doesn't read anything under _root, so starting v-two still
-        // succeeds; only the manifest write is affected.
-        Directory.Delete(_root, recursive: true);
+        // Puts a directory where the state file goes, so SetActiveVersionAsync's File.Move onto
+        // it throws -- a cheap, uncontrived way to induce the "swap succeeded but the version could
+        // not be recorded" sub-case without a new fake seam. Deleting a directory no longer works
+        // for this: the write creates its own parent, and the state file deliberately lives outside
+        // the deploy root now. The fake launcher reads nothing from disk, so starting v-two still
+        // succeeds; only the state write is affected.
+        File.Delete(_statePath);
+        Directory.CreateDirectory(_statePath);
 
         ActivationResult result = await _activation.ActivateAsync(
             "exclusive", "v-two", TestContext.Current.CancellationToken);
