@@ -46,9 +46,25 @@ public sealed class BackendSupervisor(
     /// Returns the running backend for this key, starting it if needed. Concurrent callers for the
     /// same key await the same start rather than racing to spawn duplicates.
     /// </summary>
+    /// <summary>
+    /// How many times one request will restart a backend it finds already dead before giving up.
+    /// Without a bound, a backend that dies the instant it starts sends this loop round forever,
+    /// spawning processes as fast as the machine allows, inside a request that never returns.
+    /// </summary>
+    private const int MaxCrashRestarts = 3;
+
+    /// <summary>
+    /// 100ms, 200ms, 400ms. Deliberately small: this is spent inside a live request, so it exists
+    /// to stop a hot spin and to let a transient cause clear, not to wait anything out.
+    /// </summary>
+    private static TimeSpan CrashRestartDelay(int attempt) =>
+        TimeSpan.FromMilliseconds(100 * Math.Pow(2, attempt - 1));
+
     public async Task<BackendInstance> GetOrStartAsync(
         BackendKey key, CancellationToken cancellationToken)
     {
+        var crashRestarts = 0;
+
         while (true)
         {
             Lazy<Task<BackendInstance>>? entry = null;
@@ -109,10 +125,25 @@ public sealed class BackendSupervisor(
                 BackendInstance instance = await entry.Value.WaitAsync(cancellationToken);
 
                 // A crashed backend is evicted and restarted on the next request rather than
-                // handed out dead.
+                // handed out dead -- but only a few times, and never in a hot loop.
                 if (instance.Handle.HasExited)
                 {
                     RemoveIfSame(key, entry);
+
+                    if (++crashRestarts > MaxCrashRestarts)
+                    {
+                        logger.LogError(
+                            "{Key} exited immediately on {Attempts} consecutive starts; giving up " +
+                            "on this request rather than restarting it again", key, crashRestarts);
+
+                        throw new BackendStartupException(
+                            $"{key} exited immediately on {crashRestarts} consecutive starts. " +
+                            "Check the backend's own log: the gateway can start it, and it is " +
+                            "dying on its own.",
+                            string.Empty);
+                    }
+
+                    await Task.Delay(CrashRestartDelay(crashRestarts), cancellationToken);
                     continue;
                 }
 

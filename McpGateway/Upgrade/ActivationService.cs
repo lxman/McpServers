@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using McpGateway.Configuration;
 using McpGateway.Supervision;
 using Microsoft.Extensions.Logging;
@@ -9,7 +10,22 @@ public sealed class ActivationService(
     ManifestStore manifest,
     ILogger<ActivationService> logger)
 {
-    private readonly SemaphoreSlim _gate = new(1, 1);
+    /// <summary>
+    /// One gate per server, not one for the fleet. What the gate protects is per-server -- a prune
+    /// must not delete the directory that server's own mid-flight swap is about to start from --
+    /// and two servers share nothing a swap touches. A single gate made every activation and prune
+    /// wait behind whichever server happened to be slowest: code-assist alone allows 120 seconds
+    /// for startup, and Stage 3 adds thirteen more servers behind it.
+    /// <para>
+    /// Case-insensitive to match the manifest. Names reaching here are already canonical, so this
+    /// is a second line rather than the fix.
+    /// </para>
+    /// </summary>
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _gates =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private SemaphoreSlim GateFor(string server) =>
+        _gates.GetOrAdd(server, _ => new SemaphoreSlim(1, 1));
 
     /// <summary>Stands in for a from-version on a server that has never been deployed.</summary>
     private const string NotDeployed = "(none)";
@@ -29,14 +45,15 @@ public sealed class ActivationService(
     public async Task<IReadOnlyList<string>> PruneAsync(
         string server, CancellationToken cancellationToken)
     {
-        await _gate.WaitAsync(cancellationToken);
+        SemaphoreSlim gate = GateFor(server);
+        await gate.WaitAsync(cancellationToken);
         try
         {
             return await supervisor.PruneVersionsAsync(server, cancellationToken);
         }
         finally
         {
-            _gate.Release();
+            gate.Release();
         }
     }
 
@@ -50,7 +67,8 @@ public sealed class ActivationService(
     public async Task<ActivationResult> ActivateAsync(
         string server, string? version, CancellationToken cancellationToken)
     {
-        await _gate.WaitAsync(cancellationToken);
+        SemaphoreSlim gate = GateFor(server);
+        await gate.WaitAsync(cancellationToken);
         try
         {
             ServerEntry entry = supervisor.ResolveEntry(server);
@@ -160,7 +178,7 @@ public sealed class ActivationService(
         }
         finally
         {
-            _gate.Release();
+            gate.Release();
         }
     }
 
