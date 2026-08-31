@@ -1,0 +1,1189 @@
+[
+  {
+    "name": "add_allowed_directory",
+    "description": "Add directory to whitelist. See security-config/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "directoryPath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "directoryPath"
+      ]
+    }
+  },
+  {
+    "name": "add_blocked_command",
+    "description": "Add command pattern to blocklist. See security-config/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "commandPattern": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandPattern"
+      ]
+    }
+  },
+  {
+    "name": "analyze_indentation",
+    "description": "Analyze file indentation patterns. See file-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "filePath"
+      ]
+    }
+  },
+  {
+    "name": "approve_edit",
+    "description": "PHASE 2: Apply pending edit (requires 'APPROVE'). See file-editing/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "approvalToken": {
+          "type": "string"
+        },
+        "confirmation": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "approvalToken",
+        "confirmation"
+      ]
+    }
+  },
+  {
+    "name": "cancel_edit",
+    "description": "Cancel pending edit. See file-editing/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "approvalToken": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "approvalToken"
+      ]
+    }
+  },
+  {
+    "name": "check_registry_key_exists",
+    "description": "Check if a registry key exists. See registry-management/check-key-exists.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "check_registry_value_exists",
+    "description": "Check if a registry value exists. See registry-management/check-value-exists.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "valueName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "valueName"
+      ]
+    }
+  },
+  {
+    "name": "cleanup_backup_files",
+    "description": "Clean up backup files by age/pattern. See maintenance/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "directoryPath": {
+          "type": "string"
+        },
+        "olderThanHours": {
+          "type": "integer",
+          "default": 24
+        },
+        "pattern": {
+          "type": "string",
+          "default": "*.backup.*"
+        }
+      },
+      "required": [
+        "directoryPath"
+      ]
+    }
+  },
+  {
+    "name": "close_session",
+    "description": "Close persistent session. See command-execution/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sessionId"
+      ]
+    }
+  },
+  {
+    "name": "compare_binary_files",
+    "description": "Compare binary files byte-by-byte. See binary-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file1Path": {
+          "type": "string"
+        },
+        "file2Path": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "length": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        },
+        "showMatches": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "file1Path",
+        "file2Path"
+      ]
+    }
+  },
+  {
+    "name": "create_directory",
+    "description": "Create directory. See file-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "create_registry_key",
+    "description": "Create a new registry key. See registry-management/create-key.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "delete",
+    "description": "Delete file or directory. See file-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "force": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "delete_registry_key",
+    "description": "Delete a registry key. See registry-management/delete-key.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "recursive": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "delete_registry_value",
+    "description": "Delete a registry value. See registry-management/delete-value.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "valueName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "valueName"
+      ]
+    }
+  },
+  {
+    "name": "enumerate_registry_keys_recursive",
+    "description": "Enumerate all subkeys recursively with optional depth limit. See registry-management/enumerate-recursive.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "maxDepth": {
+          "type": "integer",
+          "default": 0
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "execute_command",
+    "description": "Execute shell command. See command-execution/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "workingDirectory": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "default": 30000
+        },
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      },
+      "required": [
+        "command"
+      ]
+    }
+  },
+  {
+    "name": "find_in_file",
+    "description": "Find lines matching pattern. Supports pagination and count-only mode. See file-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "caseSensitive": {
+          "type": "boolean",
+          "default": false
+        },
+        "useRegex": {
+          "type": "boolean",
+          "default": false
+        },
+        "maxMatches": {
+          "type": "integer",
+          "default": 500
+        },
+        "skip": {
+          "type": "integer",
+          "default": 0
+        },
+        "countOnly": {
+          "type": "boolean",
+          "default": false
+        },
+        "includeContext": {
+          "type": "boolean",
+          "default": false
+        },
+        "contextLines": {
+          "type": "integer",
+          "default": 2
+        }
+      },
+      "required": [
+        "filePath",
+        "pattern"
+      ]
+    }
+  },
+  {
+    "name": "generate_hex_dump",
+    "description": "Generate classic hex dump. See binary-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "length": {
+          "type": "integer",
+          "default": 512
+        },
+        "bytesPerLine": {
+          "type": "integer",
+          "default": 16
+        }
+      },
+      "required": [
+        "filePath"
+      ]
+    }
+  },
+  {
+    "name": "get_audit_log",
+    "description": "Get recent audit entries. See maintenance/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "default": 20
+        }
+      }
+    }
+  },
+  {
+    "name": "get_configuration",
+    "description": "Get security config. See security-config/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_file_info",
+    "description": "Get file/directory info. See file-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "get_help",
+    "description": "Get help info and endpoints. See maintenance/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_process_info",
+    "description": "Get detailed process information. See process-management/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "processId": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "processId"
+      ]
+    }
+  },
+  {
+    "name": "get_registry_key_info",
+    "description": "Get information about a registry key including subkeys and values. See registry-management/get-key-info.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "get_session_output",
+    "description": "Get output from persistent session. See command-execution/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "default": "default"
+        }
+      }
+    }
+  },
+  {
+    "name": "get_skills_location",
+    "description": "",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "http_delete",
+    "description": "DELETE request to endpoint. See http-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ]
+    }
+  },
+  {
+    "name": "http_get",
+    "description": "GET request to endpoint. See http-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ]
+    }
+  },
+  {
+    "name": "http_post",
+    "description": "POST request with JSON body. See http-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "jsonBody": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "jsonBody"
+      ]
+    }
+  },
+  {
+    "name": "http_put",
+    "description": "PUT request with JSON body. See http-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "jsonBody": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "jsonBody"
+      ]
+    }
+  },
+  {
+    "name": "http_request",
+    "description": "Custom HTTP request with headers. See http-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "jsonBody": {
+          "type": "string",
+          "default": ""
+        },
+        "headersJson": {
+          "type": "string",
+          "default": ""
+        }
+      },
+      "required": [
+        "method",
+        "url"
+      ]
+    }
+  },
+  {
+    "name": "kill_process",
+    "description": "Terminate process by ID. See process-management/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "processId": {
+          "type": "integer"
+        },
+        "force": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "processId"
+      ]
+    }
+  },
+  {
+    "name": "kill_process_by_name",
+    "description": "Terminate all processes by name. See process-management/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "processName": {
+          "type": "string"
+        },
+        "confirmation": {
+          "type": "string",
+          "default": ""
+        }
+      },
+      "required": [
+        "processName"
+      ]
+    }
+  },
+  {
+    "name": "list_directory",
+    "description": "List directory contents. See file-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "skip": {
+          "type": "integer",
+          "default": 0
+        },
+        "take": {
+          "type": "integer",
+          "default": 500
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "list_pending_edits",
+    "description": "List pending edits awaiting approval. See file-editing/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "list_processes",
+    "description": "List running processes with filtering. See process-management/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filter": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "limit": {
+          "type": "integer",
+          "default": 50
+        }
+      }
+    }
+  },
+  {
+    "name": "list_registry_sub_keys",
+    "description": "List all subkeys under a registry key. See registry-management/list-subkeys.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "list_registry_values",
+    "description": "List all values in a registry key. See registry-management/list-values.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "list_sessions",
+    "description": "List active terminal sessions. See command-execution/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "move",
+    "description": "Move or rename file/directory. See file-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sourcePath": {
+          "type": "string"
+        },
+        "destinationPath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sourcePath",
+        "destinationPath"
+      ]
+    }
+  },
+  {
+    "name": "prepare_delete_lines",
+    "description": "PHASE 1: Prepare line deletion. See file-editing/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "startLine": {
+          "type": "integer"
+        },
+        "endLine": {
+          "type": "integer"
+        },
+        "versionToken": {
+          "type": "string"
+        },
+        "createBackup": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "filePath",
+        "startLine",
+        "endLine",
+        "versionToken"
+      ]
+    }
+  },
+  {
+    "name": "prepare_insert_after_line",
+    "description": "PHASE 1: Prepare content insertion. See file-editing/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "afterLine": {
+          "type": "integer"
+        },
+        "content": {
+          "type": "string"
+        },
+        "versionToken": {
+          "type": "string"
+        },
+        "maintainIndentation": {
+          "type": "boolean",
+          "default": true
+        },
+        "createBackup": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "filePath",
+        "afterLine",
+        "content",
+        "versionToken"
+      ]
+    }
+  },
+  {
+    "name": "prepare_replace_in_file",
+    "description": "PHASE 1: Prepare text pattern replacement. See file-editing/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "searchPattern": {
+          "type": "string"
+        },
+        "replaceWith": {
+          "type": "string"
+        },
+        "versionToken": {
+          "type": "string"
+        },
+        "caseSensitive": {
+          "type": "boolean",
+          "default": false
+        },
+        "useRegex": {
+          "type": "boolean",
+          "default": false
+        },
+        "createBackup": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "filePath",
+        "searchPattern",
+        "replaceWith",
+        "versionToken"
+      ]
+    }
+  },
+  {
+    "name": "prepare_replace_lines",
+    "description": "PHASE 1: Prepare line replacement. See file-editing/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "startLine": {
+          "type": "integer"
+        },
+        "endLine": {
+          "type": "integer"
+        },
+        "newContent": {
+          "type": "string"
+        },
+        "versionToken": {
+          "type": "string"
+        },
+        "createBackup": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "filePath",
+        "startLine",
+        "endLine",
+        "newContent",
+        "versionToken"
+      ]
+    }
+  },
+  {
+    "name": "read_around_line",
+    "description": "Read lines around specific line with context. See file-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "lineNumber": {
+          "type": "integer"
+        },
+        "contextLines": {
+          "type": "integer",
+          "default": 10
+        }
+      },
+      "required": [
+        "filePath",
+        "lineNumber"
+      ]
+    }
+  },
+  {
+    "name": "read_file",
+    "description": "Read file with pagination. See file-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "startLine": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": null
+        },
+        "maxLines": {
+          "type": "integer",
+          "default": 500
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "read_hex_bytes",
+    "description": "Read bytes in hex format. See binary-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "length": {
+          "type": "integer"
+        },
+        "format": {
+          "type": "string",
+          "default": "hex-ascii"
+        }
+      },
+      "required": [
+        "filePath",
+        "offset",
+        "length"
+      ]
+    }
+  },
+  {
+    "name": "read_next_chunk",
+    "description": "Read next chunk of lines for incremental processing. See file-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "startLine": {
+          "type": "integer"
+        },
+        "maxLines": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "filePath",
+        "startLine"
+      ]
+    }
+  },
+  {
+    "name": "read_range",
+    "description": "Read specific line range from file. See file-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "startLine": {
+          "type": "integer"
+        },
+        "endLine": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "filePath",
+        "startLine",
+        "endLine"
+      ]
+    }
+  },
+  {
+    "name": "read_registry_value",
+    "description": "Read a value from Windows Registry. See registry-management/read-value.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "valueName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "valueName"
+      ]
+    }
+  },
+  {
+    "name": "search_files",
+    "description": "Search files by pattern. Supports pagination for large result sets. See file-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "searchPath": {
+          "type": "string"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "recursive": {
+          "type": "boolean",
+          "default": true
+        },
+        "skip": {
+          "type": "integer",
+          "default": 0
+        },
+        "maxResults": {
+          "type": "integer",
+          "default": 500
+        },
+        "summaryOnly": {
+          "type": "boolean",
+          "default": false
+        },
+        "sortBy": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "name"
+        }
+      },
+      "required": [
+        "searchPath",
+        "pattern"
+      ]
+    }
+  },
+  {
+    "name": "search_hex_pattern",
+    "description": "Search for hex pattern in binary file. See binary-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filePath": {
+          "type": "string"
+        },
+        "hexPattern": {
+          "type": "string"
+        },
+        "startOffset": {
+          "type": "integer",
+          "default": 0
+        },
+        "maxResults": {
+          "type": "integer",
+          "default": 100
+        }
+      },
+      "required": [
+        "filePath",
+        "hexPattern"
+      ]
+    }
+  },
+  {
+    "name": "send_input",
+    "description": "Send input to persistent session. See command-execution/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sessionId",
+        "input"
+      ]
+    }
+  },
+  {
+    "name": "test_command_blocking",
+    "description": "Test if command is blocked. See security-config/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "command"
+      ]
+    }
+  },
+  {
+    "name": "test_directory_access",
+    "description": "Test if directory is allowed. See security-config/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "directoryPath": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "directoryPath"
+      ]
+    }
+  },
+  {
+    "name": "write_file",
+    "description": "Write content to file. See file-operations/SKILL.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "default": "overwrite"
+        },
+        "versionToken": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "path",
+        "content"
+      ]
+    }
+  },
+  {
+    "name": "write_registry_value",
+    "description": "Write a value to Windows Registry. See registry-management/write-value.md",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "valueName": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "valueType": {
+          "type": "string",
+          "default": "String"
+        }
+      },
+      "required": [
+        "path",
+        "valueName",
+        "value"
+      ]
+    }
+  }
+]

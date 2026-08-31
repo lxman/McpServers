@@ -3,22 +3,20 @@ using DesktopCommander.Core.Services;
 using DesktopCommander.Core.Services.AdvancedFileEditing;
 using DesktopCommanderMcp.McpTools;
 using Mcp.ResponseGuard.Services;
+using Mcp.Hosting.Core;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using ModelContextProtocol.AspNetCore;
 using Serilog;
-using SerilogFileWriter;
-
-Log.Logger = McpLoggingExtensions.SetupMcpLogging("logs/desktop-commander-.log");
 
 try
 {
-    Log.Information("Starting Desktop Commander server.");
-    
-    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+    // Logging, the loopback listener and the gateway's port-file contract all live in McpHttpHost.
+    // The old "logs/desktop-commander-.log" resolved against the working directory, which is a
+    // versioned deploy directory now.
+    WebApplicationBuilder builder = McpHttpHost.CreateBuilder(args, "desktop-commander");
 
-    builder.Logging.ClearProviders();
-    builder.Logging.AddSerilog(Log.Logger, dispose: false);
+    Log.Information("Starting Desktop Commander server.");
 
     // Add Memory Cache for ServerRegistry and other services
     builder.Services.AddMemoryCache();
@@ -60,8 +58,9 @@ try
             }
         });
 
-    builder.Services.AddMcpServer()
-        .WithStdioServerTransport()
+    builder.Services
+        .AddMcpServer()
+        .WithHttpTransport(o => o.SessionMode = HttpServerSessionMode.StatefulForInitializeClients)
         .WithTools<HttpTools>()
         // File System Operations
         .WithTools<FileSystemTools>()
@@ -78,13 +77,15 @@ try
         // Registry Management
         .WithTools<DesktopCommanderMcp.McpTools.RegistryTools>();
 
-    IHost host = builder.Build();
+    WebApplication app = builder.Build();
+    app.MapMcpHost();
 
-    await host.RunAsync();
+    await app.RunAsync();
 }
 catch (Exception ex)
 {
     Log.Fatal(ex, "DesktopCommander terminated unexpectedly");
+    Environment.ExitCode = 1;
 }
 finally
 {

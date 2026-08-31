@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -18,10 +18,12 @@
         <PackageReference Include="Microsoft.Extensions.Logging"  />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"  />
         <PackageReference Include="ModelContextProtocol"  />
+        <PackageReference Include="ModelContextProtocol.AspNetCore" />
     </ItemGroup>
     
     <ItemGroup>
       <ProjectReference Include="..\Libraries\DesktopCommander.Core\DesktopCommander.Core.csproj" />
+      <ProjectReference Include="..\Libraries\Mcp.Hosting.Core\Mcp.Hosting.Core.csproj" />
       <ProjectReference Include="..\Libraries\SerilogFileWriter\SerilogFileWriter.csproj" />
     </ItemGroup>
     

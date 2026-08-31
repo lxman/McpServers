@@ -1,37 +1,48 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Mcp.ResponseGuard;
+using Mcp.Hosting.Core;
 using Mcp.ResponseGuard.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using ModelContextProtocol.AspNetCore;
 using Serilog;
-using SerilogFileWriter;
 using SshClient.Core.Services;
 using SshMcp.McpTools;
 
-// Setup MCP-safe logging (redirects Console to file)
-McpLoggingExtensions.SetupMcpLogging("SshMcp");
+try
+{
+    // Logging, the loopback listener and the gateway's port-file contract all live in McpHttpHost.
+    // The old SetupMcpLogging("SshMcp") call took a bare server name and resolved its own path;
+    // McpHttpHost puts it under %LOCALAPPDATA%\McpServers\logs\ssh-mcp with every other server.
+    WebApplicationBuilder builder = McpHttpHost.CreateBuilder(args, "ssh-mcp");
 
-HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+    Log.Information("Starting SSH MCP server");
 
-// Configure Serilog
-builder.Logging.ClearProviders();
-builder.Logging.AddSerilog();
+    // Register core services
+    builder.Services.AddSingleton<SshConnectionManager>();
+    builder.Services.AddSingleton<SshCommandExecutor>();
+    builder.Services.AddSingleton<SftpFileManager>();
 
-// Register core services
-builder.Services.AddSingleton<SshConnectionManager>();
-builder.Services.AddSingleton<SshCommandExecutor>();
-builder.Services.AddSingleton<SftpFileManager>();
+    // Register response guard
+    builder.Services.AddSingleton<OutputGuard>();
 
-// Register response guard
-builder.Services.AddSingleton<OutputGuard>();
+    builder.Services
+        .AddMcpServer()
+        .WithHttpTransport(o => o.SessionMode = HttpServerSessionMode.StatefulForInitializeClients)
+        .WithTools<SshConnectionTools>()
+        .WithTools<SshCommandTools>()
+        .WithTools<SftpTools>();
 
-// Add MCP server with all tool types
-builder.Services.AddMcpServer()
-    .WithStdioServerTransport()
-    .WithTools<SshConnectionTools>()
-    .WithTools<SshCommandTools>()
-    .WithTools<SftpTools>();
+    WebApplication app = builder.Build();
+    app.MapMcpHost();
 
-IHost app = builder.Build();
-
-await app.RunAsync();
+    await app.RunAsync();
+}
+catch (Exception ex)
+{
+    // There was no try/catch here before, so a startup failure died silently with no log line.
+    Log.Fatal(ex, "SSH MCP server terminated unexpectedly");
+    Environment.ExitCode = 1;
+}
+finally
+{
+    await Log.CloseAndFlushAsync();
+}
