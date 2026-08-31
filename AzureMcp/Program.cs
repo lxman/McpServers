@@ -2,23 +2,21 @@ using AzureMcp.McpTools;
 using AzureServer.Core.Configuration;
 using Mcp.ResponseGuard.Configuration;
 using Mcp.ResponseGuard.Services;
+using Mcp.Hosting.Core;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ModelContextProtocol.AspNetCore;
 using Serilog;
-using SerilogFileWriter;
-
-// Configure Serilog to write to a file (not stdout!)
-Log.Logger = McpLoggingExtensions.SetupMcpLogging("logs/azure-mcp-.log");
 
 try
 {
+    // Logging, the loopback listener and the gateway's port-file contract all live in McpHttpHost.
+    // The old "logs/azure-mcp-.log" resolved against the working directory, which is a versioned
+    // deploy directory now.
+    WebApplicationBuilder builder = McpHttpHost.CreateBuilder(args, "azure");
+
     Log.Information("Starting Azure MCP server");
-
-    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-
-    builder.Logging.ClearProviders();
-    builder.Logging.AddSerilog(Log.Logger, dispose: false);
 
     // Register Azure Core services
     await builder.Services.AddAzureServicesWithPureDiscoveryAsync();
@@ -28,9 +26,9 @@ try
         sp.GetRequiredService<ILogger<OutputGuard>>(),
         new OutputGuardOptions { SafeTokenLimit = 15_000 }));
 
-    // Configure MCP server with STDIO transport
-    builder.Services.AddMcpServer()
-        .WithStdioServerTransport()
+    builder.Services
+        .AddMcpServer()
+        .WithHttpTransport(o => o.SessionMode = HttpServerSessionMode.StatefulForInitializeClients)
         // Azure Service Tools
         .WithTools<HealthTools>()
         .WithTools<StorageTools>()
@@ -48,12 +46,15 @@ try
         .WithTools<DevOpsTools>()
         .WithTools<CredentialManagementTools>();
 
-    IHost host = builder.Build();
-    await host.RunAsync();
+    WebApplication app = builder.Build();
+    app.MapMcpHost();
+
+    await app.RunAsync();
 }
 catch (Exception ex)
 {
     Log.Fatal(ex, "Azure MCP server terminated unexpectedly");
+    Environment.ExitCode = 1;
 }
 finally
 {
