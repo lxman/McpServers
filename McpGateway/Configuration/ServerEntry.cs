@@ -15,7 +15,11 @@ public sealed record ServerEntry
     /// </summary>
     [JsonIgnore] public string? ActiveVersion { get; init; }
 
-    /// <summary>"shared" gives every caller one backend; "per-client" gives each its own.</summary>
+    /// <summary>
+    /// "shared" gives every caller one backend; "per-client" one per client application;
+    /// "per-session" one per calling process, which is the only value that still isolates now that
+    /// Claude Desktop is retired and "per-client" has exactly one possible value.
+    /// </summary>
     [JsonPropertyName("pool")] public string Pool { get; init; } = "per-client";
 
     /// <summary>False for servers whose machine-wide state two live instances would corrupt.</summary>
@@ -27,4 +31,8 @@ public sealed record ServerEntry
 
     [JsonIgnore]
     public bool IsShared => string.Equals(Pool, "shared", StringComparison.OrdinalIgnoreCase);
+
+    [JsonIgnore]
+    public bool IsPerSession =>
+        string.Equals(Pool, "per-session", StringComparison.OrdinalIgnoreCase);
 }
