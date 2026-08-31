@@ -21,6 +21,7 @@
     <ItemGroup>
         <ProjectReference Include="..\McpGateway\McpGateway.csproj" />
         <ProjectReference Include="..\Libraries\Mcp.Hosting.Core\Mcp.Hosting.Core.csproj" />
+        <ProjectReference Include="..\McpGateway.TestBackend\McpGateway.TestBackend.csproj" />
     </ItemGroup>
 
 </Project>

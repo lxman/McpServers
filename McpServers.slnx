@@ -45,4 +45,5 @@
   <Project Path="EdgarMcp\EdgarMcp.csproj" />
   <Project Path="McpGateway\McpGateway.csproj" />
   <Project Path="McpGateway.Tests\McpGateway.Tests.csproj" />
+  <Project Path="McpGateway.TestBackend\McpGateway.TestBackend.csproj" />
 </Solution>
