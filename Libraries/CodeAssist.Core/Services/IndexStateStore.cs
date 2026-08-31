@@ -244,6 +244,13 @@ public sealed class IndexStateStore(
         {
             throw;
         }
+        catch (OperationCanceledException)
+        {
+            // Cancellation is the caller's decision, not a delete failure. Swallowing it here
+            // would report a cancelled delete as an unlucky one, with only a log line to see.
+            // ListRepositoryNamesAsync already rethrows it ahead of its generic catch.
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to delete index state at {Path}", path);
