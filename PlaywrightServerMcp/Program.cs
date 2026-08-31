@@ -1,23 +1,30 @@
+using Mcp.Hosting.Core;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ModelContextProtocol.AspNetCore;
 using Playwright.Core.Services;
+using PlaywrightServerMcp;
 using PlaywrightServerMcp.Tools;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Serilog;
-using SerilogFileWriter;
-
-Log.Logger = McpLoggingExtensions.SetupMcpLogging("logs/playwright-server-mcp-.log");
 
 try
 {
+    // Logging, the loopback listener and the gateway's port-file contract all live in McpHttpHost.
+    // The old "logs/playwright-server-mcp-.log" resolved against the working directory, which is a
+    // versioned deploy directory now.
+    WebApplicationBuilder builder = McpHttpHost.CreateBuilder(args, "playwright");
+
     Log.Information("Starting Playwright server");
-    
-    HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
-    
-    builder.Logging.ClearProviders();
-    builder.Logging.AddSerilog(Log.Logger, dispose: false);
+
+    // Screenshots, PDFs and downloads were written under the working directory, which the gateway
+    // makes a versioned deploy path -- so each deploy would orphan the artefacts of the last.
+    // Deliberately does NOT touch the Angular tools' workingDirectory defaults: those mean the
+    // user's project, not our output.
+    OutputPaths.Root = McpHttpHost.DataPathFor("playwright");
+    Log.Information("Output directory: {OutputRoot}", OutputPaths.Root);
 
     // Configure JSON serialization options globally to handle deep object structures
     builder.Services.Configure<JsonSerializerOptions>(options =>
@@ -82,18 +89,20 @@ try
         logging.AddFilter("Microsoft.Playwright", LogLevel.None);
     });
 
-    // Configure the MCP server with STDIO transport
     builder.Services
         .AddMcpServer()
-        .WithStdioServerTransport()
+        .WithHttpTransport(o => o.SessionMode = HttpServerSessionMode.StatefulForInitializeClients)
         .WithToolsFromAssembly();
 
-    IHost host = builder.Build();
-    await host.RunAsync();
+    WebApplication app = builder.Build();
+    app.MapMcpHost();
+
+    await app.RunAsync();
 }
 catch (Exception ex)
 {
     Log.Fatal(ex, "Playwright Server stopped unexpectedly");
+    Environment.ExitCode = 1;
 }
 finally
 {
