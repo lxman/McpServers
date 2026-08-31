@@ -1,37 +1,27 @@
 using CodeAssist.Core.Extensions;
 using CodeAssistMcp.McpTools;
 using CodeAssistMcp.Services;
+using Mcp.Hosting.Core;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using ModelContextProtocol.AspNetCore;
 using Serilog;
-using SerilogFileWriter;
-
-// Configure Serilog to write to a file (not stdout - MCP uses stdio)
-Log.Logger = McpLoggingExtensions.SetupMcpLogging("logs/codeassist-mcp-.log");
 
 try
 {
+    // Logging, the loopback listener and the gateway's port-file contract all live in
+    // McpHttpHost. Log.Logger is configured by the time this returns.
+    WebApplicationBuilder builder = McpHttpHost.CreateBuilder(args, "code-assist");
+
     Log.Information("Starting CodeAssist MCP server");
 
-    // Create builder with explicit base path
-    HostApplicationBuilder builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
-    {
-        Args = args,
-        ContentRootPath = AppContext.BaseDirectory
-    });
-
-    builder.Logging.ClearProviders();
-    builder.Logging.AddSerilog(Log.Logger, dispose: false);
-
-    // Register CodeAssist services
     builder.Services.AddCodeAssistServices(builder.Configuration);
     builder.Services.AddSingleton<RepositoryWatcherStartupService>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<RepositoryWatcherStartupService>());
 
-    // Configure MCP server with STDIO transport
     builder.Services.AddMcpServer()
-        .WithStdioServerTransport()
+        .WithHttpTransport(o => o.SessionMode = HttpServerSessionMode.StatefulForInitializeClients)
         .WithTools<HealthTools>()
         .WithTools<IndexTools>()
         .WithTools<SearchTools>()
@@ -39,8 +29,10 @@ try
         .WithTools<PersonalContextTools>()
         .WithTools<DataFlowTools>();
 
-    IHost host = builder.Build();
-    await host.RunAsync();
+    WebApplication app = builder.Build();
+    app.MapMcpHost();
+
+    await app.RunAsync();
 }
 catch (Exception ex)
 {
