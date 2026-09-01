@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Mcp.Database.Core.Sql;
+using Microsoft.Data.Sqlite;
 using Mcp.ResponseGuard.Configuration;
 using Mcp.ResponseGuard.Services;
 using ModelContextProtocol.AspNetCore;
@@ -41,8 +42,40 @@ try
     builder.Services.Configure<SqlConfiguration>(
         builder.Configuration.GetSection("SqlConfiguration"));
 
+    // SQLite data sources are anchored here, in the composition root, for the same reason edgar's
+    // data directory was: a relative "Data Source=./local.db" used to resolve against whatever
+    // working directory the client handed us, and now resolves against a VERSIONED deploy
+    // directory -- so the database would be created under v-A and silently be a different, empty
+    // file under v-B. Absolute paths are left alone as the user's escape hatch.
+    builder.Services.PostConfigure<SqlConfiguration>(sqlConfig =>
+    {
+        string dataRoot = McpHttpHost.ResolveDataDirectory(null, "sql-database-explorer");
+
+        foreach (ConnectionConfig conn in sqlConfig.Connections.Values)
+        {
+            if (!string.Equals(conn.Provider, "Sqlite", StringComparison.OrdinalIgnoreCase)) continue;
+
+            var csb = new SqliteConnectionStringBuilder(conn.ConnectionString);
+
+            // An in-memory database has no file to anchor, and neither does an empty data source.
+            if (string.IsNullOrWhiteSpace(csb.DataSource)) continue;
+            if (csb.DataSource.Contains(":memory:", StringComparison.OrdinalIgnoreCase)) continue;
+
+            csb.DataSource = McpHttpHost.ResolveDataDirectory(csb.DataSource, "sql-database-explorer");
+            conn.ConnectionString = csb.ConnectionString;
+        }
+
+        // SQLite creates the database file but not the directory above it.
+        Directory.CreateDirectory(dataRoot);
+    });
+
     // Register SQL connection manager
     builder.Services.AddSqlConnectionManager();
+
+    // Opens the connections named in SqlConfiguration on first use. Without it nothing ever
+    // populates SqlConnectionManager -- there is no connect tool -- so every connection name,
+    // including the ones in appsettings.json, answered "not found. Please connect first."
+    builder.Services.AddSingleton<ConnectionResolver>();
 
     // Register services
     builder.Services.AddSingleton<IQueryExecutor, QueryExecutor>();

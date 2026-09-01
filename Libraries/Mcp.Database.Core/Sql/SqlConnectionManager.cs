@@ -41,7 +41,8 @@ public class SqlConnectionManager : IDisposable
         {
             ["SqlServer"] = new SqlServerProvider(),
             ["PostgreSQL"] = new PostgreSqlProvider(),
-            ["MySQL"] = new MySqlProvider()
+            ["MySQL"] = new MySqlProvider(),
+            ["Sqlite"] = new SqliteProvider()
         };
 
         // Set up periodic health checks if enabled

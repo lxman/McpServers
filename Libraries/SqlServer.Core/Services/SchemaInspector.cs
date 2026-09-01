@@ -12,16 +12,21 @@ namespace SqlServer.Core.Services;
 public class SchemaInspector : ISchemaInspector
 {
     private readonly SqlConnectionManager _connectionManager;
+    private readonly ConnectionResolver _resolver;
     private readonly SqlConfiguration _config;
     private readonly ILogger<SchemaInspector> _logger;
     private readonly Dictionary<string, IDbProvider> _providers = new();
 
+    // The manager is still needed directly: GetProvider maps the open connection's provider onto
+    // this class's own IDbProvider table, which the resolver has no part in.
     public SchemaInspector(
         SqlConnectionManager connectionManager,
+        ConnectionResolver resolver,
         IOptions<SqlConfiguration> config,
         ILogger<SchemaInspector> logger)
     {
         _connectionManager = connectionManager;
+        _resolver = resolver;
         _config = config.Value;
         _logger = logger;
         InitializeProviders();
@@ -47,8 +52,7 @@ public class SchemaInspector : ISchemaInspector
     {
         try
         {
-            IDbConnection connection = _connectionManager.GetConnection(connectionName)
-                ?? throw new InvalidOperationException($"Connection '{connectionName}' not found. Please connect first.");
+            IDbConnection connection = await _resolver.EnsureConnectedAsync(connectionName);
             IDbProvider provider = GetProvider(connectionName);
             string query = provider.GetTablesQuery();
             IEnumerable<TableInfo> tables = await connection.QueryAsync<TableInfo>(query);
@@ -65,8 +69,7 @@ public class SchemaInspector : ISchemaInspector
     {
         try
         {
-            IDbConnection connection = _connectionManager.GetConnection(connectionName)
-                ?? throw new InvalidOperationException($"Connection '{connectionName}' not found. Please connect first.");
+            IDbConnection connection = await _resolver.EnsureConnectedAsync(connectionName);
             IDbProvider provider = GetProvider(connectionName);
             string query = provider.GetColumnsQuery(tableName);
             IEnumerable<ColumnInfo> columns = await connection.QueryAsync<ColumnInfo>(query, new { tableName });
@@ -88,8 +91,7 @@ public class SchemaInspector : ISchemaInspector
     {
         try
         {
-            IDbConnection connection = _connectionManager.GetConnection(connectionName)
-                ?? throw new InvalidOperationException($"Connection '{connectionName}' not found. Please connect first.");
+            IDbConnection connection = await _resolver.EnsureConnectedAsync(connectionName);
             IDbProvider provider = GetProvider(connectionName);
             string query = provider.GetIndexesQuery(tableName);
 
@@ -133,8 +135,7 @@ public class SchemaInspector : ISchemaInspector
     {
         try
         {
-            IDbConnection connection = _connectionManager.GetConnection(connectionName)
-                ?? throw new InvalidOperationException($"Connection '{connectionName}' not found. Please connect first.");
+            IDbConnection connection = await _resolver.EnsureConnectedAsync(connectionName);
             IDbProvider provider = GetProvider(connectionName);
             string query = provider.GetForeignKeysQuery(tableName);
             IEnumerable<ForeignKeyInfo> foreignKeys = await connection.QueryAsync<ForeignKeyInfo>(query, new { tableName });
