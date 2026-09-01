@@ -1,7 +1,6 @@
 using System.Data;
 using System.Diagnostics;
 using Dapper;
-using Mcp.Database.Core.Sql;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SqlServer.Core.Models;
@@ -10,7 +9,7 @@ using SqlServer.Core.Services.Interfaces;
 namespace SqlServer.Core.Services;
 
 public class QueryExecutor(
-    SqlConnectionManager connectionManager,
+    ConnectionResolver resolver,
     IAuditLogger auditLogger,
     IOptions<SqlConfiguration> config,
     ILogger<QueryExecutor> logger)
@@ -26,8 +25,7 @@ public class QueryExecutor(
             ValidateSql(sql);
             maxRows = Math.Min(maxRows, _config.Security.MaxResultRows);
 
-            IDbConnection connection = connectionManager.GetConnection(connectionName)
-                ?? throw new InvalidOperationException($"Connection '{connectionName}' not found. Please connect first.");
+            IDbConnection connection = await resolver.EnsureConnectedAsync(connectionName);
             List<dynamic> data = (await connection.QueryAsync<dynamic>(sql, parameters)).ToList();
 
             bool isTruncated = data.Count > maxRows;
@@ -73,8 +71,7 @@ public class QueryExecutor(
         {
             ValidateSql(sql);
 
-            IDbConnection connection = connectionManager.GetConnection(connectionName)
-                ?? throw new InvalidOperationException($"Connection '{connectionName}' not found. Please connect first.");
+            IDbConnection connection = await resolver.EnsureConnectedAsync(connectionName);
             int rowsAffected = await connection.ExecuteAsync(sql, parameters);
 
             sw.Stop();
@@ -114,8 +111,7 @@ public class QueryExecutor(
         {
             ValidateSql(sql);
 
-            IDbConnection connection = connectionManager.GetConnection(connectionName)
-                ?? throw new InvalidOperationException($"Connection '{connectionName}' not found. Please connect first.");
+            IDbConnection connection = await resolver.EnsureConnectedAsync(connectionName);
             object? scalarValue = await connection.ExecuteScalarAsync(sql, parameters);
 
             sw.Stop();

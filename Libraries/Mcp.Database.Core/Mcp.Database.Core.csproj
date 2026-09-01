@@ -25,6 +25,7 @@
         <PackageReference Include="Microsoft.Data.SqlClient"  />
         <PackageReference Include="Npgsql"  />
         <PackageReference Include="MySqlConnector"  />
+        <PackageReference Include="Microsoft.Data.Sqlite"  />
 
         <!-- Core Dependencies -->
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"  />
