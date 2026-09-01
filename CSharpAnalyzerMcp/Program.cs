@@ -16,8 +16,18 @@ try
 
     Log.Information("Starting CSharp Analyzer MCP server");
 
-    // Register CSharpAnalyzer.Core services
-    builder.Services.AddSingleton<AssemblyAnalysisService>();
+    // Reflection services are SCOPED -- the MCP SDK resolves tool targets through a per-request
+    // scope, so this is one loader per tool call. AssemblyLoaderService was registered nowhere at
+    // all, which is why get_assembly_info and list_types threw on every call. Registering it as a
+    // singleton would have fixed the throw and opened two worse holes: its cache is a plain
+    // Dictionary with no synchronisation, and it holds a MetadataLoadContext, which keeps the
+    // inspected .dll OPEN until disposed -- on this server's shared pool with a 30-minute idle
+    // timeout that means locking the user's own build output, the exact failure this gateway
+    // exists to remove. Scoped closes both: never shared across calls, and DI disposes it at the
+    // end of each one. The cost is re-reading metadata per call, which is cheap.
+    // AssemblyAnalysisService moves with it, or it would capture a scoped dependency.
+    builder.Services.AddScoped<AssemblyLoaderService>();
+    builder.Services.AddScoped<AssemblyAnalysisService>();
 
     builder.Services
         .AddMcpServer()
