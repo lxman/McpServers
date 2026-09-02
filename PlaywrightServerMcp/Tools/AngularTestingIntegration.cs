@@ -22,15 +22,27 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
 [McpServerTool]
     [Description("Execute Angular unit tests with comprehensive result parsing and analysis. See skills/playwright-mcp/tools/angular/testing-integration.md.")]
     public async Task<string> ExecuteAngularUnitTests(
+        [Description(AngularProjectDirectory.ParameterDescription)] string workingDirectory,
         string mode = "single-run",
         string testPattern = "",
         bool codeCoverage = true,
         string browser = "chrome",
-        string workingDirectory = "",
         string sessionId = "default")
     {
         try
         {
+            if (!AngularProjectDirectory.TryValidate(workingDirectory, out string refusal))
+            {
+                return JsonSerializer.Serialize(new UnitTestResult
+                {
+                    Success = false,
+                    Command = "ng test",
+                    WorkingDirectory = workingDirectory,
+                    ErrorMessage = refusal,
+                    ExitCode = -1
+                }, SerializerOptions.JsonOptionsComplex);
+            }
+
             // Validate session exists
             PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
             if (session == null)
@@ -47,7 +59,7 @@ public class AngularTestingIntegration(PlaywrightSessionManager sessionManager)
 
             var config = new TestExecutionConfig
             {
-                WorkingDirectory = string.IsNullOrWhiteSpace(workingDirectory) ? Directory.GetCurrentDirectory() : workingDirectory,
+                WorkingDirectory = workingDirectory,
                 WatchMode = mode.ToLower().Contains("watch"),
                 CiMode = mode.ToLower().Contains("ci"),
                 HeadlessMode = mode.ToLower().Contains("ci") || !mode.ToLower().Contains("watch"),

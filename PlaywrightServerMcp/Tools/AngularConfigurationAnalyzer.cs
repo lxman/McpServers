@@ -20,7 +20,7 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
 [McpServerTool]
     [Description("Analyze Angular workspace configuration (angular.json) with comprehensive parsing and validation. See skills/playwright-mcp/tools/angular/configuration-analyzer.md.")]
     public async Task<string> AnalyzeAngularJsonConfig(
-        string workingDirectory = "",
+        [Description(AngularProjectDirectory.ParameterDescription)] string workingDirectory,
         bool includeDependencyAnalysis = true,
         bool includeSecurityScan = true,
         bool includeArchitecturalInsights = true,
@@ -28,6 +28,16 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
     {
         try
         {
+            if (!AngularProjectDirectory.TryValidate(workingDirectory, out string refusal))
+            {
+                return JsonSerializer.Serialize(new ConfigurationAnalysisResult
+                {
+                    Success = false,
+                    WorkingDirectory = workingDirectory,
+                    ErrorMessage = refusal
+                }, SerializerOptions.JsonOptionsComplex);
+            }
+
             // Validate session exists
             PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
             if (session == null)
@@ -40,12 +50,8 @@ public partial class AngularConfigurationAnalyzer(PlaywrightSessionManager sessi
                 }, SerializerOptions.JsonOptionsComplex);
             }
 
-            string targetDirectory = string.IsNullOrWhiteSpace(workingDirectory) 
-                ? Directory.GetCurrentDirectory() 
-                : workingDirectory;
-
             ConfigurationAnalysisResult result = await AnalyzeWorkspaceConfiguration(
-                targetDirectory, 
+                workingDirectory, 
                 includeDependencyAnalysis, 
                 includeSecurityScan, 
                 includeArchitecturalInsights);
