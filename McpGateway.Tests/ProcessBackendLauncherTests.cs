@@ -18,24 +18,35 @@ public sealed class ProcessBackendLauncherTests : IAsyncDisposable
 
     private IBackendHandle? _handle;
 
-    private static string TestBackendAssembly => Path.GetFullPath(Path.Combine(
-        AppContext.BaseDirectory, "..", "..", "..", "..",
-        "McpGateway.TestBackend", "bin", "Debug", "net10.0", "McpGateway.TestBackend.dll"));
+    /// <summary>
+    /// Published into this test's own directory rather than read out of the project's own
+    /// bin/Debug. That path is only populated as a side effect of another class publishing, so on
+    /// a cold tree these tests raced it and failed with "No assembly at ... Publish the version
+    /// first" -- a failure about test ordering wearing the costume of a launcher bug.
+    /// </summary>
+    private string PublishTestBackend()
+    {
+        string output = Path.Combine(_root, "backend");
+        TestBackendPublisher.Publish(output, "launcher");
+
+        return Path.Combine(output, "McpGateway.TestBackend.dll");
+    }
 
     [Fact]
     public void Start_AdoptsTheSpawnedBackendIntoTheGatewayJobObject()
     {
-        Assert.True(File.Exists(TestBackendAssembly),
-            $"expected a built test backend at {TestBackendAssembly}");
-
         Directory.CreateDirectory(_root);
+        string testBackendAssembly = PublishTestBackend();
+
+        Assert.True(File.Exists(testBackendAssembly),
+            $"expected a published test backend at {testBackendAssembly}");
 
         var launcher = new ProcessBackendLauncher(NullLogger<ProcessBackendLauncher>.Instance);
 
         _handle = launcher.Start(new BackendLaunchRequest(
             "test-backend",
             "v-launcher-test",
-            TestBackendAssembly,
+            testBackendAssembly,
             Path.Combine(_root, "port.json"),
             "a-backend-token"));
 
@@ -51,13 +62,14 @@ public sealed class ProcessBackendLauncherTests : IAsyncDisposable
     public void Start_CapturesAProcessIdentityThatSurvivesTeardown()
     {
         Directory.CreateDirectory(_root);
+        string testBackendAssembly = PublishTestBackend();
 
         var launcher = new ProcessBackendLauncher(NullLogger<ProcessBackendLauncher>.Instance);
 
         _handle = launcher.Start(new BackendLaunchRequest(
             "test-backend",
             "v-launcher-test",
-            TestBackendAssembly,
+            testBackendAssembly,
             Path.Combine(_root, "port.json"),
             "a-backend-token"));
 
@@ -76,7 +88,27 @@ public sealed class ProcessBackendLauncherTests : IAsyncDisposable
     {
         if (_handle is not null) await _handle.DisposeAsync();
 
-        try { Directory.Delete(_root, recursive: true); }
-        catch (Exception ex) when (ex is IOException or DirectoryNotFoundException) { }
+        // The backend is published INTO _root now, so these are the DLLs the exiting process still
+        // has mapped. Its handles close asynchronously after it is asked to stop, so a delete
+        // straight afterwards can hit a file that is still open. Retried briefly rather than
+        // swallowed, so a temp tree is not left behind on every run.
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                Directory.Delete(_root, recursive: true);
+                return;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                if (attempt == 20) return;
+
+                await Task.Delay(100);
+            }
+        }
     }
 }

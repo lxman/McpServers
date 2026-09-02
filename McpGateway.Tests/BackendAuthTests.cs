@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -125,41 +124,8 @@ public sealed class BackendAuthFixture : IAsyncLifetime
             .GetProperty("echo").GetProperty("backends")[0].GetProperty("port").GetInt32();
     }
 
-    private void Publish(string version)
-    {
-        string output = Path.Combine(Root, "deploy", "echo", version);
-
-        var info = new ProcessStartInfo("dotnet")
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-        foreach (string arg in new[]
-                 {
-                     "publish", RepoPath("McpGateway.TestBackend/McpGateway.TestBackend.csproj"),
-                     "-c", "Debug", "-o", output, "--nologo", "-v", "quiet"
-                 })
-        {
-            info.ArgumentList.Add(arg);
-        }
-
-        using Process process = Process.Start(info)!;
-
-        // Both pipes have to be drained concurrently. Reading stderr to the end while stdout fills
-        // its 4 KB buffer deadlocks the publish -- the child blocks on a write nobody is reading
-        // and WaitForExit never returns. Seen for real on a publish whose dependency graph had
-        // just been rebuilt, so this is not theoretical.
-        Task<string> stdout = process.StandardOutput.ReadToEndAsync();
-        Task<string> stderr = process.StandardError.ReadToEndAsync();
-        process.WaitForExit();
-
-        Assert.True(process.ExitCode == 0,
-            $"publish {version} failed: {stderr.Result}{Environment.NewLine}{stdout.Result}");
-    }
-
-    private static string RepoPath(string relative) => Path.GetFullPath(Path.Combine(
-        AppContext.BaseDirectory, "..", "..", "..", "..", relative));
+    private void Publish(string version) => TestBackendPublisher.Publish(
+        Path.Combine(Root, "deploy", "echo", version), version);
 
     /// <summary>
     /// Null-tolerant on purpose. If InitializeAsync throws part way through, xUnit still calls
