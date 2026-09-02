@@ -65,7 +65,8 @@ public sealed class CrashRestartTests : IAsyncDisposable
         Task<BackendInstance> start = _supervisor.GetOrStartAsync(
             new BackendKey("flaps", ""), CancellationToken.None);
 
-        Task finished = await Task.WhenAny(start, Task.Delay(TimeSpan.FromSeconds(10)));
+        Task finished = await Task.WhenAny(
+            start, Task.Delay(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
 
         Assert.True(
             ReferenceEquals(finished, start),
