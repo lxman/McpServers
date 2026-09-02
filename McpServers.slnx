@@ -46,4 +46,5 @@
   <Project Path="McpGateway\McpGateway.csproj" />
   <Project Path="McpGateway.Tests\McpGateway.Tests.csproj" />
   <Project Path="McpGateway.TestBackend\McpGateway.TestBackend.csproj" />
+  <Project Path="PlaywrightServerMcp.Tests\PlaywrightServerMcp.Tests.csproj" />
 </Solution>

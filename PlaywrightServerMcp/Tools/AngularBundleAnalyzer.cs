@@ -20,7 +20,7 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
 [McpServerTool]
     [Description("Analyze Angular bundle size by component with detailed impact analysis and optimization recommendations. See skills/playwright-mcp/tools/angular/bundle-analyzer.md.")]
     public async Task<string> AnalyzeBundleSizeByComponent(
-        string workingDirectory = "",
+        [Description(AngularProjectDirectory.ParameterDescription)] string workingDirectory,
         string buildConfiguration = "production",
         bool includeComponentAnalysis = true,
         bool includeDependencyAnalysis = true,
@@ -31,6 +31,16 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
     {
         try
         {
+            if (!AngularProjectDirectory.TryValidate(workingDirectory, out string refusal))
+            {
+                return JsonSerializer.Serialize(new BundleSizeAnalysisResult
+                {
+                    Success = false,
+                    WorkingDirectory = workingDirectory,
+                    ErrorMessage = refusal
+                }, SerializerOptions.JsonOptionsComplex);
+            }
+
             // Validate session exists
             PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
             if (session == null)
@@ -43,12 +53,8 @@ public class AngularBundleAnalyzer(PlaywrightSessionManager sessionManager)
                 }, SerializerOptions.JsonOptionsComplex);
             }
 
-            string targetDirectory = string.IsNullOrWhiteSpace(workingDirectory) 
-                ? Directory.GetCurrentDirectory() 
-                : workingDirectory;
-
             BundleSizeAnalysisResult result = await AnalyzeBundleSize(
-                targetDirectory,
+                workingDirectory,
                 buildConfiguration,
                 includeComponentAnalysis,
                 includeDependencyAnalysis,

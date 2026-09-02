@@ -39,12 +39,24 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
     [Description("Execute Angular CLI commands and capture their output with comprehensive error handling. See skills/playwright-mcp/tools/angular/cli-integration.md.")]
     public async Task<string> ExecuteNgCommands(
         string command,
-        string workingDirectory = "",
+        [Description(AngularProjectDirectory.ParameterDescription)] string workingDirectory,
         int timeoutSeconds = 120,
         string sessionId = "default")
     {
         try
         {
+            if (!AngularProjectDirectory.TryValidate(workingDirectory, out string refusal))
+            {
+                return JsonSerializer.Serialize(new CliCommandResult
+                {
+                    Success = false,
+                    Command = command,
+                    WorkingDirectory = workingDirectory,
+                    ErrorMessage = refusal,
+                    ExitCode = -1
+                }, SerializerOptions.JsonOptionsComplex);
+            }
+
             // Validate session exists
             PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
             if (session == null)
@@ -61,7 +73,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
 
             var config = new CliExecutionConfig
             {
-                WorkingDirectory = string.IsNullOrWhiteSpace(workingDirectory) ? Directory.GetCurrentDirectory() : workingDirectory,
+                WorkingDirectory = workingDirectory,
                 TimeoutSeconds = timeoutSeconds,
                 CaptureOutput = true,
                 ValidateAngularProject = ShouldValidateAngularProject(command) 
@@ -88,11 +100,22 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
     [McpServerTool]
     [Description("Check if Angular CLI is installed and get version information. See skills/playwright-mcp/tools/angular/cli-integration.md.")]
     public async Task<string> CheckAngularCliStatus(
-        string workingDirectory = "",
+        [Description(AngularProjectDirectory.ParameterDescription)] string workingDirectory,
         string sessionId = "default")
     {
         try
         {
+            if (!AngularProjectDirectory.TryValidate(workingDirectory, out string refusal))
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    Success = false,
+                    AngularCliInstalled = false,
+                    ErrorMessage = refusal,
+                    WorkingDirectory = workingDirectory
+                }, SerializerOptions.JsonOptionsComplex);
+            }
+
             // Validate session exists
             PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
             if (session == null)
@@ -107,7 +130,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
 
             var config = new CliExecutionConfig
             {
-                WorkingDirectory = string.IsNullOrWhiteSpace(workingDirectory) ? Directory.GetCurrentDirectory() : workingDirectory,
+                WorkingDirectory = workingDirectory,
                 TimeoutSeconds = 30,
                 ValidateAngularProject = false
             };
@@ -152,12 +175,24 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
     public async Task<string> GenerateAngularArtifact(
         string artifactType,
         string artifactName,
+        [Description(AngularProjectDirectory.ParameterDescription)] string workingDirectory,
         string options = "",
-        string workingDirectory = "",
         string sessionId = "default")
     {
         try
         {
+            if (!AngularProjectDirectory.TryValidate(workingDirectory, out string refusal))
+            {
+                return JsonSerializer.Serialize(new CliCommandResult
+                {
+                    Success = false,
+                    Command = $"ng generate {artifactType} {artifactName}",
+                    WorkingDirectory = workingDirectory,
+                    ErrorMessage = refusal,
+                    ExitCode = -1
+                }, SerializerOptions.JsonOptionsComplex);
+            }
+
             // Validate session exists
             PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
             if (session == null)
@@ -174,7 +209,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
 
             var config = new CliExecutionConfig
             {
-                WorkingDirectory = string.IsNullOrWhiteSpace(workingDirectory) ? Directory.GetCurrentDirectory() : workingDirectory,
+                WorkingDirectory = workingDirectory,
                 TimeoutSeconds = 180,
                 ValidateAngularProject = true
             };
@@ -232,13 +267,25 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
     [McpServerTool]
     [Description("Build Angular project with specified configuration. See skills/playwright-mcp/tools/angular/cli-integration.md.")]
     public async Task<string> BuildAngularProject(
+        [Description(AngularProjectDirectory.ParameterDescription)] string workingDirectory,
         string configuration = "development",
         string options = "",
-        string workingDirectory = "",
         string sessionId = "default")
     {
         try
         {
+            if (!AngularProjectDirectory.TryValidate(workingDirectory, out string refusal))
+            {
+                return JsonSerializer.Serialize(new CliCommandResult
+                {
+                    Success = false,
+                    Command = $"ng build --configuration={configuration}",
+                    WorkingDirectory = workingDirectory,
+                    ErrorMessage = refusal,
+                    ExitCode = -1
+                }, SerializerOptions.JsonOptionsComplex);
+            }
+
             // Validate session exists
             PlaywrightSessionManager.SessionContext? session = _sessionManager.GetSession(sessionId);
             if (session == null)
@@ -255,7 +302,7 @@ public class AngularCliIntegration(PlaywrightSessionManager sessionManager)
 
             var config = new CliExecutionConfig
             {
-                WorkingDirectory = string.IsNullOrWhiteSpace(workingDirectory) ? Directory.GetCurrentDirectory() : workingDirectory,
+                WorkingDirectory = workingDirectory,
                 TimeoutSeconds = 600, // Longer timeout for builds
                 ValidateAngularProject = true
             };

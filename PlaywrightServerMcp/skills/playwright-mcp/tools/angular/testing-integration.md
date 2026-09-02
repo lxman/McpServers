@@ -9,7 +9,7 @@ Execute Angular unit tests with comprehensive result parsing and analysis.
 
 **Parameters:**
 - `sessionId` (string, default: "default"): Session ID for context
-- `workingDirectory` (string, default: ""): Working directory (defaults to current directory)
+- `workingDirectory` (string, **required**): Absolute path to the Angular project root. No default -- see [Working directory](#working-directory).
 - `testPattern` (string, default: ""): Specific test pattern or file to run (optional)
 - `mode` (string, default: "single-run"): Test execution configuration
   - `"single-run"`: Run tests once and exit
@@ -28,7 +28,7 @@ Check if Angular CLI is installed and get version information.
 
 **Parameters:**
 - `sessionId` (string, default: "default"): Session ID for context
-- `workingDirectory` (string, default: ""): Working directory to check (defaults to current directory)
+- `workingDirectory` (string, **required**): Absolute path to the Angular project root. No default -- see [Working directory](#working-directory).
 
 **Returns:** string - JSON with Angular CLI status
 
@@ -56,3 +56,14 @@ Check if Angular CLI is installed and get version information.
 4. Specify test patterns for focused testing
 5. Use headless Chrome in CI environments
 6. Parse test results for actionable insights
+
+## Working directory
+
+`workingDirectory` is **required** on every tool here, and must be an **absolute** path to your
+Angular project root.
+
+It used to fall back to the process's current directory. This server now runs as a shared HTTP
+backend out of a versioned deploy directory, so that fallback silently aimed these tools at the
+server's own install rather than at your project -- reporting on it, building in it, and in the
+case of `ng generate` writing into it. A blank, relative, or non-existent path is now refused with
+a message saying what to pass instead.
