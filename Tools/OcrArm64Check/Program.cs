@@ -1,6 +1,7 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using DocumentServer.Core.Services.Ocr;
 using DocumentServer.Core.Services.Ocr.Models;
@@ -13,26 +14,23 @@ using PdfLibrary.Structure;
 namespace OcrArm64Check;
 
 /// <summary>
-/// Verifies the render-and-OCR path on linux-arm64 against a reference run.
+/// Runs the render-and-OCR path against a real corpus, on the machine it will ship to.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The OCR engine choice was already settled and Tesseract itself was confirmed on ARM64. What
-/// this checks is the <em>managed</em> path either side of it: SkiaSharp's linux-arm64 native
-/// asset and PdfLibrary's rasteriser. Those are the pieces with no ARM64 guarantee, and a
-/// rasteriser that quietly renders differently on another architecture does not throw - it just
-/// produces worse text, which is invisible without a reference to compare against.
+/// Three modes. <c>pages</c> re-runs a manifest of individual pages, which is how the ARM64
+/// render parity check was done: SkiaSharp's linux-arm64 asset and PdfLibrary's rasteriser have
+/// no ARM64 guarantee, and a rasteriser that quietly renders differently on another
+/// architecture does not throw - it produces worse text, invisible without a reference.
 /// </para>
 /// <para>
-/// So this deliberately re-runs the same pages the bake-off scored and diffs the text, rather
-/// than asserting that the process merely starts.
+/// <c>doc</c> runs the full <see cref="OcrService"/> over one PDF, exercising page gating and
+/// error accounting. <c>fulltext</c> is the production job: it fills in the OCR-pending pages of
+/// an extracted corpus in place.
 /// </para>
 /// </remarks>
 public static class Program
 {
-    /// <summary>Word count at or below which the supersampled retry fires. Matches OcrService.</summary>
-    private const int RetryWordThreshold = 5;
-
     public static int Main(string[] args)
     {
         string mode = Arg(args, "--mode") ?? "pages";
@@ -40,9 +38,12 @@ public static class Program
         {
             "pages" => RunPages(args),
             "doc" => RunDoc(args),
-            _ => Fail($"unknown --mode '{mode}' (expected 'pages' or 'doc')")
+            "fulltext" => RunFulltext(args),
+            _ => Fail($"unknown --mode '{mode}' (expected 'pages', 'doc' or 'fulltext')")
         };
     }
+
+    // ---------------------------------------------------------------- pages
 
     private static int RunPages(string[] args)
     {
@@ -50,53 +51,38 @@ public static class Program
         string corpus = Arg(args, "--corpus") ?? Fail<string>("--corpus is required");
         string outDir = Arg(args, "--out") ?? Fail<string>("--out is required");
         int limit = int.TryParse(Arg(args, "--limit"), out int l) ? l : int.MaxValue;
-        // Saving rasters is what makes this a test of the *renderer*. Without them a text
-        // difference cannot be attributed to the render or the engine.
-        string? renderDir = Arg(args, "--renders");
 
-        ILoggerFactory loggerFactory = NullLoggerFactory.Instance;
-        var engine = new TesseractCliEngine(loggerFactory.CreateLogger<TesseractCliEngine>());
-        if (!engine.IsAvailable)
-        {
-            return Fail("Tesseract is not available on this machine.");
-        }
+        Deps deps = BuildDeps(NullLoggerFactory.Instance);
+        if (!deps.Engine.IsAvailable) return Fail("Tesseract is not available on this machine.");
 
-        Console.WriteLine($"tesseract     : {engine.Version}");
-        Console.WriteLine($"architecture  : {System.Runtime.InteropServices.RuntimeInformation.OSArchitecture}");
-        Console.WriteLine($"runtime id    : {System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier}");
+        PrintEnvironment(deps.Engine);
 
-        var rasterizer = new PdfPageRasterizer(loggerFactory.CreateLogger<PdfPageRasterizer>());
+        List<PageRef> pages = (JsonSerializer.Deserialize<List<PageRef>>(
+            File.ReadAllText(manifest), JsonOpts) ?? []).Take(limit).ToList();
 
-        List<PageRef> pages = JsonSerializer.Deserialize<List<PageRef>>(
-            File.ReadAllText(manifest), JsonOpts) ?? [];
-        pages = pages.Take(limit).ToList();
-
-        Directory.CreateDirectory(outDir);
         string textDir = Path.Combine(outDir, "text");
         Directory.CreateDirectory(textDir);
-        if (renderDir is not null) Directory.CreateDirectory(renderDir);
 
         var results = new List<PageResult>();
         var sw = Stopwatch.StartNew();
 
         // Group by source so each PDF is parsed once rather than once per page; several of
-        // these documents are over a hundred pages.
+        // these documents run past a hundred pages.
         foreach (IGrouping<string, PageRef> group in pages.GroupBy(p => p.Source))
         {
-            string pdfPath = Path.Combine(corpus, group.Key.Replace('\\', Path.DirectorySeparatorChar));
-            PdfDocument? doc = null;
-
+            PdfDocument doc;
             try
             {
-                doc = PdfDocument.Load(pdfPath);
+                doc = PdfDocument.Load(Path.Combine(corpus, Normalize(group.Key)));
             }
             catch (Exception ex)
             {
                 foreach (PageRef p in group)
                 {
-                    results.Add(PageResult.Failed(p, $"load failed: {ex.Message}"));
+                    results.Add(new PageResult { Id = p.Id, Error = $"load failed: {ex.Message}" });
                     Console.WriteLine($"  FAIL {p.Id}: load failed: {ex.Message}");
                 }
+
                 continue;
             }
 
@@ -104,7 +90,7 @@ public static class Program
             {
                 foreach (PageRef p in group)
                 {
-                    results.Add(ProcessPage(doc, p, rasterizer, engine, textDir, renderDir));
+                    results.Add(ProcessManifestPage(doc, p, deps, textDir));
                 }
             }
             finally
@@ -118,8 +104,7 @@ public static class Program
         var summary = new
         {
             architecture = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString(),
-            runtimeIdentifier = System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier,
-            tesseract = engine.Version,
+            tesseract = deps.Engine.Version,
             pages = results.Count,
             failed = results.Count(r => r.Error is not null),
             retried = results.Count(r => r.Retried),
@@ -130,99 +115,230 @@ public static class Program
             results
         };
 
+        Directory.CreateDirectory(outDir);
         File.WriteAllText(Path.Combine(outDir, "_summary.json"),
-            JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true }));
+            JsonSerializer.Serialize(summary, Indented));
 
-        Console.WriteLine();
-        Console.WriteLine($"pages        : {summary.pages}");
-        Console.WriteLine($"failed       : {summary.failed}");
-        Console.WriteLine($"empty        : {summary.emptyPages}");
-        Console.WriteLine($"retried      : {summary.retried}  (rescued {summary.rescued})");
-        Console.WriteLine($"total words  : {summary.totalWords}");
-        Console.WriteLine($"elapsed      : {summary.elapsedSeconds}s");
-        Console.WriteLine($"wrote        : {outDir}");
+        Console.WriteLine($"\npages {summary.pages} | failed {summary.failed} | "
+            + $"empty {summary.emptyPages} | retried {summary.retried} "
+            + $"(rescued {summary.rescued}) | words {summary.totalWords} | "
+            + $"{summary.elapsedSeconds}s");
 
         return summary.failed > 0 ? 1 : 0;
     }
 
-    /// <summary>
-    /// Renders and recognises one page, mirroring OcrService's two-pass strategy.
-    /// </summary>
-    private static PageResult ProcessPage(
-        PdfDocument doc, PageRef p, PdfPageRasterizer rasterizer,
-        TesseractCliEngine engine, string textDir, string? renderDir)
+    private static PageResult ProcessManifestPage(
+        PdfDocument doc, PageRef p, Deps deps, string textDir)
     {
         try
         {
             PdfPage page = doc.GetPage(p.Page - 1)
                 ?? throw new InvalidOperationException($"page {p.Page} did not load");
 
-            byte[] raster = rasterizer.RenderPage(page, p.Page, PdfPageRasterizer.DefaultDpi);
-            (string text, _) = engine.Recognize(raster);
-            int words = CountWords(text);
+            // A fresh strategy per page: the manifest samples non-consecutive pages, so
+            // carrying latch state between them would model a document that is not there.
+            var strategy = new PageOcrStrategy(
+                NullLogger<PageOcrStrategy>.Instance, deps.Engine, deps.Rasterizer);
+            PageOcrOutcome o = strategy.OcrPage(page, p.Page);
 
-            // Always keep the first-pass raster under the plain id: that is the one the x64
-            // reference renders correspond to, so the comparison stays like-for-like even on
-            // pages where the retry later wins.
-            if (renderDir is not null)
-            {
-                File.WriteAllBytes(Path.Combine(renderDir, p.Id + ".png"), raster);
-            }
-
-            string firstPassSha = Convert.ToHexString(SHA256.HashData(raster))[..16];
-            var retried = false;
-            var rescued = false;
-
-            if (words <= RetryWordThreshold)
-            {
-                retried = true;
-                byte[] retryRaster = rasterizer.RenderPage(
-                    page, p.Page, PdfPageRasterizer.RetryDpi, PdfPageRasterizer.RetrySupersample);
-                (string retryText, _) = engine.Recognize(retryRaster);
-                int retryWords = CountWords(retryText);
-
-                if (renderDir is not null)
-                {
-                    File.WriteAllBytes(Path.Combine(renderDir, p.Id + ".retry.png"), retryRaster);
-                }
-
-                if (retryWords > words)
-                {
-                    rescued = true;
-                    text = retryText;
-                    words = retryWords;
-                    raster = retryRaster;
-                }
-            }
-
-            File.WriteAllText(Path.Combine(textDir, p.Id + ".txt"), text);
-
-            Console.WriteLine(
-                $"  {p.Id,-40} {words,6} words{(rescued ? "  (rescued)" : retried ? "  (retried)" : "")}");
+            File.WriteAllText(Path.Combine(textDir, p.Id + ".txt"), o.Text);
+            Console.WriteLine($"  {p.Id,-40} {o.Words,6} words"
+                + (o.Rescued ? "  (rescued)" : o.Retried ? "  (retried)" : ""));
 
             return new PageResult
             {
-                Id = p.Id,
-                Words = words,
-                Chars = text.Length,
-                Retried = retried,
-                Rescued = rescued,
-                FirstPassSha256 = firstPassSha,
-                RasterSha256 = Convert.ToHexString(SHA256.HashData(raster))[..16],
-                RasterBytes = raster.Length
+                Id = p.Id, Words = o.Words, Chars = o.Text.Length,
+                Retried = o.Retried, Rescued = o.Rescued
             };
         }
         catch (Exception ex)
         {
             Console.WriteLine($"  FAIL {p.Id}: {ex.Message}");
-            return PageResult.Failed(p, ex.Message);
+            return new PageResult { Id = p.Id, Error = ex.Message };
         }
     }
 
+    // ------------------------------------------------------------- fulltext
+
     /// <summary>
-    /// Runs the real <see cref="OcrService"/> over a whole PDF, which the per-page mode does
-    /// not cover: page gating, the supersample latch, and error accounting only exist there.
+    /// Fills in the OCR-pending pages of an extracted corpus, in place.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Each <c>fulltext/*.json</c> holds a document's pages, with <c>needsOcr</c> marking those
+    /// that had no text layer. This renders and recognises exactly those pages and writes the
+    /// text back, so the downstream structure parser needs no separate OCR path.
+    /// </para>
+    /// <para>
+    /// A page that OCR cannot read <b>keeps</b> <c>needsOcr: true</c>. Clearing the flag with
+    /// empty text would turn an unreadable page into a legitimately blank one, and the document
+    /// would then be silently incomplete with nothing to alert on. Leaving it set keeps it an
+    /// honest gap that the parser already knows how to handle.
+    /// </para>
+    /// </remarks>
+    private static int RunFulltext(string[] args)
+    {
+        string dir = Arg(args, "--fulltext") ?? Fail<string>("--fulltext is required");
+        string corpus = Arg(args, "--corpus") ?? Fail<string>("--corpus is required");
+        string reportPath = Arg(args, "--report") ?? "ocr_fill_report.json";
+        int parallel = int.TryParse(Arg(args, "--parallel"), out int p) ? p : 1;
+
+        Deps deps = BuildDeps(NullLoggerFactory.Instance);
+        if (!deps.Engine.IsAvailable) return Fail("Tesseract is not available on this machine.");
+
+        PrintEnvironment(deps.Engine);
+        Console.WriteLine($"workers       : {parallel}");
+
+        string[] files = Directory.GetFiles(dir, "*.json").OrderBy(f => f).ToArray();
+        var pending = new List<(string File, JsonNode Root, List<int> Pages)>();
+
+        foreach (string f in files)
+        {
+            JsonNode root = JsonNode.Parse(File.ReadAllText(f))
+                ?? throw new InvalidOperationException($"{f} is not valid JSON");
+
+            JsonArray pagesArr = root["pages"]!.AsArray();
+            var need = new List<int>();
+            for (var i = 0; i < pagesArr.Count; i++)
+            {
+                if (pagesArr[i]!["needsOcr"]!.GetValue<bool>()) need.Add(i);
+            }
+
+            if (need.Count > 0) pending.Add((f, root, need));
+        }
+
+        Console.WriteLine($"documents     : {pending.Count} of {files.Length} need OCR");
+        Console.WriteLine($"pages         : {pending.Sum(x => x.Pages.Count)}\n");
+
+        var docResults = new ConcurrentBag<DocResult>();
+        var done = 0;
+        var sw = Stopwatch.StartNew();
+
+        Parallel.ForEach(pending, new ParallelOptions { MaxDegreeOfParallelism = parallel }, item =>
+        {
+            DocResult r = FillDocument(item.File, item.Root, item.Pages, corpus, deps);
+            docResults.Add(r);
+
+            int n = Interlocked.Increment(ref done);
+            Console.WriteLine($"  [{n}/{pending.Count}] {r.DocId,-32} "
+                + $"{r.PagesOcrd}/{r.PagesRequested} pages, {r.Words} words"
+                + (r.Unreadable > 0 ? $", {r.Unreadable} unreadable" : "")
+                + (r.Error is not null ? $"  ERROR {r.Error}" : ""));
+        });
+
+        sw.Stop();
+
+        List<DocResult> all = docResults.OrderBy(r => r.DocId).ToList();
+        var report = new
+        {
+            architecture = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString(),
+            tesseract = deps.Engine.Version,
+            workers = parallel,
+            documents = all.Count,
+            documentsFailed = all.Count(r => r.Error is not null),
+            pagesRequested = all.Sum(r => r.PagesRequested),
+            pagesOcrd = all.Sum(r => r.PagesOcrd),
+            pagesUnreadable = all.Sum(r => r.Unreadable),
+            pagesRescued = all.Sum(r => r.Rescued),
+            totalWords = all.Sum(r => r.Words),
+            elapsedSeconds = Math.Round(sw.Elapsed.TotalSeconds, 1),
+            documentsDetail = all
+        };
+
+        File.WriteAllText(reportPath, JsonSerializer.Serialize(report, Indented));
+
+        Console.WriteLine($"\ndocuments     : {report.documents} ({report.documentsFailed} failed)");
+        Console.WriteLine($"pages OCR'd   : {report.pagesOcrd} / {report.pagesRequested}");
+        Console.WriteLine($"unreadable    : {report.pagesUnreadable}  (left needsOcr=true)");
+        Console.WriteLine($"rescued       : {report.pagesRescued}");
+        Console.WriteLine($"words         : {report.totalWords}");
+        Console.WriteLine($"elapsed       : {report.elapsedSeconds}s "
+            + $"({report.pagesRequested / Math.Max(1.0, report.elapsedSeconds):F1} pages/s)");
+        Console.WriteLine($"report        : {reportPath}");
+
+        return report.documentsFailed > 0 ? 1 : 0;
+    }
+
+    private static DocResult FillDocument(
+        string file, JsonNode root, List<int> pageIndexes, string corpus, Deps deps)
+    {
+        var result = new DocResult
+        {
+            DocId = root["docId"]!.GetValue<string>(),
+            Source = root["sourcePath"]!.GetValue<string>(),
+            PagesRequested = pageIndexes.Count
+        };
+
+        PdfDocument doc;
+        try
+        {
+            doc = PdfDocument.Load(Path.Combine(corpus, Normalize(result.Source)));
+        }
+        catch (Exception ex)
+        {
+            // Encrypted or corrupt: surface it. Never write empty text and clear the flag.
+            result.Error = $"load failed: {ex.Message}";
+            return result;
+        }
+
+        try
+        {
+            JsonArray pagesArr = root["pages"]!.AsArray();
+            var strategy = new PageOcrStrategy(
+                NullLogger<PageOcrStrategy>.Instance, deps.Engine, deps.Rasterizer);
+
+            foreach (int idx in pageIndexes)
+            {
+                JsonNode pageNode = pagesArr[idx]!;
+                int pageNumber = pageNode["page"]!.GetValue<int>();
+
+                try
+                {
+                    PdfPage page = doc.GetPage(pageNumber - 1)
+                        ?? throw new InvalidOperationException("page did not load");
+
+                    PageOcrOutcome o = strategy.OcrPage(page, pageNumber);
+
+                    if (o.Words == 0)
+                    {
+                        result.Unreadable++;
+                        result.UnreadablePages.Add(pageNumber);
+                        continue;
+                    }
+
+                    pageNode["text"] = o.Text;
+                    pageNode["needsOcr"] = false;
+                    // Provenance: downstream may want to weight or re-check OCR'd text, and
+                    // after the fact there is otherwise no way to tell it apart.
+                    pageNode["ocr"] = true;
+
+                    result.PagesOcrd++;
+                    result.Words += o.Words;
+                    if (o.Rescued) result.Rescued++;
+                }
+                catch (Exception ex)
+                {
+                    result.Unreadable++;
+                    result.UnreadablePages.Add(pageNumber);
+                    result.PageErrors.Add($"page {pageNumber}: {ex.Message}");
+                }
+            }
+        }
+        finally
+        {
+            doc.Dispose();
+        }
+
+        if (result.PagesOcrd > 0)
+        {
+            File.WriteAllText(file, root.ToJsonString(Indented));
+        }
+
+        return result;
+    }
+
+    // ------------------------------------------------------------------ doc
+
     private static int RunDoc(string[] args)
     {
         string pdf = Arg(args, "--pdf") ?? Fail<string>("--pdf is required");
@@ -232,51 +348,65 @@ public static class Program
             .SetMinimumLevel(LogLevel.Information)
             .AddSimpleConsole(o => o.SingleLine = true));
 
-        var engine = new TesseractCliEngine(loggerFactory.CreateLogger<TesseractCliEngine>());
-        var rasterizer = new PdfPageRasterizer(loggerFactory.CreateLogger<PdfPageRasterizer>());
+        Deps deps = BuildDeps(loggerFactory);
         var preprocessor = new ImagePreprocessor(loggerFactory.CreateLogger<ImagePreprocessor>());
 
         using var service = new OcrService(
-            loggerFactory.CreateLogger<OcrService>(), engine, rasterizer, preprocessor);
+            loggerFactory.CreateLogger<OcrService>(),
+            loggerFactory.CreateLogger<PageOcrStrategy>(),
+            deps.Engine, deps.Rasterizer, preprocessor);
 
-        if (!service.IsAvailable)
-        {
-            return Fail("Tesseract is not available on this machine.");
-        }
+        if (!service.IsAvailable) return Fail("Tesseract is not available on this machine.");
 
         var sw = Stopwatch.StartNew();
         OcrResult result = service.ExtractTextFromScannedPdf(pdf).GetAwaiter().GetResult();
         sw.Stop();
 
-        Console.WriteLine();
-        Console.WriteLine($"success         : {result.Success}");
+        Console.WriteLine($"\nsuccess         : {result.Success}");
         Console.WriteLine($"error           : {result.ErrorMessage ?? "-"}");
         Console.WriteLine($"pages OCR'd     : {result.PagesProcessed}");
         Console.WriteLine($"pages w/ errors : {result.PagesWithErrors}");
-        Console.WriteLine($"words           : {CountWords(result.ExtractedText ?? string.Empty)}");
         Console.WriteLine($"elapsed         : {sw.Elapsed.TotalSeconds:F1}s");
         foreach (KeyValuePair<string, string> kv in result.Metadata.OrderBy(k => k.Key))
         {
             Console.WriteLine($"  {kv.Key,-26}: {kv.Value}");
         }
 
-        if (outPath is not null)
-        {
-            File.WriteAllText(outPath, result.ExtractedText ?? string.Empty);
-            Console.WriteLine($"wrote           : {outPath}");
-        }
+        if (outPath is not null) File.WriteAllText(outPath, result.ExtractedText ?? string.Empty);
 
         return result.Success ? 0 : 1;
     }
 
-    private static int CountWords(string text)
-        => string.IsNullOrWhiteSpace(text)
-            ? 0
-            : text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+    // --------------------------------------------------------------- shared
+
+    private sealed record Deps(TesseractCliEngine Engine, PdfPageRasterizer Rasterizer);
+
+    private static Deps BuildDeps(ILoggerFactory f) => new(
+        new TesseractCliEngine(f.CreateLogger<TesseractCliEngine>()),
+        new PdfPageRasterizer(f.CreateLogger<PdfPageRasterizer>()));
+
+    private static void PrintEnvironment(TesseractCliEngine engine)
+    {
+        Console.WriteLine($"tesseract     : {engine.Version}");
+        Console.WriteLine($"architecture  : {System.Runtime.InteropServices.RuntimeInformation.OSArchitecture}");
+        Console.WriteLine($"runtime id    : {System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier}");
+    }
+
+    /// <summary>Corpus paths are recorded Windows-style; make them work on either host.</summary>
+    private static string Normalize(string relative)
+        => relative.Replace('\\', Path.DirectorySeparatorChar);
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNameCaseInsensitive = true
+    };
+
+    private static readonly JsonSerializerOptions Indented = new()
+    {
+        WriteIndented = true,
+        // Contract text is full of characters that would otherwise be escaped into unreadable
+        // \uXXXX noise, and these files get read by hand during triage.
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
     private static string? Arg(string[] args, string name)
@@ -303,7 +433,6 @@ public static class Program
         [JsonPropertyName("id")] public string Id { get; set; } = "";
         [JsonPropertyName("source")] public string Source { get; set; } = "";
         [JsonPropertyName("page")] public int Page { get; set; }
-        [JsonPropertyName("dpi")] public int Dpi { get; set; }
     }
 
     private sealed class PageResult
@@ -313,12 +442,20 @@ public static class Program
         public int Chars { get; set; }
         public bool Retried { get; set; }
         public bool Rescued { get; set; }
-        public string? FirstPassSha256 { get; set; }
-        public string? RasterSha256 { get; set; }
-        public int RasterBytes { get; set; }
         public string? Error { get; set; }
+    }
 
-        public static PageResult Failed(PageRef p, string error)
-            => new() { Id = p.Id, Error = error };
+    private sealed class DocResult
+    {
+        public string DocId { get; set; } = "";
+        public string Source { get; set; } = "";
+        public int PagesRequested { get; set; }
+        public int PagesOcrd { get; set; }
+        public int Unreadable { get; set; }
+        public int Rescued { get; set; }
+        public int Words { get; set; }
+        public string? Error { get; set; }
+        public List<int> UnreadablePages { get; set; } = [];
+        public List<string> PageErrors { get; set; } = [];
     }
 }

@@ -27,6 +27,7 @@ namespace DocumentServer.Core.Services.Ocr;
 /// </remarks>
 public sealed class OcrService(
     ILogger<OcrService> logger,
+    ILogger<PageOcrStrategy> strategyLogger,
     TesseractCliEngine engine,
     PdfPageRasterizer rasterizer,
     ImagePreprocessor imagePreprocessor) : IDisposable
@@ -35,25 +36,6 @@ public sealed class OcrService(
     /// Below this many characters, a page's text layer is treated as absent rather than sparse.
     /// </summary>
     private const int MinMeaningfulTextLength = 10;
-
-    /// <summary>
-    /// A first-pass result at or below this word count triggers the supersampled retry.
-    /// </summary>
-    private const int RetryWordThreshold = 5;
-
-    /// <summary>
-    /// After this many consecutive pages are rescued by the supersampled retry, stop paying for
-    /// the 300 DPI first pass and render supersampled directly.
-    /// </summary>
-    /// <remarks>
-    /// Some documents are bilevel fax scans from end to end, and every page of them aliases at
-    /// 300 DPI. Measured on a 96-page Oregon contract, all 96 pages needed the retry, so each
-    /// one burned a full render-plus-OCR that was always going to return nothing: 2.7 s/page
-    /// against the ~1.2 s/page the engine actually needs. Latching after a short run of
-    /// unanimous rescues removes that waste. The latch drops on the first page it mispredicts,
-    /// so a document that mixes fax scans with clean pages cannot get stuck in the wrong mode.
-    /// </remarks>
-    private const int SupersampleLatchThreshold = 3;
 
     private bool _disposed;
 
@@ -106,10 +88,7 @@ public sealed class OcrService(
         logger.LogInformation("Processing {PageCount} pages from PDF", totalPages);
 
         var allText = new StringBuilder();
-        var retried = 0;
-        var latchedPages = 0;
-        var consecutiveRescues = 0;
-        var latched = false;
+        var strategy = new PageOcrStrategy(strategyLogger, engine, rasterizer);
 
         for (var i = 0; i < totalPages; i++)
         {
@@ -129,38 +108,8 @@ public sealed class OcrService(
                     continue;
                 }
 
-                (string text, bool didRetry, bool rescued) = OcrPage(page, pageNumber, latched);
-                if (didRetry) retried++;
-                if (latched) latchedPages++;
-
-                // Latch on after a run of unanimous rescues; drop it the moment a page
-                // disagrees, so a mixed document re-tests the cheap path.
-                if (rescued)
-                {
-                    consecutiveRescues++;
-                    if (!latched && consecutiveRescues >= SupersampleLatchThreshold)
-                    {
-                        latched = true;
-                        logger.LogInformation(
-                            "{Count} consecutive pages rescued by supersampling; skipping the "
-                            + "{Dpi} DPI first pass for the rest of {PdfPath}",
-                            consecutiveRescues, PdfPageRasterizer.DefaultDpi, pdfPath);
-                    }
-                }
-                else
-                {
-                    if (latched)
-                    {
-                        logger.LogInformation(
-                            "Page {PageNumber} did not need supersampling; releasing the latch",
-                            pageNumber);
-                    }
-
-                    consecutiveRescues = 0;
-                    latched = false;
-                }
-
-                allText.AppendLine(text);
+                PageOcrOutcome outcome = strategy.OcrPage(page, pageNumber);
+                allText.AppendLine(outcome.Text);
                 result.PagesProcessed++;
             }
             catch (Exception ex)
@@ -178,77 +127,16 @@ public sealed class OcrService(
 
         result.ExtractedText = allText.ToString();
         result.Metadata["ExtractedLength"] = result.ExtractedText.Length.ToString();
-        result.Metadata["PagesSupersampleRetried"] = retried.ToString();
-        result.Metadata["PagesSupersampleLatched"] = latchedPages.ToString();
+        result.Metadata["PagesSupersampleRetried"] = strategy.RetriedPages.ToString();
+        result.Metadata["PagesSupersampleLatched"] = strategy.LatchedPages.ToString();
 
         logger.LogInformation(
             "Completed OCR of {PdfPath}. OCR'd: {Processed}, retried: {Retried}, "
             + "latched: {Latched}, errors: {Errors}",
-            pdfPath, result.PagesProcessed, retried, latchedPages, result.PagesWithErrors);
+            pdfPath, result.PagesProcessed, strategy.RetriedPages, strategy.LatchedPages,
+            result.PagesWithErrors);
 
         return result;
-    }
-
-    /// <summary>
-    /// OCRs one page: render at 300 DPI, and retry supersampled if that returns almost nothing.
-    /// </summary>
-    /// <remarks>
-    /// A single global DPI is wrong for scanned contracts. 150 DPI rescues bilevel fax pages
-    /// but costs around 9% of the words on already-good pages; 300 DPI alone leaves a handful
-    /// of pages returning literally zero bytes with no error. Measured over 110 scanned pages,
-    /// 300 DPI plus a supersampled retry recovered the most words of any strategy tried, with
-    /// no page made worse. The retry fires on roughly 10% of pages, so it costs very little.
-    /// </remarks>
-    private (string Text, bool DidRetry, bool Rescued) OcrPage(
-        PdfPage page, int pageNumber, bool preferSupersample)
-    {
-        if (preferSupersample)
-        {
-            byte[] latchedRaster = rasterizer.RenderPage(
-                page, pageNumber, PdfPageRasterizer.RetryDpi, PdfPageRasterizer.RetrySupersample);
-            (string latchedText, _) = engine.Recognize(latchedRaster);
-
-            if (CountWords(latchedText) > RetryWordThreshold)
-            {
-                return (latchedText, true, true);
-            }
-
-            // The latch mispredicted this page. Fall through to the standard two-pass so the
-            // page still gets its ordinary chance rather than being written off.
-            logger.LogDebug(
-                "Page {PageNumber}: latched supersample returned almost nothing, falling back",
-                pageNumber);
-        }
-
-        byte[] raster = rasterizer.RenderPage(page, pageNumber, PdfPageRasterizer.DefaultDpi);
-        (string text, _) = engine.Recognize(raster);
-
-        int words = CountWords(text);
-        if (words > RetryWordThreshold)
-        {
-            return (text, false, false);
-        }
-
-        logger.LogDebug(
-            "Page {PageNumber} returned {Words} words at {Dpi} DPI; retrying supersampled",
-            pageNumber, words, PdfPageRasterizer.DefaultDpi);
-
-        byte[] retryRaster = rasterizer.RenderPage(
-            page, pageNumber, PdfPageRasterizer.RetryDpi, PdfPageRasterizer.RetrySupersample);
-        (string retryText, _) = engine.Recognize(retryRaster);
-
-        // Keep whichever pass read more. The retry exists to rescue aliased pages, not to
-        // overwrite a good result on a page that is genuinely near-blank.
-        int retryWords = CountWords(retryText);
-        if (retryWords > words)
-        {
-            logger.LogInformation(
-                "Page {PageNumber} recovered by supersampled retry: {Before} -> {After} words",
-                pageNumber, words, retryWords);
-            return (retryText, true, true);
-        }
-
-        return (text, true, false);
     }
 
     /// <summary>
