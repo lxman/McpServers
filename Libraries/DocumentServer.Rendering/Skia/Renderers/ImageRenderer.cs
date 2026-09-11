@@ -6,11 +6,11 @@ using PdfLibrary.Core;
 using PdfLibrary.Core.Primitives;
 using PdfLibrary.Document;
 using PdfLibrary.Rendering;
-using PdfLibrary.Rendering.SkiaSharp.Conversion;
+using DocumentServer.Rendering.Skia.Conversion;
 using PdfLibrary.Structure;
 using SkiaSharp;
 
-namespace PdfLibrary.Rendering.SkiaSharp.Rendering;
+namespace DocumentServer.Rendering.Skia.Renderers;
 
 /// <summary>
 /// Handles image rendering operations for PDF documents.

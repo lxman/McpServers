@@ -1,8 +1,9 @@
 using Logging;
 using SkiaSharp;
 using Wacton.Unicolour;
+using PdfLibrary.Rendering;
 
-namespace PdfLibrary.Rendering.SkiaSharp.Conversion;
+namespace DocumentServer.Rendering.Skia.Conversion;
 
 /// <summary>
 /// Converts PDF color spaces to SkiaSharp SKColor values.

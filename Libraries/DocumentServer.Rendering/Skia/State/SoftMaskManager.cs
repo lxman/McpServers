@@ -1,7 +1,8 @@
 using System.Runtime.InteropServices;
 using SkiaSharp;
+using PdfLibrary.Rendering;
 
-namespace PdfLibrary.Rendering.SkiaSharp.State;
+namespace DocumentServer.Rendering.Skia.State;
 
 /// <summary>
 /// Manages soft mask (transparency mask) lifecycle for PDF rendering.

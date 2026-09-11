@@ -1,6 +1,7 @@
 using SkiaSharp;
+using PdfLibrary.Rendering;
 
-namespace PdfLibrary.Rendering.SkiaSharp.State;
+namespace DocumentServer.Rendering.Skia.State;
 
 /// <summary>
 /// Manages canvas state save/restore operations and state depth tracking.

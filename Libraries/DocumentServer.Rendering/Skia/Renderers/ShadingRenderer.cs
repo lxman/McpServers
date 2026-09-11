@@ -1,8 +1,9 @@
 using System.Numerics;
 using PdfLibrary.Content;
 using SkiaSharp;
+using PdfLibrary.Rendering;
 
-namespace PdfLibrary.Rendering.SkiaSharp.Rendering;
+namespace DocumentServer.Rendering.Skia.Renderers;
 
 /// <summary>
 /// Paints PDF axial/radial shadings with SkiaSharp gradients — both the <c>sh</c> operator

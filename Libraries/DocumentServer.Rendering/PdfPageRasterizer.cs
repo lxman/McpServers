@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using PdfLibrary.Document;
-using PdfLibrary.Rendering.SkiaSharp;
+using DocumentServer.Rendering.Skia;
 using SkiaSharp;
 
 namespace DocumentServer.Rendering;

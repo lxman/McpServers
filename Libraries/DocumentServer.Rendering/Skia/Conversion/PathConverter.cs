@@ -1,6 +1,7 @@
 using SkiaSharp;
+using PdfLibrary.Rendering;
 
-namespace PdfLibrary.Rendering.SkiaSharp.Conversion;
+namespace DocumentServer.Rendering.Skia.Conversion;
 
 /// <summary>
 /// Converts PDF path operations to SkiaSharp SKPath.

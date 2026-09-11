@@ -1,12 +1,13 @@
-﻿using System.Numerics;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using Logging;
 using PdfLibrary.Content;
 using PdfLibrary.Document;
-using PdfLibrary.Rendering.SkiaSharp.Conversion;
+using DocumentServer.Rendering.Skia.Conversion;
 using SkiaSharp;
+using PdfLibrary.Rendering;
 
-namespace PdfLibrary.Rendering.SkiaSharp.Rendering;
+namespace DocumentServer.Rendering.Skia.Renderers;
 
 /// <summary>
 /// Lightweight IRenderTarget implementation for rendering pattern content to an existing surface.

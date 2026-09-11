@@ -1,8 +1,9 @@
 using PdfLibrary.Document;
 using PdfLibrary.Structure;
 using SkiaSharp;
+using PdfLibrary.Rendering;
 
-namespace PdfLibrary.Rendering.SkiaSharp;
+namespace DocumentServer.Rendering.Skia;
 
 /// <summary>
 /// Fluent builder for rendering PDF pages with various options.

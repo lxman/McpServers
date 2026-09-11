@@ -1,7 +1,8 @@
 using PdfLibrary.Document;
 using PdfLibrary.Structure;
+using PdfLibrary.Rendering;
 
-namespace PdfLibrary.Rendering.SkiaSharp;
+namespace DocumentServer.Rendering.Skia;
 
 /// <summary>
 /// Extension methods for rendering PDF pages using SkiaSharp.

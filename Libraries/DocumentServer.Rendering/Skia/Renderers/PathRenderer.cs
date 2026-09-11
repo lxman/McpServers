@@ -1,10 +1,11 @@
 using System.Numerics;
 using Logging;
 using PdfLibrary.Content;
-using PdfLibrary.Rendering.SkiaSharp.Conversion;
+using DocumentServer.Rendering.Skia.Conversion;
 using SkiaSharp;
+using PdfLibrary.Rendering;
 
-namespace PdfLibrary.Rendering.SkiaSharp.Rendering;
+namespace DocumentServer.Rendering.Skia.Renderers;
 
 /// <summary>
 /// Holds an isolated transparency group snapshot pending composite after canvas restore.

@@ -1,15 +1,16 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Numerics;
 using Logging;
 using PdfLibrary.Content;
 using PdfLibrary.Document;
-using PdfLibrary.Rendering.SkiaSharp.Conversion;
-using PdfLibrary.Rendering.SkiaSharp.Rendering;
-using PdfLibrary.Rendering.SkiaSharp.State;
+using DocumentServer.Rendering.Skia.Conversion;
+using DocumentServer.Rendering.Skia.Renderers;
+using DocumentServer.Rendering.Skia.State;
 using PdfLibrary.Structure;
 using SkiaSharp;
+using PdfLibrary.Rendering;
 
-namespace PdfLibrary.Rendering.SkiaSharp;
+namespace DocumentServer.Rendering.Skia;
 
 /// <summary>
 /// SkiaSharp-based render target for pixel-perfect PDF rendering.
