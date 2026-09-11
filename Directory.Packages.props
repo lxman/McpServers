@@ -186,7 +186,7 @@
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
 
     <!-- PDF rendering. MIT, pure managed, no native assets: safe on linux-arm64. -->
-    <PackageVersion Include="Lxman.PdfLibrary" Version="2.6.3-local" />
+    <PackageVersion Include="Lxman.PdfLibrary" Version="2.6.3" />
     <!-- Raster backend for the vendored IRenderTarget. 4.151.2 is a floor, not a
          preference: SKPathBuilder does not exist in 3.x. NativeAssets.Linux.NoDependencies
          carries linux-arm64/native/libSkiaSharp.so without the fontconfig dependency,
