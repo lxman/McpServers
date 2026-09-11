@@ -8,6 +8,7 @@ using DocumentServer.Core.Services.FormatSpecific.PowerPoint;
 using DocumentServer.Core.Services.FormatSpecific.Word;
 using DocumentServer.Core.Services.Lucene;
 using DocumentServer.Core.Services.Ocr;
+using DocumentServer.Rendering;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -49,7 +50,7 @@ builder.Services.AddSingleton<LuceneIndexer>();
 builder.Services.AddSingleton<LuceneSearcher>();
 
 // OCR Services
-builder.Services.AddSingleton<TesseractEngine>();
+builder.Services.AddSingleton<TesseractCliEngine>();
 
 // Format-Specific Services
 // Excel
@@ -70,6 +71,7 @@ builder.Services.AddSingleton<PdfImageExtractor>();
 builder.Services.AddSingleton<PdfSummarizer>();
 
 builder.Services.AddSingleton<ImagePreprocessor>();
+builder.Services.AddSingleton<PdfPageRasterizer>();
 builder.Services.AddSingleton<OcrService>();
 
 // Configure CORS if needed

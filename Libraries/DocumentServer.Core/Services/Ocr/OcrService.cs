@@ -1,238 +1,281 @@
 using System.Text;
 using DocumentServer.Core.Services.Ocr.Models;
+using DocumentServer.Rendering;
 using Microsoft.Extensions.Logging;
-using UglyToad.PdfPig;
-using UglyToad.PdfPig.Content;
-using PdfDocument = UglyToad.PdfPig.PdfDocument;
-using Page = UglyToad.PdfPig.Content.Page;
+using PdfLibrary.Document;
+using PdfLibrary.Structure;
 
 namespace DocumentServer.Core.Services.Ocr;
 
 /// <summary>
-/// Provides OCR (Optical Character Recognition) services for documents and images
+/// OCR for PDFs and images.
 /// </summary>
-public class OcrService : IDisposable
+/// <remarks>
+/// <para>
+/// PDF pages are OCR'd by <em>rendering the page</em> and recognising the resulting raster.
+/// The obvious alternative - pull the image XObjects out of the page and OCR those - was
+/// measured against a real contract corpus and does not work: of 270 image streams on 110
+/// scanned pages, 73% could not be decoded as standalone images, because they are JBIG2 or
+/// CCITT fax bitstreams that are only meaningful alongside the PDF's /DecodeParms. Separately,
+/// 58% of scanned pages carry more than one image, so per-image OCR breaks lines apart even
+/// where the bytes do decode.
+/// </para>
+/// <para>
+/// Pages are gated individually. Mixed documents - digital text with scanned exhibits or
+/// signature pages - are the normal case here, not an edge case.
+/// </para>
+/// </remarks>
+public sealed class OcrService(
+    ILogger<OcrService> logger,
+    TesseractCliEngine engine,
+    PdfPageRasterizer rasterizer,
+    ImagePreprocessor imagePreprocessor) : IDisposable
 {
-    private readonly ILogger<OcrService> _logger;
-    private readonly TesseractEngine _tesseractEngine;
-    private readonly ImagePreprocessor _imagePreprocessor;
+    /// <summary>
+    /// Below this many characters, a page's text layer is treated as absent rather than sparse.
+    /// </summary>
+    private const int MinMeaningfulTextLength = 10;
+
+    /// <summary>
+    /// A first-pass result at or below this word count triggers the supersampled retry.
+    /// </summary>
+    private const int RetryWordThreshold = 5;
+
+    /// <summary>
+    /// After this many consecutive pages are rescued by the supersampled retry, stop paying for
+    /// the 300 DPI first pass and render supersampled directly.
+    /// </summary>
+    /// <remarks>
+    /// Some documents are bilevel fax scans from end to end, and every page of them aliases at
+    /// 300 DPI. Measured on a 96-page Oregon contract, all 96 pages needed the retry, so each
+    /// one burned a full render-plus-OCR that was always going to return nothing: 2.7 s/page
+    /// against the ~1.2 s/page the engine actually needs. Latching after a short run of
+    /// unanimous rescues removes that waste. The latch drops on the first page it mispredicts,
+    /// so a document that mixes fax scans with clean pages cannot get stuck in the wrong mode.
+    /// </remarks>
+    private const int SupersampleLatchThreshold = 3;
+
     private bool _disposed;
 
-    /// <summary>
-    /// Indicates whether OCR services are available
-    /// </summary>
-    public bool IsAvailable => _tesseractEngine.IsAvailable;
-
-    public OcrService(
-        ILogger<OcrService> logger,
-        TesseractEngine tesseractEngine,
-        ImagePreprocessor imagePreprocessor)
-    {
-        _logger = logger;
-        _tesseractEngine = tesseractEngine;
-        _imagePreprocessor = imagePreprocessor;
-
-        if (IsAvailable)
-        {
-            _logger.LogInformation("OCR service initialized successfully");
-        }
-        else
-        {
-            _logger.LogWarning("OCR service initialized but Tesseract is not available");
-        }
-    }
+    /// <summary>Whether OCR is available.</summary>
+    public bool IsAvailable => engine.IsAvailable;
 
     /// <summary>
-    /// Extract text from password-protected scanned PDF using OCR
+    /// Extracts text from a PDF, OCR'ing only those pages that lack a text layer.
     /// </summary>
-    /// <param name="pdfPath">Path to the PDF file</param>
-    /// <param name="password">Optional password for encrypted PDFs</param>
-    /// <returns>OCR result containing extracted text and metadata</returns>
     public async Task<OcrResult> ExtractTextFromScannedPdf(string pdfPath, string? password = null)
     {
         if (!IsAvailable)
         {
-            return new OcrResult
-            {
-                Success = false,
-                ErrorMessage = "OCR service is not available"
-            };
+            return Unavailable();
         }
 
         try
         {
-            _logger.LogInformation("Starting OCR extraction from PDF: {PdfPath}", pdfPath);
+            logger.LogInformation("Starting OCR extraction from PDF: {PdfPath}", pdfPath);
 
-            // Set up PdfPig parsing options with password support
-            var parsingOptions = new ParsingOptions();
-            if (!string.IsNullOrEmpty(password))
-            {
-                parsingOptions.Passwords = [password];
-                _logger.LogDebug("Using password for PDF decryption");
-            }
-
-            var result = new OcrResult
-            {
-                Success = true,
-                Metadata = new Dictionary<string, string>
-                {
-                    ["FilePath"] = pdfPath,
-                    ["ProcessedAt"] = DateTime.UtcNow.ToString("O")
-                }
-            };
-
-            var allText = new StringBuilder();
-
-            using PdfDocument pdfDocument = PdfDocument.Open(pdfPath, parsingOptions);
-            
-            int totalPages = pdfDocument.NumberOfPages;
-            result.Metadata["TotalPages"] = totalPages.ToString();
-            _logger.LogInformation("Processing {PageCount} pages from PDF", totalPages);
-
-            foreach (Page page in pdfDocument.GetPages())
-            {
-                try
-                {
-                    // First, check if there's already extractable text
-                    string existingText = page.Text;
-                    
-                    if (IsTextMeaningful(existingText))
-                    {
-                        allText.AppendLine(existingText);
-                        _logger.LogDebug("Page {PageNumber} has extractable text, skipping OCR", page.Number);
-                    }
-                    else
-                    {
-                        _logger.LogDebug("Page {PageNumber} appears to be scanned, using OCR", page.Number);
-                        
-                        // Extract images from the page and perform OCR
-                        string ocrText = await ExtractTextFromPdfPage(page);
-                        allText.AppendLine(ocrText);
-                        result.PagesProcessed++;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to process page {PageNumber} of PDF {PdfPath}", 
-                        page.Number, pdfPath);
-                    allText.AppendLine($"[OCR Error on page {page.Number}: {ex.Message}]");
-                    result.PagesWithErrors++;
-                    result.Warnings.Add($"Page {page.Number}: {ex.Message}");
-                }
-            }
-
-            result.ExtractedText = allText.ToString();
-            result.Metadata["ExtractedLength"] = result.ExtractedText.Length.ToString();
-
-            _logger.LogInformation("Completed OCR extraction from PDF. Processed: {Processed}, Errors: {Errors}", 
-                result.PagesProcessed, result.PagesWithErrors);
-
-            return result;
+            return await Task.Run(() => ExtractFromPdfCore(pdfPath, password));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to extract text from scanned PDF: {PdfPath}", pdfPath);
-            return new OcrResult
-            {
-                Success = false,
-                ErrorMessage = ex.Message
-            };
+            // A failure here means the document could not be read at all - a bad password, a
+            // corrupt file, a truncated stream. Report it; never hand back an empty string
+            // that would be indexed as a legitimately empty document.
+            logger.LogError(ex, "Failed to extract text from PDF: {PdfPath}", pdfPath);
+            return new OcrResult { Success = false, ErrorMessage = ex.Message };
         }
     }
 
-    /// <summary>
-    /// Extract text from a single PDF page using OCR
-    /// </summary>
-    private async Task<string> ExtractTextFromPdfPage(Page page)
+    private OcrResult ExtractFromPdfCore(string pdfPath, string? password)
     {
-        try
+        var result = new OcrResult
         {
-            return await Task.Run(() =>
+            Success = true,
+            Metadata = new Dictionary<string, string>
             {
-                var allOcrText = new StringBuilder();
-                
-                // Get images from the page
-                IEnumerable<IPdfImage> images = page.GetImages().ToList();
-                
-                if (!images.Any())
-                {
-                    _logger.LogDebug("No images found on page {PageNumber}, page might be text-based or empty", 
-                        page.Number);
-                    return string.Empty;
-                }
+                ["FilePath"] = pdfPath,
+                ["ProcessedAt"] = DateTime.UtcNow.ToString("O"),
+                ["OcrEngine"] = engine.Version ?? "unknown"
+            }
+        };
 
-                _logger.LogDebug("Found {ImageCount} images on page {PageNumber}", 
-                    images.Count(), page.Number);
+        using PdfDocument document = LoadDocument(pdfPath, password);
 
-                foreach (IPdfImage pdfImage in images)
-                {
-                    try
-                    {
-                        // Convert PdfPig image to bytes
-                        byte[] imageBytes = pdfImage.RawBytes.ToArray();
-                        
-                        // Enhance the image using ImagePreprocessor
-                        byte[] enhancedImageBytes = _imagePreprocessor.EnhanceImageForOcr(imageBytes);
-                        
-                        // Perform OCR on the enhanced image
-                        string ocrText = _tesseractEngine.ExtractText(enhancedImageBytes);
-                        
-                        if (!string.IsNullOrWhiteSpace(ocrText))
-                        {
-                            allOcrText.AppendLine(ocrText);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to process image on page {PageNumber}", page.Number);
-                    }
-                }
-                
-                return allOcrText.ToString();
-            });
-        }
-        catch (Exception ex)
+        int totalPages = document.PageCount;
+        result.Metadata["TotalPages"] = totalPages.ToString();
+        logger.LogInformation("Processing {PageCount} pages from PDF", totalPages);
+
+        var allText = new StringBuilder();
+        var retried = 0;
+        var latchedPages = 0;
+        var consecutiveRescues = 0;
+        var latched = false;
+
+        for (var i = 0; i < totalPages; i++)
         {
-            _logger.LogError(ex, "Failed to perform OCR on PDF page {PageNumber}", page.Number);
-            return $"[OCR failed on page {page.Number}: {ex.Message}]";
+            int pageNumber = i + 1;
+
+            try
+            {
+                PdfPage page = document.GetPage(i)
+                    ?? throw new InvalidOperationException($"Page {pageNumber} did not load.");
+
+                string existing = SafeExtractText(page);
+
+                if (IsTextMeaningful(existing))
+                {
+                    allText.AppendLine(existing);
+                    logger.LogDebug("Page {PageNumber} has a text layer, skipping OCR", pageNumber);
+                    continue;
+                }
+
+                (string text, bool didRetry, bool rescued) = OcrPage(page, pageNumber, latched);
+                if (didRetry) retried++;
+                if (latched) latchedPages++;
+
+                // Latch on after a run of unanimous rescues; drop it the moment a page
+                // disagrees, so a mixed document re-tests the cheap path.
+                if (rescued)
+                {
+                    consecutiveRescues++;
+                    if (!latched && consecutiveRescues >= SupersampleLatchThreshold)
+                    {
+                        latched = true;
+                        logger.LogInformation(
+                            "{Count} consecutive pages rescued by supersampling; skipping the "
+                            + "{Dpi} DPI first pass for the rest of {PdfPath}",
+                            consecutiveRescues, PdfPageRasterizer.DefaultDpi, pdfPath);
+                    }
+                }
+                else
+                {
+                    if (latched)
+                    {
+                        logger.LogInformation(
+                            "Page {PageNumber} did not need supersampling; releasing the latch",
+                            pageNumber);
+                    }
+
+                    consecutiveRescues = 0;
+                    latched = false;
+                }
+
+                allText.AppendLine(text);
+                result.PagesProcessed++;
+            }
+            catch (Exception ex)
+            {
+                // One unreadable page must not abort the document, but it must stay visible:
+                // counted, warned, and marked inline so a silently short extraction cannot
+                // pass for a complete one.
+                logger.LogWarning(ex, "Failed to process page {PageNumber} of {PdfPath}",
+                    pageNumber, pdfPath);
+                allText.AppendLine($"[OCR Error on page {pageNumber}: {ex.Message}]");
+                result.PagesWithErrors++;
+                result.Warnings.Add($"Page {pageNumber}: {ex.Message}");
+            }
         }
+
+        result.ExtractedText = allText.ToString();
+        result.Metadata["ExtractedLength"] = result.ExtractedText.Length.ToString();
+        result.Metadata["PagesSupersampleRetried"] = retried.ToString();
+        result.Metadata["PagesSupersampleLatched"] = latchedPages.ToString();
+
+        logger.LogInformation(
+            "Completed OCR of {PdfPath}. OCR'd: {Processed}, retried: {Retried}, "
+            + "latched: {Latched}, errors: {Errors}",
+            pdfPath, result.PagesProcessed, retried, latchedPages, result.PagesWithErrors);
+
+        return result;
     }
 
     /// <summary>
-    /// Extracts text from an image file using OCR
+    /// OCRs one page: render at 300 DPI, and retry supersampled if that returns almost nothing.
     /// </summary>
-    /// <param name="imagePath">Path to the image file</param>
-    /// <param name="enhanceImage">Whether to apply image enhancement before OCR (default: true)</param>
-    /// <returns>OCR result containing extracted text and metadata</returns>
+    /// <remarks>
+    /// A single global DPI is wrong for scanned contracts. 150 DPI rescues bilevel fax pages
+    /// but costs around 9% of the words on already-good pages; 300 DPI alone leaves a handful
+    /// of pages returning literally zero bytes with no error. Measured over 110 scanned pages,
+    /// 300 DPI plus a supersampled retry recovered the most words of any strategy tried, with
+    /// no page made worse. The retry fires on roughly 10% of pages, so it costs very little.
+    /// </remarks>
+    private (string Text, bool DidRetry, bool Rescued) OcrPage(
+        PdfPage page, int pageNumber, bool preferSupersample)
+    {
+        if (preferSupersample)
+        {
+            byte[] latchedRaster = rasterizer.RenderPage(
+                page, pageNumber, PdfPageRasterizer.RetryDpi, PdfPageRasterizer.RetrySupersample);
+            (string latchedText, _) = engine.Recognize(latchedRaster);
+
+            if (CountWords(latchedText) > RetryWordThreshold)
+            {
+                return (latchedText, true, true);
+            }
+
+            // The latch mispredicted this page. Fall through to the standard two-pass so the
+            // page still gets its ordinary chance rather than being written off.
+            logger.LogDebug(
+                "Page {PageNumber}: latched supersample returned almost nothing, falling back",
+                pageNumber);
+        }
+
+        byte[] raster = rasterizer.RenderPage(page, pageNumber, PdfPageRasterizer.DefaultDpi);
+        (string text, _) = engine.Recognize(raster);
+
+        int words = CountWords(text);
+        if (words > RetryWordThreshold)
+        {
+            return (text, false, false);
+        }
+
+        logger.LogDebug(
+            "Page {PageNumber} returned {Words} words at {Dpi} DPI; retrying supersampled",
+            pageNumber, words, PdfPageRasterizer.DefaultDpi);
+
+        byte[] retryRaster = rasterizer.RenderPage(
+            page, pageNumber, PdfPageRasterizer.RetryDpi, PdfPageRasterizer.RetrySupersample);
+        (string retryText, _) = engine.Recognize(retryRaster);
+
+        // Keep whichever pass read more. The retry exists to rescue aliased pages, not to
+        // overwrite a good result on a page that is genuinely near-blank.
+        int retryWords = CountWords(retryText);
+        if (retryWords > words)
+        {
+            logger.LogInformation(
+                "Page {PageNumber} recovered by supersampled retry: {Before} -> {After} words",
+                pageNumber, words, retryWords);
+            return (retryText, true, true);
+        }
+
+        return (text, true, false);
+    }
+
+    /// <summary>
+    /// Extracts text from an image file using OCR.
+    /// </summary>
     public async Task<OcrResult> ExtractTextFromImage(string imagePath, bool enhanceImage = true)
     {
         if (!IsAvailable)
         {
-            return new OcrResult
-            {
-                Success = false,
-                ErrorMessage = "OCR service is not available"
-            };
+            return Unavailable();
         }
 
         try
         {
-            _logger.LogInformation("Starting OCR extraction from image: {ImagePath}", imagePath);
+            logger.LogInformation("Starting OCR extraction from image: {ImagePath}", imagePath);
 
             OcrResult result = await Task.Run(() =>
             {
-                // Load image
                 byte[] imageBytes = File.ReadAllBytes(imagePath);
-                
-                // Optionally enhance the image
+
                 if (enhanceImage)
                 {
-                    imageBytes = _imagePreprocessor.EnhanceImageForOcr(imageBytes);
+                    imageBytes = imagePreprocessor.EnhanceImageForOcr(imageBytes);
                 }
-                
-                // Perform OCR with confidence
-                (string text, float confidence) = _tesseractEngine.ExtractTextWithConfidence(imageBytes);
-                
+
+                (string text, float? confidence) = engine.Recognize(imageBytes, withConfidence: true);
+
                 return new OcrResult
                 {
                     Success = true,
@@ -244,93 +287,132 @@ public class OcrService : IDisposable
                         ["FilePath"] = imagePath,
                         ["ProcessedAt"] = DateTime.UtcNow.ToString("O"),
                         ["ImageEnhanced"] = enhanceImage.ToString(),
+                        ["OcrEngine"] = engine.Version ?? "unknown",
                         ["ExtractedLength"] = text.Length.ToString()
                     }
                 };
             });
 
-            _logger.LogInformation("Completed OCR extraction from image. Confidence: {Confidence:P1}", 
+            logger.LogInformation("Completed OCR of image. Confidence: {Confidence:P1}",
                 result.Confidence ?? 0);
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to extract text from image: {ImagePath}", imagePath);
-            return new OcrResult
-            {
-                Success = false,
-                ErrorMessage = ex.Message
-            };
+            logger.LogError(ex, "Failed to extract text from image: {ImagePath}", imagePath);
+            return new OcrResult { Success = false, ErrorMessage = ex.Message };
         }
     }
 
     /// <summary>
-    /// Determines if a PDF is likely scanned by checking text content
+    /// Reports which pages of a PDF lack a text layer.
     /// </summary>
-    /// <param name="pdfPath">Path to the PDF file</param>
-    /// <param name="password">Optional password for encrypted PDFs</param>
-    /// <returns>True if the PDF appears to be scanned (contains primarily images rather than text)</returns>
+    /// <remarks>
+    /// Every page is examined. Sampling the first few pages and generalising is unsafe here:
+    /// scanned material is routinely appended as exhibits or signature pages, so a prefix
+    /// sample reports "has text" for documents that are half images.
+    /// </remarks>
+    public PdfScanAnalysis AnalyzePdf(string pdfPath, string? password = null)
+    {
+        using PdfDocument document = LoadDocument(pdfPath, password);
+
+        var analysis = new PdfScanAnalysis { TotalPages = document.PageCount };
+
+        for (var i = 0; i < document.PageCount; i++)
+        {
+            PdfPage? page = document.GetPage(i);
+            string text = page is null ? string.Empty : SafeExtractText(page);
+            bool requiresOcr = !IsTextMeaningful(text);
+
+            analysis.Pages.Add(new PageScanInfo
+            {
+                PageNumber = i + 1,
+                TextLength = text.Trim().Length,
+                RequiresOcr = requiresOcr
+            });
+
+            if (requiresOcr) analysis.PagesRequiringOcr++;
+            else analysis.PagesWithText++;
+        }
+
+        logger.LogInformation(
+            "Scan analysis of {PdfPath}: {Ocr}/{Total} pages need OCR (isScanned={IsScanned})",
+            pdfPath, analysis.PagesRequiringOcr, analysis.TotalPages, analysis.IsScanned);
+
+        return analysis;
+    }
+
+    /// <summary>
+    /// Whether a PDF is predominantly scanned.
+    /// </summary>
+    /// <remarks>
+    /// Prefer <see cref="AnalyzePdf"/>. This answers a descriptive question, and a document can
+    /// return false here while still containing hundreds of pages that need OCR.
+    /// </remarks>
     public bool IsPdfScanned(string pdfPath, string? password = null)
     {
         try
         {
-            _logger.LogDebug("Analyzing PDF for scanned content: {PdfPath}", pdfPath);
-
-            var parsingOptions = new ParsingOptions();
-            if (!string.IsNullOrEmpty(password))
-            {
-                parsingOptions.Passwords = [password];
-            }
-
-            using PdfDocument pdfDocument = PdfDocument.Open(pdfPath, parsingOptions);
-            
-            int pagesToCheck = Math.Min(pdfDocument.NumberOfPages, 3); // Check the first 3 pages
-            int textlessPages = pdfDocument.GetPages()
-                .Take(pagesToCheck)
-                .Count(page => !IsTextMeaningful(page.Text));
-
-            // If more than half the checked pages have no meaningful text, likely scanned
-            bool isScanned = textlessPages > pagesToCheck / 2;
-
-            _logger.LogInformation("PDF scan analysis: {ScannedPages}/{TotalChecked} pages without text. Scanned: {IsScanned}",
-                textlessPages, pagesToCheck, isScanned);
-
-            return isScanned;
+            return AnalyzePdf(pdfPath, password).IsScanned;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to analyze PDF for scanned content: {PdfPath}", pdfPath);
+            logger.LogWarning(ex, "Failed to analyze PDF for scanned content: {PdfPath}", pdfPath);
             return false;
         }
     }
 
-    /// <summary>
-    /// Checks if extracted text is meaningful (not just whitespace or garbage)
-    /// </summary>
+    private static PdfDocument LoadDocument(string pdfPath, string? password)
+        => string.IsNullOrEmpty(password)
+            ? PdfDocument.Load(pdfPath)
+            : PdfDocument.Load(pdfPath, password);
+
+    private string SafeExtractText(PdfPage page)
+    {
+        try
+        {
+            return page.ExtractText() ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            // A page whose text layer will not parse is treated as needing OCR, which is the
+            // safe direction: it gets rendered and recognised rather than dropped.
+            logger.LogDebug(ex, "Text-layer extraction failed; page will be treated as scanned");
+            return string.Empty;
+        }
+    }
+
+    private OcrResult Unavailable()
+    {
+        logger.LogError("OCR requested but no usable Tesseract executable is available");
+        return new OcrResult
+        {
+            Success = false,
+            ErrorMessage = "OCR service is not available: no usable Tesseract executable was found."
+        };
+    }
+
+    private static int CountWords(string text)
+        => string.IsNullOrWhiteSpace(text)
+            ? 0
+            : text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+
     private static bool IsTextMeaningful(string text)
     {
-        if (string.IsNullOrWhiteSpace(text))
-            return false;
+        if (string.IsNullOrWhiteSpace(text)) return false;
 
-        string cleanText = text.Trim();
-        if (cleanText.Length < 10)
-            return false;
+        string clean = text.Trim();
+        if (clean.Length < MinMeaningfulTextLength) return false;
 
-        // Check if it contains mostly readable characters
-        int readableChars = cleanText.Count(c => char.IsLetterOrDigit(c) || char.IsPunctuation(c) || c == ' ');
-        double readableRatio = (double)readableChars / cleanText.Length;
-
-        return readableRatio > 0.7; // At least 70% readable characters
+        int readable = clean.Count(c => char.IsLetterOrDigit(c) || char.IsPunctuation(c) || c == ' ');
+        return (double)readable / clean.Length > 0.7;
     }
 
     public void Dispose()
     {
-        if (_disposed)
-            return;
-
-        _tesseractEngine?.Dispose();
+        if (_disposed) return;
         _disposed = true;
-        _logger.LogDebug("OCR service disposed");
+        logger.LogDebug("OCR service disposed");
     }
 }

@@ -4,6 +4,7 @@ using DocumentServer.Core.Services.Core;
 using DocumentServer.Core.Services.DocumentSearch;
 using DocumentServer.Core.Services.Lucene;
 using DocumentServer.Core.Services.Ocr;
+using DocumentServer.Rendering;
 using Mcp.ResponseGuard.Configuration;
 using Mcp.ResponseGuard.Services;
 using Mcp.Hosting.Core;
@@ -40,9 +41,10 @@ try
     builder.Services.AddSingleton<DocumentComparator>();
     builder.Services.AddSingleton<MetadataExtractor>();
 
-    // TesseractEngine and ImagePreprocessor must be registered before OcrService
-    builder.Services.AddSingleton<TesseractEngine>();
+    // TesseractCliEngine, PdfPageRasterizer and ImagePreprocessor must be registered before OcrService
+    builder.Services.AddSingleton<TesseractCliEngine>();
     builder.Services.AddSingleton<ImagePreprocessor>();
+    builder.Services.AddSingleton<PdfPageRasterizer>();
     builder.Services.AddSingleton<OcrService>();
 
     // IndexManager must be registered before LuceneIndexer and LuceneSearcher

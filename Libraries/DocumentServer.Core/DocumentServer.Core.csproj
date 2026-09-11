@@ -32,8 +32,8 @@
         <PackageReference Include="Lucene.Net.QueryParser"  />
         <PackageReference Include="FuzzySharp"  />
 
-        <!-- OCR -->
-        <PackageReference Include="TesseractOCR"  />
+        <!-- OCR. Tesseract runs as an external process (see TesseractCliEngine): the managed
+             bindings ship Windows-only native assets, and OMP_THREAD_LIMIT is process-scoped. -->
         <PackageReference Include="SixLabors.ImageSharp"  />
 
         <!-- API -->
@@ -43,6 +43,7 @@
     <ItemGroup>
       <ProjectReference Include="..\Mcp.Common.Core\Mcp.Common.Core.csproj" />
       <ProjectReference Include="..\MsOfficeCrypto\MsOfficeCrypto.csproj" />
+      <ProjectReference Include="..\DocumentServer.Rendering\DocumentServer.Rendering.csproj" />
     </ItemGroup>
 
 </Project>

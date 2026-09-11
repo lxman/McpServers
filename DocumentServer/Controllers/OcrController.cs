@@ -62,20 +62,28 @@ public class OcrController(ILogger<OcrController> logger, OcrService ocrService)
 
         try
         {
-            bool isScanned = ocrService.IsPdfScanned(filePath, password);
+            PdfScanAnalysis analysis = ocrService.AnalyzePdf(filePath, password);
 
+            // isScanned and requiresOcr are deliberately different. A document can be mostly
+            // digital and still contain scanned exhibits or signature pages; gating OCR on
+            // isScanned would silently drop those pages while the document still returns
+            // results from the half that did index.
             var response = new Dictionary<string, object>
             {
                 ["filePath"] = filePath,
-                ["isScanned"] = isScanned,
-                ["requiresOcr"] = isScanned,
-                ["message"] = isScanned
-                    ? "PDF contains scanned images and requires OCR"
-                    : "PDF contains extractable text"
+                ["isScanned"] = analysis.IsScanned,
+                ["requiresOcr"] = analysis.RequiresOcr,
+                ["totalPages"] = analysis.TotalPages,
+                ["pagesWithText"] = analysis.PagesWithText,
+                ["pagesRequiringOcr"] = analysis.PagesRequiringOcr,
+                ["message"] = analysis.RequiresOcr
+                    ? $"{analysis.PagesRequiringOcr} of {analysis.TotalPages} pages have no text layer and require OCR"
+                    : "All pages contain extractable text"
             };
 
-            logger.LogInformation("PDF scan check complete: {FilePath}, IsScanned={IsScanned}",
-                filePath, isScanned);
+            logger.LogInformation(
+                "PDF scan check complete: {FilePath}, RequiresOcr={RequiresOcr} ({Ocr}/{Total} pages)",
+                filePath, analysis.RequiresOcr, analysis.PagesRequiringOcr, analysis.TotalPages);
 
             return Ok(response);
         }

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <!-- Vendor/ is third-party source, copied verbatim. Do not fail our build on
+             their documentation warnings; see Vendor/README.md. -->
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Lxman.PdfLibrary" />
+        <PackageReference Include="SkiaSharp" />
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+        <!-- Direct reference so this version wins over ShapeCrawler's transitive 4.150.1;
+             a PackageVersion alone does not pin transitives without transitive pinning. -->
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    </ItemGroup>
+
+</Project>
