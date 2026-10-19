@@ -4,15 +4,15 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- AWS SDKs -->
-    <PackageVersion Include="AWSSDK.CloudWatch" Version="4.0.105.3" />
-    <PackageVersion Include="AWSSDK.CloudWatchLogs" Version="4.0.105.2" />
-    <PackageVersion Include="AWSSDK.Core" Version="4.0.102.10" />
-    <PackageVersion Include="AWSSDK.ECR" Version="4.0.101.9" />
-    <PackageVersion Include="AWSSDK.ECS" Version="4.0.106.2" />
-    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.102.3" />
-    <PackageVersion Include="AWSSDK.QuickSight" Version="4.0.111.1" />
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.3" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.101.3" />
+    <PackageVersion Include="AWSSDK.CloudWatch" Version="4.0.105.4" />
+    <PackageVersion Include="AWSSDK.CloudWatchLogs" Version="4.0.105.3" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.0.102.11" />
+    <PackageVersion Include="AWSSDK.ECR" Version="4.0.101.10" />
+    <PackageVersion Include="AWSSDK.ECS" Version="4.0.106.3" />
+    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.102.4" />
+    <PackageVersion Include="AWSSDK.QuickSight" Version="4.0.111.2" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.4" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.101.4" />
     <!-- Azure SDKs - Aspire & Provisioning -->
     <PackageVersion Include="Aspire.Hosting.Azure.AppService" Version="13.6.1" />
     <PackageVersion Include="Azure.Provisioning.AppService" Version="1.4.0-beta.2" />
@@ -24,7 +24,7 @@
     <PackageVersion Include="Azure.Provisioning.PostgreSql" Version="1.2.0-beta.2" />
     <PackageVersion Include="Azure.Provisioning.Sql" Version="1.2.0-beta.1" />
     <!-- Azure SDKs - Core Services -->
-    <PackageVersion Include="Azure.Containers.ContainerRegistry" Version="1.3.0" />
+    <PackageVersion Include="Azure.Containers.ContainerRegistry" Version="1.4.0" />
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Messaging.EventHubs" Version="5.12.2" />
     <PackageVersion Include="Azure.Messaging.EventHubs.Processor" Version="5.12.2" />
@@ -86,7 +86,7 @@
     <PackageVersion Include="NPOI" Version="2.8.1" />
     <PackageVersion Include="OpenMcdf" Version="3.3.0" />
     <PackageVersion Include="PdfPig" Version="0.1.16" />
-    <PackageVersion Include="ShapeCrawler" Version="0.80.0" />
+    <PackageVersion Include="ShapeCrawler" Version="0.82.0" />
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="TesseractOCR" Version="5.5.2" />
     <!-- Trading -->
@@ -128,7 +128,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="11.0.0-preview.3.26207.106" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="11.0.0-preview.3.26207.106" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="11.0.0-preview.3.26207.106" />
-    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.11.0" />
     <!-- MSBuild (loaded at runtime via MSBuildLocator, not from NuGet) -->
     <PackageVersion Include="Microsoft.Build" Version="18.11.0" />
     <PackageVersion Include="Microsoft.Build.Framework" Version="18.11.0" />
