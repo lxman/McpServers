@@ -1,8 +1,9 @@
 # Floors reflect versions verified working together; see pyproject.toml for the
 # authoritative dependency set. Requires Python >= 3.10 (mcp and black both cap below that).
 
-# MCP SDK
-mcp>=1.29.0
+# MCP SDK -- 2.x required: src/main.py uses the constructor-based
+# on_list_tools/on_call_tool handlers (the 1.x decorators were removed).
+mcp>=2.3.0
 
 # HTTP Server with OpenAPI auto-generation
 Flask>=3.1.3

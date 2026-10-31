@@ -10,12 +10,12 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
-const serverPort = "7300"
+const serverPort = "7303"
 
 // @title Go Analyzer API
 // @version 1.0
 // @description Go code analysis tools with auto-generated OpenAPI documentation
-// @host localhost:7300
+// @host localhost:7303
 // @BasePath /
 func main() {
 	http.HandleFunc("/description", handleDescription)

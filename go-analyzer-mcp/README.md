@@ -113,7 +113,7 @@ go-analyzer-mcp/
 ├── cmd/               # Entry points (one binary per subdirectory)
 │   ├── go-analyzer/   # stdio MCP server
 │   │   └── main.go
-│   └── http-server/   # HTTP API server (port 7300)
+│   └── http-server/   # HTTP API server (port 7303)
 │       └── main.go
 ├── go.mod             # Go module dependencies
 └── go.sum             # Dependency checksums

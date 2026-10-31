@@ -2,9 +2,10 @@
 """Python Analyzer MCP Server - Main entry point"""
 import asyncio
 import json
+from mcp import types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+from mcp.types import Tool
 
 from .tools import PythonTools
 
@@ -185,19 +186,16 @@ tools: list[Tool] = [
     )
 ]
 
-# Create the MCP server
-app = Server("python-analyzer-mcp")
-
-
-@app.list_tools()
-async def list_tools() -> list[Tool]:
+async def list_tools(ctx, params) -> types.ListToolsResult:
     """List available tools"""
-    return tools
+    return types.ListToolsResult(tools=tools)
 
 
-@app.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+async def call_tool(ctx, params: types.CallToolRequestParams) -> types.CallToolResult:
     """Handle tool calls"""
+
+    name = params.name
+    arguments = params.arguments
 
     try:
         if name == "analyze_code":
@@ -253,19 +251,29 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                 "error": f"Unknown tool: {name}"
             }
 
-        return [TextContent(
-            type="text",
-            text=json.dumps(result, indent=2)
-        )]
+        return types.CallToolResult(
+            content=[types.TextContent(type="text", text=json.dumps(result, indent=2))]
+        )
 
     except Exception as e:
-        return [TextContent(
-            type="text",
-            text=json.dumps({
-                "success": False,
-                "error": str(e)
-            }, indent=2)
-        )]
+        return types.CallToolResult(
+            content=[types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "success": False,
+                    "error": str(e)
+                }, indent=2)
+            )]
+        )
+
+
+# Create the MCP server with the low-level handlers (mcp 2.x removed the
+# @app.list_tools()/@app.call_tool() decorators in favour of constructor args).
+app = Server(
+    "python-analyzer-mcp",
+    on_list_tools=list_tools,
+    on_call_tool=call_tool,
+)
 
 
 async def main():

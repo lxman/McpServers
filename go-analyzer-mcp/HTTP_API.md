@@ -1,8 +1,8 @@
 # Go Analyzer HTTP API
 
 ## Server Information
-- **Port**: 7300
-- **Base URL**: `http://localhost:7300`
+- **Port**: 7303
+- **Base URL**: `http://localhost:7303`
 
 ## Starting the Server
 
@@ -139,7 +139,7 @@ Add to DirectoryMcp configuration:
 {
   "go-analyzer": {
     "name": "Go Analyzer Tools",
-    "url": "http://localhost:7300"
+    "url": "http://localhost:7303"
   }
 }
 ```

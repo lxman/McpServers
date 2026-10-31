@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "MCP server that exposes Python code analysis capabilities"
 requires-python = ">=3.10"
 dependencies = [
-    "mcp>=1.29.0",
+    "mcp>=2.3.0",
     "pylint>=3.3.9",
     "pyflakes>=3.4.0",
     "mypy>=1.19.1",
