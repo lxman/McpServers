@@ -53,4 +53,38 @@ public sealed class ManifestValidationTests
 
         Assert.Empty(ManifestValidation.Warnings(entries));
     }
+
+    /// <summary>
+    /// The manifest that actually ships must be clean. The three tests above pin the rule; this one
+    /// pins the configuration the rule is applied to, so a future edit that sets a per-session
+    /// server to idleTimeoutMinutes: 0 fails here rather than quietly leaving backends behind.
+    /// </summary>
+    [Fact]
+    public void ShippedManifest_ProducesNoWarnings()
+    {
+        string manifestPath = RepoFile("servers.json");
+        string statePath = Path.Combine(
+            Path.GetTempPath(), "mcp-shipped-" + Guid.NewGuid().ToString("N"), "state.json");
+
+        ManifestStore store = ManifestStore.Load(manifestPath, statePath);
+
+        // A manifest that failed to load, or loaded nothing, would pass the warning assertion
+        // vacuously -- the exact silent-empty failure this test exists to prevent.
+        Assert.NotEmpty(store.Entries);
+        Assert.Empty(ManifestValidation.Warnings(store.Entries));
+    }
+
+    private static string RepoFile(string name)
+    {
+        DirectoryInfo? directory = new(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            string candidate = Path.Combine(directory.FullName, name);
+            if (File.Exists(candidate)) return candidate;
+            directory = directory.Parent;
+        }
+
+        throw new FileNotFoundException(
+            $"Could not find '{name}' above '{AppContext.BaseDirectory}'.");
+    }
 }
