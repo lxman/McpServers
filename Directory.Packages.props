@@ -4,17 +4,17 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- AWS SDKs -->
-    <PackageVersion Include="AWSSDK.CloudWatch" Version="4.0.105.4" />
-    <PackageVersion Include="AWSSDK.CloudWatchLogs" Version="4.0.105.3" />
-    <PackageVersion Include="AWSSDK.Core" Version="4.0.102.11" />
-    <PackageVersion Include="AWSSDK.ECR" Version="4.0.101.10" />
-    <PackageVersion Include="AWSSDK.ECS" Version="4.0.106.3" />
-    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.102.4" />
-    <PackageVersion Include="AWSSDK.QuickSight" Version="4.0.111.2" />
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.4" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.101.4" />
+    <PackageVersion Include="AWSSDK.CloudWatch" Version="4.0.107.2" />
+    <PackageVersion Include="AWSSDK.CloudWatchLogs" Version="4.0.107" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.0.102.16" />
+    <PackageVersion Include="AWSSDK.ECR" Version="4.0.102" />
+    <PackageVersion Include="AWSSDK.ECS" Version="4.0.109" />
+    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.102.7" />
+    <PackageVersion Include="AWSSDK.QuickSight" Version="4.0.112.1" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.8" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.101.7" />
     <!-- Azure SDKs - Aspire & Provisioning -->
-    <PackageVersion Include="Aspire.Hosting.Azure.AppService" Version="13.6.1" />
+    <PackageVersion Include="Aspire.Hosting.Azure.AppService" Version="13.6.4" />
     <PackageVersion Include="Azure.Provisioning.AppService" Version="1.4.0-beta.2" />
     <PackageVersion Include="Azure.Provisioning.ApplicationInsights" Version="1.2.0-beta.1" />
     <PackageVersion Include="Azure.Provisioning.EventHubs" Version="1.1.0" />
@@ -43,7 +43,7 @@
     <PackageVersion Include="Azure.ResourceManager.Consumption" Version="1.1.0" />
     <PackageVersion Include="Azure.ResourceManager.ContainerInstance" Version="1.4.0" />
     <PackageVersion Include="Azure.ResourceManager.ContainerRegistry" Version="1.5.0-beta.2" />
-    <PackageVersion Include="Azure.ResourceManager.ContainerService" Version="1.8.0" />
+    <PackageVersion Include="Azure.ResourceManager.ContainerService" Version="1.9.0" />
     <PackageVersion Include="Azure.ResourceManager.CosmosDBForPostgreSql" Version="1.1.0-beta.3" />
     <PackageVersion Include="Azure.ResourceManager.CostManagement" Version="1.0.3" />
     <PackageVersion Include="Azure.ResourceManager.Dns" Version="1.2.0-beta.3" />
@@ -62,11 +62,11 @@
     <PackageVersion Include="Azure.ResourceManager.ServiceBus" Version="1.2.0" />
     <PackageVersion Include="Azure.ResourceManager.Sql" Version="1.4.0" />
     <PackageVersion Include="Azure.ResourceManager.SqlVirtualMachine" Version="1.1.2" />
-    <PackageVersion Include="Azure.ResourceManager.Storage" Version="1.8.0" />
+    <PackageVersion Include="Azure.ResourceManager.Storage" Version="1.9.0" />
     <PackageVersion Include="Azure.ResourceManager.TrafficManager" Version="1.2.0" />
     <!-- Azure SDKs - Security & Storage -->
-    <PackageVersion Include="Azure.Security.KeyVault.Certificates" Version="4.9.2" />
-    <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.11.2" />
+    <PackageVersion Include="Azure.Security.KeyVault.Certificates" Version="4.10.0" />
+    <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.12.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
     <PackageVersion Include="Azure.Storage.Blobs.Batch" Version="12.27.1" />
     <PackageVersion Include="Azure.Storage.Blobs.ChangeFeed" Version="12.0.0-preview.61" />
@@ -84,25 +84,25 @@
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageVersion Include="MessagePack" Version="3.1.12" />
     <PackageVersion Include="NPOI" Version="2.8.1" />
-    <PackageVersion Include="OpenMcdf" Version="3.3.0" />
+    <PackageVersion Include="OpenMcdf" Version="3.4.0" />
     <PackageVersion Include="PdfPig" Version="0.1.16" />
     <PackageVersion Include="ShapeCrawler" Version="0.82.0" />
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="TesseractOCR" Version="5.5.2" />
     <!-- Trading -->
-    <PackageVersion Include="Alpaca.Markets" Version="8.0.0" />
+    <PackageVersion Include="Alpaca.Markets" Version="8.0.1" />
     <!-- Database Drivers -->
     <PackageVersion Include="Dapper" Version="2.1.89" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.1.1" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="11.0.0-preview.3.26207.106" />
     <PackageVersion Include="MongoDB.Analyzer" Version="2.0.0" />
-    <PackageVersion Include="MongoDB.Driver" Version="3.12.0" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.13.0" />
     <PackageVersion Include="MySqlConnector" Version="2.6.2" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
-    <PackageVersion Include="StackExchange.Redis" Version="3.4.5" />
+    <PackageVersion Include="StackExchange.Redis" Version="3.4.29" />
     <!-- Email & Communication -->
-    <PackageVersion Include="MailKit" Version="4.18.1" />
-    <PackageVersion Include="MimeKit" Version="4.18.1" />
+    <PackageVersion Include="MailKit" Version="4.18.2" />
+    <PackageVersion Include="MimeKit" Version="4.18.2" />
     <!-- HTTP & Networking -->
     <PackageVersion Include="DnsClient" Version="1.8.0" />
     <!-- Image Processing -->
@@ -114,7 +114,7 @@
     <PackageVersion Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00017" />
     <PackageVersion Include="Lucene.Net.QueryParser" Version="4.8.0-beta00017" />
     <!-- MCP Protocol -->
-    <PackageVersion Include="ModelContextProtocol" Version="2.2.0" />
+    <PackageVersion Include="ModelContextProtocol" Version="2.3.0" />
     <!-- Microsoft Extensions -->
     <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="11.0.0-preview.3.26207.106" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="11.0.0-preview.3.26207.106" />
@@ -155,15 +155,15 @@
     <PackageVersion Include="FuzzySharp" Version="2.0.2" />
     <!-- Web & API -->
     <PackageVersion Include="Microsoft.AspNetCore.Http.Features" Version="6.0.0-preview.4.21253.5" />
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
     <PackageVersion Include="Microsoft.AspNetCore.ResponseCompression" Version="2.3.13" />
-    <PackageVersion Include="Microsoft.Playwright" Version="1.63.0" />
-    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.64.1" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.3.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.0" />
-    <PackageVersion Include="Selenium.WebDriver" Version="4.51.0" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.7" />
+    <PackageVersion Include="Selenium.WebDriver" Version="4.52.0" />
     <!-- Windows & Credential Management -->
-    <PackageVersion Include="Meziantou.Framework.Win32.CredentialManager" Version="3.0.5" />
+    <PackageVersion Include="Meziantou.Framework.Win32.CredentialManager" Version="3.0.8" />
     <PackageVersion Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <!-- Azure DevOps -->
     <PackageVersion Include="Microsoft.TeamFoundationServer.Client" Version="20.271.20260413.1-ci" />
@@ -185,19 +185,19 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="coverlet.collector" Version="10.1.0" />
     <!-- PDF rendering. MIT, pure managed, no native assets: safe on linux-arm64. -->
-    <PackageVersion Include="Lxman.PdfLibrary" Version="2.6.3" />
+    <PackageVersion Include="Lxman.PdfLibrary" Version="2.6.5" />
     <!-- Raster backend for the vendored IRenderTarget. 4.151.2 is a floor, not a
          preference: SKPathBuilder does not exist in 3.x. NativeAssets.Linux.NoDependencies
          carries linux-arm64/native/libSkiaSharp.so without the fontconfig dependency,
          which suits a slim container on the ARM64 Sparks. -->
-    <PackageVersion Include="SkiaSharp" Version="4.153.1" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
+    <PackageVersion Include="SkiaSharp" Version="4.154.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.154.0" />
     <!-- Pinned forward: ShapeCrawler 0.80.0 pulls SkiaSharp.NativeAssets.Linux 4.150.1, which
          ships a libSkiaSharp.so that the 4.151.2 managed assembly refuses to load ("native
          library (150.0) is incompatible ... supported [151.0, 152.0)"). Both native packages
          deliver the same runtimes/linux-*/native/libSkiaSharp.so path, so the older one can win
          and break rendering. This fails only at runtime, only on Linux, so keep the versions
          aligned. -->
-    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.153.1" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.154.0" />
   </ItemGroup>
 </Project>
