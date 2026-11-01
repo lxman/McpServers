@@ -34,7 +34,7 @@ $project = Join-Path $repoRoot $entry.project
 $artifacts = Join-Path $env:TEMP "mcp-publish-artifacts\$Server"
 
 Write-Host "Publishing $Server -> $output"
-dotnet publish $project -c $Configuration -o $output --artifacts-path $artifacts --nologo -v quiet
+dotnet publish $project -c $Configuration -o $output --artifacts-path $artifacts --nologo -v quiet | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $Server." }
 
 $assembly = Join-Path $output $entry.assembly
